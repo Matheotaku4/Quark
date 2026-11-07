@@ -16,7 +16,7 @@ use crate::theme::{self, Palette};
 use crate::tray;
 use crate::update::{self, Release};
 use crate::widgets::{self, Icon};
-use eframe::egui::{self, Align, Align2, FontId, Layout, RichText, Sense, Stroke, Vec2};
+use eframe::egui::{self, Align, Align2, FontId, Layout, Sense, Stroke, Vec2};
 use std::collections::{HashMap, VecDeque};
 use std::path::PathBuf;
 use std::sync::mpsc::{Receiver, TryRecvError, channel};
@@ -2986,39 +2986,44 @@ impl QuarkApp {
 
                     ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
                         ui.add_space(16.0);
-                        if widgets::icon_button(
-                            ui,
-                            32.0,
-                            Icon::Gear,
-                            &pal,
-                            "Paramètres · Ctrl+Q pour quitter",
-                        )
-                        .clicked()
-                        {
+                        // Libellés visibles quand la fenêtre est assez large : la
+                        // bibliothèque ajoute des commandes (Ajouter, Grille/Liste,
+                        // recherche) et demande donc plus de place que les autres
+                        // onglets. En dessous, on garde les icônes seules pour ne
+                        // pas faire chevaucher les onglets.
+                        let wide_threshold = if self.tab == Tab::Library { 1480.0 } else { 1180.0 };
+                        let wide = ctx.screen_rect().width() >= wide_threshold;
+                        let settings_hint = crate::i18n::tr("Paramètres · Ctrl+Q pour quitter");
+                        let settings_clicked = if wide {
+                            widgets::pill_button(ui, &pal, Icon::Gear, "Paramètres", 0, None)
+                                .on_hover_text(settings_hint)
+                                .clicked()
+                        } else {
+                            widgets::icon_button(
+                                ui,
+                                32.0,
+                                Icon::Gear,
+                                &pal,
+                                "Paramètres · Ctrl+Q pour quitter",
+                            )
+                            .clicked()
+                        };
+                        if settings_clicked {
                             self.settings_open = true;
-                        }
-                        ui.add_space(6.0);
-                        if widgets::icon_button(
-                            ui,
-                            32.0,
-                            Icon::Search,
-                            &pal,
-                            "Palette de commandes · Ctrl+K",
-                        )
-                        .clicked()
-                        {
-                            self.open_command_palette(ctx);
                         }
                         ui.add_space(6.0);
                         // Téléchargements : le même panneau, accessible depuis
                         // tous les onglets, avec le nombre de transferts actifs.
-                        let response =
-                            widgets::icon_button(ui, 32.0, Icon::Download, &pal, "Téléchargements");
+                        let active = self.active_install_count();
+                        let response = if wide {
+                            widgets::pill_button(ui, &pal, Icon::Download, "Transferts", active, None)
+                        } else {
+                            widgets::icon_button(ui, 32.0, Icon::Download, &pal, "Téléchargements")
+                        };
                         if response.clicked() {
                             self.downloads_open = !self.downloads_open;
                         }
-                        let active = self.active_install_count();
-                        if active > 0 {
+                        if active > 0 && !wide {
                             let badge = egui::Pos2::new(
                                 response.rect.right() - 3.0,
                                 response.rect.top() + 5.0,
@@ -3031,6 +3036,30 @@ impl QuarkApp {
                                 FontId::proportional(9.0),
                                 pal.bg,
                             );
+                        }
+                        ui.add_space(6.0);
+                        let palette_clicked = if wide {
+                            widgets::pill_button(
+                                ui,
+                                &pal,
+                                Icon::Search,
+                                "Rechercher ou commande",
+                                0,
+                                Some("Ctrl K"),
+                            )
+                            .clicked()
+                        } else {
+                            widgets::icon_button(
+                                ui,
+                                32.0,
+                                Icon::Search,
+                                &pal,
+                                "Palette de commandes · Ctrl+K",
+                            )
+                            .clicked()
+                        };
+                        if palette_clicked {
+                            self.open_command_palette(ctx);
                         }
 
                         ui.add_space(6.0);

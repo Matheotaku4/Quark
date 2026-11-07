@@ -9,7 +9,7 @@ use crate::providers::Provider;
 use crate::providers::tools::ManagedToolId;
 use crate::theme::Palette;
 use crate::widgets::{self, Icon};
-use eframe::egui::{self, RichText, Vec2};
+use eframe::egui::{self, Vec2};
 
 enum LoginAction {
     None,

@@ -200,21 +200,21 @@ fn dynamic_english(text: &str) -> String {
 pub fn release_summary() -> [&'static str; 6] {
     if is_english() {
         [
-            "My Games has a List view: one row per game, with an Open or Install button that is always visible.",
-            "The \"···\" menu of each row groups the actions that used to require a right-click.",
-            "Grid and List use the same segmented control as the library, and the choice is remembered.",
-            "Home has its own tab, the library list starts with a Home row, and a game page keeps its actions in one \"···\" menu.",
-            "The game page shows an overview on wide windows, and playtime is saved every minute.",
-            "Secondary text meets WCAG AA contrast in all 13 themes. Existing configurations remain compatible: My Games keeps the grid by default.",
+            "On wide windows, the top bar shows \"Settings\", \"Transfers\" and \"Search or command\" with their labels.",
+            "The Store has a row of chips that jumps straight to each section.",
+            "My Games has a List view with an Open or Install button that is always visible (1.4.0).",
+            "A game page keeps its actions in one \"···\" menu and shows an overview on wide windows.",
+            "Playtime is saved every minute: a crash no longer loses the whole session.",
+            "Internal fixes: compiler warnings and a language-dependent test. No migration needed.",
         ]
     } else {
         [
-            "« Mes jeux » a une vue Liste : une ligne par jeu, avec un bouton Ouvrir ou Installer toujours visible.",
-            "Le menu « ··· » de chaque ligne regroupe les actions autrefois réservées au clic droit.",
-            "Grille et Liste se choisissent avec le même contrôle segmenté que la bibliothèque, et le choix est mémorisé.",
-            "L'accueil a son propre onglet, la liste de la bibliothèque commence par « Accueil », et la fiche d'un jeu réunit ses actions dans un menu « ··· ».",
-            "La fiche affiche un aperçu sur les fenêtres larges, et le temps de jeu est enregistré chaque minute.",
-            "Les textes secondaires respectent le contraste WCAG AA dans les 13 thèmes. Les configurations existantes restent compatibles : Mes jeux garde la grille par défaut.",
+            "Sur les fenêtres larges, la barre du haut affiche « Paramètres », « Transferts » et « Rechercher ou commande » avec leur libellé.",
+            "La Boutique a une rangée de pastilles qui mène directement à chaque section.",
+            "« Mes jeux » propose une vue Liste avec un bouton Ouvrir ou Installer toujours visible (1.4.0).",
+            "La fiche d'un jeu réunit ses actions dans un menu « ··· » et affiche un aperçu sur les fenêtres larges.",
+            "Le temps de jeu est enregistré chaque minute : un plantage ne fait plus perdre toute la session.",
+            "Correctifs internes : avertissements du compilateur et un test dépendant de la langue. Aucune migration.",
         ]
     }
 }
@@ -227,19 +227,24 @@ pub fn release_title() -> String {
     }
 }
 
+/// Verrou partagé par tous les tests qui lisent ou changent la langue, quel que
+/// soit leur module. Sans lui, un test de `game_search` pouvait lire « MB » au
+/// lieu de « Mo » pendant qu'un test d'`i18n` passait brièvement en anglais.
+#[cfg(test)]
+pub(crate) fn language_test_lock() -> std::sync::MutexGuard<'static, ()> {
+    static LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+    LOCK.lock().unwrap_or_else(|poison| poison.into_inner())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::sync::{Mutex, MutexGuard};
+    use std::sync::MutexGuard;
 
     // La langue est globale au processus : les tests qui la changent doivent
     // s'exécuter l'un après l'autre, sinon l'un lit la langue posée par l'autre.
-    static LANGUAGE_LOCK: Mutex<()> = Mutex::new(());
-
     fn language_lock() -> MutexGuard<'static, ()> {
-        LANGUAGE_LOCK
-            .lock()
-            .unwrap_or_else(|poison| poison.into_inner())
+        language_test_lock()
     }
 
     #[test]
@@ -268,11 +273,11 @@ mod tests {
     fn le_resume_de_version_suit_la_langue() {
         let _guard = language_lock();
         set_language(UiLanguage::French);
-        assert!(release_summary()[0].starts_with("« Mes jeux » a une vue Liste"));
-        assert!(release_summary()[1].starts_with("Le menu « ··· »"));
+        assert!(release_summary()[0].starts_with("Sur les fenêtres larges, la barre du haut"));
+        assert!(release_summary()[1].starts_with("La Boutique a une rangée"));
         set_language(UiLanguage::English);
-        assert!(release_summary()[0].starts_with("My Games has a List view"));
-        assert!(release_summary()[1].starts_with("The \"···\" menu"));
+        assert!(release_summary()[0].starts_with("On wide windows, the top bar"));
+        assert!(release_summary()[1].starts_with("The Store has a row"));
         assert!(release_title().starts_with("What's new"));
         set_language(UiLanguage::French);
     }

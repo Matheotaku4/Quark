@@ -494,7 +494,7 @@ fn theme_preview(ui: &mut egui::Ui, mode: ThemeMode, selected: bool) -> bool {
         rect,
         6.0,
         Stroke::new(
-            if selected { 2.0 } else { 1.0 },
+            if selected { 2.0_f32 } else { 1.0 },
             if selected {
                 preview.accent
             } else {

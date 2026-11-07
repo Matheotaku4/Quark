@@ -16,7 +16,7 @@ use crate::theme::{self, Palette};
 use crate::update;
 use crate::widgets::{self, Icon};
 use eframe::egui::{
-    self, Align, Align2, Color32, FontId, Layout, Pos2, Rect, RichText, Sense, Stroke, Vec2,
+    self, Align, Align2, Color32, FontId, Layout, Pos2, Rect, Sense, Stroke, Vec2,
 };
 use std::path::{Path, PathBuf};
 use std::time::Instant;
@@ -4339,7 +4339,7 @@ fn theme_card(ui: &mut egui::Ui, mode: ThemeMode, selected: bool) -> bool {
     painter.rect_stroke(
         rect,
         7.0,
-        Stroke::new(if selected { 2.0 } else { 1.0 }, border),
+        Stroke::new(if selected { 2.0_f32 } else { 1.0 }, border),
         egui::StrokeKind::Inside,
     );
     painter.rect_filled(

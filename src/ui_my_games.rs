@@ -7,7 +7,7 @@
 use crate::app::{QuarkApp, SettingsTab, Tab};
 use crate::providers::{InstallState, Provider, ProviderGame};
 use crate::theme;
-use eframe::egui::{self, Align, Align2, Layout, Pos2, Rect, RichText, Sense, Vec2};
+use eframe::egui::{self, Align, Align2, Layout, Pos2, Rect, Sense, Vec2};
 use std::path::PathBuf;
 
 impl QuarkApp {

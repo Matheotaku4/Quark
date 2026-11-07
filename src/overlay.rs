@@ -314,7 +314,6 @@ impl Overlay {
 }
 
 fn draw_toast(ui: &mut egui::Ui, pal: &crate::theme::Palette, notices: &[Notice]) {
-    use eframe::egui::RichText;
     let Some(notice) = notices.first() else {
         return;
     };
@@ -365,7 +364,6 @@ fn draw_overlay(
     loading: bool,
     close: &mut bool,
 ) {
-    use eframe::egui::RichText;
     let screen = ui.max_rect();
     ui.painter()
         .rect_filled(screen, 0.0, Color32::from_black_alpha(178));
@@ -544,7 +542,6 @@ fn achievement_row(
     row: &AchievementRow,
     settings: &Settings,
 ) {
-    use eframe::egui::RichText;
     let compact = settings.overlay_compact;
     egui::Frame::new()
         .fill(if row.unlocked {

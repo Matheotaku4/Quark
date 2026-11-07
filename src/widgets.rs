@@ -3,7 +3,7 @@
 
 use crate::theme::{self, Palette};
 use eframe::egui::{
-    self, Align2, Color32, FontId, Pos2, Rect, Response, RichText, Sense, Stroke, Vec2,
+    self, Align2, Color32, FontId, Pos2, Rect, Response, Sense, Stroke, Vec2,
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -414,6 +414,98 @@ pub fn menu_row(ui: &mut egui::Ui, pal: &Palette, icon: Icon, color: Color32, la
         theme::lerp_color(pal.text_dim, pal.text, 0.55 + 0.45 * hover),
     );
     resp.clicked()
+}
+
+/// Bouton à pastille avec libellé, icône et, au choix, un compteur (« Transferts · 2 »)
+/// ou un raccourci clavier dans un petit cadre (« Ctrl K »). Remplace une icône
+/// seule quand la place le permet : le libellé dit ce que fait le bouton.
+pub fn pill_button(
+    ui: &mut egui::Ui,
+    pal: &Palette,
+    icon: Icon,
+    label: &str,
+    count: usize,
+    kbd: Option<&str>,
+) -> Response {
+    const ICON: f32 = 13.0;
+    let label = crate::i18n::tr(label);
+    let font = FontId::proportional(12.5);
+    let label_galley = ui
+        .painter()
+        .layout_no_wrap(label.clone(), font.clone(), pal.text);
+    let count_galley = (count > 0).then(|| {
+        ui.painter()
+            .layout_no_wrap(format!(" · {count}"), font.clone(), pal.accent)
+    });
+    let kbd_galley = kbd.map(|keys| {
+        ui.painter()
+            .layout_no_wrap(keys.to_string(), FontId::proportional(10.5), pal.text_dim)
+    });
+    let mut width = 12.0 + ICON + 8.0 + label_galley.size().x + 12.0;
+    if let Some(galley) = &count_galley {
+        width += galley.size().x;
+    }
+    if let Some(galley) = &kbd_galley {
+        width += galley.size().x + 12.0 + 2.0;
+    }
+    let (rect, resp) = ui.allocate_exact_size(Vec2::new(width, 30.0), Sense::click());
+    let painter = ui.painter_at(rect);
+    let hover = ui
+        .ctx()
+        .animate_bool_with_time(control_id(ui, rect, &label, "pill"), resp.hovered(), 0.12);
+    painter.rect_filled(rect, 8.0, theme::lerp_color(pal.surface, pal.surface_hover, hover));
+    painter.rect_stroke(
+        rect,
+        8.0,
+        Stroke::new(1.0_f32, pal.border),
+        egui::StrokeKind::Inside,
+    );
+    let ink = theme::lerp_color(pal.text_dim, pal.text, hover);
+    let mut x = rect.left() + 12.0;
+    paint_icon(
+        ui,
+        Rect::from_center_size(Pos2::new(x + ICON / 2.0, rect.center().y), Vec2::splat(ICON)),
+        icon,
+        ink,
+    );
+    x += ICON + 8.0;
+    let label_w = label_galley.size().x;
+    painter.galley(
+        Pos2::new(x, rect.center().y - label_galley.size().y / 2.0),
+        label_galley,
+        ink,
+    );
+    x += label_w;
+    if let Some(galley) = count_galley {
+        let w = galley.size().x;
+        painter.galley(
+            Pos2::new(x, rect.center().y - galley.size().y / 2.0),
+            galley,
+            pal.accent,
+        );
+        x += w;
+    }
+    if let Some(galley) = kbd_galley {
+        let box_rect = Rect::from_min_size(
+            Pos2::new(x + 10.0, rect.center().y - 9.0),
+            Vec2::new(galley.size().x + 12.0, 18.0),
+        );
+        painter.rect_stroke(
+            box_rect,
+            5.0,
+            Stroke::new(1.0_f32, pal.border),
+            egui::StrokeKind::Inside,
+        );
+        painter.galley(
+            Pos2::new(
+                box_rect.center().x - galley.size().x / 2.0,
+                box_rect.center().y - galley.size().y / 2.0,
+            ),
+            galley,
+            pal.text_dim,
+        );
+    }
+    resp
 }
 
 /// Contrôle segmenté (par exemple Grille | Liste) : le libellé reste visible,

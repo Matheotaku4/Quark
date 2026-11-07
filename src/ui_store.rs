@@ -10,7 +10,7 @@ use crate::steam_store::{StoreItem, StoreSection};
 use crate::theme::Palette;
 use crate::widgets::{self, Icon};
 use eframe::egui::{
-    self, Align, Align2, Color32, FontId, Layout, Pos2, Rect, RichText, Sense, Vec2,
+    self, Align, Align2, Color32, FontId, Layout, Pos2, Rect, Sense, Vec2,
 };
 
 const PAGE_MARGIN: f32 = 30.0;
@@ -18,6 +18,10 @@ const CARD_WIDTH: f32 = 238.0;
 const CARD_GAP: f32 = 14.0;
 const CARDS_PER_SECTION: usize = 24;
 const ART_RATIO: f32 = 1.745;
+/// Cibles spéciales des pastilles de navigation (les autres sont les indices des
+/// sections du catalogue).
+const JUMP_DEALS: usize = usize::MAX - 1;
+const JUMP_RECOMMENDED: usize = usize::MAX;
 
 /// Texture d'une image de boutique, chargée par le loader HTTP d'egui.
 fn store_texture(ctx: &egui::Context, url: &str) -> Option<(egui::TextureId, Vec2)> {
@@ -192,10 +196,43 @@ impl QuarkApp {
 
                                 let snapshot = self.store_snapshot.clone();
                                 if let Some(snapshot) = snapshot {
+                                    // Navigation par pastilles : un clic fait défiler la
+                                    // page jusqu'à la section (le cache `jump_to` ne vit
+                                    // que pour cette image).
+                                    let mut jump_to: Option<usize> = None;
+                                    let has_deals = hero_item(&snapshot.sections).is_some()
+                                        && !top_deals(&snapshot.sections, 8).is_empty();
+                                    let has_reco = self.store_recommendation_source.is_some()
+                                        && !self.store_recommendations.is_empty();
+                                    if has_deals || has_reco || !snapshot.sections.is_empty() {
+                                        ui.horizontal_wrapped(|ui| {
+                                            ui.spacing_mut().item_spacing = Vec2::new(8.0, 8.0);
+                                            if has_deals && section_chip(ui, &pal, "Top réductions")
+                                            {
+                                                jump_to = Some(JUMP_DEALS);
+                                            }
+                                            if has_reco
+                                                && section_chip(ui, &pal, "Recommandé pour vous")
+                                            {
+                                                jump_to = Some(JUMP_RECOMMENDED);
+                                            }
+                                            for (index, section) in
+                                                snapshot.sections.iter().enumerate()
+                                            {
+                                                if section_chip(ui, &pal, &section.title) {
+                                                    jump_to = Some(index);
+                                                }
+                                            }
+                                        });
+                                        ui.add_space(14.0);
+                                    }
                                     if let Some(hero) = hero_item(&snapshot.sections) {
                                         hero_card(ui, &pal, &hero, &mut open_item);
                                         let deals = top_deals(&snapshot.sections, 8);
                                         if !deals.is_empty() {
+                                            if jump_to == Some(JUMP_DEALS) {
+                                                ui.scroll_to_cursor(Some(Align::TOP));
+                                            }
                                             section_heading(
                                                 ui,
                                                 &pal,
@@ -212,6 +249,9 @@ impl QuarkApp {
                                         self.store_recommendation_source.as_deref(),
                                         self.store_recommendations.is_empty(),
                                     ) {
+                                        if jump_to == Some(JUMP_RECOMMENDED) {
+                                            ui.scroll_to_cursor(Some(Align::TOP));
+                                        }
                                         section_heading(
                                             ui,
                                             &pal,
@@ -229,7 +269,10 @@ impl QuarkApp {
                                             &mut open_item,
                                         );
                                     }
-                                    for section in &snapshot.sections {
+                                    for (index, section) in snapshot.sections.iter().enumerate() {
+                                        if jump_to == Some(index) {
+                                            ui.scroll_to_cursor(Some(Align::TOP));
+                                        }
                                         section_heading(
                                             ui,
                                             &pal,
@@ -1115,4 +1158,17 @@ fn thousands(value: u32) -> String {
         with_spaces.push(character);
     }
     with_spaces
+}
+
+/// Pastille de navigation de la boutique (même style que les puces de tri de
+/// l'accueil). Renvoie `true` au clic.
+fn section_chip(ui: &mut egui::Ui, pal: &Palette, label: &str) -> bool {
+    ui.add(
+        egui::Button::new(crate::i18n::rich(label).size(12.0).color(pal.text_dim))
+            .fill(pal.surface)
+            .stroke(egui::Stroke::new(1.0_f32, pal.border))
+            .corner_radius(14.0)
+            .min_size(Vec2::new(0.0, 28.0)),
+    )
+    .clicked()
 }

@@ -459,6 +459,8 @@ mod tests {
 
     #[test]
     fn anker_lit_son_api_json() {
+        let _langue = crate::i18n::language_test_lock();
+        crate::i18n::set_language(crate::config::UiLanguage::French);
         let body = r#"{"data":[
           {"title":"Cyberpunk 2077","slug":"cyberpunk-2077","size_gb":72.5,
            "cover":"https://ankergames.net/cover.jpg",
@@ -507,6 +509,8 @@ mod tests {
 
     #[test]
     fn scene_lit_une_ligne_html_et_decode_le_titre() {
+        let _langue = crate::i18n::language_test_lock();
+        crate::i18n::set_language(crate::config::UiLanguage::French);
         let body = r#"<div role="list">
           <div class="release-row group" id="release-6565">
             <span class="text-lg font-medium break-all release-name" title="Cyberpunk.SFX-TENOKE">Cyberpunk.SFX-TENOKE</span>

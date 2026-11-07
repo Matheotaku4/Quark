@@ -5,7 +5,7 @@
 use crate::app::QuarkApp;
 use crate::config::{GameStatus, GroupBy, LibrarySort, SavedView};
 use crate::widgets::{self, Icon};
-use eframe::egui::{self, Align, Color32, Layout, RichText, Vec2};
+use eframe::egui::{self, Align, Color32, Layout, Vec2};
 
 impl QuarkApp {
     /// Bouton « Filtres » et son panneau, comme la bibliothèque Steam : statut,

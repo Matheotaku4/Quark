@@ -6,7 +6,7 @@
 use crate::app::{QuarkApp, SettingsTab, Tab};
 use crate::config::{ViewMode, fold_char};
 use crate::widgets::{self, Icon};
-use eframe::egui::{self, Align2, Color32, FontId, Pos2, Rect, RichText, Sense, Stroke, Vec2};
+use eframe::egui::{self, Align2, Color32, FontId, Pos2, Rect, Sense, Stroke, Vec2};
 
 #[derive(Clone, PartialEq, Eq)]
 pub enum PaletteAction {

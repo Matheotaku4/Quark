@@ -1,17 +1,11 @@
-## Quark 1.4.0 — Mes jeux en liste, interface complète
+## Quark 1.4.1 — Barre du haut libellée et pastilles de la Boutique
 
-### Mes jeux
+### Interface
 
-- Nouvelle vue **Liste** : une ligne de 64 px par jeu (jaquette, titre, boutique, état) avec un bouton **Ouvrir** ou **Installer** toujours visible.
-- Le menu « ··· » de chaque ligne regroupe les actions qui demandaient un clic droit ou un double-clic : installation, désinstallation, succès, sauvegardes.
-- Grille et Liste se choisissent avec le même contrôle segmenté que la bibliothèque ; le choix est mémorisé. La grille reste l'affichage par défaut, aucune migration n'est nécessaire.
+- Sur les fenêtres larges, « Paramètres », « Transferts · n » et « Rechercher ou commande · Ctrl K » ont un libellé dans la barre du haut ; en dessous, les icônes restent.
+- Boutique : une rangée de pastilles (Top réductions, Recommandé, puis chaque section) fait défiler la page jusqu'à la section choisie.
 
-### Interface (récapitulatif depuis la 1.3.2)
+### Correctifs
 
-- Onglet Accueil dans la barre du haut, ligne « Accueil » en tête de la liste de la bibliothèque.
-- Menu « ··· » sur la fiche d'un jeu, carte d'aperçu sur les fenêtres larges.
-- Contraste WCAG AA des textes secondaires dans les 13 thèmes.
-
-### Fiabilité
-
-- Le temps de jeu est enregistré chaque minute pendant une partie.
+- Les imports `RichText` inutilisés et deux littéraux flottants signalés par le compilateur sont corrigés (ces derniers deviendront une erreur dans une future version de Rust).
+- Les tests qui supposent le français prennent désormais le même verrou de langue que ceux d'`i18n` : `game_search` ne peut plus lire « MB » pendant qu'un autre test passe en anglais.

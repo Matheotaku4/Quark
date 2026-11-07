@@ -6,7 +6,7 @@ own, launches Windows games through Proton (or umu-launcher), and stays out of
 the way with an AMOLED interface, a store page, save snapshots and an in-game
 overlay.
 
-This is the **1.4.0** documentation. Older release notes are kept on the GitHub
+This is the **1.4.1** documentation. Older release notes are kept on the GitHub
 releases page; `docs/release-notes.md` only describes the release currently
 being published.
 
@@ -27,11 +27,11 @@ The wiki is published from the versioned source in [`wiki/`](wiki/) by the
 | --- | --- |
 | ![Onboarding](docs/images/onboarding-fr.png) | ![What's new](docs/images/whats-new-fr.png) |
 
-## What's new in 1.4.0
+## What's new in 1.4.1
 
-- **My games list view.** A new **List** view shows one row per game with an always-visible **Open** or **Install** button and a **···** menu holding the actions that used to need a right-click. Grid / List uses the same segmented control as the library and is remembered; the grid stays the default.
-- **Complete interface pass.** Home tab, a Home row at the top of the library list, a **···** menu on the game page, an overview card on wide windows, and WCAG AA contrast in all 13 themes.
-- **Reliable playtime.** The running session is saved every minute, so a crash loses at most the last minute.
+- **Labelled top bar.** On wide windows, Settings, Transfers (with the active count) and Search or command (Ctrl K) show a label instead of a bare icon; narrower windows keep the icons.
+- **Store section chips.** A row of chips (Top discounts, Recommended, then each catalogue section) scrolls the page to the chosen section.
+- **Maintenance.** Compiler warnings on unused imports and float literals are fixed, and a language-dependent test no longer races with the translation tests.
 
 | PlayStation 2 |
 | --- |
@@ -39,7 +39,7 @@ The wiki is published from the versioned source in [`wiki/`](wiki/) by the
 
 ## Table of contents
 
-1. [What's new in 1.4.0](#whats-new-in-140)
+1. [What's new in 1.4.1](#whats-new-in-141)
 2. [What Quark does](#what-quark-does)
 3. [Installation](#installation)
 4. [First launch](#first-launch)
@@ -97,8 +97,8 @@ Download `quark-<version>-linux-x86_64.tar.gz` and its `.sha256` file from the
 then verify and unpack it:
 
 ```bash
-sha256sum -c quark-1.4.0-linux-x86_64.tar.gz.sha256
-tar -xzf quark-1.4.0-linux-x86_64.tar.gz
+sha256sum -c quark-1.4.1-linux-x86_64.tar.gz.sha256
+tar -xzf quark-1.4.1-linux-x86_64.tar.gz
 ./quark/quark
 ```
 
@@ -140,7 +140,7 @@ A new configuration opens a three-step welcome guide. It is not blocking:
 **Skip** closes it. The guide changes the interface language, startup page,
 theme and hero background live, then offers to add a first game. Existing
 configurations are marked as already welcomed, so updating from 1.1.4 never
-shows it unexpectedly; they still see the 1.4.0 summary once.
+shows it unexpectedly; they still see the 1.4.1 summary once.
 
 1. Open **Settings → Stores & tools** and install Legendary and/or gogdl with
    **Install / update**. Quark verifies the SHA-256 digest published by GitHub

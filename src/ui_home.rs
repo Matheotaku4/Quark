@@ -12,7 +12,7 @@ use crate::theme::{self, Palette};
 use crate::ui_library::{protondb_badge, single_line};
 use crate::widgets::{self, Icon};
 use eframe::egui::{
-    self, Align, Align2, Color32, FontId, Layout, Pos2, Rect, RichText, Sense, Vec2,
+    self, Align, Align2, Color32, FontId, Layout, Pos2, Rect, Sense, Vec2,
 };
 use std::path::PathBuf;
 use std::time::Duration;
