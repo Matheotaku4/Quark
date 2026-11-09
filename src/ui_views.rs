@@ -13,6 +13,14 @@ impl QuarkApp {
     /// pastilles. Les choix se combinent et le panneau reste ouvert tant que le
     /// clic est à l'intérieur.
     pub(crate) fn filter_menu(&mut self, ui: &mut egui::Ui, indent: f32) {
+        ui.add_space(6.0);
+        ui.horizontal(|ui| {
+            ui.add_space(indent);
+            self.filter_menu_inline(ui);
+        });
+    }
+
+    pub(crate) fn filter_menu_inline(&mut self, ui: &mut egui::Ui) {
         let pal = self.pal;
         let tags = self.lib.all_tags();
         let genres = self.lib.all_genres();
@@ -28,10 +36,7 @@ impl QuarkApp {
             format!("{} · {active}", crate::i18n::tr("Filtres"))
         };
 
-        ui.add_space(6.0);
-        ui.horizontal(|ui| {
-            ui.add_space(indent);
-            let response = widgets::ghost_button(ui, &label, &pal, Icon::Filter);
+        let response = widgets::ghost_button(ui, &label, &pal, Icon::Filter);
             egui::Popup::from_toggle_button_response(&response)
                 .close_behavior(egui::PopupCloseBehavior::CloseOnClickOutside)
                 .frame(
@@ -157,7 +162,6 @@ impl QuarkApp {
                             }
                         });
                 });
-        });
 
         if status != self.lib.settings.home_status
             || tag != self.lib.settings.home_tag
@@ -185,10 +189,9 @@ impl QuarkApp {
         ui.add_space(8.0);
         ui.horizontal(|ui| {
             ui.add_space(12.0);
-            ui.label(crate::i18n::rich("VUES").size(10.0).color(pal.text_faint));
             egui::ComboBox::from_id_salt("quark_saved_views")
                 .selected_text(crate::i18n::rich(active).size(11.0))
-                .width(118.0)
+                .width(96.0)
                 .show_ui(ui, |ui| {
                     if views.is_empty() {
                         ui.label(
@@ -222,6 +225,22 @@ impl QuarkApp {
                 self.saved_view_error = None;
                 self.saved_views_open = true;
             }
+
+            // Le tri vit sur la même rangée que les vues : la maquette tient
+            // les commandes de la colonne en deux lignes seulement.
+            let mut sort = self.lib.settings.library_sort;
+            egui::ComboBox::from_id_salt("quark_library_sort")
+                .selected_text(crate::i18n::rich(format!("Tri : {}", sort.label())).size(11.0))
+                .width(100.0)
+                .show_ui(ui, |ui| {
+                    for option in LibrarySort::ALL {
+                        ui.selectable_value(&mut sort, option, option.label());
+                    }
+                });
+            if sort != self.lib.settings.library_sort {
+                self.lib.settings.library_sort = sort;
+                self.touch();
+            }
         });
 
         if self.home {
@@ -234,20 +253,6 @@ impl QuarkApp {
         ui.add_space(4.0);
         ui.horizontal(|ui| {
             ui.add_space(12.0);
-            let mut sort = self.lib.settings.library_sort;
-            egui::ComboBox::from_id_salt("quark_library_sort")
-                .selected_text(crate::i18n::rich(format!("Tri : {}", sort.label())).size(11.0))
-                .width(104.0)
-                .show_ui(ui, |ui| {
-                    for option in LibrarySort::ALL {
-                        ui.selectable_value(&mut sort, option, option.label());
-                    }
-                });
-            if sort != self.lib.settings.library_sort {
-                self.lib.settings.library_sort = sort;
-                self.touch();
-            }
-
             let mut group = self.lib.settings.group_by;
             egui::ComboBox::from_id_salt("quark_library_group")
                 .selected_text(crate::i18n::rich(format!("Grouper : {}", group.label())).size(11.0))
@@ -263,6 +268,8 @@ impl QuarkApp {
                 self.lib.settings.group_by = group;
                 self.touch();
             }
+            ui.add_space(4.0);
+            self.filter_menu_inline(ui);
         });
 
         if let Some(index) = apply {

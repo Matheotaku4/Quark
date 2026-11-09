@@ -1093,7 +1093,7 @@ impl Default for Settings {
             ui_language: UiLanguage::French,
             onboarding_done: false,
             last_seen_version: String::new(),
-            my_games_list: false,
+            my_games_list: true,
             hero_background: false,
             hero_background_blur: 14.0,
             sgdb_api_key: String::new(),

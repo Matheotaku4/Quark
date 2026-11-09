@@ -102,9 +102,7 @@ impl QuarkApp {
                                 ui.set_max_width(
                                     (ui.available_width() - PAGE_MARGIN).max(240.0),
                                 );
-                                ui.add_space(20.0);
-                                store_heading(ui, &pal);
-                                ui.add_space(14.0);
+                                ui.add_space(18.0);
                                 ui.horizontal(|ui| {
                                     let field_width =
                                         (ui.available_width() - 250.0).max(150.0);
@@ -227,7 +225,26 @@ impl QuarkApp {
                                         ui.add_space(14.0);
                                     }
                                     if let Some(hero) = hero_item(&snapshot.sections) {
-                                        hero_card(ui, &pal, &hero, &mut open_item);
+                                        // Comme la maquette : l'offre à la une
+                                        // occupe deux tiers de la largeur, le
+                                        // classement des plus joués le reste.
+                                        let leaders = top_played(&snapshot.sections, 5);
+                                        ui.add_space(16.0);
+                                        ui.horizontal_top(|ui| {
+                                            let side_w = 286.0_f32
+                                                .min((ui.available_width() * 0.30).max(240.0));
+                                            let hero_w = (ui.available_width() - side_w - 16.0)
+                                                .max(320.0);
+                                            ui.vertical(|ui| {
+                                                ui.set_width(hero_w);
+                                                hero_card(ui, &pal, &hero, &mut open_item);
+                                            });
+                                            ui.add_space(16.0);
+                                            ui.vertical(|ui| {
+                                                ui.set_width(side_w);
+                                                top_played_card(ui, &pal, &leaders);
+                                            });
+                                        });
                                         let deals = top_deals(&snapshot.sections, 8);
                                         if !deals.is_empty() {
                                             if jump_to == Some(JUMP_DEALS) {
@@ -276,7 +293,7 @@ impl QuarkApp {
                                         section_heading(
                                             ui,
                                             &pal,
-                                            &section.title.to_uppercase(),
+                                            &section.title,
                                             section_caption(section).as_deref(),
                                             accent_for(&pal, section),
                                         );
@@ -600,36 +617,6 @@ fn search_hit_row(ui: &mut egui::Ui, pal: &Palette, hit: &crate::game_search::Si
     clicked
 }
 
-/// Titre de page avec filet d'accent et une ligne d'explication.
-fn store_heading(ui: &mut egui::Ui, pal: &Palette) {
-    ui.horizontal(|ui| {
-        let (bar, _) = ui.allocate_exact_size(Vec2::new(3.0, 44.0), Sense::hover());
-        ui.painter().rect_filled(bar, 1.5, pal.accent);
-        ui.add_space(10.0);
-        ui.vertical(|ui| {
-            ui.label(
-                crate::i18n::rich("BOUTIQUE STEAM")
-                    .size(11.0)
-                    .strong()
-                    .color(pal.accent),
-            );
-            ui.label(
-                crate::i18n::rich("Découvrir votre prochain jeu")
-                    .size(28.0)
-                    .strong()
-                    .color(pal.text),
-            );
-            ui.label(
-                crate::i18n::rich(
-                    "Catalogue régional Steam · les achats se font sur le site officiel",
-                )
-                .size(12.0)
-                .color(pal.text_dim),
-            );
-        });
-    });
-}
-
 fn widgets_button(ui: &mut egui::Ui, label: &str, pal: &Palette, enabled: bool) -> bool {
     ui.add_enabled(
         enabled,
@@ -690,21 +677,102 @@ fn section_heading(
     pal: &Palette,
     text: &str,
     caption: Option<&str>,
-    accent: Color32,
+    _accent: Color32,
 ) {
-    ui.add_space(24.0);
-    ui.horizontal(|ui| {
-        let (bar, _) = ui.allocate_exact_size(Vec2::new(3.0, 15.0), Sense::hover());
-        ui.painter().rect_filled(bar, 1.5, accent);
-        ui.add_space(8.0);
-        ui.label(crate::i18n::rich(text).size(12.0).strong().color(pal.text));
-    });
+    ui.add_space(26.0);
+    ui.label(crate::i18n::rich(text).size(16.0).strong().color(pal.text));
     if let Some(caption) = caption {
         ui.add_space(2.0);
         ui.label(crate::i18n::rich(caption).size(10.5).color(pal.text_faint));
     }
-    ui.add_space(9.0);
+    ui.add_space(10.0);
 }
+
+/// Les jeux les plus joués du catalogue, pour la carte à droite du héro.
+fn top_played(sections: &[StoreSection], count: usize) -> Vec<StoreItem> {
+    // Toutes sections confondues : un jeu peut être populaire sans figurer
+    // dans la section « Populaires » au moment du cache.
+    let mut items: Vec<StoreItem> = sections
+        .iter()
+        .flat_map(|section| section.items.iter())
+        .cloned()
+        .collect();
+    items.sort_by(|left, right| {
+        right
+            .players_peak
+            .unwrap_or(0)
+            .cmp(&left.players_peak.unwrap_or(0))
+    });
+    let mut seen = std::collections::HashSet::new();
+    items.retain(|item| seen.insert(item.app_id));
+    items.truncate(count);
+    if items.is_empty() {
+        if let Some(section) = sections.first() {
+            items = section.items.iter().take(count).cloned().collect();
+        }
+    }
+    items
+}
+
+fn top_played_card(ui: &mut egui::Ui, pal: &Palette, items: &[StoreItem]) {
+    egui::Frame::new()
+        .fill(pal.surface)
+        .stroke(egui::Stroke::new(1.0_f32, pal.border))
+        .corner_radius(14.0)
+        .inner_margin(14.0)
+        .show(ui, |ui| {
+            ui.set_width(ui.available_width());
+            ui.set_min_height(232.0);
+            ui.label(
+                crate::i18n::rich("LES PLUS JOUÉS")
+                    .size(10.5)
+                    .strong()
+                    .color(pal.text),
+            );
+            ui.add_space(10.0);
+            if items.is_empty() {
+                ui.label(
+                    crate::i18n::rich("Classement indisponible.")
+                        .size(11.0)
+                        .color(pal.text_faint),
+                );
+                return;
+            }
+            for (index, item) in items.iter().enumerate() {
+                ui.horizontal(|ui| {
+                    ui.label(
+                        crate::i18n::rich(format!("{:02}", index + 1))
+                            .size(10.5)
+                            .color(pal.text_faint),
+                    );
+                    ui.add_space(4.0);
+                    ui.add(
+                        egui::Label::new(
+                            crate::i18n::rich(&item.name)
+                                .size(12.0)
+                                .color(pal.text),
+                        )
+                        .truncate(),
+                    );
+                    ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
+                        if let Some(peak) = item.players_peak {
+                            ui.label(
+                                crate::i18n::rich(thousands(peak))
+                                    .size(9.5)
+                                    .color(pal.text_faint),
+                            );
+                        }
+                    });
+                });
+                if index + 1 < items.len() {
+                    ui.add_space(5.0);
+                    ui.separator();
+                    ui.add_space(3.0);
+                }
+            }
+        });
+}
+
 
 /// Première offre en promotion, mise en avant en haut de page.
 fn hero_item(sections: &[StoreSection]) -> Option<StoreItem> {
@@ -755,7 +823,6 @@ fn hero_card(
 ) {
     let width = ui.available_width().min(1100.0);
     let height = (width / 2.6).clamp(210.0, 380.0);
-    ui.add_space(20.0);
     let (rect, response) = ui.allocate_exact_size(Vec2::new(width, height), Sense::click());
     let painter = ui.painter_at(rect);
     let hover = ui.ctx().animate_bool_with_time(

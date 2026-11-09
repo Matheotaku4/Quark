@@ -2929,40 +2929,34 @@ impl QuarkApp {
     fn top_bar(&mut self, ctx: &egui::Context) {
         let pal = self.pal;
         egui::TopBottomPanel::top("quark_topbar")
-            .exact_height(56.0)
+            .exact_height(62.0)
             .frame(
                 egui::Frame::new()
                     .fill(pal.header)
-                    .stroke(Stroke::new(1.0_f32, pal.border)),
+                    .stroke(Stroke::new(1.0_f32, pal.border))
+                    .inner_margin(egui::Margin::symmetric(22, 0)),
             )
             .show(ctx, |ui| {
                 ui.horizontal_centered(|ui| {
-                    ui.add_space(18.0);
-                    let (mark_rect, _) = ui.allocate_exact_size(Vec2::splat(24.0), Sense::hover());
+                    let (mark_rect, _) = ui.allocate_exact_size(Vec2::splat(22.0), Sense::hover());
                     let painter = ui.painter_at(mark_rect);
                     painter.circle_stroke(
                         mark_rect.center(),
-                        8.0,
-                        Stroke::new(2.0_f32, pal.accent),
-                    );
-                    painter.circle_stroke(
-                        mark_rect.center(),
-                        3.0,
-                        Stroke::new(2.0_f32, pal.text_dim),
+                        8.5,
+                        Stroke::new(2.2_f32, pal.accent),
                     );
                     painter.circle_filled(
-                        mark_rect.center() + Vec2::new(7.0, 4.0),
-                        2.5,
-                        pal.accent_hover,
+                        mark_rect.center() + Vec2::new(7.0, 5.0),
+                        2.2,
+                        pal.accent,
                     );
-                    ui.add_space(4.0);
+                    ui.add_space(7.0);
                     ui.label(
                         crate::i18n::rich("QUARK")
-                            .size(16.0)
-                            .strong()
+                            .font(FontId::new(18.0, crate::fonts::bold_family()))
                             .color(pal.text),
                     );
-                    ui.add_space(30.0);
+                    ui.add_space(26.0);
 
                     // L'accueil a son propre onglet : il reste une page de la
                     // bibliothèque (`Tab::Library` + `home`), mais l'utilisateur
@@ -3038,7 +3032,11 @@ impl QuarkApp {
                             );
                         }
                         ui.add_space(6.0);
-                        let palette_clicked = if wide {
+                        // La bibliothèque a déjà son champ de recherche :
+                        // l'icône de palette y faisait doublon.
+                        let palette_clicked = if self.tab == Tab::Library {
+                            false
+                        } else if wide {
                             widgets::pill_button(
                                 ui,
                                 &pal,
@@ -3067,33 +3065,39 @@ impl QuarkApp {
                         // segmenté aux libellés visibles, et un bouton
                         // « Ajouter » explicite à la place de trois icônes.
                         if self.tab == Tab::Library {
-                            ui.add_space(4.0);
-                            if widgets::ghost_button(ui, "Ajouter", &pal, Icon::Plus).clicked() {
+                            if widgets::icon_button(
+                                ui,
+                                34.0,
+                                Icon::Plus,
+                                &pal,
+                                "Ajouter un jeu",
+                            )
+                            .clicked()
+                            {
                                 self.open_add_dialog();
                             }
-                            ui.add_space(8.0);
-                            let current = usize::from(self.lib.settings.view == ViewMode::List);
-                            if let Some(index) = widgets::segmented(
-                                ui,
-                                &pal,
-                                &[(Icon::Grid, "Grille"), (Icon::List, "Liste")],
-                                current,
-                            ) {
-                                self.set_view(if index == 0 {
-                                    ViewMode::Grid
-                                } else {
+                            ui.add_space(4.0);
+                            let (icon, tip) = if self.lib.settings.view == ViewMode::Grid {
+                                (Icon::List, "Passer en liste")
+                            } else {
+                                (Icon::Grid, "Passer en grille")
+                            };
+                            if widgets::icon_button(ui, 34.0, icon, &pal, tip).clicked() {
+                                self.set_view(if self.lib.settings.view == ViewMode::Grid {
                                     ViewMode::List
+                                } else {
+                                    ViewMode::Grid
                                 });
                             }
-                            ui.add_space(6.0);
+                            ui.add_space(10.0);
                         }
                         if self.tab == Tab::Library {
                             // La recherche cède de la place quand la fenêtre est
                             // étroite (1024 px minimum) au lieu de chevaucher
                             // les onglets.
-                            let search_width = (ui.available_width() - 12.0).clamp(120.0, 260.0);
+                            let search_width = (ui.available_width() - 12.0).clamp(180.0, 320.0);
                             ui.add_sized(
-                                Vec2::new(search_width, 30.0),
+                                Vec2::new(search_width, 38.0),
                                 egui::TextEdit::singleline(&mut self.filter)
                                     .id(egui::Id::new("quark_filter"))
                                     .hint_text(crate::i18n::tr(

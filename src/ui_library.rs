@@ -3,7 +3,7 @@
 use crate::app::{NewsState, QuarkApp};
 use crate::config::{self, AssetKind, Game, GameStatus, ViewMode};
 use crate::images::{
-    draw_cover, draw_fit_left, hero_placeholder, rounded_cover, rounded_cover_tinted,
+    draw_cover, hero_placeholder, rounded_cover, rounded_cover_tinted,
 };
 use crate::news;
 use crate::proton::{self, LaunchKind};
@@ -27,7 +27,9 @@ impl QuarkApp {
         // Vue grille : **seulement** la grille. La fiche du jeu s'ouvre en
         // surimpression, avec sa croix, et se ferme d'un clic à côté.
         let grid_only = view == ViewMode::Grid;
-        if !grid_only {
+        // L'accueil est une page pleine largeur : la colonne de gauche
+        // n'apparaît que dans la bibliothèque elle-même.
+        if !grid_only && !self.home {
             egui::SidePanel::left("quark_library_list")
                 .exact_width(292.0)
                 .resizable(false)
@@ -336,7 +338,25 @@ impl QuarkApp {
 
         // « Accueil » ouvre la liste, comme dans Steam : une vraie ligne, sur la
         // même grille que les jeux, avec le « + » d'ajout à droite.
-        ui.add_space(8.0);
+        ui.add_space(14.0);
+        ui.horizontal(|ui| {
+            ui.add_space(16.0);
+            ui.label(
+                crate::i18n::rich("Bibliothèque")
+                    .font(egui::FontId::new(20.0, crate::fonts::bold_family()))
+                    .color(pal.text),
+            );
+            ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
+                ui.add_space(16.0);
+                let count = if ids.len() == total {
+                    format!("{total} jeu{}", if total > 1 { "x" } else { "" })
+                } else {
+                    format!("{} / {total} jeux", ids.len())
+                };
+                ui.label(crate::i18n::rich(count).size(11.0).color(pal.text_faint));
+            });
+        });
+        ui.add_space(10.0);
         let (home_clicked, add_clicked) = widgets::home_row(ui, self.home, &pal);
         if home_clicked {
             self.home = true;
@@ -346,17 +366,7 @@ impl QuarkApp {
         }
 
         ui.add_space(6.0);
-        if marked_count == 0 {
-            ui.horizontal(|ui| {
-                ui.add_space(16.0);
-                let count = if ids.len() == total {
-                    format!("{total} jeu{}", if total > 1 { "x" } else { "" })
-                } else {
-                    format!("{} / {total} jeux", ids.len())
-                };
-                ui.label(crate::i18n::rich(count).size(11.0).color(pal.text_faint));
-            });
-        } else {
+        if marked_count > 0 {
             // Barre de sélection : supprimer plusieurs jeux d'un coup.
             ui.horizontal(|ui| {
                 ui.add_space(16.0);
@@ -383,11 +393,6 @@ impl QuarkApp {
             });
         }
         self.library_view_bar(ui);
-        // Sur l'accueil, le menu est déjà affiché au-dessus de la grille :
-        // éviter un second bouton identique dans la colonne de gauche.
-        if !self.home {
-            self.filter_menu(ui, 12.0);
-        }
         ui.add_space(8.0);
 
         let age = self.page_at.elapsed().as_secs_f32();
@@ -584,7 +589,7 @@ impl QuarkApp {
         let selected = self.selected.as_deref() == Some(id);
         let marked = self.is_marked(id);
         let running = self.is_running(id);
-        let row_pal = pal.with_accent(self.game_accent(&game));
+        let row_pal = pal;
         let ps2_progress = self.ps2_progress(&game);
         let response = game_row(
             ui,
@@ -643,8 +648,9 @@ impl QuarkApp {
             self.empty_state(ui);
             return;
         };
-        // Le jeu impose sa couleur : bouton Jouer, liserés, ligne sélectionnée.
-        let pal = self.pal.with_accent(self.game_accent(&game));
+        // Le chrome garde l'accent du thème (bleu de la maquette) ; la
+        // couleur de jaquette reste réservée aux vignettes.
+        let pal = self.pal;
         let ps2_progress = self.ps2_progress(&game);
 
         let settings = self.lib.settings.clone();
@@ -941,6 +947,50 @@ impl QuarkApp {
                             },
                         );
 
+                        // Jaquette verticale à droite de la bannière : elle
+                        // donne un repère au jeu et reprend la composition de
+                        // la maquette (bannière + affiche).
+                        let cover_w = (hero.width() * 0.16).clamp(120.0, 190.0);
+                        let cover_h = cover_w * 1.34;
+                        let cover_rect = Rect::from_min_size(
+                            Pos2::new(hero.right() - 32.0 - cover_w, hero.top() + 58.0),
+                            Vec2::new(cover_w, cover_h),
+                        );
+                        painter.rect_filled(
+                            cover_rect.expand(5.0),
+                            14.0,
+                            Color32::from_black_alpha(90),
+                        );
+                        if let Some(texture) = game
+                            .artwork
+                            .get(AssetKind::Cover)
+                            .filter(|path| path.exists())
+                            .and_then(|path| self.texture(ui.ctx(), path))
+                        {
+                            rounded_cover_tinted(
+                                ui,
+                                cover_rect,
+                                &texture,
+                                12.0,
+                                Color32::WHITE,
+                            );
+                            painter.rect_stroke(
+                                cover_rect,
+                                12.0,
+                                egui::Stroke::new(1.0_f32, Color32::from_white_alpha(38)),
+                                egui::StrokeKind::Inside,
+                            );
+                        } else {
+                            painter.rect_filled(cover_rect, 12.0, Color32::from_black_alpha(150));
+                            hero_placeholder(
+                                &painter,
+                                cover_rect,
+                                &game.monogram_letter(),
+                                pal.accent,
+                                0.0,
+                            );
+                        }
+
                         // Logo (ou titre) au-dessus du bouton Jouer.
                         let row_height = 44.0;
                         let row_y = hero.bottom() - 26.0 - row_height;
@@ -951,27 +1001,16 @@ impl QuarkApp {
                             ),
                             Vec2::new((width * 0.55).min(540.0), 86.0),
                         );
-                        let logo_path = game
-                            .artwork
-                            .get(AssetKind::Logo)
-                            .filter(|p| p.exists())
-                            .cloned();
-                        match logo_path {
-                            Some(logo) => {
-                                if let Some(texture) = self.texture(ui.ctx(), &logo) {
-                                    draw_fit_left(ui, &texture, logo_rect);
-                                }
-                            }
-                            None => {
-                                painter.text(
-                                    Pos2::new(hero.left() + 34.0, logo_rect.bottom()),
-                                    Align2::LEFT_BOTTOM,
-                                    &game.name,
-                                    FontId::proportional(34.0),
-                                    pal.text,
-                                );
-                            }
-                        }
+                        // Le titre est toujours du texte : un logo détouré
+                        // manquant laissait un grand vide blanc dans la
+                        // bannière, et la maquette place le nom en clair.
+                        painter.text(
+                            Pos2::new(hero.left() + 34.0, logo_rect.bottom()),
+                            Align2::LEFT_BOTTOM,
+                            &game.name,
+                            FontId::new(34.0, crate::fonts::bold_family()),
+                            pal.text,
+                        );
 
                         // Bouton Jouer + temps de jeu (comme Steam).
                         let (label, icon) = if is_running {
@@ -988,11 +1027,10 @@ impl QuarkApp {
                                 .max_rect(play_area)
                                 .layout(Layout::left_to_right(Align::Center)),
                             |ui| {
-                                play_clicked = widgets::accent_button(
+                                play_clicked = widgets::gold_button(
                                     ui,
                                     Vec2::new(176.0, row_height),
                                     label,
-                                    &pal,
                                     true,
                                     icon,
                                 )
@@ -1171,7 +1209,7 @@ impl QuarkApp {
                 ui.add_space(18.0);
                 ui.horizontal(|ui| {
                     ui.add_space(23.0);
-                    if widgets::tab(
+                    if widgets::detail_tab(
                         ui,
                         "Actualités",
                         self.detail_tab == crate::app::DetailTab::News,
@@ -1182,7 +1220,7 @@ impl QuarkApp {
                         self.detail_tab = crate::app::DetailTab::News;
                     }
                     ui.add_space(2.0);
-                    if widgets::tab(
+                    if widgets::detail_tab(
                         ui,
                         "Succès",
                         self.detail_tab == crate::app::DetailTab::Achievements,
@@ -1193,7 +1231,7 @@ impl QuarkApp {
                         self.detail_tab = crate::app::DetailTab::Achievements;
                     }
                     ui.add_space(2.0);
-                    if widgets::tab(
+                    if widgets::detail_tab(
                         ui,
                         "Historique",
                         self.detail_tab == crate::app::DetailTab::History,

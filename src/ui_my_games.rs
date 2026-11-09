@@ -81,29 +81,15 @@ impl QuarkApp {
                                 ui.set_max_width((ui.available_width() - 28.0).max(240.0));
                                 ui.add_space(24.0);
                                 ui.horizontal(|ui| {
-                                    ui.vertical(|ui| {
-                                        ui.label(
-                                            crate::i18n::rich("MES JEUX")
-                                                .size(11.0)
-                                                .strong()
-                                                .color(pal.accent),
-                                        );
-                                        ui.label(
-                                            crate::i18n::rich("Vos bibliothèques réunies")
-                                                .size(26.0)
-                                                .strong()
-                                                .color(pal.text),
-                                        );
-                                        ui.label(
-                                            crate::i18n::rich(if busy {
-                                                "Synchronisation en cours…"
-                                            } else {
-                                                "Synchronisées au démarrage · installations locales détectées"
-                                            })
-                                            .size(12.0)
-                                            .color(pal.text_dim),
-                                        );
-                                    });
+                                    ui.label(
+                                        crate::i18n::rich("MES JEUX")
+                                            .size(11.0)
+                                            .strong()
+                                            .color(pal.accent),
+                                    );
+                                    if busy {
+                                        ui.add(egui::Spinner::new().size(11.0));
+                                    }
                                     ui.with_layout(
                                         Layout::right_to_left(Align::Center),
                                         |ui| {
@@ -208,11 +194,19 @@ impl QuarkApp {
                                 }
                                 ui.add_space(10.0);
 
-                                self.provider_install_panel(ui, &pal);
-                                self.ps2_ra_panel(ui, &pal, &ps2_games);
                                 let needle = self.my_games_query.trim().to_string();
                                 let games = visible_games(&all_games, selected, &needle);
-                                if games.is_empty() {
+                                // Deux colonnes : la bibliothèque à gauche,
+                                // les transferts et RetroAchievements à droite,
+                                // comme la colonne d'activité de la maquette.
+                                ui.horizontal_top(|ui| {
+                                    let side_w = 330.0_f32
+                                        .min((ui.available_width() * 0.32).max(280.0));
+                                    let main_w =
+                                        (ui.available_width() - side_w - 18.0).max(320.0);
+                                    ui.vertical(|ui| {
+                                        ui.set_width(main_w);
+                                        if games.is_empty() {
                                     ui.add_space(20.0);
                                     ui.label(
                                         crate::i18n::rich(if needle.is_empty() {
@@ -274,7 +268,15 @@ impl QuarkApp {
                                         &mut remove_save_folder,
                                     );
                                     }
-                                }
+                                        }
+                                    });
+                                    ui.add_space(18.0);
+                                    ui.vertical(|ui| {
+                                        ui.set_width(side_w);
+                                        self.provider_install_panel(ui, &pal);
+                                        self.ps2_ra_panel(ui, &pal, &ps2_games);
+                                    });
+                                });
                                 ui.add_space(16.0);
                                 for candidate in
                                     crate::providers::operations::match_candidates(&all_games)
@@ -783,6 +785,10 @@ impl QuarkApp {
                     ui.set_width(ui.available_width());
                     ui.horizontal(|ui| {
                         ui.vertical(|ui| {
+                            // Laisse la place au bouton « Annuler » : sans
+                            // cette limite, le détail du transfert passait
+                            // dessous et les deux textes se superposaient.
+                            ui.set_max_width((ui.available_width() - 74.0).max(140.0));
                             ui.label(
                                 crate::i18n::rich(format!(
                                     "Installation {} · {title}",

@@ -104,17 +104,17 @@ pub fn palette(mode: ThemeMode) -> Palette {
         ThemeMode::Amoled => Palette {
             bg: rgb(0, 0, 0),
             panel: rgb(0x05, 0x05, 0x05),
-            surface: rgb(0x11, 0x11, 0x11),
-            surface_hover: rgb(0x1C, 0x1C, 0x1C),
-            border: rgb(0x1E, 0x1E, 0x1E),
-            row_selected: rgb(0x14, 0x22, 0x2E),
-            text: rgb(0xE8, 0xE8, 0xE8),
-            text_dim: rgb(0x9A, 0xA0, 0xA6),
-            text_faint: rgb(0x78, 0x7E, 0x84),
-            accent: rgb(0x1A, 0x9F, 0xFF),
-            accent_hover: rgb(0x3F, 0xB0, 0xFF),
-            accent_pressed: rgb(0x0F, 0x7F, 0xD0),
-            danger: rgb(0xD9, 0x41, 0x41),
+            surface: rgb(0x0D, 0x0D, 0x0D),
+            surface_hover: rgb(0x17, 0x17, 0x17),
+            border: rgb(0x26, 0x26, 0x26),
+            row_selected: rgb(0x16, 0x16, 0x16),
+            text: rgb(0xF5, 0xF5, 0xF5),
+            text_dim: rgb(0xA8, 0xA8, 0xA8),
+            text_faint: rgb(0x8A, 0x8A, 0x8A),
+            accent: rgb(0x2E, 0x9B, 0xFF),
+            accent_hover: rgb(0x5C, 0xB4, 0xFF),
+            accent_pressed: rgb(0x1B, 0x7F, 0xD8),
+            danger: rgb(0xFF, 0x5C, 0x5C),
             header: rgb(0, 0, 0),
         },
         ThemeMode::Graphite => Palette {
@@ -340,36 +340,35 @@ pub fn apply(ctx: &egui::Context, mode: ThemeMode) {
     widgets.inactive.bg_fill = p.surface;
     widgets.inactive.weak_bg_fill = p.surface;
     widgets.inactive.bg_stroke = Stroke::new(1.0_f32, p.border);
-    widgets.inactive.fg_stroke = Stroke::new(1.0_f32, p.text);
-    widgets.inactive.expansion = 0.0;
-    widgets.inactive.corner_radius = egui::CornerRadius::same(4);
+    widgets.inactive.fg_stroke = Stroke::new(1.0_f32, p.text);            widgets.inactive.expansion = 0.0;
+    widgets.inactive.corner_radius = egui::CornerRadius::same(8);
 
     widgets.hovered.bg_fill = p.surface_hover;
     widgets.hovered.weak_bg_fill = p.surface_hover;
     widgets.hovered.bg_stroke = Stroke::new(1.0_f32, p.accent.gamma_multiply(0.6));
     widgets.hovered.fg_stroke = Stroke::new(1.0_f32, p.text);
     widgets.hovered.expansion = 0.0;
-    widgets.hovered.corner_radius = egui::CornerRadius::same(4);
+    widgets.hovered.corner_radius = egui::CornerRadius::same(8);
 
     widgets.active.bg_fill = p.accent_pressed;
     widgets.active.weak_bg_fill = p.accent_pressed;
     widgets.active.bg_stroke = Stroke::new(1.0_f32, p.accent);
     widgets.active.fg_stroke = Stroke::new(1.0_f32, Color32::WHITE);
     widgets.active.expansion = 0.0;
-    widgets.active.corner_radius = egui::CornerRadius::same(4);
+    widgets.active.corner_radius = egui::CornerRadius::same(8);
 
     widgets.open.bg_fill = p.surface_hover;
     widgets.open.weak_bg_fill = p.surface_hover;
     widgets.open.bg_stroke = Stroke::new(1.0_f32, p.border);
     widgets.open.fg_stroke = Stroke::new(1.0_f32, p.text);
     widgets.open.expansion = 0.0;
-    widgets.open.corner_radius = egui::CornerRadius::same(4);
+    widgets.open.corner_radius = egui::CornerRadius::same(8);
 
     style.visuals = v;
     style.text_styles = [
         (
             egui::TextStyle::Heading,
-            FontId::new(20.0, FontFamily::Proportional),
+            FontId::new(22.0, FontFamily::Proportional),
         ),
         (
             egui::TextStyle::Body,
@@ -389,9 +388,9 @@ pub fn apply(ctx: &egui::Context, mode: ThemeMode) {
         ),
     ]
     .into();
-    style.spacing.item_spacing = Vec2::new(8.0, 6.0);
-    style.spacing.button_padding = Vec2::new(10.0, 5.0);
-    style.spacing.scroll.bar_width = 8.0;
+    style.spacing.item_spacing = Vec2::new(8.0, 7.0);
+    style.spacing.button_padding = Vec2::new(12.0, 6.0);
+    style.spacing.scroll.bar_width = 10.0;
     // Transitions courtes : assez visibles pour être agréables, assez rapides
     // pour ne jamais retarder un clic. Les animations d'egui n'entretiennent un
     // repaint que tant qu'elles bougent, donc aucun coût au repos.
@@ -400,13 +399,20 @@ pub fn apply(ctx: &egui::Context, mode: ThemeMode) {
     ctx.set_style(style);
 }
 
-/// Hauteur de bannière : plus haute que le 3.1:1 des `library_hero` de Steam,
-/// pour laisser respirer le logo, le bouton et les actualités.
+/// Hauteur de bannière : une bande panoramique qui laisse respirer le titre et
+/// l'action principale sans repousser les actualités hors de l'écran.
 pub fn hero_height(width: f32) -> f32 {
-    (width / 2.7).clamp(230.0, 520.0)
+    (width / 2.75).clamp(260.0, 430.0)
 }
 
-pub const COVER_RATIO: f32 = 1.5; // 600x900 comme Steam
+/// Jaune des actions principales (Continuer, Voir dans le navigateur).
+pub const GOLD: Color32 = rgb(0xFF, 0xD2, 0x3F);
+/// Vert des statuts « En cours » et des jauges de progression positives.
+pub const SUCCESS: Color32 = rgb(0x35, 0xC7, 0x59);
+
+/// Les jaquettes de la nouvelle interface sont un peu moins hautes que les
+/// 600x900 de Steam : les grilles respirent et les titres restent visibles.
+pub const COVER_RATIO: f32 = 1.35;
 
 /// Couleurs de secours des jeux sans icône. Une par jeu, choisie de façon
 /// stable : le même titre donne toujours la même couleur.

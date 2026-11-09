@@ -187,6 +187,7 @@ pub fn run(opts: &SnapshotOptions) -> Result<(), String> {
         };
         app.store_offline_mode = true;
         if opts.providers_demo {
+            app.lib.settings.my_games_list = true;
             app.lib.provider_library.games = vec![
                 crate::providers::ProviderGame {
                     key: crate::providers::ProviderGameKey {
@@ -399,10 +400,9 @@ pub fn run(opts: &SnapshotOptions) -> Result<(), String> {
         );
         app.store_recommendations = recommendations;
         app.store_recommendation_source = source;
-        app.store_search_results = Some(vec![
-            crate::steam_store::StoreItem { app_id: 620, name: "Portal 2".into(), price: Some(crate::steam_store::StorePrice { currency: "EUR".into(), initial: 1999, final_price: 499, discount_percent: Some(75) }), artwork_url: Some("https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/620/header.jpg".into()), store_url: "https://store.steampowered.com/app/620".into(), linux_available: Some(true), players_peak: None },
-            crate::steam_store::StoreItem { app_id: 400, name: "Portal".into(), price: Some(crate::steam_store::StorePrice { currency: "EUR".into(), initial: 999, final_price: 199, discount_percent: Some(80) }), artwork_url: Some("https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/400/header.jpg".into()), store_url: "https://store.steampowered.com/app/400".into(), linux_available: Some(true), players_peak: None },
-        ]);
+        // La démo ouvre la Boutique sur le catalogue : des résultats de
+        // recherche préremplis repousseraient le héro hors de l'écran.
+        app.store_search_results = None;
         // Note ProtonDB factice pour le jeu de démonstration (aucun réseau).
         app.protondb.insert(
             292_030,

@@ -6,10 +6,10 @@
 
 use crate::app::QuarkApp;
 use crate::config::{self, AssetKind, HomeSort};
-use crate::images::{self, draw_cover, draw_fit_left};
+use crate::images::{self, draw_cover};
 use crate::proton::{self, LaunchKind};
 use crate::theme::{self, Palette};
-use crate::ui_library::{protondb_badge, single_line};
+use crate::ui_library::protondb_badge;
 use crate::widgets::{self, Icon};
 use eframe::egui::{
     self, Align, Align2, Color32, FontId, Layout, Pos2, Rect, Sense, Vec2,
@@ -20,11 +20,11 @@ use std::time::Duration;
 /// Durée du glissement d'une vignette du carrousel.
 const SLIDE_SECS: f32 = 0.34;
 /// Rayon des coins du carrousel.
-const CAROUSEL_RADIUS: f32 = 16.0;
+const CAROUSEL_RADIUS: f32 = 20.0;
 /// Rayon des coins des vignettes de la grille.
-const TILE_RADIUS: f32 = 10.0;
+const TILE_RADIUS: f32 = 14.0;
 /// Marge latérale de la page.
-const PADDING: f32 = 26.0;
+const PADDING: f32 = 24.0;
 
 impl QuarkApp {
     pub(crate) fn home_pane(&mut self, ui: &mut egui::Ui) {
@@ -155,7 +155,7 @@ impl QuarkApp {
             0.0
         };
         let width = (ui.available_width() - PADDING * 2.0).max(320.0);
-        let height = (width / 2.7).clamp(240.0, 410.0);
+        let height = (width / 4.2).clamp(220.0, 340.0);
 
         // Progression du glissement : l'instant du changement est posé par
         // `show_slide`, puis chaque image demandée avance l'animation. Au repos,
@@ -173,26 +173,16 @@ impl QuarkApp {
         let Some(game) = self.lib.get(&id).cloned() else {
             return;
         };
-        let pal = base.with_accent(self.game_accent(&game));
+        let pal = base;
 
         let hero_path = game
             .artwork
             .get(AssetKind::Hero)
             .filter(|path| path.exists())
             .cloned();
-        let hero_light = hero_path
-            .as_ref()
-            .map(|path| self.is_light_image(path))
-            .unwrap_or(false);
         let hero_tex = hero_path
             .as_ref()
             .and_then(|path| self.texture(ui.ctx(), path));
-        let logo_tex = game
-            .artwork
-            .get(AssetKind::Logo)
-            .filter(|path| path.exists())
-            .cloned()
-            .and_then(|path| self.texture(ui.ctx(), &path));
 
         let settings = self.lib.settings.clone();
         let native = proton::resolve(&game, &settings, &self.runtimes)
@@ -202,8 +192,6 @@ impl QuarkApp {
         let running_secs = self.running_since(&id);
 
         let mut continue_clicked = false;
-        let mut prev_clicked = false;
-        let mut next_clicked = false;
         let mut goto: Option<usize> = None;
         let mut open_game = false;
         let mut open_protondb = false;
@@ -285,122 +273,65 @@ impl QuarkApp {
                         },
                     );
 
-                    // Logo (ou titre) juste au-dessus du bouton.
-                    let row_height = 42.0;
-                    let row_y = hero.bottom() - 26.0 - row_height;
-                    let logo_rect = Rect::from_min_size(
-                        Pos2::new(
-                            hero.left() + 30.0,
-                            (row_y - 12.0 - 74.0).max(hero.top() + 52.0) + slide,
-                        ),
-                        Vec2::new((width * 0.52).min(520.0), 74.0),
+                    // Titre, information de jeu puis action principale : la
+                    // pile est ancrée en bas à gauche de la bannière.
+                    let button_h = 44.0;
+                    let button_y = hero.bottom() - 24.0 - button_h;
+                    let meta_y = button_y - 26.0;
+                    let title_bottom = meta_y - 16.0;
+                    painter.text(
+                        Pos2::new(hero.left() + 26.0, title_bottom + slide),
+                        Align2::LEFT_BOTTOM,
+                        &game.name,
+                        FontId::new(34.0, crate::fonts::bold_family()),
+                        pal.text.gamma_multiply(ease.max(0.15)),
                     );
-                    match &logo_tex {
-                        Some(texture) => draw_fit_left(ui, texture, logo_rect),
-                        None => {
-                            painter.text(
-                                Pos2::new(hero.left() + 32.0, logo_rect.bottom() + slide),
-                                Align2::LEFT_BOTTOM,
-                                &game.name,
-                                FontId::proportional(32.0),
-                                pal.text.gamma_multiply(ease),
-                            );
-                        }
-                    }
-
-                    // Continuer, puis le temps de jeu et la dernière session.
-                    let row_rect = Rect::from_min_size(
-                        Pos2::new(hero.left() + 30.0, row_y),
-                        Vec2::new(hero.width() - 60.0, row_height),
-                    );
-                    ui.scope_builder(
-                        egui::UiBuilder::new()
-                            .max_rect(row_rect)
-                            .layout(Layout::left_to_right(Align::Center)),
-                        |ui| {
-                            let (label, icon) = if running {
-                                ("Arr\u{ea}ter", Icon::Stop)
-                            } else {
-                                ("Continuer", Icon::Play)
-                            };
-                            continue_clicked = widgets::accent_button(
-                                ui,
-                                Vec2::new(160.0, row_height),
-                                label,
-                                &pal,
-                                true,
-                                icon,
+                    let playtime = if running {
+                        if crate::i18n::is_english() {
+                            format!(
+                                "In game for {}",
+                                config::human_playtime(running_secs.max(1))
                             )
-                            .clicked();
-                            ui.add_space(18.0);
-                            let playtime = if running {
-                                if crate::i18n::is_english() {
-                                    format!(
-                                        "In game for {}",
-                                        config::human_playtime(running_secs.max(1))
-                                    )
-                                } else {
-                                    format!(
-                                        "En jeu depuis {}",
-                                        config::human_playtime(running_secs.max(1))
-                                    )
-                                }
-                            } else if crate::i18n::is_english() {
-                                format!("{} played", game.playtime_label())
-                            } else {
-                                format!("{} de jeu", game.playtime_label())
-                            };
-                            ui.label(
-                                crate::i18n::rich(playtime)
-                                    .size(13.0)
-                                    .color(pal.text_dim.gamma_multiply(ease)),
-                            );
-                            if game.last_played.is_some() {
-                                ui.add_space(14.0);
-                                ui.label(
-                                    crate::i18n::rich(if crate::i18n::is_english() {
-                                        format!("\u{b7}  last played {}", game.last_played_label())
-                                    } else {
-                                        format!("\u{b7}  jou\u{e9} {}", game.last_played_label())
-                                    })
-                                    .size(12.5)
-                                    .color(pal.text_faint.gamma_multiply(ease)),
-                                );
-                            }
-                        },
+                        } else {
+                            format!(
+                                "En jeu depuis {}",
+                                config::human_playtime(running_secs.max(1))
+                            )
+                        }
+                    } else if crate::i18n::is_english() {
+                        format!("{} played", game.playtime_label())
+                    } else {
+                        format!("{} de jeu", game.playtime_label())
+                    };
+                    let meta_line = if game.last_played.is_some() {
+                        if crate::i18n::is_english() {
+                            format!("{playtime}  \u{b7}  last played {}", game.last_played_label())
+                        } else {
+                            format!("{playtime}  \u{b7}  jou\u{e9} {}", game.last_played_label())
+                        }
+                    } else {
+                        playtime
+                    };
+                    painter.text(
+                        Pos2::new(hero.left() + 26.0, meta_y + slide),
+                        Align2::LEFT_CENTER,
+                        &meta_line,
+                        FontId::proportional(13.0),
+                        pal.text_dim.gamma_multiply(ease.max(0.15)),
                     );
-
-                    // Flèches, au bord de la carte.
-                    let nav_y = hero.center().y - 17.0;
-                    let left_rect = Rect::from_min_size(
-                        Pos2::new(hero.left() + 12.0, nav_y),
-                        Vec2::splat(34.0),
+                    let button_rect = Rect::from_min_size(
+                        Pos2::new(hero.left() + 26.0, button_y),
+                        Vec2::new(168.0, button_h),
                     );
-                    ui.scope_builder(egui::UiBuilder::new().max_rect(left_rect), |ui| {
-                        prev_clicked = widgets::floating_icon_button(
-                            ui,
-                            34.0,
-                            Icon::ArrowLeft,
-                            &pal,
-                            "Jeu précédent",
-                            hero_light,
-                        )
-                        .clicked();
-                    });
-                    let right_rect = Rect::from_min_size(
-                        Pos2::new(hero.right() - 46.0, nav_y),
-                        Vec2::splat(34.0),
-                    );
-                    ui.scope_builder(egui::UiBuilder::new().max_rect(right_rect), |ui| {
-                        next_clicked = widgets::floating_icon_button(
-                            ui,
-                            34.0,
-                            Icon::ArrowRight,
-                            &pal,
-                            "Jeu suivant",
-                            hero_light,
-                        )
-                        .clicked();
+                    ui.scope_builder(egui::UiBuilder::new().max_rect(button_rect), |ui| {
+                        let (label, icon) = if running {
+                            ("Arr\u{ea}ter", Icon::Stop)
+                        } else {
+                            ("Continuer", Icon::Play)
+                        };
+                        continue_clicked =
+                            widgets::gold_button(ui, Vec2::new(168.0, button_h), label, true, icon)
+                                .clicked();
                     });
 
                     // Pastilles de position, en bas à droite.
@@ -417,22 +348,23 @@ impl QuarkApp {
                             |ui| {
                                 for index in 0..recent.len() {
                                     let active = index == self.carousel;
-                                    let (dot, response) =
-                                        ui.allocate_exact_size(Vec2::splat(10.0), Sense::click());
-                                    let radius = if active { 4.0 } else { 3.0 };
-                                    ui.painter().circle_filled(
-                                        dot.center(),
-                                        radius,
-                                        if active {
-                                            pal.text
-                                        } else {
-                                            pal.text_faint.gamma_multiply(0.9)
-                                        },
+                                    let (dot, response) = ui.allocate_exact_size(
+                                        Vec2::new(if active { 24.0 } else { 10.0 }, 10.0),
+                                        Sense::click(),
                                     );
+                                    if active {
+                                        ui.painter().rect_filled(dot, 3.0, pal.text);
+                                    } else {
+                                        ui.painter().circle_filled(
+                                            dot.center(),
+                                            3.0,
+                                            pal.text_faint.gamma_multiply(0.9),
+                                        );
+                                    }
                                     if response.clicked() {
                                         goto = Some(index);
                                     }
-                                    ui.add_space(6.0);
+                                    ui.add_space(4.0);
                                 }
                             },
                         );
@@ -447,14 +379,6 @@ impl QuarkApp {
             } else {
                 self.launch(ui.ctx(), &id);
             }
-        }
-        if prev_clicked {
-            let len = recent.len();
-            self.show_slide((self.carousel + len - 1) % len, len);
-        }
-        if next_clicked {
-            let len = recent.len();
-            self.show_slide((self.carousel + 1) % len, len);
         }
         if let Some(index) = goto {
             self.show_slide(index, recent.len());
@@ -487,7 +411,6 @@ impl QuarkApp {
         let sort = self.lib.settings.home_sort;
         let mut new_sort: Option<HomeSort> = None;
 
-        self.filter_menu(ui, PADDING);
         ui.add_space(10.0);
         ui.horizontal(|ui| {
             ui.add_space(PADDING);
@@ -496,8 +419,7 @@ impl QuarkApp {
             // petites capitales grises.
             ui.label(
                 crate::i18n::rich("Toute la bibliothèque")
-                    .size(18.0)
-                    .strong()
+                    .font(FontId::new(21.0, crate::fonts::bold_family()))
                     .color(pal.text),
             );
             ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
@@ -508,6 +430,7 @@ impl QuarkApp {
                     }
                     ui.add_space(6.0);
                 }
+                self.filter_menu_inline(ui);
             });
         });
         ui.add_space(14.0);
@@ -534,13 +457,13 @@ impl QuarkApp {
             .collect();
 
         let available = (ui.available_width() - PADDING * 2.0).max(240.0);
-        let gap = 14.0;
-        let columns = ((available + gap) / 154.0).floor().clamp(2.0, 7.0) as usize;
+        let gap = 18.0;
+        let columns = ((available + gap) / 176.0).floor().clamp(2.0, 6.0) as usize;
         let tile_w = ((available - gap * (columns as f32 - 1.0)) / columns as f32)
             .floor()
-            .max(96.0);
+            .max(110.0);
         let cover_h = tile_w * theme::COVER_RATIO;
-        let row_h = cover_h + 40.0;
+        let row_h = cover_h + 46.0;
 
         // Entrée en cascade : chaque tuile apparaît un peu après la précédente.
         // Une fois l'animation finie, plus aucune image n'est demandée.
@@ -582,7 +505,7 @@ impl QuarkApp {
                     );
                     let cover = Rect::from_min_size(tile.min, Vec2::new(tile_w, cover_h))
                         .shrink(2.0 * anim);
-                    painter.rect_filled(tile, TILE_RADIUS, pal.surface);
+                    painter.rect_filled(cover, TILE_RADIUS, pal.surface);
                     match covers.get(index + slot).and_then(|cover| cover.as_ref()) {
                         Some(texture) => {
                             images::rounded_cover_tinted(
@@ -615,7 +538,19 @@ impl QuarkApp {
                     }
                     let title_color =
                         theme::lerp_color(pal.text_dim, pal.text, anim).gamma_multiply(appear);
-                    let job = single_line(&game.name, 13.0, title_color, tile_w);
+                    let mut job = egui::text::LayoutJob::default();
+                    job.wrap.max_rows = 1;
+                    job.wrap.overflow_character = Some('\u{2026}');
+                    job.wrap.max_width = tile_w;
+                    job.append(
+                        &game.name,
+                        0.0,
+                        egui::TextFormat {
+                            font_id: FontId::new(14.0, crate::fonts::bold_family()),
+                            color: title_color,
+                            ..Default::default()
+                        },
+                    );
                     let galley = painter.layout_job(job);
                     painter.galley(
                         Pos2::new(tile.left(), cover.bottom() + 7.0),
@@ -630,7 +565,7 @@ impl QuarkApp {
                         } else {
                             game.playtime_label()
                         },
-                        FontId::proportional(11.5),
+                        FontId::proportional(12.0),
                         pal.text_dim.gamma_multiply(appear),
                     );
                     if game.exe_missing() {
@@ -702,8 +637,8 @@ fn sort_chip(ui: &mut egui::Ui, label: &str, selected: bool, pal: &Palette) -> b
                 1.0_f32,
                 if selected { pal.accent } else { pal.border },
             ))
-            .corner_radius(14.0)
-            .min_size(Vec2::new(0.0, 28.0)),
+            .corner_radius(16.0)
+            .min_size(Vec2::new(0.0, 30.0)),
     )
     .clicked()
 }

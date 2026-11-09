@@ -616,7 +616,9 @@ impl QuarkApp {
                         ui.horizontal(|ui| {
                             ui.vertical(|ui| {
                                 ui.label(
-                                    crate::i18n::rich("Paramètres").size(22.0).color(pal.text),
+                                    crate::i18n::rich("Paramètres")
+                                        .font(FontId::new(22.0, crate::fonts::bold_family()))
+                                        .color(pal.text),
                                 );
                                 ui.label(
                                     crate::i18n::rich(
@@ -652,7 +654,7 @@ impl QuarkApp {
                                 ui.add_space(4.0);
                                 for (tab, label) in SettingsTab::ALL {
                                     let selected = self.settings_tab == tab;
-                                    if ui
+                                    let nav_response = ui
                                         .add_sized(
                                             Vec2::new(210.0, 34.0),
                                             egui::Button::new(
@@ -670,15 +672,23 @@ impl QuarkApp {
                                             } else {
                                                 Color32::TRANSPARENT
                                             })
-                                            .stroke(if selected {
-                                                Stroke::new(1.0_f32, pal.accent)
-                                            } else {
-                                                Stroke::NONE
-                                            })
+                                            .stroke(Stroke::NONE)
                                             .corner_radius(6.0),
-                                        )
-                                        .clicked()
-                                    {
+                                        );
+                                    if selected {
+                                        ui.painter().rect_filled(
+                                            Rect::from_min_size(
+                                                Pos2::new(
+                                                    nav_response.rect.left() + 1.0,
+                                                    nav_response.rect.center().y - 9.0,
+                                                ),
+                                                Vec2::new(3.0, 18.0),
+                                            ),
+                                            1.5,
+                                            pal.accent,
+                                        );
+                                    }
+                                    if nav_response.clicked() {
                                         self.settings_tab = tab;
                                     }
                                     ui.add_space(2.0);
@@ -690,14 +700,6 @@ impl QuarkApp {
 
                             ui.vertical(|ui| {
                                 ui.set_max_width((ui.available_width() - 8.0).min(1080.0));
-                                ui.label(
-                                    crate::i18n::rich(self.settings_tab.hint())
-                                        .size(12.5)
-                                        .color(pal.text_dim),
-                                );
-                                ui.add_space(6.0);
-                                ui.separator();
-                                ui.add_space(12.0);
                                 egui::ScrollArea::vertical()
                                     .id_salt("quark_settings_scroll")
                                     .max_height(page_height)
@@ -723,14 +725,32 @@ impl QuarkApp {
                             );
                             ui.add_space(10.0);
                             for language in config::UiLanguage::ALL {
-                                if ui
-                                    .radio_value(
-                                        &mut self.lib.settings.ui_language,
-                                        language,
-                                        language.label(),
+                                let selected = self.lib.settings.ui_language == language;
+                                let response = ui.add(
+                                    egui::Button::new(
+                                        crate::i18n::rich(language.label())
+                                            .size(12.0)
+                                            .color(if selected {
+                                                crate::theme::on_accent(pal.accent)
+                                            } else {
+                                                pal.text_dim
+                                            }),
                                     )
-                                    .changed()
-                                {
+                                    .fill(if selected {
+                                        pal.accent
+                                    } else {
+                                        Color32::TRANSPARENT
+                                    })
+                                    .stroke(if selected {
+                                        Stroke::NONE
+                                    } else {
+                                        Stroke::new(1.0_f32, pal.border)
+                                    })
+                                    .corner_radius(15.0)
+                                    .min_size(Vec2::new(92.0, 30.0)),
+                                );
+                                if response.clicked() && !selected {
+                                    self.lib.settings.ui_language = language;
                                     crate::i18n::set_language(language);
                                     self.touch();
                                 }
@@ -4326,51 +4346,36 @@ fn dll_files(dir: &Path) -> Result<Vec<String>, String> {
 
 fn theme_card(ui: &mut egui::Ui, mode: ThemeMode, selected: bool) -> bool {
     let preview = theme::palette(mode);
-    let (rect, response) = ui.allocate_exact_size(Vec2::new(166.0, 78.0), Sense::click());
+    let (rect, response) = ui.allocate_exact_size(Vec2::new(124.0, 60.0), Sense::click());
     let painter = ui.painter_at(rect);
+    let accent = theme::palette(ThemeMode::Amoled).accent;
     let border = if selected {
-        preview.accent
+        accent
     } else if response.hovered() {
         preview.text_dim
     } else {
         preview.border
     };
-    painter.rect_filled(rect, 7.0, preview.bg);
+    painter.rect_filled(rect, 9.0, preview.surface);
     painter.rect_stroke(
         rect,
-        7.0,
-        Stroke::new(if selected { 2.0_f32 } else { 1.0 }, border),
+        9.0,
+        Stroke::new(if selected { 1.5_f32 } else { 1.0 }, border),
         egui::StrokeKind::Inside,
     );
     painter.rect_filled(
         Rect::from_min_size(
             Pos2::new(rect.left() + 12.0, rect.top() + 12.0),
-            Vec2::new(44.0, 8.0),
+            Vec2::new(80.0, 8.0),
         ),
-        3.0,
+        4.0,
         preview.accent,
     );
-    painter.rect_filled(
-        Rect::from_min_size(
-            Pos2::new(rect.left() + 12.0, rect.top() + 26.0),
-            Vec2::new(76.0, 6.0),
-        ),
-        3.0,
-        preview.surface_hover,
-    );
-    painter.rect_filled(
-        Rect::from_min_size(
-            Pos2::new(rect.left() + 12.0, rect.top() + 38.0),
-            Vec2::new(58.0, 5.0),
-        ),
-        2.0,
-        preview.text_dim,
-    );
     painter.text(
-        Pos2::new(rect.left() + 12.0, rect.bottom() - 10.0),
+        Pos2::new(rect.left() + 12.0, rect.bottom() - 11.0),
         Align2::LEFT_BOTTOM,
         mode.label(),
-        FontId::proportional(11.5),
+        FontId::new(10.0, crate::fonts::bold_family()),
         preview.text,
     );
     response.clicked()
@@ -4378,13 +4383,13 @@ fn theme_card(ui: &mut egui::Ui, mode: ThemeMode, selected: bool) -> bool {
 
 fn section(ui: &mut egui::Ui, title: &str, pal: &Palette) {
     ui.add_space(22.0);
-    ui.horizontal(|ui| {
-        let (bar, _) = ui.allocate_exact_size(Vec2::new(3.0, 15.0), Sense::hover());
-        ui.painter().rect_filled(bar, 1.5, pal.accent);
-        ui.add_space(7.0);
-        ui.label(crate::i18n::rich(title).size(11.5).strong().color(pal.text));
-    });
-    ui.add_space(5.0);
+    ui.label(
+        crate::i18n::rich(title)
+            .size(10.5)
+            .strong()
+            .color(pal.text_faint),
+    );
+    ui.add_space(3.0);
     ui.separator();
     ui.add_space(10.0);
 }
