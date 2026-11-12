@@ -1,12 +1,16 @@
-## Quark 1.4.2 — Filtres regroupés et recherche étendue
+## Quark 1.4.3 — Paramètres en cartes
 
 ### Interface
 
-- Les vues enregistrées, le tri et le groupement rejoignent le panneau **Filtres**, désormais placé directement sous **Accueil** dans la bibliothèque. Le même panneau garde les filtres de statut, de genre et de tags.
-- La recherche de la bibliothèque devient une icône : elle liste d'abord les jeux installés, puis les jeux achetés dans Steam, Epic Games et GOG, en deux sections distinctes.
-- La fiche du jeu expose les paramètres, la personnalisation, le journal de session et le retrait en haut à gauche du héro, en icônes seules. Le bouton d'information et le menu « ··· » sont retirés.
-- Les puces de tri de l'accueil sont intégrées au panneau Filtres : le titre de section ne garde qu'une commande.
+- Les paramètres d'un jeu passent dans une fenêtre large (960 px au maximum) avec l'en-tête du jeu, les onglets **Général / PlayStation 2 / DLL overrides**, une navigation de section de 220 px, des cartes pour chaque groupe et un pied fixe.
+- Chaque groupe de réglages devient une carte avec son titre et son explication : lancement, ma fiche, fiche Steam, Proton, options de lancement, anti-triche, variables d'environnement, données. Les champs, les chemins, les lignes d'option et les lignes de statut sont partagés entre toutes les pages.
+- Les paramètres globaux occupent toute la fenêtre : en-tête, navigation de 220 px, contenu en cartes. **Apparence** affiche les thèmes dans une grille de cinq colonnes ; les autres onglets utilisent les mêmes cartes, contrôles segmentés et lignes d'option.
+- Les options de lancement sont regroupées en deux colonnes (GameMode, MangoHud, PRIME, umu-launcher), gamescope ouvre un panneau dédié pour la résolution, la limite d'images et le FSR, et la commande wrapper garde sa réinitialisation.
+- Les variables d'environnement utilisent une colonne de nom fixe, un `=` aligné, la valeur sur le reste de la ligne et une poubelle en bout de ligne.
+- Les contrôles segmentés passent automatiquement en mode compact quand leurs libellés déborderaient ; les cartes **Ma fiche** et **Fiche Steam** s'empilent sous 670 px de contenu.
+- La mise en page reste utilisable de 1024 à 1440 px, sans débordement horizontal du modal ni des paramètres.
 
 ### Correctifs
 
-- Les résultats de recherche sont dédoublonnés entre la bibliothèque Quark et les installations de boutique liées.
+- Le pied du modal ne force plus la fenêtre à s'élargir : sa largeur tient compte de ses marges.
+- Les contrôles segmentés de deux groupes différents ne partagent plus le même identifiant egui, ce qui évitait un avertissement de widget dupliqué sur la page Apparence.

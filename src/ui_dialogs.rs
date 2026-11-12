@@ -3,8 +3,8 @@
 //! (XDG Desktop Portal), ouverts via `QuarkApp::pick_file` / `pick_directory`.
 
 use crate::app::{
-    AchievementsState, AddStep, GameTab, PickerTarget, QuarkApp, SearchState, SettingsTab,
-    UpdateState,
+    AchievementsState, AddStep, GameSection, GameTab, PickerTarget, QuarkApp, SearchState,
+    SettingsTab, UpdateState,
 };
 use crate::config::{
     self, AssetKind, EnvVar, GameStatus, ProtonMode, StartPage, ThemeMode, ViewMode,
@@ -599,7 +599,7 @@ impl QuarkApp {
         // une modale étroite. La navigation latérale garde toutes les
         // catégories visibles et le contenu utilise la largeur disponible.
         let screen = ctx.screen_rect();
-        let page_height = (screen.height() - 170.0).max(300.0);
+        let page_height = (screen.height() - 190.0).max(300.0);
         egui::Area::new(egui::Id::new("quark_settings"))
             .order(egui::Order::Foreground)
             .fixed_pos(screen.min)
@@ -616,16 +616,16 @@ impl QuarkApp {
                         ui.horizontal(|ui| {
                             ui.vertical(|ui| {
                                 ui.label(
-                                    crate::i18n::rich("Paramètres")
-                                        .font(FontId::new(22.0, crate::fonts::bold_family()))
-                                        .color(pal.text),
+                                    crate::i18n::rich("QUARK")
+                                        .size(11.0)
+                                        .strong()
+                                        .color(pal.text_faint),
                                 );
                                 ui.label(
-                                    crate::i18n::rich(
-                                        "Réglages de Quark, enregistrés automatiquement",
-                                    )
-                                    .size(11.0)
-                                    .color(pal.text_faint),
+                                    crate::i18n::rich("Paramètres")
+                                        .size(24.0)
+                                        .strong()
+                                        .color(pal.text),
                                 );
                             });
                             ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
@@ -640,9 +640,16 @@ impl QuarkApp {
                                 {
                                     close_requested = true;
                                 }
+                                ui.label(
+                                    crate::i18n::rich(
+                                        "Réglages de Quark, enregistrés automatiquement",
+                                    )
+                                    .size(12.0)
+                                    .color(pal.text_dim),
+                                );
                             });
                         });
-                        ui.add_space(12.0);
+                        ui.add_space(16.0);
                         ui.separator();
                         ui.add_space(16.0);
 
@@ -650,56 +657,42 @@ impl QuarkApp {
                             // Colonne de navigation : plus stable qu'une rangée
                             // d'onglets qui déborde à 1024 px.
                             ui.vertical(|ui| {
-                                ui.set_width(218.0);
-                                ui.add_space(4.0);
+                                ui.set_width(220.0);
                                 for (tab, label) in SettingsTab::ALL {
-                                    let selected = self.settings_tab == tab;
-                                    let nav_response = ui
-                                        .add_sized(
-                                            Vec2::new(210.0, 34.0),
-                                            egui::Button::new(
-                                                crate::i18n::rich(label)
-                                                    .size(12.5)
-                                                    .color(if selected {
-                                                        pal.text
-                                                    } else {
-                                                        pal.text_dim
-                                                    }),
-                                            )
-                                            .selected(selected)
-                                            .fill(if selected {
-                                                pal.surface
-                                            } else {
-                                                Color32::TRANSPARENT
-                                            })
-                                            .stroke(Stroke::NONE)
-                                            .corner_radius(6.0),
-                                        );
-                                    if selected {
-                                        ui.painter().rect_filled(
-                                            Rect::from_min_size(
-                                                Pos2::new(
-                                                    nav_response.rect.left() + 1.0,
-                                                    nav_response.rect.center().y - 9.0,
-                                                ),
-                                                Vec2::new(3.0, 18.0),
-                                            ),
-                                            1.5,
-                                            pal.accent,
-                                        );
-                                    }
-                                    if nav_response.clicked() {
+                                    if widgets::nav_entry(
+                                        ui,
+                                        &pal,
+                                        label,
+                                        self.settings_tab == tab,
+                                    ) {
                                         self.settings_tab = tab;
                                     }
                                     ui.add_space(2.0);
                                 }
                             });
-                            ui.add_space(22.0);
+                            ui.add_space(16.0);
                             ui.separator();
-                            ui.add_space(22.0);
+                            ui.add_space(16.0);
 
                             ui.vertical(|ui| {
-                                ui.set_max_width((ui.available_width() - 8.0).min(1080.0));
+                                ui.set_width(ui.available_width());
+                                let tab_label = SettingsTab::ALL
+                                    .iter()
+                                    .find(|(tab, _)| *tab == self.settings_tab)
+                                    .map(|(_, label)| *label)
+                                    .unwrap_or("");
+                                ui.label(
+                                    crate::i18n::rich(tab_label)
+                                        .size(20.0)
+                                        .strong()
+                                        .color(pal.text),
+                                );
+                                ui.label(
+                                    crate::i18n::rich(self.settings_tab.hint())
+                                        .size(12.0)
+                                        .color(pal.text_dim),
+                                );
+                                ui.add_space(12.0);
                                 egui::ScrollArea::vertical()
                                     .id_salt("quark_settings_scroll")
                                     .max_height(page_height)
@@ -716,1261 +709,1589 @@ impl QuarkApp {
                                         ui.set_opacity(page_fade);
                     match self.settings_tab {
                     SettingsTab::Appearance => {
-                        section(ui, "LANGUE", &pal);
-                        ui.horizontal_wrapped(|ui| {
-                            ui.label(
-                                crate::i18n::rich("Langue de l'interface")
-                                    .size(12.5)
-                                    .color(pal.text_dim),
-                            );
-                            ui.add_space(10.0);
-                            for language in config::UiLanguage::ALL {
-                                let selected = self.lib.settings.ui_language == language;
-                                let response = ui.add(
-                                    egui::Button::new(
-                                        crate::i18n::rich(language.label())
-                                            .size(12.0)
-                                            .color(if selected {
-                                                crate::theme::on_accent(pal.accent)
-                                            } else {
-                                                pal.text_dim
-                                            }),
-                                    )
-                                    .fill(if selected {
-                                        pal.accent
-                                    } else {
-                                        Color32::TRANSPARENT
-                                    })
-                                    .stroke(if selected {
-                                        Stroke::NONE
-                                    } else {
-                                        Stroke::new(1.0_f32, pal.border)
-                                    })
-                                    .corner_radius(15.0)
-                                    .min_size(Vec2::new(92.0, 30.0)),
-                                );
-                                if response.clicked() && !selected {
+                        widgets::card(
+                            ui,
+                            &pal,
+                            "Langue",
+                            Some(
+                                "Le changement est immédiat. La langue des fiches Steam reste réglée séparément dans Boutiques & outils.",
+                            ),
+                            |ui| {
+                                let labels: Vec<String> = config::UiLanguage::ALL
+                                    .iter()
+                                    .map(|language| language.label())
+                                    .collect();
+                                let items: Vec<(Icon, &str)> = labels
+                                    .iter()
+                                    .map(|label| (Icon::None, label.as_str()))
+                                    .collect();
+                                let selected = config::UiLanguage::ALL
+                                    .iter()
+                                    .position(|language| *language == self.lib.settings.ui_language)
+                                    .unwrap_or(0);
+                                if let Some(index) =
+                                    widgets::segmented(ui, &pal, &items, selected)
+                                {
+                                    let language = config::UiLanguage::ALL[index];
                                     self.lib.settings.ui_language = language;
                                     crate::i18n::set_language(language);
                                     self.touch();
                                 }
-                            }
-                            widgets::info_button(
-                                ui,
-                                &pal,
-                                "Le changement est immédiat. La langue des fiches Steam reste réglée séparément dans Boutiques & outils.",
-                            );
-                        });
-
-                        section(ui, "THÈME", &pal);
-                        ui.horizontal_wrapped(|ui| {
-                            for mode in ThemeMode::ALL {
-                                if theme_card(ui, mode, self.lib.settings.theme == mode) {
-                                    self.lib.settings.theme = mode;
-                                    self.touch();
-                                }
-                            }
-                        });
-                        ui.add_space(6.0);
-                        ui.label(
-                            crate::i18n::rich("Le thème s'applique immédiatement à toute l'interface.")
-                                .size(10.5)
-                                .color(pal.text_faint),
+                            },
                         );
-
-                        section(ui, "FOND", &pal);
-                        if widgets::setting_toggle(
+                        ui.add_space(16.0);
+                        widgets::card(
                             ui,
                             &pal,
-                            "Fond hero aléatoire",
+                            "Thème",
                             Some(
-                                "Choisit une bannière au hasard dans la bibliothèque, la floute et l'affiche derrière l'accueil et la bibliothèque. Un nouveau choix est fait à chaque démarrage.",
+                                "Le thème s'applique immédiatement à toute l'interface. L'aperçu utilise les couleurs de chaque palette.",
                             ),
-                            &mut self.lib.settings.hero_background,
-                            "hero_background",
-                        )
-                        .changed()
-                        {
-                            if self.lib.settings.hero_background {
-                                self.pick_random_background();
-                            }
-                            self.touch();
-                        }
-                        if self.lib.settings.hero_background {
-                            ui.horizontal(|ui| {
-                                ui.label(
-                                    crate::i18n::rich("Flou du fond")
-                                        .size(12.0)
-                                        .color(pal.text_dim),
-                                );
-                                let mut blur = self.lib.settings.hero_background_blur;
-                                if ui
-                                    .add(
-                                        egui::Slider::new(&mut blur, 2.0..=30.0)
-                                            .suffix(" px")
-                                            .fixed_decimals(0),
-                                    )
-                                    .changed()
-                                {
-                                    self.lib.settings.hero_background_blur = blur;
-                                    self.touch();
+                            |ui| {
+                                let columns = if ui.available_width() >= 900.0 { 5 } else { 4 };
+                                let gap = 10.0;
+                                let card_width = (ui.available_width()
+                                    - gap * (columns - 1) as f32)
+                                    / columns as f32;
+                                for row in ThemeMode::ALL.chunks(columns) {
+                                    ui.horizontal(|ui| {
+                                        for mode in row {
+                                            if theme_card(
+                                                ui,
+                                                &pal,
+                                                *mode,
+                                                self.lib.settings.theme == *mode,
+                                                card_width,
+                                            ) {
+                                                self.lib.settings.theme = *mode;
+                                                self.touch();
+                                            }
+                                            ui.add_space(gap);
+                                        }
+                                    });
+                                    ui.add_space(gap);
                                 }
-                                if widgets::ghost_button(
+                                ui.label(
+                                    crate::i18n::rich(
+                                        "Le thème s'applique immédiatement à toute l'interface.",
+                                    )
+                                    .size(11.0)
+                                    .color(pal.text_faint),
+                                );
+                            },
+                        );
+                        ui.add_space(16.0);
+                        widgets::card(
+                            ui,
+                            &pal,
+                            "Fond",
+                            None,
+                            |ui| {
+                                if widgets::option_row(
                                     ui,
-                                    "Autre bannière",
                                     &pal,
-                                    Icon::Refresh,
+                                    "Fond hero aléatoire",
+                                    Some(
+                                        "Choisit une bannière au hasard dans la bibliothèque, la floute et l'affiche derrière l'accueil et la bibliothèque. Un nouveau choix est fait à chaque démarrage.",
+                                    ),
+                                    &mut self.lib.settings.hero_background,
+                                    "hero_background",
                                 )
-                                .clicked()
+                                .changed()
                                 {
-                                    self.pick_random_background();
-                                }
-                            });
-                            let current = self
-                                .random_hero_game
-                                .as_ref()
-                                .and_then(|id| self.lib.get(id))
-                                .map(|game| game.name.clone());
-                            match current {
-                                Some(name) => {
-                                    ui.label(
-                                        crate::i18n::rich(format!(
-                                            "Bannière de cette session : {name}"
-                                        ))
-                                        .size(10.5)
-                                        .color(pal.text_faint),
-                                    );
-                                }
-                                None => {
-                                    ui.label(
-                                        crate::i18n::rich(
-                                            "Aucune bannière disponible pour le fond aléatoire.",
-                                        )
-                                        .size(10.5)
-                                        .color(pal.text_faint),
-                                    );
-                                }
-                            }
-                        }
-
-                        section(ui, "DÉMARRAGE", &pal);
-                        ui.horizontal_wrapped(|ui| {
-                            ui.label(
-                                crate::i18n::rich("Page d'ouverture").size(12.5).color(pal.text_dim),
-                            );
-                            ui.add_space(10.0);
-                            for page in StartPage::ALL {
-                                if ui
-                                    .radio_value(
-                                        &mut self.lib.settings.start_page,
-                                        page,
-                                        page.label(),
-                                    )
-                                    .changed()
-                                {
+                                    if self.lib.settings.hero_background {
+                                        self.pick_random_background();
+                                    }
                                     self.touch();
                                 }
-                            }
-                            widgets::info_button(
-                                ui,
-                                &pal,
-                                "Quark ouvre cette page au prochain lancement. L'accueil reste \
-                                 la valeur par défaut ; le choix est enregistré avec la \
-                                 bibliothèque.",
-                            );
-                        });
-
-                        section(ui, "BIBLIOTHÈQUE", &pal);
-                        ui.horizontal(|ui| {
-                            ui.label(crate::i18n::rich("Vue par défaut").size(12.5).color(pal.text_dim));
-                            ui.add_space(12.0);
-                            for view in [ViewMode::List, ViewMode::Grid] {
-                                if ui
-                                    .radio_value(&mut self.lib.settings.view, view, view.label())
-                                    .changed()
-                                {
-                                    self.touch();
+                                if self.lib.settings.hero_background {
+                                    widgets::field(ui, &pal, "Flou du fond", |ui| {
+                                        ui.horizontal(|ui| {
+                                            let mut blur =
+                                                self.lib.settings.hero_background_blur;
+                                            if ui
+                                                .add(
+                                                    egui::Slider::new(&mut blur, 2.0..=30.0)
+                                                        .suffix(" px")
+                                                        .fixed_decimals(0),
+                                                )
+                                                .changed()
+                                            {
+                                                self.lib.settings.hero_background_blur = blur;
+                                                self.touch();
+                                            }
+                                            if widgets::ghost_button(
+                                                ui,
+                                                "Autre bannière",
+                                                &pal,
+                                                Icon::Refresh,
+                                            )
+                                            .clicked()
+                                            {
+                                                self.pick_random_background();
+                                            }
+                                        });
+                                    });
+                                    let current = self
+                                        .random_hero_game
+                                        .as_ref()
+                                        .and_then(|id| self.lib.get(id))
+                                        .map(|game| game.name.clone());
+                                    match current {
+                                        Some(name) => {
+                                            ui.label(
+                                                crate::i18n::rich(format!(
+                                                    "Bannière de cette session : {name}"
+                                                ))
+                                                .size(11.0)
+                                                .color(pal.text_faint),
+                                            );
+                                        }
+                                        None => {
+                                            ui.label(
+                                                crate::i18n::rich(
+                                                    "Aucune bannière disponible pour le fond aléatoire.",
+                                                )
+                                                .size(11.0)
+                                                .color(pal.text_faint),
+                                            );
+                                        }
+                                    }
                                 }
-                            }
-                            widgets::info_button(
-                                ui,
-                                &pal,
-                                "La vue se bascule aussi depuis la barre du haut (icônes liste / \
-                                 grille).",
-                            );
-                        });
-                        ui.add_space(6.0);
-                        ui.horizontal(|ui| {
-                            if widgets::ghost_button(
-                                ui,
-                                "Importer la bibliothèque Steam installée…",
-                                &pal,
-                                Icon::Steam,
-                            )
-                            .clicked()
-                            {
-                                open_steam_import = true;
-                            }
-                            widgets::info_button(
-                                ui,
-                                &pal,
-                                "Lit les fichiers appmanifest_*.acf de toutes tes bibliothèques \
-                                 Steam (dossier historique, autres disques, Flatpak et Snap), \
-                                 propose les jeux installés et ne duplique pas ceux déjà dans \
-                                 Quark. L'exécutable est cherché dans le dossier de chaque jeu.",
-                            );
-                        });
-
-                        section(ui, "ACCUEIL", &pal);
-                        if widgets::setting_toggle(
+                            },
+                        );
+                        ui.add_space(16.0);
+                        widgets::card(
                             ui,
                             &pal,
-                            "Carrousel automatique",
-                            Some(
-                                "L'accueil passe d'un jeu récent au suivant après le délai \
-                                 ci-dessous ; une flèche repart de zéro.",
-                            ),
-                            &mut self.lib.settings.carousel_auto,
-                            "carousel_auto",
-                        )
-                        .changed()
-                        {
-                            self.touch();
-                        }
-                        if self.lib.settings.carousel_auto {
-                            ui.horizontal(|ui| {
+                            "Démarrage",
+                            None,
+                            |ui| {
+                                ui.horizontal(|ui| {
+                                    ui.label(
+                                        crate::i18n::rich("Page d'ouverture")
+                                            .size(12.0)
+                                            .color(pal.text_dim),
+                                    );
+                                    widgets::info_button(
+                                        ui,
+                                        &pal,
+                                        "Quark ouvre cette page au prochain lancement. L'accueil reste la valeur par défaut ; le choix est enregistré avec la bibliothèque.",
+                                    );
+                                });
+                                let labels: Vec<String> = StartPage::ALL
+                                    .iter()
+                                    .map(|page| page.label())
+                                    .collect();
+                                let items: Vec<(Icon, &str)> = labels
+                                    .iter()
+                                    .map(|label| (Icon::None, label.as_str()))
+                                    .collect();
+                                let selected = StartPage::ALL
+                                    .iter()
+                                    .position(|page| *page == self.lib.settings.start_page)
+                                    .unwrap_or(0);
+                                if let Some(index) =
+                                    widgets::segmented(ui, &pal, &items, selected)
+                                {
+                                    self.lib.settings.start_page = StartPage::ALL[index];
+                                    self.touch();
+                                }
+                            },
+                        );
+                        ui.add_space(16.0);
+                        widgets::card(
+                            ui,
+                            &pal,
+                            "Bibliothèque",
+                            None,
+                            |ui| {
                                 ui.label(
-                                    crate::i18n::rich("Changer toutes les")
+                                    crate::i18n::rich("Vue par défaut")
                                         .size(12.0)
                                         .color(pal.text_dim),
                                 );
-                                let mut secs = self.lib.settings.carousel_secs;
-                                if ui
-                                    .add(
-                                        egui::DragValue::new(&mut secs)
-                                            .range(3.0..=60.0)
-                                            .speed(0.5)
-                                            .suffix(" s"),
-                                    )
-                                    .changed()
+                                let items = [
+                                    (Icon::List, ViewMode::List.label()),
+                                    (Icon::Grid, ViewMode::Grid.label()),
+                                ];
+                                let labels: Vec<String> =
+                                    items.iter().map(|(_, label)| label.clone()).collect();
+                                let segments: Vec<(Icon, &str)> = labels
+                                    .iter()
+                                    .enumerate()
+                                    .map(|(index, label)| (items[index].0, label.as_str()))
+                                    .collect();
+                                let selected =
+                                    usize::from(self.lib.settings.view == ViewMode::Grid);
+                                if let Some(index) =
+                                    widgets::segmented(ui, &pal, &segments, selected)
                                 {
-                                    self.lib.settings.carousel_secs = secs;
+                                    self.lib.settings.view =
+                                        if index == 0 { ViewMode::List } else { ViewMode::Grid };
                                     self.touch();
                                 }
-                            });
-                        }
-
-                        section(ui, "ZONE DE NOTIFICATION", &pal);
-                        let mut start_tray: Option<bool> = None;
-                        if widgets::setting_toggle(
+                                ui.add_space(8.0);
+                                ui.horizontal(|ui| {
+                                    if widgets::ghost_button(
+                                        ui,
+                                        "Importer la bibliothèque Steam installée…",
+                                        &pal,
+                                        Icon::Steam,
+                                    )
+                                    .clicked()
+                                    {
+                                        open_steam_import = true;
+                                    }
+                                    widgets::info_button(
+                                        ui,
+                                        &pal,
+                                        "Lit les fichiers appmanifest_*.acf de toutes tes bibliothèques Steam (dossier historique, autres disques, Flatpak et Snap), propose les jeux installés et ne duplique pas ceux déjà dans Quark. L'exécutable est cherché dans le dossier de chaque jeu.",
+                                    );
+                                });
+                            },
+                        );
+                        ui.add_space(16.0);
+                        widgets::card(
                             ui,
                             &pal,
-                            "Icône dans la zone de notification",
+                            "Accueil",
+                            None,
+                            |ui| {
+                                if widgets::option_row(
+                                    ui,
+                                    &pal,
+                                    "Carrousel automatique",
+                                    Some(
+                                        "L'accueil passe d'un jeu récent au suivant après le délai ci-dessous ; une flèche repart de zéro.",
+                                    ),
+                                    &mut self.lib.settings.carousel_auto,
+                                    "carousel_auto",
+                                )
+                                .changed()
+                                {
+                                    self.touch();
+                                }
+                                if self.lib.settings.carousel_auto {
+                                    widgets::field(ui, &pal, "Changer toutes les", |ui| {
+                                        let mut secs = self.lib.settings.carousel_secs;
+                                        if ui
+                                            .add(
+                                                egui::DragValue::new(&mut secs)
+                                                    .range(3.0..=60.0)
+                                                    .speed(0.5)
+                                                    .suffix(" s"),
+                                            )
+                                            .changed()
+                                        {
+                                            self.lib.settings.carousel_secs = secs;
+                                            self.touch();
+                                        }
+                                    });
+                                }
+                            },
+                        );
+                        ui.add_space(16.0);
+                        widgets::card(
+                            ui,
+                            &pal,
+                            "Zone de notification",
+                            None,
+                            |ui| {
+                                let mut start_tray: Option<bool> = None;
+                                if widgets::option_row(
+                                    ui,
+                                    &pal,
+                                    "Icône dans la zone de notification",
+                                    Some(
+                                        "Fermer la fenêtre laisse Quark dans la zone de notification ; « Quitter Quark » ferme tout. L'icône vit dans un petit processus dédié, même sous Wayland.",
+                                    ),
+                                    &mut self.lib.settings.tray_icon,
+                                    "tray_icon",
+                                )
+                                .changed()
+                                {
+                                    start_tray = Some(self.lib.settings.tray_icon);
+                                }
+                                if let Some(enabled) = start_tray {
+                                    self.set_tray_icon(enabled);
+                                }
+                                if self.lib.settings.tray_icon {
+                                    match (&crate::tray::helper_pid(), &self.tray_error) {
+                                        (Some(_), _) => {
+                                            ui.label(
+                                                crate::i18n::rich(
+                                                    "Icône active : la croix ferme Quark, l'icône reste et un clic la relance.",
+                                                )
+                                                .size(11.0)
+                                                .color(pal.text_faint),
+                                            );
+                                        }
+                                        (None, Some(err)) => {
+                                            ui.horizontal(|ui| {
+                                                ui.label(
+                                                    crate::i18n::rich(
+                                                        "Icône indisponible : ce bureau n'a pas de zone de notification.",
+                                                    )
+                                                    .size(11.0)
+                                                    .color(pal.danger),
+                                                );
+                                                widgets::info_button(ui, &pal, err);
+                                            });
+                                            ui.label(
+                                                crate::i18n::rich(
+                                                    "Le bureau doit fournir un watcher StatusNotifierItem (extension AppIndicator sous GNOME). Décoché, la croix quitte Quark.",
+                                                )
+                                                .size(10.5)
+                                                .color(pal.text_faint),
+                                            );
+                                        }
+                                        (None, None) => {}
+                                    }
+                                }
+                            },
+                        );
+                    }
+                    SettingsTab::InGame => {
+                        widgets::card(
+                            ui,
+                            &pal,
+                            "Overlay",
                             Some(
-                                "Fermer la fenêtre laisse Quark dans la zone de notification ; \
-                                 « Quitter Quark » ferme tout. L'icône vit dans un petit \
-                                 processus dédié, même sous Wayland.",
+                                "L'overlay est une fenêtre au-dessus du jeu. Il reste fermé par défaut : Maj+Retour arrière l'ouvre et le referme, sans quitter la partie.",
                             ),
-                            &mut self.lib.settings.tray_icon,
-                            "tray_icon",
-                        )
-                        .changed()
-                        {
-                            start_tray = Some(self.lib.settings.tray_icon);
-                        }
-                        if let Some(enabled) = start_tray {
-                            self.set_tray_icon(enabled);
-                        }
-                        if self.lib.settings.tray_icon {
-                            match (&crate::tray::helper_pid(), &self.tray_error) {
-                                (Some(_), _) => {
+                            |ui| {
+                                if widgets::option_row(
+                                    ui,
+                                    &pal,
+                                    "Activer l'overlay",
+                                    Some("Captures d'écran, succès et notifications en jeu."),
+                                    &mut self.lib.settings.overlay,
+                                    "overlay_enabled",
+                                )
+                                .changed()
+                                {
+                                    self.touch();
+                                }
+                                if self.lib.settings.overlay {
+                                    widgets::field(
+                                        ui,
+                                        &pal,
+                                        "Raccourci d'ouverture",
+                                        |ui| {
+                                            let changed = ui
+                                                .add_sized(
+                                                    Vec2::new(200.0, 34.0),
+                                                    egui::TextEdit::singleline(
+                                                        &mut self.lib.settings.overlay_hotkey,
+                                                    )
+                                                    .hint_text(crate::i18n::tr(
+                                                        "Shift+BackSpace",
+                                                    ))
+                                                    .font(egui::FontId::monospace(12.0)),
+                                                )
+                                                .changed();
+                                            if changed {
+                                                let key = self
+                                                    .lib
+                                                    .settings
+                                                    .overlay_hotkey
+                                                    .trim()
+                                                    .to_string();
+                                                self.lib.settings.overlay_hotkey =
+                                                    if key.is_empty() {
+                                                        "Shift+BackSpace".to_string()
+                                                    } else {
+                                                        key
+                                                    };
+                                                self.touch();
+                                            }
+                                        },
+                                    );
+                                    widgets::field(
+                                        ui,
+                                        &pal,
+                                        "Touche de capture",
+                                        |ui| {
+                                            let changed = ui
+                                                .add_sized(
+                                                    Vec2::new(90.0, 34.0),
+                                                    egui::TextEdit::singleline(
+                                                        &mut self
+                                                            .lib
+                                                            .settings
+                                                            .screenshot_key,
+                                                    )
+                                                    .hint_text(crate::i18n::tr("F12"))
+                                                    .font(egui::FontId::monospace(12.0)),
+                                                )
+                                                .changed();
+                                            if changed {
+                                                let key = self
+                                                    .lib
+                                                    .settings
+                                                    .screenshot_key
+                                                    .trim()
+                                                    .to_string();
+                                                self.lib.settings.screenshot_key =
+                                                    if key.is_empty() {
+                                                        "F12".to_string()
+                                                    } else {
+                                                        key
+                                                    };
+                                                self.touch();
+                                            }
+                                            ui.label(
+                                                crate::i18n::rich(
+                                                    "F1–F12, Print… · appliquée au prochain lancement",
+                                                )
+                                                .size(11.0)
+                                                .color(pal.text_faint),
+                                            );
+                                        },
+                                    );
                                     ui.label(
                                         crate::i18n::rich(
-                                            "Icône active : la croix ferme Quark, l'icône reste \
-                                             et un clic la relance.",
+                                            "Format X11 : Shift, Ctrl, Alt ou Super, puis le nom de la touche. Maj+Retour arrière s'écrit Shift+BackSpace.",
                                         )
                                         .size(11.0)
                                         .color(pal.text_faint),
                                     );
                                 }
-                                (None, Some(err)) => {
-                                    // Message court dans la page, erreur D-Bus complète
-                                    // dans le ⓘ : la ligne brute débordait de la fenêtre.
-                                    ui.horizontal(|ui| {
-                                        ui.label(
-                                            crate::i18n::rich(
-                                                "Icône indisponible : ce bureau n'a pas de zone \
-                                                 de notification.",
-                                            )
-                                            .size(11.0)
-                                            .color(pal.danger),
-                                        );
-                                        widgets::info_button(ui, &pal, err);
-                                    });
-                                    ui.label(
-                                        crate::i18n::rich(
-                                            "Le bureau doit fournir un watcher StatusNotifierItem \
-                                             (extension AppIndicator sous GNOME). Décoché, la \
-                                             croix quitte Quark.",
-                                        )
-                                        .size(10.5)
-                                        .color(pal.text_faint),
-                                    );
-                                }
-                                (None, None) => {}
-                            }
-                        }
-                    }
-                    SettingsTab::InGame => {
-                        section_hint(
-                            ui,
-                            "OVERLAY",
-                            &pal,
-                            "L'overlay est une fenêtre au-dessus du jeu. Il reste fermé par \
-                             défaut : Maj+Retour arrière l'ouvre et le referme, sans quitter la \
-                             partie.",
+                            },
                         );
-                        if widgets::setting_toggle(
+                        ui.add_space(16.0);
+                        widgets::card(
                             ui,
                             &pal,
-                            "Activer l'overlay",
-                            Some("Captures d'écran, succès et notifications en jeu."),
-                            &mut self.lib.settings.overlay,
-                            "overlay_enabled",
-                        )
-                        .changed()
-                        {
-                            self.touch();
-                        }
-                        if self.lib.settings.overlay {
-                            ui.add_space(6.0);
-                            ui.horizontal(|ui| {
-                                ui.label(
-                                    crate::i18n::rich("Raccourci d'ouverture")
-                                        .size(12.0)
-                                        .color(pal.text_dim),
-                                );
-                                let changed = ui
-                                    .add_sized(
-                                        Vec2::new(170.0, 26.0),
-                                        egui::TextEdit::singleline(
-                                            &mut self.lib.settings.overlay_hotkey,
-                                        )
-                                        .hint_text(crate::i18n::tr("Shift+BackSpace"))
-                                        .font(egui::FontId::monospace(12.0)),
-                                    )
-                                    .changed();
-                                if changed {
-                                    let key = self.lib.settings.overlay_hotkey.trim().to_string();
-                                    self.lib.settings.overlay_hotkey = if key.is_empty() {
-                                        "Shift+BackSpace".to_string()
-                                    } else {
-                                        key
-                                    };
-                                    self.touch();
-                                }
-                                widgets::info_button(
+                            "Succès",
+                            Some(
+                                "Choisis ce que l'overlay affiche. Le tri reste celui de la fiche : les succès les plus courants d'abord.",
+                            ),
+                            |ui| {
+                                if widgets::option_row(
                                     ui,
                                     &pal,
-                                    "Format X11 : Shift, Ctrl, Alt ou Super, puis le nom de la \
-                                     touche. Maj+Retour arrière s'écrit Shift+BackSpace.",
-                                );
-                            });
-                            ui.horizontal(|ui| {
-                                ui.label(
-                                    crate::i18n::rich("Touche de capture")
-                                        .size(12.0)
-                                        .color(pal.text_dim),
-                                );
-                                let changed = ui
-                                    .add_sized(
-                                        Vec2::new(80.0, 26.0),
-                                        egui::TextEdit::singleline(
-                                            &mut self.lib.settings.screenshot_key,
-                                        )
-                                        .hint_text(crate::i18n::tr("F12"))
-                                        .font(egui::FontId::monospace(12.0)),
-                                    )
-                                    .changed();
-                                if changed {
-                                    let key = self.lib.settings.screenshot_key.trim().to_string();
-                                    self.lib.settings.screenshot_key = if key.is_empty() {
-                                        "F12".to_string()
-                                    } else {
-                                        key
-                                    };
+                                    "Afficher les succès verrouillés",
+                                    Some("Décoche pour ne voir que les succès déjà obtenus."),
+                                    &mut self.lib.settings.overlay_show_locked,
+                                    "overlay_locked",
+                                )
+                                .changed()
+                                {
+                                    self.touch();
+                                }
+                                if widgets::option_row(
+                                    ui,
+                                    &pal,
+                                    "Version compacte",
+                                    Some("Lignes plus courtes, sans description."),
+                                    &mut self.lib.settings.overlay_compact,
+                                    "overlay_compact",
+                                )
+                                .changed()
+                                {
+                                    self.touch();
+                                }
+                                if widgets::option_row(
+                                    ui,
+                                    &pal,
+                                    "Afficher progression et rareté",
+                                    Some("Pourcentage de progression et part des joueurs."),
+                                    &mut self.lib.settings.overlay_show_progress,
+                                    "overlay_progress",
+                                )
+                                .changed()
+                                {
+                                    self.touch();
+                                }
+                            },
+                        );
+                        ui.add_space(16.0);
+                        widgets::card(
+                            ui,
+                            &pal,
+                            "Sauvegardes cloud",
+                            Some(
+                                "Epic utilise legendary sync-saves ; GOG utilise gogdl save-sync. La sauvegarde la plus récente gagne, et le dossier GOG se choisit dans la fiche du jeu.",
+                            ),
+                            |ui| {
+                                if widgets::option_row(
+                                    ui,
+                                    &pal,
+                                    "Synchroniser après installation et après une partie",
+                                    Some(
+                                        "Récupère la sauvegarde du compte à l'installation, puis envoie celle du jeu à la fermeture.",
+                                    ),
+                                    &mut self.lib.settings.cloud_saves,
+                                    "cloud_saves",
+                                )
+                                .changed()
+                                {
                                     self.touch();
                                 }
                                 ui.label(
-                                    crate::i18n::rich("F1–F12, Print… · appliquée au prochain lancement")
-                                        .size(10.5)
-                                        .color(pal.text_faint),
+                                    crate::i18n::rich(
+                                        "Steam Cloud reste géré par le client Steam : Quark ne l'interroge pas.",
+                                    )
+                                    .size(11.0)
+                                    .color(pal.text_faint),
                                 );
-                            });
-                        }
-
-                        section_hint(
-                            ui,
-                            "SUCCÈS",
-                            &pal,
-                            "Choisis ce que l'overlay affiche. Le tri reste celui de la fiche : \
-                             les succès les plus courants d'abord.",
-                        );
-                        if widgets::setting_toggle(
-                            ui,
-                            &pal,
-                            "Afficher les succès verrouillés",
-                            Some("Décoche pour ne voir que les succès déjà obtenus."),
-                            &mut self.lib.settings.overlay_show_locked,
-                            "overlay_locked",
-                        )
-                        .changed()
-                        {
-                            self.touch();
-                        }
-                        if widgets::setting_toggle(
-                            ui,
-                            &pal,
-                            "Version compacte",
-                            Some("Lignes plus courtes, sans description."),
-                            &mut self.lib.settings.overlay_compact,
-                            "overlay_compact",
-                        )
-                        .changed()
-                        {
-                            self.touch();
-                        }
-                        if widgets::setting_toggle(
-                            ui,
-                            &pal,
-                            "Afficher progression et rareté",
-                            Some("Pourcentage de progression et part des joueurs."),
-                            &mut self.lib.settings.overlay_show_progress,
-                            "overlay_progress",
-                        )
-                        .changed()
-                        {
-                            self.touch();
-                        }
-
-                        section_hint(
-                            ui,
-                            "SAUVEGARDES CLOUD",
-                            &pal,
-                            "Epic utilise legendary sync-saves ; GOG utilise gogdl save-sync. La \
-                             sauvegarde la plus récente gagne, et le dossier GOG se choisit dans la \
-                             fiche du jeu.",
-                        );
-                        if widgets::setting_toggle(
-                            ui,
-                            &pal,
-                            "Synchroniser après installation et après une partie",
-                            Some(
-                                "Récupère la sauvegarde du compte à l'installation, puis envoie \
-                                 celle du jeu à la fermeture.",
-                            ),
-                            &mut self.lib.settings.cloud_saves,
-                            "cloud_saves",
-                        )
-                        .changed()
-                        {
-                            self.touch();
-                        }
-                        ui.label(
-                            crate::i18n::rich(
-                                "Steam Cloud reste géré par le client Steam : Quark ne \
-                                 l'interroge pas.",
-                            )
-                            .size(10.5)
-                            .color(pal.text_faint),
+                            },
                         );
                     }
                     SettingsTab::Defaults => {
-                        section_hint(
+                        widgets::card(
                             ui,
-                            "VALEURS PAR DÉFAUT",
                             &pal,
-                            "Ce ne sont pas des réglages globaux : ces valeurs sont recopiées \
-                             dans un jeu au moment où tu l'ajoutes, puis chaque jeu garde les \
-                             siennes. Changer un défaut ne modifie donc aucun jeu déjà dans la \
-                             bibliothèque, et modifier un jeu ne touche pas les autres.",
+                            "Préfixe Proton",
+                            Some(
+                                "Ce ne sont pas des réglages globaux : ces valeurs sont recopiées dans un jeu au moment où tu l'ajoutes, puis chaque jeu garde les siennes. Changer un défaut ne modifie aucun jeu déjà dans la bibliothèque.",
+                            ),
+                            |ui| {
+                                let mut text =
+                                    self.lib.settings.default_prefix.clone().unwrap_or_default();
+                                let hint = format!(
+                                    "auto : {}",
+                                    config::prefix_root().display()
+                                );
+                                widgets::field(
+                                    ui,
+                                    &pal,
+                                    "Dossier par défaut",
+                                    |ui| {
+                                        ui.horizontal(|ui| {
+                                            widgets::style_text_inputs(ui, &pal);
+                                            let width = (ui.available_width() - 210.0)
+                                                .max(180.0);
+                                            let response = ui.add_sized(
+                                                Vec2::new(width, 34.0),
+                                                egui::TextEdit::singleline(&mut text)
+                                                    .hint_text(&hint),
+                                            );
+                                            if response.changed() {
+                                                self.lib.settings.default_prefix =
+                                                    if text.trim().is_empty() {
+                                                        None
+                                                    } else {
+                                                        Some(text.clone())
+                                                    };
+                                                self.touch();
+                                            }
+                                            if widgets::ghost_button(
+                                                ui,
+                                                "Parcourir…",
+                                                &pal,
+                                                Icon::Folder,
+                                            )
+                                            .clicked()
+                                            {
+                                                browse_prefix = true;
+                                            }
+                                            if widgets::ghost_button(
+                                                ui,
+                                                "Auto",
+                                                &pal,
+                                                Icon::None,
+                                            )
+                                            .clicked()
+                                            {
+                                                self.lib.settings.default_prefix = None;
+                                                self.touch();
+                                            }
+                                            widgets::info_button(
+                                                ui,
+                                                &pal,
+                                                "Le dossier choisi est recopié dans un nouveau jeu, puis utilisé tel quel : Quark n'y crée aucun sous-dossier. Vide = un préfixe par jeu sous ~/.local/share/quark/prefixes/.",
+                                            );
+                                        });
+                                    },
+                                );
+                            },
                         );
-
-                        section(ui, "PRÉFIXE PROTON", &pal);
-                        ui.horizontal(|ui| {
-                            let mut text =
-                                self.lib.settings.default_prefix.clone().unwrap_or_default();
-                            let field = (ui.available_width() - 210.0).max(220.0);
-                            let response = ui.add(
-                                egui::TextEdit::singleline(&mut text)
-                                    .hint_text(format!("auto : {}", config::prefix_root().display()))
-                                    .desired_width(field),
-                            );
-                            if response.changed() {
-                                self.lib.settings.default_prefix = if text.trim().is_empty() {
-                                    None
-                                } else {
-                                    Some(text.clone())
-                                };
-                                self.touch();
-                            }
-                            if widgets::ghost_button(ui, "Parcourir…", &pal, Icon::Folder).clicked() {
-                                browse_prefix = true;
-                            }
-                            if widgets::ghost_button(ui, "Auto", &pal, Icon::None).clicked() {
-                                self.lib.settings.default_prefix = None;
-                                self.touch();
-                            }
-                            widgets::info_button(
-                                ui,
-                                &pal,
-                                "Le dossier choisi est recopié dans un nouveau jeu, puis utilisé \
-                                 tel quel : Quark n'y crée aucun sous-dossier. Changer ce défaut \
-                                 ne déplace pas les jeux déjà configurés. Vide = un préfixe par \
-                                 jeu sous ~/.local/share/quark/prefixes/.",
-                            );
-                        });
-
-                        section(ui, "DOSSIER D'INSTALLATION DES BOUTIQUES", &pal);
-                        ui.horizontal(|ui| {
-                            let mut text = self
-                                .lib
-                                .settings
-                                .default_install_dir
-                                .clone()
-                                .unwrap_or_default();
-                            let field = (ui.available_width() - 210.0).max(220.0);
-                            let response = ui.add(
-                                egui::TextEdit::singleline(&mut text)
-                                    .hint_text(format!(
-                                        "auto : {}",
-                                        config::home_dir().join("Games").display()
-                                    ))
-                                    .desired_width(field),
-                            );
-                            if response.changed() {
-                                self.lib.settings.default_install_dir = if text.trim().is_empty() {
-                                    None
-                                } else {
-                                    Some(text.clone())
-                                };
-                                self.touch();
-                            }
-                            if widgets::ghost_button(ui, "Parcourir…", &pal, Icon::Folder).clicked() {
-                                browse_install_dir = true;
-                            }
-                            if widgets::ghost_button(ui, "Auto", &pal, Icon::None).clicked() {
-                                self.lib.settings.default_install_dir = None;
-                                self.touch();
-                            }
-                            widgets::info_button(
-                                ui,
-                                &pal,
-                                "Dossier parent proposé quand tu installes un jeu Epic ou GOG. \
-                                 Quark y crée le dossier du jeu ; tu peux choisir un autre \
-                                 dossier pour une installation précise sans changer ce réglage. \
-                                 Vide = ~/Games.",
-                            );
-                        });
-
-                        section(ui, "ARGUMENTS", &pal);
-                        ui.horizontal(|ui| {
-                            let response = ui.add(
-                                egui::TextEdit::singleline(&mut self.lib.settings.default_args)
-                                    .hint_text(crate::i18n::tr("ex. -windowed -novid"))
-                                    .desired_width((ui.available_width() - 50.0).max(300.0)),
-                            );
-                            if response.changed() {
-                                self.touch();
-                            }
-                            widgets::info_button(
-                                ui,
-                                &pal,
-                                "Passés après l'exécutable, comme dans les options de lancement \
-                                 Steam. Les guillemets sont respectés : --chemin \"un dossier\".",
-                            );
-                        });
-
-                        section(ui, "RUNTIME PROTON", &pal);
-                        let mut mode = self
-                            .lib
-                            .settings
-                            .default_proton
-                            .clone()
-                            .map(ProtonMode::Runtime)
-                            .unwrap_or(ProtonMode::Default);
-                        if runtime_combo(
+                        ui.add_space(16.0);
+                        widgets::card(
                             ui,
                             &pal,
-                            "default_runtime",
-                            &mut mode,
-                            &self.runtimes,
-                            false,
-                        ) {
-                            self.lib.settings.default_proton = match mode {
-                                ProtonMode::Runtime(key) => Some(key),
-                                _ => None,
-                            };
-                            self.touch();
-                        }
-                        // Les runtimes détectés et le compte d'anti-triche
-                        // vivaient dans leur propre onglet « Proton », qui ne
-                        // servait qu'à ça : ils sont ici, à côté du choix.
-                        ui.add_space(4.0);
-                        ui.horizontal(|ui| {
-                            let protons = self
-                                .runtimes
-                                .iter()
-                                .filter(|runtime| runtime.kind == RuntimeKind::Proton)
-                                .count();
-                            let anticheat = self.runtimes.len() - protons;
-                            ui.label(
-                                crate::i18n::rich(if crate::i18n::is_english() {
-                                    format!(
-                                        "{protons} Proton runtime(s) · {anticheat} anti-cheat runtime(s)"
-                                    )
-                                } else {
-                                    format!(
-                                        "{protons} runtime(s) Proton · {anticheat} runtime(s) anti-triche"
-                                    )
-                                })
-                                .size(11.0)
-                                .color(pal.text_faint),
-                            );
-                            if widgets::ghost_button(ui, "Redétecter", &pal, Icon::Refresh).clicked() {
-                                redetect = true;
-                            }
-                        });
-                        ui.horizontal(|ui| {
-                            ui.label(
-                                crate::i18n::rich(format!(
-                                    "Anti-triche : {}",
-                                    proton::anticheat_summary(&self.runtimes)
-                                ))
-                                .size(11.0)
-                                .color(pal.text_faint),
-                            );
-                            widgets::info_button(
-                                ui,
-                                &pal,
-                                "BattlEye et EasyAntiCheat sont deux options indépendantes, \
-                                 cochables ensemble dans les paramètres du jeu : Quark déclare les \
-                                 dossiers trouvés à ton Proton via PROTON_BATTLEYE_RUNTIME et \
-                                 PROTON_EAC_RUNTIME. Ces dossiers ne se lancent pas eux-mêmes.",
-                            );
-                        });
-                        if self.runtimes.is_empty() {
-                            ui.label(
-                                crate::i18n::rich(
-                                    "Aucun runtime trouvé. Installe Proton (Steam) ou dépose un \
-                                     build dans ~/.steam/steam/compatibilitytools.d/.",
-                                )
-                                .size(11.0)
-                                .color(pal.text_faint),
-                            );
-                        }
-
-                        section_hint(
-                            ui,
-                            "ANTI-TRICHE",
-                            &pal,
-                            "Deux options indépendantes, cochables ensemble. Les dossiers trouvés \
-                             dans Steam sont déclarés à ton Proton par PROTON_BATTLEYE_RUNTIME et \
-                             PROTON_EAC_RUNTIME.",
-                        );
-                        let mut battleye = self.lib.settings.default_anticheat.battleye();
-                        let mut eac = self.lib.settings.default_anticheat.eac();
-                        let mut changed = false;
-                        changed |= widgets::setting_toggle(
-                            ui,
-                            &pal,
-                            "BattlEye AntiCheat Runtime",
-                            Some("Déclaré à Proton par PROTON_BATTLEYE_RUNTIME."),
-                            &mut battleye,
-                            "default_battleye",
-                        )
-                        .changed();
-                        changed |= widgets::setting_toggle(
-                            ui,
-                            &pal,
-                            "EasyAntiCheat Runtime",
-                            Some("Déclaré à Proton par PROTON_EAC_RUNTIME."),
-                            &mut eac,
-                            "default_eac",
-                        )
-                        .changed();
-                        if changed {
-                            self.lib.settings.default_anticheat = self
-                                .lib
-                                .settings
-                                .default_anticheat
-                                .with_battleye(battleye)
-                                .with_eac(eac);
-                            self.touch();
-                        }
-
-                        section_hint(
-                            ui,
-                            "OPTIONS DE LANCEMENT",
-                            &pal,
-                            "Recopiées dans chaque jeu ajouté, puis chaque jeu garde les siennes. \
-                             Un outil absent est ignoré au lancement (le jeu démarre quand même) \
-                             et signalé dans les paramètres du jeu.",
-                        );
-                        if launch_options_editor(
-                            ui,
-                            &pal,
-                            &mut self.lib.settings.default_launch,
-                            &mut self.lib.settings.default_proton_log,
-                            &mut self.lib.settings.default_umu,
+                            "Dossier d'installation des boutiques",
                             None,
-                            &self.tools,
-                        ) {
-                            self.touch();
-                        }
-                        section_hint(
-                            ui,
-                            "VARIABLES D'ENVIRONNEMENT",
-                            &pal,
-                            "Format NOM=valeur, par exemple \
-                             WINEDLLOVERRIDES=winmm=n,b;steam_api64. Chaque jeu ajouté en reçoit \
-                             une copie qu'il peut modifier sans toucher aux autres.",
+                            |ui| {
+                                let mut text = self
+                                    .lib
+                                    .settings
+                                    .default_install_dir
+                                    .clone()
+                                    .unwrap_or_default();
+                                let hint = format!(
+                                    "auto : {}",
+                                    config::home_dir().join("Games").display()
+                                );
+                                widgets::field(
+                                    ui,
+                                    &pal,
+                                    "Dossier parent",
+                                    |ui| {
+                                        ui.horizontal(|ui| {
+                                            widgets::style_text_inputs(ui, &pal);
+                                            let width = (ui.available_width() - 210.0)
+                                                .max(180.0);
+                                            let response = ui.add_sized(
+                                                Vec2::new(width, 34.0),
+                                                egui::TextEdit::singleline(&mut text)
+                                                    .hint_text(&hint),
+                                            );
+                                            if response.changed() {
+                                                self.lib.settings.default_install_dir =
+                                                    if text.trim().is_empty() {
+                                                        None
+                                                    } else {
+                                                        Some(text.clone())
+                                                    };
+                                                self.touch();
+                                            }
+                                            if widgets::ghost_button(
+                                                ui,
+                                                "Parcourir…",
+                                                &pal,
+                                                Icon::Folder,
+                                            )
+                                            .clicked()
+                                            {
+                                                browse_install_dir = true;
+                                            }
+                                            if widgets::ghost_button(
+                                                ui,
+                                                "Auto",
+                                                &pal,
+                                                Icon::None,
+                                            )
+                                            .clicked()
+                                            {
+                                                self.lib.settings.default_install_dir = None;
+                                                self.touch();
+                                            }
+                                            widgets::info_button(
+                                                ui,
+                                                &pal,
+                                                "Dossier parent proposé quand tu installes un jeu Epic ou GOG. Quark y crée le dossier du jeu ; tu peux choisir un autre dossier pour une installation précise. Vide = ~/Games.",
+                                            );
+                                        });
+                                    },
+                                );
+                            },
                         );
-                        if env_editor(ui, &pal, &mut self.lib.settings.default_env) {
-                            self.touch();
-                        }
-                    }
-
-                    SettingsTab::Artworks => {
-                        section(ui, "SOURCES", &pal);
-                        ui.horizontal(|ui| {
-                            ui.label(
-                                crate::i18n::rich("Clé API SteamGridDB").size(12.5).color(pal.text_dim),
-                            );
-                            widgets::info_button(
-                                ui,
-                                &pal,
-                                "Sans clé, Quark se limite aux artworks officiels du CDN Steam. \
-                                 Clé gratuite : steamgriddb.com/profile/preferences/api",
-                            );
-                            ui.add_space(8.0);
-                            let response = ui.add(
-                                egui::TextEdit::singleline(&mut self.lib.settings.sgdb_api_key)
-                                    .password(true)
-                                    .hint_text(crate::i18n::tr("optionnelle"))
-                                    .desired_width(300.0),
-                            );
-                            if response.changed() {
-                                self.touch();
-                            }
-                        });
-                        ui.horizontal(|ui| {
-                            ui.label(
-                                crate::i18n::rich("Langue / pays (recherche Steam)")
-                                    .size(12.5)
-                                    .color(pal.text_dim),
-                            );
-                            ui.add_space(8.0);
-                            let mut language = self.lib.settings.language.clone();
-                            egui::ComboBox::from_id_salt("steam_language")
-                                .selected_text(language.clone())
-                                .width(150.0)
-                                .show_ui(ui, |ui| {
-                                    for option in [
-                                        "french",
-                                        "english",
-                                        "german",
-                                        "spanish",
-                                        "italian",
-                                        "portuguese",
-                                        "schinese",
-                                        "japanese",
-                                    ] {
-                                        ui.selectable_value(
-                                            &mut language,
-                                            option.to_string(),
-                                            option,
-                                        );
+                        ui.add_space(16.0);
+                        widgets::card(
+                            ui,
+                            &pal,
+                            "Arguments",
+                            Some(
+                                "Passés après l'exécutable, comme dans les options de lancement Steam. Les guillemets sont respectés : --chemin \"un dossier\".",
+                            ),
+                            |ui| {
+                                widgets::field(ui, &pal, "Arguments par défaut", |ui| {
+                                    let response = ui.add_sized(
+                                        Vec2::new(ui.available_width(), 34.0),
+                                        egui::TextEdit::singleline(
+                                            &mut self.lib.settings.default_args,
+                                        )
+                                        .hint_text(crate::i18n::tr(
+                                            "ex. -windowed -novid",
+                                        )),
+                                    );
+                                    if response.changed() {
+                                        self.touch();
                                     }
                                 });
-                            if language != self.lib.settings.language {
-                                self.lib.settings.language = language;
-                                self.touch();
-                            }
-                            let mut country = self.lib.settings.country.clone();
-                            let response = ui.add_sized(
-                                Vec2::new(70.0, 24.0),
-                                egui::TextEdit::singleline(&mut country),
-                            );
-                            if response.changed() {
-                                self.lib.settings.country = country;
-                                self.touch();
-                            }
-                        });
-                    }
-                    SettingsTab::Stats => self.stats_page(ui, &pal),
-                    SettingsTab::Disk => self.disk_page(ui, &pal, ctx),
-                    SettingsTab::Providers => {
-                        section(ui, "SYNCHRONISATION", &pal);
-                        self.sync_section(ui, ctx, &pal);
-                        ui.add_space(12.0);
-                        section(ui, "COMPTES", &pal);
-                        ui.label(
-                            crate::i18n::rich(
-                                "Les identifiants restent sur cet ordinateur dans un fichier séparé, protégé par les permissions de ton compte. Ils ne sont pas chiffrés et Quark ne les envoie jamais à un serveur Quark.",
-                            )
-                            .size(12.0)
-                            .color(pal.text_dim),
+                            },
                         );
-                        ui.add_space(8.0);
-                        if let Some(error) = &self.credentials_error {
-                            ui.label(crate::i18n::rich(error).size(11.5).color(pal.danger));
-                        }
-                        ui.label(
-                            crate::i18n::rich(if self.credentials.steam_web_api_key.is_some() {
-                                "Steam Web API : clé enregistrée (masquée)"
-                            } else {
-                                "Steam Web API : clé facultative non configurée"
-                            })
-                            .size(12.0)
-                            .color(pal.text),
-                        );
-                        ui.horizontal_wrapped(|ui| {
-                            ui.add_sized(
-                                Vec2::new(330.0, 28.0),
-                                egui::TextEdit::singleline(&mut self.steam_key_draft)
-                                    .password(true)
-                                    .hint_text(crate::i18n::tr("Clé Web API Steam personnelle · laisser vide pour garder l'actuelle")),
-                            );
-                            ui.add_sized(
-                                Vec2::new(220.0, 28.0),
-                                egui::TextEdit::singleline(&mut self.steam_id_draft)
-                                    .password(true)
-                                    .hint_text(if self.credentials.steam_id.is_some() { "SteamID64 enregistré · remplacement facultatif" } else { "SteamID64 (17 chiffres)" }),
-                            );
-                            if widgets::ghost_button(ui, "Enregistrer", &pal, Icon::Info).clicked() {
-                                save_steam_key = true;
-                            }
-                            widgets::info_button(
-                                ui,
-                                &pal,
-                                "La clé personnelle et le SteamID64 sont enregistrés dans credentials.json avec permissions privées. GetOwnedGames peut rester inaccessible si les détails Steam sont privés. Une réponse vide est signalée comme ambiguë, jamais interprétée comme une bibliothèque vérifiée vide.",
-                            );
-                        });
-                        ui.add_space(10.0);
-                        section(ui, "CONNEXIONS", &pal);
-                        self.provider_accounts(ui, ctx, &pal);
-                        ui.label(
-                            crate::i18n::rich("Heroic sera détecté et sa configuration ne sera lue qu'après ton accord explicite.")
-                                .size(11.5)
-                                .color(pal.text_faint),
-                        );
-
-                        ui.add_space(10.0);
-                        section(ui, "PLAYSTATION 2 · PCSX2", &pal);
-                        ui.label(
-                            crate::i18n::rich(
-                                "Les jeux PS2 ajoutés depuis une image disque sont lancés par PCSX2. \
-                                 La jaquette vient du dépôt communautaire ps2-covers, classée par \
-                                 numéro de série.",
-                            )
-                            .size(11.5)
-                            .color(pal.text_dim),
-                        );
-                        let detected = crate::ps2::detect_emulator(&self.lib.settings);
-                        ui.horizontal_wrapped(|ui| {
-                            ui.label(
-                                crate::i18n::rich("Binaire PCSX2").size(12.0).color(pal.text_dim),
-                            );
-                            ui.add_sized(
-                                Vec2::new(360.0, 26.0),
-                                egui::TextEdit::singleline(&mut self.lib.settings.pcsx2_path)
-                                    .hint_text(crate::i18n::tr(
-                                        "auto · pcsx2-qt ou export Flatpak net.pcsx2.PCSX2",
-                                    )),
-                            );
-                            if widgets::ghost_button(ui, "Parcourir…", &pal, Icon::Folder).clicked()
-                            {
-                                browse_pcsx2 = true;
-                            }
-                            if widgets::ghost_button(ui, "Auto", &pal, Icon::Refresh).clicked() {
-                                self.lib.settings.pcsx2_path.clear();
-                                self.touch();
-                            }
-                            widgets::info_button(
-                                ui,
-                                &pal,
-                                "Vide, Quark cherche pcsx2-qt et pcsx2 dans le PATH puis \
-                                 l'export Flatpak net.pcsx2.PCSX2. Indique un chemin si \
-                                 l'émulateur est installé ailleurs.",
-                            );
-                        });
-                        match &detected {
-                            Some(path) => {
-                                ui.label(
-                                    crate::i18n::rich(format!("Détecté : {}", path.display()))
-                                        .size(10.5)
-                                        .color(pal.text_faint),
-                                );
-                            }
-                            None => {
-                                ui.label(
-                                    crate::i18n::rich(
-                                        "Aucun PCSX2 détecté. Installe-le depuis pcsx2.net ou \
-                                         indique son binaire ci-dessus.",
-                                    )
-                                    .size(10.5)
-                                    .color(pal.danger),
-                                );
-                            }
-                        }
-                        ui.add_space(10.0);
-                        section(ui, "RETROACHIEVEMENTS", &pal);
-                        ui.label(
-                            crate::i18n::rich(
-                                "PCSX2 gère lui-même la connexion et les déblocages. Quark lit la \
-                                 progression avec la clé Web API pour l'afficher dans la fiche du \
-                                 jeu et dans l'overlay.",
-                            )
-                            .size(11.5)
-                            .color(pal.text_dim),
-                        );
-                        ui.horizontal_wrapped(|ui| {
-                            ui.label(crate::i18n::rich("Pseudo").size(12.0).color(pal.text_dim));
-                            ui.add_sized(
-                                Vec2::new(220.0, 26.0),
-                                egui::TextEdit::singleline(&mut self.lib.settings.ra_username)
-                                    .hint_text(crate::i18n::tr("pseudo RetroAchievements")),
-                            );
-                            ui.label(
-                                crate::i18n::rich("Clé Web API").size(12.0).color(pal.text_dim),
-                            );
-                            ui.add_sized(
-                                Vec2::new(280.0, 26.0),
-                                egui::TextEdit::singleline(&mut self.lib.settings.ra_api_key)
-                                    .password(true)
-                                    .hint_text(crate::i18n::tr("profil → Keys")),
-                            );
-                            widgets::info_button(
-                                ui,
-                                &pal,
-                                "La clé se trouve sur retroachievements.org, dans ton profil → \
-                                 Keys. Elle reste dans config.json sur cet ordinateur et n'est \
-                                 jamais envoyée à un serveur Quark.",
-                            );
-                        });
-                        ui.label(
-                            crate::i18n::rich(
-                                "Ouvre la fiche d'un jeu PS2 pour chercher sa fiche \
-                                 RetroAchievements par titre, puis afficher sa progression.",
-                            )
-                            .size(10.5)
-                            .color(pal.text_faint),
-                        );
-
-                        ui.add_space(10.0);
-                        section(ui, "OUTILS GÉRÉS PAR QUARK", &pal);
-                        for tool in crate::providers::tools::ManagedToolId::ALL {
-                            ui.horizontal_wrapped(|ui| {
-                                ui.label(crate::i18n::rich(tool.label()).size(12.0).color(pal.text));
-                                if let Some(state) = &self.managed_tools[tool.index()] {
-                                    ui.label(crate::i18n::rich(state).size(11.0).color(pal.text_dim));
-                                } else if tool.installed_path().is_file() {
-                                    ui.label(crate::i18n::rich("Binaire présent · version non vérifiée à cette session").size(10.5).color(pal.text_faint));
-                                } else {
-                                    ui.label(crate::i18n::rich("Non installé").size(10.5).color(pal.text_faint));
-                                }
-                                if widgets::ghost_button(ui, "Installer / actualiser", &pal, Icon::Refresh).clicked() {
-                                    self.start_managed_tool(ctx, tool);
-                                }
-                            });
-                        }
-                        ui.label(
-                            crate::i18n::rich("Téléchargements depuis les releases officielles Linux x86_64 ; le digest SHA-256 GitHub est vérifié avant exécution (il ne s'agit pas d'une signature indépendante). Les licences et avis de distribution seront inclus dans le paquet.")
-                                .size(11.0)
-                                .color(pal.text_faint),
-                        );
-
-                        ui.add_space(10.0);
-                        section(ui, "OVERLAY EPIC (EOS)", &pal);
-                        if let Some(job) = &self.eos_overlay_job {
-                            let label = job
-                                .progress
-                                .lock()
-                                .map(|progress| progress.label())
-                                .unwrap_or_else(|_| "Overlay Epic · installation…".to_string());
-                            ui.label(crate::i18n::rich(label).size(12.0).color(pal.text_dim));
-                        } else if let Some(path) =
-                            crate::providers::legendary::LegendaryAdapter::eos_overlay_installed_path()
-                        {
-                            ui.label(
-                                crate::i18n::rich(format!("Installé · {}", path.display()))
-                                    .size(11.5)
-                                    .color(pal.text_dim),
-                            );
-                            ui.label(
-                                crate::i18n::rich("Activé automatiquement dans le préfixe de chaque jeu Epic au lancement.")
-                                    .size(11.0)
-                                    .color(pal.text_faint),
-                            );
-                        } else {
-                            ui.label(
-                                crate::i18n::rich("Comme Heroic : télécharge l'overlay Epic une fois, puis l'active dans le préfixe du jeu. Maj+F3 ouvre l'overlay Epic en jeu.")
-                                    .size(11.5)
-                                    .color(pal.text_dim),
-                            );
-                            if widgets::ghost_button(
-                                ui,
-                                "Installer l'overlay Epic (EOS)",
-                                &pal,
-                                Icon::Download,
-                            )
-                            .clicked()
-                            {
-                                self.install_eos_overlay_global(ctx);
-                            }
-                        }
-                    }
-                    SettingsTab::About => {
-                        section(ui, "GUIDE", &pal);
-                        ui.horizontal(|ui| {
-                            if widgets::ghost_button(
-                                ui,
-                                "Revoir le guide de démarrage",
-                                &pal,
-                                Icon::Info,
-                            )
-                            .clicked()
-                            {
-                                self.settings_open = false;
-                                self.onboarding_step = 0;
-                                self.onboarding_open = true;
-                            }
-                            ui.add_space(8.0);
-                            if widgets::ghost_button(
-                                ui,
-                                "Revoir les nouveautés",
-                                &pal,
-                                Icon::Info,
-                            )
-                            .clicked()
-                            {
-                                self.settings_open = false;
-                                self.whats_new_open = true;
-                            }
-                        });
-                        ui.add_space(8.0);
-
-                        section(ui, "MISES À JOUR", &pal);
-                        if widgets::setting_toggle(
+                        ui.add_space(16.0);
+                        widgets::card(
                             ui,
                             &pal,
-                            "Installer les mises à jour au démarrage",
+                            "Runtime Proton",
                             Some(
-                                "Quark vérifie la dernière release, remplace son binaire et se \
-                                 relance. Les binaires de développement et les dossiers en \
-                                 lecture seule sont ignorés ; désactive cette option pour \
-                                 garder la vérification manuelle.",
+                                "Le runtime recopié dans chaque nouveau jeu. Les runtimes anti-triche sont déclarés séparément ci-dessous.",
                             ),
-                            &mut self.lib.settings.auto_update,
-                            "auto_update",
-                        )
-                        .changed()
-                        {
-                            self.touch();
-                        }
-
-                        section(ui, "VERSION", &pal);
-                        ui.horizontal(|ui| {
-                            ui.label(
-                                crate::i18n::rich(format!("Quark {}", update::current_version()))
-                                    .size(12.5)
-                                    .color(pal.text),
-                            );
-                            ui.add_space(14.0);
-                            match self.update.clone() {
-                                UpdateState::Idle => {
+                            |ui| {
+                                let mut mode = self
+                                    .lib
+                                    .settings
+                                    .default_proton
+                                    .clone()
+                                    .map(ProtonMode::Runtime)
+                                    .unwrap_or(ProtonMode::Default);
+                                if runtime_combo(
+                                    ui,
+                                    &pal,
+                                    "default_runtime",
+                                    &mut mode,
+                                    &self.runtimes,
+                                    false,
+                                ) {
+                                    self.lib.settings.default_proton = match mode {
+                                        ProtonMode::Runtime(key) => Some(key),
+                                        _ => None,
+                                    };
+                                    self.touch();
+                                }
+                                ui.horizontal(|ui| {
+                                    let protons = self
+                                        .runtimes
+                                        .iter()
+                                        .filter(|runtime| {
+                                            runtime.kind == RuntimeKind::Proton
+                                        })
+                                        .count();
+                                    let anticheat = self.runtimes.len() - protons;
+                                    ui.label(
+                                        crate::i18n::rich(if crate::i18n::is_english() {
+                                            format!(
+                                                "{protons} Proton runtime(s) · {anticheat} anti-cheat runtime(s)"
+                                            )
+                                        } else {
+                                            format!(
+                                                "{protons} runtime(s) Proton · {anticheat} runtime(s) anti-triche"
+                                            )
+                                        })
+                                        .size(11.0)
+                                        .color(pal.text_faint),
+                                    );
                                     if widgets::ghost_button(
                                         ui,
-                                        "Vérifier les mises à jour",
+                                        "Redétecter",
                                         &pal,
                                         Icon::Refresh,
                                     )
                                     .clicked()
                                     {
-                                        check_updates = true;
+                                        redetect = true;
+                                    }
+                                });
+                                ui.horizontal(|ui| {
+                                    ui.label(
+                                        crate::i18n::rich(format!(
+                                            "Anti-triche : {}",
+                                            proton::anticheat_summary(&self.runtimes)
+                                        ))
+                                        .size(11.0)
+                                        .color(pal.text_faint),
+                                    );
+                                    widgets::info_button(
+                                        ui,
+                                        &pal,
+                                        "BattlEye et EasyAntiCheat sont deux options indépendantes, cochables ensemble dans les paramètres du jeu : Quark déclare les dossiers trouvés à ton Proton via PROTON_BATTLEYE_RUNTIME et PROTON_EAC_RUNTIME.",
+                                    );
+                                });
+                                if self.runtimes.is_empty() {
+                                    ui.label(
+                                        crate::i18n::rich(
+                                            "Aucun runtime trouvé. Installe Proton (Steam) ou dépose un build dans ~/.steam/steam/compatibilitytools.d/.",
+                                        )
+                                        .size(11.0)
+                                        .color(pal.text_faint),
+                                    );
+                                }
+                            },
+                        );
+                        ui.add_space(16.0);
+                        widgets::card(
+                            ui,
+                            &pal,
+                            "Anti-triche",
+                            Some(
+                                "Deux options indépendantes, cochables ensemble. Les dossiers trouvés dans Steam sont déclarés à ton Proton par PROTON_BATTLEYE_RUNTIME et PROTON_EAC_RUNTIME.",
+                            ),
+                            |ui| {
+                                let mut battleye =
+                                    self.lib.settings.default_anticheat.battleye();
+                                let mut eac = self.lib.settings.default_anticheat.eac();
+                                let mut changed = false;
+                                changed |= widgets::option_row(
+                                    ui,
+                                    &pal,
+                                    "BattlEye AntiCheat Runtime",
+                                    Some("Déclaré à Proton par PROTON_BATTLEYE_RUNTIME."),
+                                    &mut battleye,
+                                    "default_battleye",
+                                )
+                                .changed();
+                                changed |= widgets::option_row(
+                                    ui,
+                                    &pal,
+                                    "EasyAntiCheat Runtime",
+                                    Some("Déclaré à Proton par PROTON_EAC_RUNTIME."),
+                                    &mut eac,
+                                    "default_eac",
+                                )
+                                .changed();
+                                if changed {
+                                    self.lib.settings.default_anticheat = self
+                                        .lib
+                                        .settings
+                                        .default_anticheat
+                                        .with_battleye(battleye)
+                                        .with_eac(eac);
+                                    self.touch();
+                                }
+                            },
+                        );
+                        ui.add_space(16.0);
+                        widgets::card(
+                            ui,
+                            &pal,
+                            "Options de lancement",
+                            Some(
+                                "Recopiées dans chaque jeu ajouté, puis chaque jeu garde les siennes. Un outil absent est ignoré au lancement (le jeu démarre quand même) et signalé dans les paramètres du jeu.",
+                            ),
+                            |ui| {
+                                if launch_options_editor(
+                                    ui,
+                                    &pal,
+                                    &mut self.lib.settings.default_launch,
+                                    &mut self.lib.settings.default_proton_log,
+                                    &mut self.lib.settings.default_umu,
+                                    None,
+                                    &self.tools,
+                                ) {
+                                    self.touch();
+                                }
+                            },
+                        );
+                        ui.add_space(16.0);
+                        widgets::card(
+                            ui,
+                            &pal,
+                            "Variables d'environnement",
+                            Some(
+                                "Format NOM=valeur, par exemple WINEDLLOVERRIDES=winmm=n,b;steam_api64. Chaque jeu ajouté en reçoit une copie qu'il peut modifier sans toucher aux autres.",
+                            ),
+                            |ui| {
+                                if env_editor(ui, &pal, &mut self.lib.settings.default_env) {
+                                    self.touch();
+                                }
+                            },
+                        );
+                    }
+                    SettingsTab::Artworks => {
+                        widgets::card(
+                            ui,
+                            &pal,
+                            "Sources",
+                            Some(
+                                "Sans clé SteamGridDB, Quark se limite aux artworks officiels du CDN Steam. Une clé gratuite se crée sur steamgriddb.com/profile/preferences/api.",
+                            ),
+                            |ui| {
+                                widgets::field(
+                                    ui,
+                                    &pal,
+                                    "Clé API SteamGridDB",
+                                    |ui| {
+                                        let response = ui.add_sized(
+                                            Vec2::new(360.0, 34.0),
+                                            egui::TextEdit::singleline(
+                                                &mut self.lib.settings.sgdb_api_key,
+                                            )
+                                            .password(true)
+                                            .hint_text(crate::i18n::tr("optionnelle")),
+                                        );
+                                        if response.changed() {
+                                            self.touch();
+                                        }
+                                    },
+                                );
+                                widgets::field(
+                                    ui,
+                                    &pal,
+                                    "Langue / pays (recherche Steam)",
+                                    |ui| {
+                                        ui.horizontal(|ui| {
+                                            let mut language =
+                                                self.lib.settings.language.clone();
+                                            egui::ComboBox::from_id_salt("steam_language")
+                                                .selected_text(language.clone())
+                                                .width(160.0)
+                                                .show_ui(ui, |ui| {
+                                                    for option in [
+                                                        "french",
+                                                        "english",
+                                                        "german",
+                                                        "spanish",
+                                                        "italian",
+                                                        "portuguese",
+                                                        "schinese",
+                                                        "japanese",
+                                                    ] {
+                                                        ui.selectable_value(
+                                                            &mut language,
+                                                            option.to_string(),
+                                                            option,
+                                                        );
+                                                    }
+                                                });
+                                            if language != self.lib.settings.language {
+                                                self.lib.settings.language = language;
+                                                self.touch();
+                                            }
+                                            let mut country =
+                                                self.lib.settings.country.clone();
+                                            let response = ui.add_sized(
+                                                Vec2::new(80.0, 34.0),
+                                                egui::TextEdit::singleline(&mut country),
+                                            );
+                                            if response.changed() {
+                                                self.lib.settings.country = country;
+                                                self.touch();
+                                            }
+                                            ui.label(
+                                                crate::i18n::rich(
+                                                    "Pays utilisé par l'API Steam (ex. fr, us).",
+                                                )
+                                                .size(11.0)
+                                                .color(pal.text_faint),
+                                            );
+                                        });
+                                    },
+                                );
+                            },
+                        );
+                    }
+                    SettingsTab::Stats => self.stats_page(ui, &pal),
+                    SettingsTab::Disk => self.disk_page(ui, &pal, ctx),
+                    SettingsTab::Providers => {
+                        widgets::card(
+                            ui,
+                            &pal,
+                            "Synchronisation",
+                            None,
+                            |ui| {
+                                self.sync_section(ui, ctx, &pal);
+                            },
+                        );
+                        ui.add_space(16.0);
+                        widgets::card(
+                            ui,
+                            &pal,
+                            "Comptes",
+                            None,
+                            |ui| {
+                                ui.label(
+                                    crate::i18n::rich(
+                                        "Les identifiants restent sur cet ordinateur dans un fichier séparé, protégé par les permissions de ton compte. Ils ne sont pas chiffrés et Quark ne les envoie jamais à un serveur Quark.",
+                                    )
+                                    .size(12.0)
+                                    .color(pal.text_dim),
+                                );
+                                if let Some(error) = &self.credentials_error {
+                                    ui.label(
+                                        crate::i18n::rich(error).size(11.5).color(pal.danger),
+                                    );
+                                }
+                                ui.label(
+                                    crate::i18n::rich(
+                                        if self.credentials.steam_web_api_key.is_some() {
+                                            "Steam Web API : clé enregistrée (masquée)"
+                                        } else {
+                                            "Steam Web API : clé facultative non configurée"
+                                        },
+                                    )
+                                    .size(12.0)
+                                    .color(pal.text),
+                                );
+                                ui.horizontal_wrapped(|ui| {
+                                    widgets::style_text_inputs(ui, &pal);
+                                    ui.add_sized(
+                                        Vec2::new(330.0, 34.0),
+                                        egui::TextEdit::singleline(&mut self.steam_key_draft)
+                                            .password(true)
+                                            .hint_text(crate::i18n::tr(
+                                                "Clé Web API Steam personnelle · laisser vide pour garder l'actuelle",
+                                            )),
+                                    );
+                                    ui.add_sized(
+                                        Vec2::new(260.0, 34.0),
+                                        egui::TextEdit::singleline(&mut self.steam_id_draft)
+                                            .password(true)
+                                            .hint_text(if self.credentials.steam_id.is_some() {
+                                                "SteamID64 enregistré · remplacement facultatif"
+                                            } else {
+                                                "SteamID64 (17 chiffres)"
+                                            }),
+                                    );
+                                    if widgets::ghost_button(
+                                        ui,
+                                        "Enregistrer",
+                                        &pal,
+                                        Icon::Info,
+                                    )
+                                    .clicked()
+                                    {
+                                        save_steam_key = true;
+                                    }
+                                    widgets::info_button(
+                                        ui,
+                                        &pal,
+                                        "La clé personnelle et le SteamID64 sont enregistrés dans credentials.json avec permissions privées. GetOwnedGames peut rester inaccessible si les détails Steam sont privés. Une réponse vide est signalée comme ambiguë, jamais interprétée comme une bibliothèque vérifiée vide.",
+                                    );
+                                });
+                            },
+                        );
+                        ui.add_space(16.0);
+                        widgets::card(
+                            ui,
+                            &pal,
+                            "Connexions",
+                            None,
+                            |ui| {
+                                self.provider_accounts(ui, ctx, &pal);
+                                ui.label(
+                                    crate::i18n::rich(
+                                        "Heroic sera détecté et sa configuration ne sera lue qu'après ton accord explicite.",
+                                    )
+                                    .size(11.5)
+                                    .color(pal.text_faint),
+                                );
+                            },
+                        );
+                        ui.add_space(16.0);
+                        widgets::card(
+                            ui,
+                            &pal,
+                            "PlayStation 2 · PCSX2",
+                            None,
+                            |ui| {
+                                ui.label(
+                                    crate::i18n::rich(
+                                        "Les jeux PS2 ajoutés depuis une image disque sont lancés par PCSX2. La jaquette vient du dépôt communautaire ps2-covers, classée par numéro de série.",
+                                    )
+                                    .size(11.5)
+                                    .color(pal.text_dim),
+                                );
+                                let detected =
+                                    crate::ps2::detect_emulator(&self.lib.settings);
+                                widgets::field(ui, &pal, "Binaire PCSX2", |ui| {
+                                    ui.horizontal(|ui| {
+                                        let response = ui.add_sized(
+                                            Vec2::new(360.0, 34.0),
+                                            egui::TextEdit::singleline(
+                                                &mut self.lib.settings.pcsx2_path,
+                                            )
+                                            .hint_text(crate::i18n::tr(
+                                                "auto · pcsx2-qt ou export Flatpak net.pcsx2.PCSX2",
+                                            )),
+                                        );
+                                        if response.changed() {
+                                            self.touch();
+                                        }
+                                        if widgets::ghost_button(
+                                            ui,
+                                            "Parcourir…",
+                                            &pal,
+                                            Icon::Folder,
+                                        )
+                                        .clicked()
+                                        {
+                                            browse_pcsx2 = true;
+                                        }
+                                        if widgets::ghost_button(
+                                            ui,
+                                            "Auto",
+                                            &pal,
+                                            Icon::Refresh,
+                                        )
+                                        .clicked()
+                                        {
+                                            self.lib.settings.pcsx2_path.clear();
+                                            self.touch();
+                                        }
+                                        widgets::info_button(
+                                            ui,
+                                            &pal,
+                                            "Vide, Quark cherche pcsx2-qt et pcsx2 dans le PATH puis l'export Flatpak net.pcsx2.PCSX2. Indique un chemin si l'émulateur est installé ailleurs.",
+                                        );
+                                    });
+                                });
+                                match &detected {
+                                    Some(path) => {
+                                        ui.label(
+                                            crate::i18n::rich(format!(
+                                                "Détecté : {}",
+                                                path.display()
+                                            ))
+                                            .size(11.0)
+                                            .color(pal.text_faint),
+                                        );
+                                    }
+                                    None => {
+                                        ui.label(
+                                            crate::i18n::rich(
+                                                "Aucun PCSX2 détecté. Installe-le depuis pcsx2.net ou indique son binaire ci-dessus.",
+                                            )
+                                            .size(11.0)
+                                            .color(pal.danger),
+                                        );
                                     }
                                 }
-                                UpdateState::Checking => {
-                                    ui.spinner();
+                            },
+                        );
+                        ui.add_space(16.0);
+                        widgets::card(
+                            ui,
+                            &pal,
+                            "RetroAchievements",
+                            None,
+                            |ui| {
+                                ui.label(
+                                    crate::i18n::rich(
+                                        "PCSX2 gère lui-même la connexion et les déblocages. Quark lit la progression avec la clé Web API pour l'afficher dans la fiche du jeu et dans l'overlay.",
+                                    )
+                                    .size(11.5)
+                                    .color(pal.text_dim),
+                                );
+                                widgets::field(ui, &pal, "Pseudo", |ui| {
+                                    let response = ui.add_sized(
+                                        Vec2::new(240.0, 34.0),
+                                        egui::TextEdit::singleline(
+                                            &mut self.lib.settings.ra_username,
+                                        )
+                                        .hint_text(crate::i18n::tr(
+                                            "pseudo RetroAchievements",
+                                        )),
+                                    );
+                                    if response.changed() {
+                                        self.touch();
+                                    }
+                                });
+                                widgets::field(ui, &pal, "Clé Web API", |ui| {
+                                    let response = ui.add_sized(
+                                        Vec2::new(320.0, 34.0),
+                                        egui::TextEdit::singleline(
+                                            &mut self.lib.settings.ra_api_key,
+                                        )
+                                        .password(true)
+                                        .hint_text(crate::i18n::tr("profil → Keys")),
+                                    );
+                                    if response.changed() {
+                                        self.touch();
+                                    }
+                                });
+                                ui.label(
+                                    crate::i18n::rich(
+                                        "La clé se trouve sur retroachievements.org, dans ton profil → Keys. Elle reste dans config.json sur cet ordinateur et n'est jamais envoyée à un serveur Quark.",
+                                    )
+                                    .size(11.0)
+                                    .color(pal.text_faint),
+                                );
+                            },
+                        );
+                        ui.add_space(16.0);
+                        widgets::card(
+                            ui,
+                            &pal,
+                            "Outils gérés par Quark",
+                            None,
+                            |ui| {
+                                for tool in crate::providers::tools::ManagedToolId::ALL {
+                                    ui.horizontal_wrapped(|ui| {
+                                        ui.label(
+                                            crate::i18n::rich(tool.label())
+                                                .size(12.0)
+                                                .color(pal.text),
+                                        );
+                                        if let Some(state) = &self.managed_tools[tool.index()]
+                                        {
+                                            ui.label(
+                                                crate::i18n::rich(state)
+                                                    .size(11.0)
+                                                    .color(pal.text_dim),
+                                            );
+                                        } else if tool.installed_path().is_file() {
+                                            ui.label(
+                                                crate::i18n::rich(
+                                                    "Binaire présent · version non vérifiée à cette session",
+                                                )
+                                                .size(11.0)
+                                                .color(pal.text_faint),
+                                            );
+                                        } else {
+                                            ui.label(
+                                                crate::i18n::rich("Non installé")
+                                                    .size(11.0)
+                                                    .color(pal.text_faint),
+                                            );
+                                        }
+                                        if widgets::ghost_button(
+                                            ui,
+                                            "Installer / actualiser",
+                                            &pal,
+                                            Icon::Refresh,
+                                        )
+                                        .clicked()
+                                        {
+                                            self.start_managed_tool(ctx, tool);
+                                        }
+                                    });
+                                }
+                                ui.label(
+                                    crate::i18n::rich(
+                                        "Téléchargements depuis les releases officielles Linux x86_64 ; le digest SHA-256 GitHub est vérifié avant exécution (il ne s'agit pas d'une signature indépendante).",
+                                    )
+                                    .size(11.0)
+                                    .color(pal.text_faint),
+                                );
+                            },
+                        );
+                        ui.add_space(16.0);
+                        widgets::card(
+                            ui,
+                            &pal,
+                            "Overlay Epic (EOS)",
+                            None,
+                            |ui| {
+                                if let Some(job) = &self.eos_overlay_job {
+                                    let label = job
+                                        .progress
+                                        .lock()
+                                        .map(|progress| progress.label())
+                                        .unwrap_or_else(|_| {
+                                            "Overlay Epic · installation…".to_string()
+                                        });
                                     ui.label(
-                                        crate::i18n::rich("vérification\u{2026}")
+                                        crate::i18n::rich(label)
                                             .size(12.0)
                                             .color(pal.text_dim),
                                     );
-                                }
-                                UpdateState::UpToDate => {
-                                    ui.label(
-                                        crate::i18n::rich("à jour").size(12.0).color(pal.text_dim),
-                                    );
-                                    if widgets::ghost_button(ui, "Revérifier", &pal, Icon::Refresh)
-                                        .clicked()
-                                    {
-                                        check_updates = true;
-                                    }
-                                }
-                                UpdateState::Available(release) => {
+                                } else if let Some(path) = crate::providers::legendary::LegendaryAdapter::eos_overlay_installed_path() {
                                     ui.label(
                                         crate::i18n::rich(format!(
-                                            "{} disponible",
-                                            release.tag_name
+                                            "Installé · {}",
+                                            path.display()
                                         ))
-                                        .size(12.0)
-                                        .color(pal.accent),
+                                        .size(11.5)
+                                        .color(pal.text_dim),
                                     );
-                                    let size = release
-                                        .archive()
-                                        .map(|asset| asset.size as f64 / 1_048_576.0)
-                                        .unwrap_or(0.0);
-                                    let label = if size > 0.0 {
-                                        if crate::i18n::is_english() {
+                                    ui.label(
+                                        crate::i18n::rich(
+                                            "Activé automatiquement dans le préfixe de chaque jeu Epic au lancement.",
+                                        )
+                                        .size(11.0)
+                                        .color(pal.text_faint),
+                                    );
+                                } else {
+                                    ui.label(
+                                        crate::i18n::rich(
+                                            "Comme Heroic : télécharge l'overlay Epic une fois, puis l'active dans le préfixe du jeu. Maj+F3 ouvre l'overlay Epic en jeu.",
+                                        )
+                                        .size(11.5)
+                                        .color(pal.text_dim),
+                                    );
+                                    if widgets::ghost_button(
+                                        ui,
+                                        "Installer l'overlay Epic (EOS)",
+                                        &pal,
+                                        Icon::Download,
+                                    )
+                                    .clicked()
+                                    {
+                                        self.install_eos_overlay_global(ctx);
+                                    }
+                                }
+                            },
+                        );
+                    }
+                    SettingsTab::About => {
+                        widgets::card(
+                            ui,
+                            &pal,
+                            "Guide",
+                            None,
+                            |ui| {
+                                ui.horizontal(|ui| {
+                                    if widgets::ghost_button(
+                                        ui,
+                                        "Revoir le guide de démarrage",
+                                        &pal,
+                                        Icon::Info,
+                                    )
+                                    .clicked()
+                                    {
+                                        self.settings_open = false;
+                                        self.onboarding_step = 0;
+                                        self.onboarding_open = true;
+                                    }
+                                    ui.add_space(8.0);
+                                    if widgets::ghost_button(
+                                        ui,
+                                        "Revoir les nouveautés",
+                                        &pal,
+                                        Icon::Info,
+                                    )
+                                    .clicked()
+                                    {
+                                        self.settings_open = false;
+                                        self.whats_new_open = true;
+                                    }
+                                });
+                            },
+                        );
+                        ui.add_space(16.0);
+                        widgets::card(
+                            ui,
+                            &pal,
+                            "Mises à jour",
+                            None,
+                            |ui| {
+                                if widgets::option_row(
+                                    ui,
+                                    &pal,
+                                    "Installer les mises à jour au démarrage",
+                                    Some(
+                                        "Quark vérifie la dernière release, remplace son binaire et se relance. Les binaires de développement et les dossiers en lecture seule sont ignorés ; désactive cette option pour garder la vérification manuelle.",
+                                    ),
+                                    &mut self.lib.settings.auto_update,
+                                    "auto_update",
+                                )
+                                .changed()
+                                {
+                                    self.touch();
+                                }
+                            },
+                        );
+                        ui.add_space(16.0);
+                        widgets::card(
+                            ui,
+                            &pal,
+                            "Version",
+                            None,
+                            |ui| {
+                                ui.horizontal(|ui| {
+                                    ui.label(
+                                        crate::i18n::rich(format!(
+                                            "Quark {}",
+                                            update::current_version()
+                                        ))
+                                        .size(13.0)
+                                        .strong()
+                                        .color(pal.text),
+                                    );
+                                    ui.add_space(14.0);
+                                    match self.update.clone() {
+                                        UpdateState::Idle => {
+                                            if widgets::ghost_button(
+                                                ui,
+                                                "Vérifier les mises à jour",
+                                                &pal,
+                                                Icon::Refresh,
+                                            )
+                                            .clicked()
+                                            {
+                                                check_updates = true;
+                                            }
+                                        }
+                                        UpdateState::Checking => {
+                                            ui.spinner();
+                                            ui.label(
+                                                crate::i18n::rich("vérification…")
+                                                    .size(12.0)
+                                                    .color(pal.text_dim),
+                                            );
+                                        }
+                                        UpdateState::UpToDate => {
+                                            ui.label(
+                                                crate::i18n::rich("à jour")
+                                                    .size(12.0)
+                                                    .color(pal.text_dim),
+                                            );
+                                            if widgets::ghost_button(
+                                                ui,
+                                                "Revérifier",
+                                                &pal,
+                                                Icon::Refresh,
+                                            )
+                                            .clicked()
+                                            {
+                                                check_updates = true;
+                                            }
+                                        }
+                                        UpdateState::Available(release) => {
+                                            ui.label(
+                                                crate::i18n::rich(format!(
+                                                    "{} disponible",
+                                                    release.tag_name
+                                                ))
+                                                .size(12.0)
+                                                .color(pal.accent),
+                                            );
+                                            let size = release
+                                                .archive()
+                                                .map(|asset| asset.size as f64 / 1_048_576.0)
+                                                .unwrap_or(0.0);
+                                            let label = if size > 0.0 {
+                                                if crate::i18n::is_english() {
+                                                    format!(
+                                                        "Install {} ({size:.1} MB)",
+                                                        release.tag_name
+                                                    )
+                                                } else {
+                                                    format!(
+                                                        "Installer {} ({size:.1} Mo)",
+                                                        release.tag_name
+                                                    )
+                                                }
+                                            } else if crate::i18n::is_english() {
+                                                format!("Install {}", release.tag_name)
+                                            } else {
+                                                format!("Installer {}", release.tag_name)
+                                            };
+                                            if widgets::ghost_button(
+                                                ui, &label, &pal, Icon::Plus,
+                                            )
+                                            .clicked()
+                                            {
+                                                download_update = true;
+                                            }
+                                            if !release.html_url.is_empty()
+                                                && widgets::ghost_button(
+                                                    ui,
+                                                    "Page de la release",
+                                                    &pal,
+                                                    Icon::None,
+                                                )
+                                                .clicked()
+                                            {
+                                                open_url = Some(release.html_url.clone());
+                                            }
+                                        }
+                                        UpdateState::Downloading(release) => {
+                                            ui.spinner();
+                                            ui.label(
+                                                crate::i18n::rich(format!(
+                                                    "téléchargement et vérification de {}",
+                                                    release.tag_name
+                                                ))
+                                                .size(12.0)
+                                                .color(pal.text_dim),
+                                            );
+                                        }
+                                        UpdateState::Installing(tag) => {
+                                            ui.spinner();
+                                            ui.label(
+                                                crate::i18n::rich(format!(
+                                                    "installation de {tag} et redémarrage…"
+                                                ))
+                                                .size(12.0)
+                                                .color(pal.text_dim),
+                                            );
+                                        }
+                                        UpdateState::Failed(error) => {
+                                            ui.label(
+                                                crate::i18n::rich(error)
+                                                    .size(11.5)
+                                                    .color(pal.danger),
+                                            );
+                                            if widgets::ghost_button(
+                                                ui,
+                                                "Réessayer",
+                                                &pal,
+                                                Icon::Refresh,
+                                            )
+                                            .clicked()
+                                            {
+                                                check_updates = true;
+                                            }
+                                        }
+                                    }
+                                });
+                                ui.label(
+                                    crate::i18n::rich(
+                                        "Quark vérifie le SHA-256, l'architecture x86_64 et la version du binaire avant de remplacer l'exécutable, puis se relance. L'ancien binaire reste sauvegardé à côté jusqu'au prochain démarrage réussi.",
+                                    )
+                                    .size(11.0)
+                                    .color(pal.text_faint),
+                                );
+                                ui.label(
+                                    crate::i18n::rich(
+                                        "Clavier : flèches pour changer de jeu, Entrée pour lancer, Ctrl+F pour chercher, Échap pour vider la recherche, Ctrl+Q pour quitter complètement.",
+                                    )
+                                    .size(11.0)
+                                    .color(pal.text_faint),
+                                );
+                            },
+                        );
+                        ui.add_space(16.0);
+                        widgets::card(
+                            ui,
+                            &pal,
+                            "Ressources",
+                            None,
+                            |ui| {
+                                ui.horizontal(|ui| {
+                                    let memory = config::resident_mb()
+                                        .map(|mb| {
+                                            if crate::i18n::is_english() {
+                                                format!("{mb} MB")
+                                            } else {
+                                                format!("{mb} Mo")
+                                            }
+                                        })
+                                        .unwrap_or_else(|| "—".to_string());
+                                    ui.label(
+                                        crate::i18n::rich(format!(
+                                            "Mémoire résidente : {memory}"
+                                        ))
+                                        .size(11.5)
+                                        .color(pal.text_dim),
+                                    );
+                                    ui.add_space(14.0);
+                                    ui.label(
+                                        crate::i18n::rich(if crate::i18n::is_english() {
                                             format!(
-                                                "Install {} ({size:.1} MB)",
-                                                release.tag_name
+                                                "{} texture(s) cached",
+                                                self.textures.len()
                                             )
                                         } else {
                                             format!(
-                                                "Installer {} ({size:.1} Mo)",
-                                                release.tag_name
+                                                "{} texture(s) en cache",
+                                                self.textures.len()
                                             )
-                                        }
-                                    } else if crate::i18n::is_english() {
-                                        format!("Install {}", release.tag_name)
-                                    } else {
-                                        format!("Installer {}", release.tag_name)
-                                    };
-                                    if widgets::ghost_button(ui, &label, &pal, Icon::Plus).clicked() {
-                                        download_update = true;
-                                    }
-                                    if !release.html_url.is_empty()
-                                        && widgets::ghost_button(
-                                            ui,
-                                            "Page de la release",
-                                            &pal,
-                                            Icon::None,
-                                        )
-                                        .clicked()
-                                    {
-                                        open_url = Some(release.html_url.clone());
-                                    }
-                                }
-                                UpdateState::Downloading(release) => {
-                                    ui.spinner();
-                                    ui.label(
-                                        crate::i18n::rich(format!(
-                                            "téléchargement et vérification de {}",
-                                            release.tag_name
-                                        ))
-                                        .size(12.0)
-                                        .color(pal.text_dim),
+                                        })
+                                        .size(11.0)
+                                        .color(pal.text_faint),
                                     );
-                                }
-                                UpdateState::Installing(tag) => {
-                                    ui.spinner();
-                                    ui.label(
-                                        crate::i18n::rich(format!(
-                                            "installation de {tag} et redémarrage\u{2026}"
-                                        ))
-                                        .size(12.0)
-                                        .color(pal.text_dim),
+                                    widgets::info_button(
+                                        ui,
+                                        &pal,
+                                        "Les artworks sont décodés en textures : une bannière occupe plusieurs mégaoctets. Au-delà de 96 textures, les plus anciennes sont libérées, si bien que parcourir la bibliothèque ne fait plus grimper la mémoire indéfiniment.",
                                     );
-                                }
-                                UpdateState::Failed(error) => {
-                                    ui.label(crate::i18n::rich(error).size(11.5).color(pal.danger));
-                                    if widgets::ghost_button(ui, "Réessayer", &pal, Icon::Refresh)
-                                        .clicked()
-                                    {
-                                        check_updates = true;
-                                    }
-                                }
-                            }
-                        });
-                        ui.label(
-                            crate::i18n::rich(
-                                "Quark vérifie le SHA-256, l'architecture x86_64 et la version du \
-                                 binaire avant de remplacer l'exécutable, puis se relance. \
-                                 L'ancien binaire reste sauvegardé à côté jusqu'au prochain \
-                                 démarrage réussi. Si le dossier est en lecture seule, utilise \
-                                 l'archive de la release.",
-                            )
-                            .size(11.0)
-                            .color(pal.text_faint),
+                                });
+                            },
                         );
-                        ui.add_space(4.0);
-                        ui.label(
-                            crate::i18n::rich(
-                                "Clavier : flèches pour changer de jeu, Entrée pour lancer, \
-                                 Ctrl+F pour chercher, Échap pour vider la recherche, \
-                                 Ctrl+Q pour quitter complètement.",
-                            )
-                            .size(11.0)
-                            .color(pal.text_faint),
-                        );
-
-                        section(ui, "RESSOURCES", &pal);
-                        ui.horizontal(|ui| {
-                            let memory = config::resident_mb()
-                                .map(|mb| {
-                                    if crate::i18n::is_english() {
-                                        format!("{mb} MB")
-                                    } else {
-                                        format!("{mb} Mo")
-                                    }
-                                })
-                                .unwrap_or_else(|| "—".to_string());
-                            ui.label(
-                                crate::i18n::rich(format!("Mémoire résidente : {memory}"))
-                                    .size(11.5)
-                                    .color(pal.text_dim),
-                            );
-                            ui.add_space(14.0);
-                            ui.label(
-                                crate::i18n::rich(if crate::i18n::is_english() {
-                                    format!("{} texture(s) cached", self.textures.len())
-                                } else {
-                                    format!("{} texture(s) en cache", self.textures.len())
-                                })
-                                .size(11.0)
-                                .color(pal.text_faint),
-                            );
-                            widgets::info_button(
-                                ui,
-                                &pal,
-                                "Les artworks sont décodés en textures : une bannière occupe \
-                                 plusieurs mégaoctets. Au-delà de 96 textures, les plus \
-                                 anciennes sont libérées, si bien que parcourir la bibliothèque \
-                                 ne fait plus grimper la mémoire indéfiniment.",
-                            );
-                        });
-
-                        section(ui, "DOSSIERS", &pal);
-                        info_line(
+                        ui.add_space(16.0);
+                        widgets::card(
                             ui,
-                            "Configuration",
-                            &config::config_path().display().to_string(),
                             &pal,
-                        );
-                        info_line(
-                            ui,
-                            "Artworks",
-                            &config::artwork_root().display().to_string(),
-                            &pal,
-                        );
-                        info_line(
-                            ui,
-                            "Préfixes",
-                            &config::prefix_root().display().to_string(),
-                            &pal,
+                            "Dossiers",
+                            None,
+                            |ui| {
+                                info_line(
+                                    ui,
+                                    "Configuration",
+                                    &config::config_path().display().to_string(),
+                                    &pal,
+                                );
+                                info_line(
+                                    ui,
+                                    "Artworks",
+                                    &config::artwork_root().display().to_string(),
+                                    &pal,
+                                );
+                                info_line(
+                                    ui,
+                                    "Préfixes",
+                                    &config::prefix_root().display().to_string(),
+                                    &pal,
+                                );
+                            },
                         );
                     }
                     }
@@ -1978,27 +2299,6 @@ impl QuarkApp {
                             });
                         });
 
-                        ui.add_space(12.0);
-                        ui.horizontal(|ui| {
-                            if widgets::accent_button(
-                                ui,
-                                Vec2::new(140.0, 34.0),
-                                "Fermer",
-                                &pal,
-                                true,
-                                Icon::None,
-                            )
-                            .clicked()
-                            {
-                                close_requested = true;
-                            }
-                            ui.add_space(8.0);
-                            ui.label(
-                                crate::i18n::rich("Échap ferme cette fenêtre")
-                                    .size(10.5)
-                                    .color(pal.text_faint),
-                            );
-                        });
                     });
             });
 
@@ -2070,29 +2370,30 @@ impl QuarkApp {
             .sum();
         let streak = stats::streak(&sessions);
 
-        section(ui, "RÉSUMÉ", pal);
-        ui.horizontal(|ui| {
-            metric(
-                ui,
-                pal,
-                "Temps de jeu total",
-                &config::human_playtime(total),
-            );
-            ui.add_space(22.0);
-            metric(ui, pal, "Cette semaine", &config::human_playtime(this_week));
-            ui.add_space(22.0);
-            let streak_label = if crate::i18n::is_english() {
-                format!("{streak} day{}", if streak > 1 { "s" } else { "" })
-            } else {
-                format!("{streak} jour{}", if streak > 1 { "s" } else { "" })
-            };
-            metric(ui, pal, "Série en cours", &streak_label);
-            ui.add_space(22.0);
-            metric(ui, pal, "Sessions", &format!("{}", sessions.len()));
+        widgets::card(ui, pal, "Résumé", None, |ui| {
+            ui.horizontal(|ui| {
+                metric(
+                    ui,
+                    pal,
+                    "Temps de jeu total",
+                    &config::human_playtime(total),
+                );
+                ui.add_space(22.0);
+                metric(ui, pal, "Cette semaine", &config::human_playtime(this_week));
+                ui.add_space(22.0);
+                let streak_label = if crate::i18n::is_english() {
+                    format!("{streak} day{}", if streak > 1 { "s" } else { "" })
+                } else {
+                    format!("{streak} jour{}", if streak > 1 { "s" } else { "" })
+                };
+                metric(ui, pal, "Série en cours", &streak_label);
+                ui.add_space(22.0);
+                metric(ui, pal, "Sessions", &format!("{}", sessions.len()));
+            });
         });
 
         if sessions.is_empty() {
-            ui.add_space(12.0);
+            ui.add_space(16.0);
             ui.label(
                 crate::i18n::rich(
                     "Aucune session enregistrée : lance un jeu, ses heures apparaîtront ici.",
@@ -2103,30 +2404,40 @@ impl QuarkApp {
             return;
         }
 
-        section_hint(
+        ui.add_space(16.0);
+        widgets::card(
             ui,
-            "HEURES PAR SEMAINE",
             pal,
-            "Les douze dernières semaines, du lundi au dimanche. La hauteur de chaque barre \
-             donne les heures jouées.",
+            "Heures par semaine",
+            Some(
+                "Les douze dernières semaines, du lundi au dimanche. La hauteur de chaque barre donne les heures jouées.",
+            ),
+            |ui| {
+                week_chart(ui, pal, &sessions);
+            },
         );
-        week_chart(ui, pal, &sessions);
 
-        section_hint(
+        ui.add_space(16.0);
+        widgets::card(
             ui,
-            "CALENDRIER",
             pal,
-            "Un carré par jour sur les 26 dernières semaines : plus il est clair, plus tu as \
-             joué ce jour-là. Passe la souris sur un carré pour la durée exacte.",
+            "Calendrier",
+            Some(
+                "Un carré par jour sur les 26 dernières semaines : plus il est clair, plus tu as joué ce jour-là. Passe la souris sur un carré pour la durée exacte.",
+            ),
+            |ui| {
+                heatmap_chart(ui, pal, &sessions);
+            },
         );
-        heatmap_chart(ui, pal, &sessions);
 
-        section(ui, "JEUX LES PLUS JOUÉS", pal);
-        let top = stats::top_games(&self.lib, 6);
-        let max = top.iter().map(|(_, secs)| *secs).max().unwrap_or(1).max(1);
-        for (name, secs) in top {
-            game_bar(ui, pal, &name, secs, max);
-        }
+        ui.add_space(16.0);
+        widgets::card(ui, pal, "Jeux les plus joués", None, |ui| {
+            let top = stats::top_games(&self.lib, 6);
+            let max = top.iter().map(|(_, secs)| *secs).max().unwrap_or(1).max(1);
+            for (name, secs) in top {
+                game_bar(ui, pal, &name, secs, max);
+            }
+        });
     }
 
     // -----------------------------------------------------------------------
@@ -2134,112 +2445,142 @@ impl QuarkApp {
     // -----------------------------------------------------------------------
 
     fn disk_page(&mut self, ui: &mut egui::Ui, pal: &Palette, ctx: &egui::Context) {
-        section_hint(
-            ui,
-            "ESPACE DISQUE",
-            pal,
-            "Mesure les préfixes Proton, le cache d'artworks, les journaux, les archives de mise \
-             à jour et le dossier de chaque jeu. La mesure tourne en arrière-plan : la fenêtre \
-             ne se fige jamais, même sur un gros préfixe.",
-        );
-        let mut recalc = false;
-        ui.horizontal(|ui| {
-            if widgets::ghost_button(ui, "Recalculer", pal, Icon::Refresh).clicked() {
-                recalc = true;
-            }
-            if let Some(report) = &self.disk_report {
-                ui.add_space(14.0);
-                ui.label(
-                    crate::i18n::rich(if crate::i18n::is_english() {
-                        format!(
-                            "Measured total: {}",
-                            disk::format_bytes(report.total, crate::i18n::is_english())
-                        )
-                    } else {
-                        format!(
-                            "Total mesuré : {}",
-                            disk::format_bytes(report.total, crate::i18n::is_english())
-                        )
-                    })
-                    .size(13.0)
-                    .strong()
-                    .color(pal.text),
-                );
-            }
-        });
-        if recalc || (self.disk_report.is_none() && self.disk_job.is_none()) {
+        if self.disk_report.is_none() && self.disk_job.is_none() {
             self.start_disk_scan(ctx);
         }
-        ui.add_space(8.0);
-        if self.disk_job.is_some() {
-            ui.horizontal(|ui| {
-                ui.spinner();
-                ui.add_space(6.0);
-                ui.label(
-                    crate::i18n::rich("Mesure en cours…")
-                        .size(12.0)
-                        .color(pal.text_dim),
-                );
-            });
-            return;
-        }
-        let Some(report) = &self.disk_report else {
-            return;
-        };
-        let total = report.total.max(1);
-        let rows: Vec<(String, String, PathBuf, u64)> = report
-            .rows
-            .iter()
-            .map(|row| {
-                (
-                    row.label.clone(),
-                    row.detail.clone(),
-                    row.path.clone(),
-                    row.bytes,
-                )
+        let rows: Vec<(String, String, PathBuf, u64)> = self
+            .disk_report
+            .as_ref()
+            .map(|report| {
+                report
+                    .rows
+                    .iter()
+                    .map(|row| (row.label.clone(), row.detail.clone(), row.path.clone(), row.bytes))
+                    .collect()
             })
-            .collect();
+            .unwrap_or_default();
+        let total = self
+            .disk_report
+            .as_ref()
+            .map(|report| report.total)
+            .unwrap_or(0)
+            .max(1);
+        let measured = self.disk_report.as_ref().map(|report| report.total);
+        let running = self.disk_job.is_some();
+        let mut recalc = false;
         let mut open: Option<PathBuf> = None;
-        for (label, detail, path, bytes) in rows {
-            ui.horizontal(|ui| {
-                ui.vertical(|ui| {
-                    ui.set_width(430.0);
-                    ui.label(crate::i18n::rich(&label).size(12.5).color(pal.text));
-                    ui.label(crate::i18n::rich(&detail).size(10.5).color(pal.text_faint));
+
+        widgets::card(
+            ui,
+            pal,
+            "Détail par dossier",
+            Some(
+                "Mesure les préfixes Proton, le cache d'artworks, les journaux, les archives de mise à jour et le dossier de chaque jeu. La mesure tourne en arrière-plan : la fenêtre ne se fige jamais, même sur un gros préfixe.",
+            ),
+            |ui| {
+                ui.horizontal(|ui| {
+                    if widgets::ghost_button(ui, "Recalculer", pal, Icon::Refresh).clicked() {
+                        recalc = true;
+                    }
+                    if let Some(total) = measured {
+                        ui.add_space(14.0);
+                        ui.label(
+                            crate::i18n::rich(if crate::i18n::is_english() {
+                                format!(
+                                    "Measured total: {}",
+                                    disk::format_bytes(total, crate::i18n::is_english())
+                                )
+                            } else {
+                                format!(
+                                    "Total mesuré : {}",
+                                    disk::format_bytes(total, crate::i18n::is_english())
+                                )
+                            })
+                            .size(13.0)
+                            .strong()
+                            .color(pal.text),
+                        );
+                    }
+                });
+                ui.add_space(8.0);
+                if running {
+                    ui.horizontal(|ui| {
+                        ui.spinner();
+                        ui.add_space(6.0);
+                        ui.label(
+                            crate::i18n::rich("Mesure en cours…")
+                                .size(12.0)
+                                .color(pal.text_dim),
+                        );
+                    });
+                    return;
+                }
+                if rows.is_empty() {
                     ui.label(
-                        crate::i18n::rich(path.display().to_string())
-                            .size(10.0)
+                        crate::i18n::rich("Aucune mesure disponible.")
+                            .size(12.0)
                             .color(pal.text_faint),
                     );
-                });
-                ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-                    ui.label(
-                        crate::i18n::rich(disk::format_bytes(bytes, crate::i18n::is_english()))
-                            .size(12.5)
-                            .color(pal.text),
-                    );
-                    ui.add_space(10.0);
-                    if widgets::icon_button(ui, 24.0, Icon::Folder, pal, "Ouvrir le dossier")
-                        .clicked()
-                    {
-                        open = Some(path.clone());
+                    return;
+                }
+                for (index, (label, detail, path, bytes)) in rows.iter().enumerate() {
+                    ui.horizontal(|ui| {
+                        ui.vertical(|ui| {
+                            ui.set_width(430.0);
+                            ui.label(crate::i18n::rich(label).size(12.5).color(pal.text));
+                            ui.label(crate::i18n::rich(detail).size(10.5).color(pal.text_faint));
+                            ui.label(
+                                crate::i18n::rich(path.display().to_string())
+                                    .size(10.0)
+                                    .color(pal.text_faint),
+                            );
+                        });
+                        ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
+                            ui.label(
+                                crate::i18n::rich(disk::format_bytes(
+                                    *bytes,
+                                    crate::i18n::is_english(),
+                                ))
+                                .size(12.5)
+                                .color(pal.text),
+                            );
+                            ui.add_space(10.0);
+                            if widgets::icon_button(
+                                ui,
+                                24.0,
+                                Icon::Folder,
+                                pal,
+                                "Ouvrir le dossier",
+                            )
+                            .clicked()
+                            {
+                                open = Some(path.clone());
+                            }
+                            ui.add_space(10.0);
+                            let width = 170.0;
+                            let (rect, _) =
+                                ui.allocate_exact_size(Vec2::new(width, 8.0), Sense::hover());
+                            ui.painter().rect_filled(rect, 4.0, pal.surface);
+                            ui.painter().rect_filled(
+                                Rect::from_min_size(
+                                    rect.min,
+                                    Vec2::new(width * (*bytes as f32 / total as f32), 8.0),
+                                ),
+                                4.0,
+                                pal.accent,
+                            );
+                        });
+                    });
+                    if index + 1 < rows.len() {
+                        ui.add_space(6.0);
+                        ui.separator();
                     }
-                    ui.add_space(10.0);
-                    let width = 170.0;
-                    let (rect, _) = ui.allocate_exact_size(Vec2::new(width, 8.0), Sense::hover());
-                    ui.painter().rect_filled(rect, 4.0, pal.surface);
-                    ui.painter().rect_filled(
-                        Rect::from_min_size(
-                            rect.min,
-                            Vec2::new(width * (bytes as f32 / total as f32), 8.0),
-                        ),
-                        4.0,
-                        pal.accent,
-                    );
-                });
-            });
-            ui.add_space(6.0);
-            ui.separator();
+                }
+            },
+        );
+
+        if recalc {
+            self.start_disk_scan(ctx);
         }
         if let Some(path) = open {
             if let Err(err) = crate::session::open_folder(&path) {
@@ -2411,6 +2752,7 @@ impl QuarkApp {
             return;
         };
         if ctx.input(|i| i.key_pressed(egui::Key::Escape)) {
+            self.editing = None;
             return;
         }
         let pal = self.pal;
@@ -2431,6 +2773,7 @@ impl QuarkApp {
             self.game_dll_for = Some(game.id.clone());
             self.game_dll_rows = config::dll_overrides_from_env(&game.env);
             self.game_tab = GameTab::General;
+            self.game_section = GameSection::General;
         }
         if game.ps2.is_none() && self.game_tab == GameTab::Ps2 {
             self.game_tab = GameTab::General;
@@ -2473,442 +2816,956 @@ impl QuarkApp {
         let mut remove = false;
         let mut refresh_meta = false;
 
+        // Les onglets visibles dépendent du jeu : un jeu non-PS2 n'a pas de
+        // page PlayStation 2. L'index est recalculé à chaque frame.
+        let tabs: Vec<(GameTab, Icon, &'static str)> = GameTab::ALL
+            .iter()
+            .filter(|(tab, _)| *tab != GameTab::Ps2 || game.ps2.is_some())
+            .map(|(tab, label)| {
+                let icon = match tab {
+                    GameTab::General => Icon::Gear,
+                    GameTab::Ps2 => Icon::Play,
+                    GameTab::DllOverrides => Icon::Link,
+                };
+                (*tab, icon, *label)
+            })
+            .collect();
+
         let modal = egui::Modal::new(egui::Id::new("quark_game_settings")).show(ctx, |ui| {
-                // Largeur fixe : une largeur élastique laisse les chemins et les
-                // libellés anglais agrandir la fenêtre au-delà d'un écran 1024 px.
-                ui.set_width((ctx.screen_rect().width() - 100.0).clamp(560.0, 760.0));
-                let title = format!("{} · {}", crate::i18n::tr("Paramètres"), game.name);
-                ui.label(crate::i18n::rich(title).size(17.0).color(pal.text));
-                ui.add_space(10.0);
-                let mut switch_tab = None;
-                ui.horizontal(|ui| {
-                    for (tab, label) in GameTab::ALL {
-                        if tab == GameTab::Ps2 && game.ps2.is_none() {
-                            continue;
-                        }
-                        if widgets::chip(ui, label, self.game_tab == tab, &pal) {
-                            switch_tab = Some(tab);
-                        }
-                    }
-                });
-                if let Some(tab) = switch_tab {
-                    if tab != self.game_tab {
-                        // Le formulaire général peut avoir modifié
-                        // WINEDLLOVERRIDES : on relit avant d'afficher l'onglet.
-                        if tab == GameTab::DllOverrides {
-                            self.game_dll_rows = config::dll_overrides_from_env(&game.env);
-                        }
-                        self.game_tab = tab;
-                    }
-                }
-                ui.add_space(6.0);
-                // Même règle que les paramètres globaux : la page laisse la
-                // place aux boutons du bas, sans les recouvrir.
-                egui::ScrollArea::vertical()
-                    .max_height((ctx.screen_rect().height() - 210.0).max(160.0))
-                    .auto_shrink([false, true])
-                    .show(ui, |ui| {
-                if self.game_tab == GameTab::General {
-                section(ui, "LANCEMENT", &pal);
-                ui.label(crate::i18n::rich("Nom affiché").size(12.5).color(pal.text_dim));
-                ui.add(
-                    egui::TextEdit::singleline(&mut game.name)
-                        .font(FontId::proportional(15.0))
-                        .desired_width(f32::INFINITY),
-                );
-                ui.add_space(8.0);
-                ui.label(crate::i18n::rich("Exécutable").size(12.5).color(pal.text_dim));
-                ui.horizontal(|ui| {
-                    let field = (ui.available_width() - 130.0).max(200.0);
-                    ui.add(egui::TextEdit::singleline(&mut game.exe).desired_width(field));
-                    if widgets::ghost_button(ui, "Parcourir…", &pal, Icon::Folder).clicked() {
-                        browse_exe = true;
-                    }
-                });
-                ui.add_space(8.0);
-                ui.label(crate::i18n::rich("Arguments (optionnel)").size(12.5).color(pal.text_dim));
-                ui.add(
-                    egui::TextEdit::singleline(&mut game.args)
-                        .hint_text(crate::i18n::tr("--fullscreen"))
-                        .desired_width(f32::INFINITY),
-                );
+            let screen = ctx.screen_rect();
+            let width = (screen.width() - 80.0).clamp(720.0, 960.0);
+            let body_height = (screen.height() - 300.0).max(220.0);
+            // 220 px de navigation, deux fois 16 px d'écart, le séparateur et
+            // les espacements de la ligne : le reste revient au contenu.
+            let content_width = (width - 285.0).max(280.0);
+            ui.set_width(width);
+            ui.set_max_width(width);
+            ui.spacing_mut().item_spacing = Vec2::new(8.0, 8.0);
 
-                section(ui, "MA FICHE", &pal);
-                ui.horizontal(|ui| {
-                    ui.label(crate::i18n::rich("Statut").size(12.5).color(pal.text_dim));
-                    widgets::info_button(
-                        ui,
-                        &pal,
-                        "Statut personnel : il sert de filtre sur l'accueil et dans la colonne \
-                         de gauche (menu Filtres). Aucun effet sur le lancement.",
-                    );
-                });
-                ui.horizontal_wrapped(|ui| {
-                    for option in GameStatus::ALL {
-                        let selected = game.status == option;
-                        let (r, g, b) = option.color();
-                        if widgets::chip_colored(
-                            ui,
-                            &option.label(),
-                            selected,
-                            &pal,
-                            egui::Color32::from_rgb(r, g, b),
-                        ) {
-                            game.status = option;
-                        }
-                    }
-                });
-                ui.add_space(8.0);
-                tags_editor(ui, &pal, &mut game.tags);
-                ui.add_space(8.0);
-                ui.label(crate::i18n::rich("Notes personnelles").size(12.5).color(pal.text_dim));
-                ui.add(
-                    egui::TextEdit::multiline(&mut game.notes)
-                        .hint_text(crate::i18n::tr("Où j'en suis, ce que je veux retenir…"))
-                        .desired_rows(2)
-                        .desired_width(f32::INFINITY),
-                );
-
-                section(ui, "FICHE STEAM", &pal);
-                ui.horizontal(|ui| {
+            // En-tête : sur-titre, nom du jeu, onglets à droite.
+            ui.horizontal(|ui| {
+                ui.vertical(|ui| {
+                    ui.set_max_width((width - 440.0).max(260.0));
                     ui.label(
-                        crate::i18n::rich(if game.steam_app_id.is_some() {
-                            "Développeur, genres, date de sortie et description viennent de l'API \
-                             appdetails."
-                                .to_string()
-                        } else {
-                            "Ce jeu n'est pas lié à une fiche Steam.".to_string()
-                        })
-                        .size(11.5)
-                        .color(pal.text_dim),
+                        crate::i18n::rich("Paramètres du jeu")
+                            .size(11.0)
+                            .strong()
+                            .color(pal.text_dim),
                     );
-                    if game.steam_app_id.is_some()
-                        && widgets::ghost_button(ui, "Récupérer depuis Steam", &pal, Icon::Refresh)
-                            .clicked()
-                    {
-                        // Les champs vides sont remplis par la requête ; on les
-                        // vide ici pour forcer la mise à jour au retour.
-                        game.developer.clear();
-                        game.genres.clear();
-                        game.released.clear();
-                        game.description.clear();
-                        refresh_meta = true;
-                    }
-                });
-                ui.add_space(8.0);
-                ui.label(
-                    crate::i18n::rich(
-                        "Lie ce jeu à une fiche Steam ou SteamGridDB pour récupérer sa jaquette, \
-                         sa bannière, son logo et son icône.",
-                    )
-                    .size(11.0)
-                    .color(pal.text_faint),
-                );
-                ui.add_space(6.0);
-                ui.horizontal(|ui| {
-                    let field = (ui.available_width() - 128.0).max(180.0);
                     ui.add(
-                        egui::TextEdit::singleline(&mut link_query)
-                            .hint_text(crate::i18n::tr("Rechercher un jeu (Steam, SteamGridDB)…"))
-                            .desired_width(field),
+                        egui::Label::new(
+                            crate::i18n::rich(&game.name)
+                                .size(24.0)
+                                .strong()
+                                .color(pal.text),
+                        )
+                        .truncate(),
                     );
-                    if widgets::ghost_button(ui, "Rechercher", &pal, Icon::Search).clicked() {
-                        search_link = true;
+                });
+                ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
+                    let items: Vec<(Icon, &str)> =
+                        tabs.iter().map(|(_, icon, label)| (*icon, *label)).collect();
+                    let selected = tabs
+                        .iter()
+                        .position(|(tab, _, _)| *tab == self.game_tab)
+                        .unwrap_or(0);
+                    if let Some(index) = widgets::segmented(ui, &pal, &items, selected) {
+                        let tab = tabs[index].0;
+                        if tab != self.game_tab {
+                            // Le formulaire général peut avoir modifié
+                            // WINEDLLOVERRIDES : on relit avant d'afficher.
+                            if tab == GameTab::DllOverrides {
+                                self.game_dll_rows =
+                                    config::dll_overrides_from_env(&game.env);
+                            }
+                            self.game_tab = tab;
+                        }
                     }
                 });
-                if link_loading {
-                    ui.horizontal(|ui| {
-                        ui.add(egui::Spinner::new().size(12.0));
-                        ui.label(
-                            crate::i18n::rich("Recherche des fiches…")
-                                .size(11.0)
-                                .color(pal.text_dim),
-                        );
+            });
+
+            ui.add_space(12.0);
+            ui.separator();
+            ui.add_space(12.0);
+
+            ui.allocate_ui_with_layout(
+                Vec2::new(width, body_height),
+                Layout::top_down(Align::Min),
+                |ui| {
+                    ui.horizontal_top(|ui| {
+                if self.game_tab == GameTab::General {
+                    // Navigation verticale de la page « Réglages ».
+                    ui.vertical(|ui| {
+                        ui.set_width(220.0);
+                        for (section, label) in GameSection::ALL {
+                            if widgets::nav_entry(
+                                ui,
+                                &pal,
+                                label,
+                                self.game_section == section,
+                            ) {
+                                self.game_section = section;
+                            }
+                            ui.add_space(2.0);
+                        }
                     });
-                }
-                if !link_results.is_empty() {
-                    ui.add_space(4.0);
-                    egui::ScrollArea::vertical()
-                        .id_salt("quark_game_link_results")
-                        .max_height(150.0)
-                        .auto_shrink([false, true])
-                        .show(ui, |ui| {
-                            for hit in link_results.iter().take(6) {
-                                egui::Frame::new()
-                                    .fill(pal.surface)
-                                    .corner_radius(4.0)
-                                    .inner_margin(egui::Margin::symmetric(8, 4))
-                                    .show(ui, |ui| {
-                                        ui.horizontal(|ui| {
-                                            let text_width =
-                                                (ui.available_width() - 68.0).max(140.0);
-                                            ui.allocate_ui_with_layout(
-                                                Vec2::new(text_width, 34.0),
-                                                Layout::top_down(Align::Min),
+                    ui.add_space(16.0);
+                    let (line, _) = ui.allocate_exact_size(
+                        Vec2::new(1.0, body_height),
+                        Sense::hover(),
+                    );
+                    ui.painter().rect_filled(line, 0.0, pal.border);
+                    ui.add_space(16.0);
+                    ui.vertical(|ui| {
+                        ui.set_width(content_width);
+                        ui.set_height(body_height);
+                        egui::ScrollArea::vertical()
+                            .id_salt((
+                                "quark_game_section",
+                                self.game_section as usize,
+                            ))
+                            .max_height(body_height)
+                            .auto_shrink([false, false])
+                            .show(ui, |ui| match self.game_section {
+                                GameSection::General => {
+                                    widgets::card(
+                                        ui,
+                                        &pal,
+                                        "Lancement",
+                                        None,
+                                        |ui| {
+                                            widgets::field(
+                                                ui,
+                                                &pal,
+                                                "Nom affiché",
                                                 |ui| {
-                                                    ui.spacing_mut().item_spacing.y = 0.0;
+                                                    ui.add_sized(
+                                                        Vec2::new(
+                                                            ui.available_width(),
+                                                            36.0,
+                                                        ),
+                                                        egui::TextEdit::singleline(
+                                                            &mut game.name,
+                                                        )
+                                                        .font(FontId::proportional(15.0))
+                                                        .desired_width(
+                                                            ui.available_width(),
+                                                        ),
+                                                    );
+                                                },
+                                            );
+                                            widgets::field(
+                                                ui,
+                                                &pal,
+                                                "Exécutable",
+                                                |ui| {
+                                                    let (_, clicked) =
+                                                        widgets::path_field(
+                                                            ui,
+                                                            &pal,
+                                                            &mut game.exe,
+                                                            "Chemin de l'exécutable",
+                                                            "Parcourir…",
+                                                        );
+                                                    browse_exe |= clicked;
+                                                },
+                                            );
+                                            widgets::field(
+                                                ui,
+                                                &pal,
+                                                "Arguments (optionnel)",
+                                                |ui| {
+                                                    ui.add_sized(
+                                                        Vec2::new(
+                                                            ui.available_width(),
+                                                            34.0,
+                                                        ),
+                                                        egui::TextEdit::singleline(
+                                                            &mut game.args,
+                                                        )
+                                                        .hint_text(
+                                                            crate::i18n::tr(
+                                                                "--fullscreen",
+                                                            ),
+                                                        )
+                                                        .desired_width(
+                                                            ui.available_width(),
+                                                        ),
+                                                    );
+                                                },
+                                            );
+                                        },
+                                    );
+
+                                    ui.add_space(16.0);
+
+                                    // À 1024 px, les deux cartes côte à côte
+                                    // dépassent la largeur utile : on les empile.
+                                    let side_by_side = ui.available_width() >= 670.0;
+                                    if side_by_side {
+                                        ui.columns(2, |columns| {
+                                            widgets::card(
+                                                &mut columns[0],
+                                                &pal,
+                                                "Ma fiche",
+                                                None,
+                                                |ui| {
                                                     ui.horizontal(|ui| {
                                                         ui.label(
-                                                            crate::i18n::rich(hit.source.label())
-                                                                .size(9.5)
-                                                                .strong()
-                                                                .color(pal.text_faint),
+                                                            crate::i18n::rich("Statut")
+                                                                .size(12.0)
+                                                                .color(pal.text_dim),
                                                         );
-                                                        ui.add(
-                                                            egui::Label::new(
-                                                                crate::i18n::rich(&hit.title)
-                                                                    .size(12.0)
-                                                                    .color(pal.text),
-                                                            )
-                                                            .truncate(),
+                                                        widgets::info_button(
+                                                            ui,
+                                                            &pal,
+                                                            "Statut personnel : il sert de filtre sur l'accueil et dans la colonne de gauche (menu Filtres). Aucun effet sur le lancement.",
                                                         );
                                                     });
-                                                    if !hit.detail.is_empty() {
+                                                    let labels: Vec<String> = GameStatus::ALL
+                                                        .iter()
+                                                        .map(|status| status.label())
+                                                        .collect();
+                                                    let items: Vec<(Icon, &str)> = labels
+                                                        .iter()
+                                                        .map(|label| (Icon::None, label.as_str()))
+                                                        .collect();
+                                                    let selected = GameStatus::ALL
+                                                        .iter()
+                                                        .position(|status| *status == game.status)
+                                                        .unwrap_or(0);
+                                                    if let Some(index) = widgets::segmented(
+                                                        ui, &pal, &items, selected,
+                                                    ) {
+                                                        game.status =
+                                                            GameStatus::ALL[index];
+                                                    }
+                                                    ui.add_space(4.0);
+                                                    tags_editor(
+                                                        ui,
+                                                        &pal,
+                                                        &mut game.tags,
+                                                    );
+                                                    ui.add_space(4.0);
+                                                    widgets::field(
+                                                        ui,
+                                                        &pal,
+                                                        "Notes personnelles",
+                                                        |ui| {
+                                                            ui.add_sized(
+                                                                Vec2::new(
+                                                                    ui.available_width(),
+                                                                    76.0,
+                                                                ),
+                                                                egui::TextEdit::multiline(
+                                                                    &mut game.notes,
+                                                                )
+                                                                .hint_text(
+                                                                    crate::i18n::tr(
+                                                                        "Où j'en suis, ce que je veux retenir…",
+                                                                    ),
+                                                                )
+                                                                .desired_rows(3)
+                                                                .desired_width(
+                                                                    ui.available_width(),
+                                                                ),
+                                                            );
+                                                        },
+                                                    );
+                                                },
+                                            );
+
+                                            widgets::card(
+                                                &mut columns[1],
+                                                &pal,
+                                                "Fiche Steam",
+                                                None,
+                                                |ui| {
+                                                    ui.label(
+                                                        crate::i18n::rich(
+                                                            if game.steam_app_id.is_some() {
+                                                                "Développeur, genres, date de sortie et description viennent de l'API appdetails."
+                                                            } else {
+                                                                "Ce jeu n'est pas lié à une fiche Steam."
+                                                            },
+                                                        )
+                                                        .size(11.5)
+                                                        .color(pal.text_dim),
+                                                    );
+                                                    if game.steam_app_id.is_some()
+                                                        && widgets::ghost_button(
+                                                            ui,
+                                                            "Récupérer depuis Steam",
+                                                            &pal,
+                                                            Icon::Refresh,
+                                                        )
+                                                        .clicked()
+                                                    {
+                                                        game.developer.clear();
+                                                        game.genres.clear();
+                                                        game.released.clear();
+                                                        game.description.clear();
+                                                        refresh_meta = true;
+                                                    }
+                                                    ui.label(
+                                                        crate::i18n::rich(
+                                                            "Lie ce jeu à une fiche Steam ou SteamGridDB pour récupérer sa jaquette, sa bannière, son logo et son icône.",
+                                                        )
+                                                        .size(11.0)
+                                                        .color(pal.text_faint),
+                                                    );
+                                                    ui.horizontal(|ui| {
+                                                        widgets::style_text_inputs(
+                                                            ui, &pal,
+                                                        );
+                                                        let field_width = (ui
+                                                            .available_width()
+                                                            - 118.0)
+                                                            .max(150.0);
+                                                        ui.add_sized(
+                                                            Vec2::new(
+                                                                field_width,
+                                                                34.0,
+                                                            ),
+                                                            egui::TextEdit::singleline(
+                                                                &mut link_query,
+                                                            )
+                                                            .hint_text(
+                                                                crate::i18n::tr(
+                                                                    "Rechercher un jeu (Steam, SteamGridDB)…",
+                                                                ),
+                                                            ),
+                                                        );
+                                                        if widgets::ghost_button(
+                                                            ui,
+                                                            "Rechercher",
+                                                            &pal,
+                                                            Icon::Search,
+                                                        )
+                                                        .clicked()
+                                                        {
+                                                            search_link = true;
+                                                        }
+                                                    });
+                                                    if link_loading {
+                                                        ui.horizontal(|ui| {
+                                                            ui.add(
+                                                                egui::Spinner::new()
+                                                                    .size(12.0),
+                                                            );
+                                                            ui.label(
+                                                                crate::i18n::rich(
+                                                                    "Recherche des fiches…",
+                                                                )
+                                                                .size(11.0)
+                                                                .color(pal.text_dim),
+                                                            );
+                                                        });
+                                                    }
+                                                    if !link_results.is_empty() {
+                                                        ui.add_space(4.0);
+                                                        egui::ScrollArea::vertical()
+                                                            .id_salt(
+                                                                "quark_game_link_results",
+                                                            )
+                                                            .max_height(170.0)
+                                                            .auto_shrink([false, true])
+                                                            .show(ui, |ui| {
+                                                                for hit in
+                                                                    link_results.iter().take(6)
+                                                                {
+                                                                    egui::Frame::new()
+                                                                        .fill(pal.bg)
+                                                                        .corner_radius(8.0)
+                                                                        .inner_margin(
+                                                                            egui::Margin::symmetric(
+                                                                                10, 6,
+                                                                            ),
+                                                                        )
+                                                                        .show(ui, |ui| {
+                                                                            ui.horizontal(|ui| {
+                                                                                let text_width = (ui
+                                                                                    .available_width()
+                                                                                    - 64.0)
+                                                                                    .max(120.0);
+                                                                                ui.allocate_ui_with_layout(
+                                                                                    Vec2::new(text_width, 38.0),
+                                                                                    Layout::top_down(Align::Min),
+                                                                                    |ui| {
+                                                                                        ui.spacing_mut().item_spacing.y = 0.0;
+                                                                                        ui.horizontal(|ui| {
+                                                                                            ui.label(
+                                                                                                crate::i18n::rich(hit.source.label())
+                                                                                                    .size(9.5)
+                                                                                                    .strong()
+                                                                                                    .color(pal.text_faint),
+                                                                                            );
+                                                                                            ui.add(
+                                                                                                egui::Label::new(
+                                                                                                    crate::i18n::rich(&hit.title)
+                                                                                                        .size(12.0)
+                                                                                                        .color(pal.text),
+                                                                                                )
+                                                                                                .truncate(),
+                                                                                            );
+                                                                                        });
+                                                                                        if !hit.detail.is_empty() {
+                                                                                            ui.label(
+                                                                                                crate::i18n::rich(&hit.detail)
+                                                                                                    .size(9.5)
+                                                                                                    .color(pal.text_faint),
+                                                                                            );
+                                                                                        }
+                                                                                    },
+                                                                                );
+                                                                                if widgets::ghost_button(
+                                                                                    ui,
+                                                                                    "Lier",
+                                                                                    &pal,
+                                                                                    Icon::Link,
+                                                                                )
+                                                                                .clicked()
+                                                                                {
+                                                                                    link_hit =
+                                                                                        Some(hit.clone());
+                                                                                }
+                                                                            });
+                                                                        });
+                                                                    ui.add_space(4.0);
+                                                                }
+                                                            });
+                                                    }
+                                                    if !link_warnings.is_empty() {
                                                         ui.label(
-                                                            crate::i18n::rich(&hit.detail)
-                                                                .size(9.5)
-                                                                .color(pal.text_faint),
+                                                            crate::i18n::rich(
+                                                                link_warnings.join(" · "),
+                                                            )
+                                                            .size(10.0)
+                                                            .color(pal.text_faint),
+                                                        );
+                                                    }
+                                                    if game.steam_app_id.is_some()
+                                                        || game.sgdb_id.is_some()
+                                                    {
+                                                        if widgets::ghost_button(
+                                                            ui,
+                                                            "Dissocier cette page",
+                                                            &pal,
+                                                            Icon::Close,
+                                                        )
+                                                        .clicked()
+                                                        {
+                                                            unlink = true;
+                                                        }
+                                                    }
+                                                    if !game.developer.is_empty() {
+                                                        info_line(
+                                                            ui,
+                                                            "Développeur",
+                                                            &game.developer,
+                                                            &pal,
+                                                        );
+                                                    }
+                                                    if !game.genres.is_empty() {
+                                                        info_line(
+                                                            ui,
+                                                            "Genres",
+                                                            &game.genres.join(" · "),
+                                                            &pal,
+                                                        );
+                                                    }
+                                                    if !game.released.is_empty() {
+                                                        info_line(
+                                                            ui,
+                                                            "Sortie",
+                                                            &game.released,
+                                                            &pal,
                                                         );
                                                     }
                                                 },
                                             );
-                                            if widgets::ghost_button(ui, "Lier", &pal, Icon::Link)
-                                                .clicked()
-                                            {
-                                                link_hit = Some(hit.clone());
-                                            }
                                         });
-                                    });
-                                ui.add_space(3.0);
-                            }
-                        });
-                }
-                if !link_warnings.is_empty() {
-                    ui.label(
-                        crate::i18n::rich(link_warnings.join(" · "))
-                            .size(10.0)
-                            .color(pal.text_faint),
-                    );
-                }
-                if game.steam_app_id.is_some() || game.sgdb_id.is_some() {
-                    if widgets::ghost_button(ui, "Délier cette fiche", &pal, Icon::Close)
-                        .clicked()
-                    {
-                        unlink = true;
-                    }
-                }
-
-
-                if !game.developer.is_empty() {
-                    info_line(ui, "Développeur", &game.developer, &pal);
-                }
-                if !game.genres.is_empty() {
-                    info_line(ui, "Genres", &game.genres.join(" · "), &pal);
-                }
-                if !game.released.is_empty() {
-                    info_line(ui, "Sortie", &game.released, &pal);
-                }
-                section(ui, "PROTON", &pal);
-                runtime_combo(
-                    ui,
-                    &pal,
-                    "game_runtime",
-                    &mut game.proton,
-                    &self.runtimes,
-                    true,
-                );
-                ui.add_space(8.0);
-                let mut custom = game.prefix.is_some();
-                if widgets::setting_toggle(
-                    ui,
-                    &pal,
-                    "Préfixe Proton propre à ce jeu",
-                    Some(
-                        "Sinon celui de l'installation active, ou \
-                         ~/.local/share/quark/prefixes/<jeu>. Le dossier est utilisé tel quel.",
-                    ),
-                    &mut custom,
-                    "game_custom_prefix",
-                )
-                .changed()
-                {
-                    game.prefix = if custom { Some(String::new()) } else { None };
-                }
-
-                if let Some(prefix) = game.prefix.as_mut() {
-                    ui.horizontal(|ui| {
-                        let field = (ui.available_width() - 130.0).max(200.0);
-                        ui.add(
-                            egui::TextEdit::singleline(prefix)
-                                .hint_text(crate::i18n::tr("~/Games/prefixes/mon-jeu"))
-                                .desired_width(field),
-                        );
-                        if widgets::ghost_button(ui, "Parcourir…", &pal, Icon::Folder).clicked() {
-                            browse_prefix = true;
-                        }
+                                    } else {
+                                        widgets::card(
+                                            ui,
+                                            &pal,
+                                            "Ma fiche",
+                                            None,
+                                            |ui| {
+                                                ui.horizontal(|ui| {
+                                                    ui.label(
+                                                        crate::i18n::rich("Statut")
+                                                            .size(12.0)
+                                                            .color(pal.text_dim),
+                                                    );
+                                                    widgets::info_button(
+                                                        ui,
+                                                        &pal,
+                                                        "Statut personnel : il sert de filtre sur l'accueil et dans la colonne de gauche (menu Filtres). Aucun effet sur le lancement.",
+                                                    );
+                                                });
+                                                let labels: Vec<String> = GameStatus::ALL
+                                                    .iter()
+                                                    .map(|status| status.label())
+                                                    .collect();
+                                                let items: Vec<(Icon, &str)> = labels
+                                                    .iter()
+                                                    .map(|label| (Icon::None, label.as_str()))
+                                                    .collect();
+                                                let selected = GameStatus::ALL
+                                                    .iter()
+                                                    .position(|status| *status == game.status)
+                                                    .unwrap_or(0);
+                                                if let Some(index) = widgets::segmented(
+                                                    ui, &pal, &items, selected,
+                                                ) {
+                                                    game.status = GameStatus::ALL[index];
+                                                }
+                                                ui.add_space(4.0);
+                                                tags_editor(ui, &pal, &mut game.tags);
+                                                ui.add_space(4.0);
+                                                widgets::field(
+                                                    ui,
+                                                    &pal,
+                                                    "Notes personnelles",
+                                                    |ui| {
+                                                        ui.add_sized(
+                                                            Vec2::new(
+                                                                ui.available_width(),
+                                                                76.0,
+                                                            ),
+                                                            egui::TextEdit::multiline(
+                                                                &mut game.notes,
+                                                            )
+                                                            .hint_text(crate::i18n::tr(
+                                                                "Où j'en suis, ce que je veux retenir…",
+                                                            ))
+                                                            .desired_rows(3)
+                                                            .desired_width(
+                                                                ui.available_width(),
+                                                            ),
+                                                        );
+                                                    },
+                                                );
+                                            },
+                                        );
+                                        ui.add_space(16.0);
+                                        widgets::card(
+                                            ui,
+                                            &pal,
+                                            "Fiche Steam",
+                                            None,
+                                            |ui| {
+                                                ui.label(
+                                                    crate::i18n::rich(
+                                                        if game.steam_app_id.is_some() {
+                                                            "Développeur, genres, date de sortie et description viennent de l'API appdetails."
+                                                        } else {
+                                                            "Ce jeu n'est pas lié à une fiche Steam."
+                                                        },
+                                                    )
+                                                    .size(11.5)
+                                                    .color(pal.text_dim),
+                                                );
+                                                if game.steam_app_id.is_some()
+                                                    && widgets::ghost_button(
+                                                        ui,
+                                                        "Récupérer depuis Steam",
+                                                        &pal,
+                                                        Icon::Refresh,
+                                                    )
+                                                    .clicked()
+                                                {
+                                                    game.developer.clear();
+                                                    game.genres.clear();
+                                                    game.released.clear();
+                                                    game.description.clear();
+                                                    refresh_meta = true;
+                                                }
+                                                ui.horizontal(|ui| {
+                                                    widgets::style_text_inputs(ui, &pal);
+                                                    let field_width = (ui
+                                                        .available_width()
+                                                        - 118.0)
+                                                        .max(150.0);
+                                                    ui.add_sized(
+                                                        Vec2::new(field_width, 34.0),
+                                                        egui::TextEdit::singleline(
+                                                            &mut link_query,
+                                                        )
+                                                        .hint_text(crate::i18n::tr(
+                                                            "Rechercher un jeu (Steam, SteamGridDB)…",
+                                                        )),
+                                                    );
+                                                    if widgets::ghost_button(
+                                                        ui,
+                                                        "Rechercher",
+                                                        &pal,
+                                                        Icon::Search,
+                                                    )
+                                                    .clicked()
+                                                    {
+                                                        search_link = true;
+                                                    }
+                                                });
+                                                if !link_warnings.is_empty() {
+                                                    ui.label(
+                                                        crate::i18n::rich(
+                                                            link_warnings.join(" · "),
+                                                        )
+                                                        .size(10.0)
+                                                        .color(pal.text_faint),
+                                                    );
+                                                }
+                                                if game.steam_app_id.is_some()
+                                                    || game.sgdb_id.is_some()
+                                                {
+                                                    if widgets::ghost_button(
+                                                        ui,
+                                                        "Dissocier cette page",
+                                                        &pal,
+                                                        Icon::Close,
+                                                    )
+                                                    .clicked()
+                                                    {
+                                                        unlink = true;
+                                                    }
+                                                }
+                                            },
+                                        );
+                                    }
+                                }
+                                GameSection::Proton => {
+                                    widgets::card(
+                                        ui,
+                                        &pal,
+                                        "Proton",
+                                        Some(
+                                            "Le runtime et le préfixe utilisés pour ce jeu. Un préfixe dédié garde ses DLL, ses sauvegardes et ses réglages à part.",
+                                        ),
+                                        |ui| {
+                                            runtime_combo(
+                                                ui,
+                                                &pal,
+                                                "game_runtime",
+                                                &mut game.proton,
+                                                &self.runtimes,
+                                                true,
+                                            );
+                                            let mut custom = game.prefix.is_some();
+                                            if widgets::option_row(
+                                                ui,
+                                                &pal,
+                                                "Préfixe Proton dédié à ce jeu",
+                                                Some(
+                                                    "Sinon celui de l'installation active, ou ~/.local/share/quark/prefixes/<jeu>. Le dossier est utilisé tel quel.",
+                                                ),
+                                                &mut custom,
+                                                "game_custom_prefix",
+                                            )
+                                            .changed()
+                                            {
+                                                game.prefix = if custom {
+                                                    Some(String::new())
+                                                } else {
+                                                    None
+                                                };
+                                            }
+                                            if let Some(prefix) = game.prefix.as_mut() {
+                                                let (_, clicked) = widgets::path_field(
+                                                    ui,
+                                                    &pal,
+                                                    prefix,
+                                                    "~/Games/prefixes/mon-jeu",
+                                                    "Parcourir…",
+                                                );
+                                                browse_prefix |= clicked;
+                                            }
+                                            let effective =
+                                                game.prefix_path(&self.lib.settings);
+                                            ui.label(
+                                                crate::i18n::rich(format!(
+                                                    "Préfixe utilisé : {}",
+                                                    effective.display()
+                                                ))
+                                                .size(11.0)
+                                                .color(pal.text_faint),
+                                            );
+                                            // Les sauvegardes Dying Light (et
+                                            // d'autres jeux) vivent dans le
+                                            // préfixe historique. Une bascule
+                                            // d'installation peut créer un
+                                            // dossier séparé ; on permet de
+                                            // revenir aux anciennes sauvegardes.
+                                            let legacy =
+                                                config::prefix_root().join(&game.id);
+                                            if legacy.join("drive_c").is_dir()
+                                                && legacy != effective
+                                            {
+                                                if widgets::ghost_button(
+                                                    ui,
+                                                    "Utiliser l'ancien préfixe",
+                                                    &pal,
+                                                    Icon::Refresh,
+                                                )
+                                                .on_hover_text(
+                                                    "Revenir au dossier Proton historique de ce jeu, celui qui contient probablement les sauvegardes d'avant la bascule Epic/GOG.",
+                                                )
+                                                .clicked()
+                                                {
+                                                    game.prefix = Some(
+                                                        legacy.display().to_string(),
+                                                    );
+                                                }
+                                            }
+                                        },
+                                    );
+                                    ui.add_space(16.0);
+                                    widgets::card(
+                                        ui,
+                                        &pal,
+                                        "Options de lancement",
+                                        Some(
+                                            "Ces cases remplacent des commandes à taper. Elles enveloppent la commande du jeu, de l'extérieur vers l'intérieur : gamescope, puis gamemoderun, puis le jeu.",
+                                        ),
+                                        |ui| {
+                                            launch_options_editor(
+                                                ui,
+                                                &pal,
+                                                &mut game.launch,
+                                                &mut game.proton_log,
+                                                &mut game.umu,
+                                                Some(&mut game.umu_game_id),
+                                                &self.tools,
+                                            );
+                                        },
+                                    );
+                                    ui.add_space(16.0);
+                                    widgets::card(
+                                        ui,
+                                        &pal,
+                                        "Anti-triche",
+                                        Some(
+                                            "Cochés, ces dossiers sont déclarés à ton Proton par PROTON_BATTLEYE_RUNTIME / PROTON_EAC_RUNTIME : ils ne sont pas lancés directement.",
+                                        ),
+                                        |ui| {
+                                            let mut battleye = game.anticheat.battleye();
+                                            let mut eac = game.anticheat.eac();
+                                            let mut changed = false;
+                                            for (keyword, label, value, salt) in [
+                                                (
+                                                    "battleye",
+                                                    "BattlEye AntiCheat Runtime",
+                                                    &mut battleye,
+                                                    "game_battleye",
+                                                ),
+                                                (
+                                                    "easyanticheat",
+                                                    "EasyAntiCheat Runtime",
+                                                    &mut eac,
+                                                    "game_eac",
+                                                ),
+                                            ] {
+                                                let runtime = proton::anticheat_runtime(
+                                                    &self.runtimes,
+                                                    keyword,
+                                                );
+                                                let found = runtime.is_some();
+                                                let path = runtime
+                                                    .map(|runtime| {
+                                                        runtime.dir().display().to_string()
+                                                    });
+                                                let status = match &path {
+                                                    Some(path) => format!(
+                                                        "{} · {path}",
+                                                        crate::i18n::tr("Trouvé")
+                                                    ),
+                                                    None => crate::i18n::tr("Introuvable"),
+                                                };
+                                                let detail = path.clone().unwrap_or_else(|| {
+                                                    proton::anticheat_summary(&self.runtimes)
+                                                });
+                                                if widgets::option_row_status(
+                                                    ui,
+                                                    &pal,
+                                                    label,
+                                                    &status,
+                                                    found,
+                                                    Some(&detail),
+                                                    value,
+                                                    salt,
+                                                )
+                                                .changed()
+                                                {
+                                                    changed = true;
+                                                }
+                                            }
+                                            if changed {
+                                                game.anticheat = game
+                                                    .anticheat
+                                                    .with_battleye(battleye)
+                                                    .with_eac(eac);
+                                            }
+                                        },
+                                    );
+                                }
+                                GameSection::Env => {
+                                    widgets::card(
+                                        ui,
+                                        &pal,
+                                        "Variables d'environnement",
+                                        Some(
+                                            "Copiées depuis l'onglet « Par défaut » au moment de l'ajout : les modifier ici ne touche que ce jeu. Format NOM=valeur.",
+                                        ),
+                                        |ui| {
+                                            env_editor(ui, &pal, &mut game.env);
+                                        },
+                                    );
+                                }
+                                GameSection::Data => {
+                                    widgets::card(
+                                        ui,
+                                        &pal,
+                                        "Artworks",
+                                        None,
+                                        |ui| {
+                                            let sources = match (
+                                                game.steam_app_id,
+                                                game.sgdb_id,
+                                            ) {
+                                                (Some(appid), Some(sgdb)) => format!(
+                                                    "Steam AppID {appid} · SteamGridDB #{sgdb}"
+                                                ),
+                                                (Some(appid), None) => {
+                                                    format!("Steam AppID {appid}")
+                                                }
+                                                (None, Some(sgdb)) => {
+                                                    format!("SteamGridDB #{sgdb}")
+                                                }
+                                                (None, None) => {
+                                                    "aucune source (assets manuels)"
+                                                        .to_string()
+                                                }
+                                            };
+                                            ui.label(
+                                                crate::i18n::rich(sources)
+                                                    .size(12.0)
+                                                    .color(pal.text_dim),
+                                            );
+                                        },
+                                    );
+                                    ui.add_space(16.0);
+                                    widgets::card(
+                                        ui,
+                                        &pal,
+                                        "Données",
+                                        None,
+                                        |ui| {
+                                            ui.label(
+                                                crate::i18n::rich(format!(
+                                                    "Temps de jeu : {} · dernière session : {}",
+                                                    game.playtime_label(),
+                                                    game.last_played_label()
+                                                ))
+                                                .size(12.0)
+                                                .color(pal.text_dim),
+                                            );
+                                            if widgets::ghost_button(
+                                                ui,
+                                                "Réinitialiser le temps de jeu",
+                                                &pal,
+                                                Icon::None,
+                                            )
+                                            .clicked()
+                                            {
+                                                game.playtime_secs = 0;
+                                                game.last_played = None;
+                                            }
+                                        },
+                                    );
+                                }
+                            });
+                    });
+                } else if self.game_tab == GameTab::Ps2 {
+                    ui.vertical(|ui| {
+                        ui.set_width(width);
+                        ui.set_height(body_height);
+                        egui::ScrollArea::vertical()
+                            .id_salt("quark_game_ps2_scroll")
+                            .max_height(body_height)
+                            .auto_shrink([false, false])
+                            .show(ui, |ui| {
+                                widgets::card(
+                                    ui,
+                                    &pal,
+                                    "PlayStation 2",
+                                    Some(
+                                        "Quark lance l'image disque avec PCSX2. Le numéro de série sert à retrouver la jaquette dans ps2-covers et à associer la fiche RetroAchievements ; il est lu automatiquement dans SYSTEM.CNF des fichiers .iso.",
+                                    ),
+                                    |ui| {
+                                        let ra_state = self.ps2_ra.get(&game.id).cloned();
+                                        let settings = self.lib.settings.clone();
+                                        ps2_editor(
+                                            ui,
+                                            &pal,
+                                            &mut game,
+                                            &settings,
+                                            ra_state.as_ref(),
+                                            &mut ps2_read_serial,
+                                            &mut ps2_search_ra,
+                                            &mut ps2_fetch_ra,
+                                            &mut ps2_open_ra,
+                                            &mut ps2_cover,
+                                        );
+                                    },
+                                );
+                            });
+                    });
+                } else {
+                    ui.vertical(|ui| {
+                        ui.set_width(width);
+                        ui.set_height(body_height);
+                        egui::ScrollArea::vertical()
+                            .id_salt("quark_game_dll_scroll")
+                            .max_height(body_height)
+                            .auto_shrink([false, false])
+                            .show(ui, |ui| {
+                                widgets::card(
+                                    ui,
+                                    &pal,
+                                    "DLL overrides",
+                                    Some(
+                                        "WINEDLLOVERRIDES indique à Wine quelle version d'une DLL charger. « n » prend la DLL native livrée avec le jeu, « b » celle de Wine ; « n,b » essaie la native puis la builtin. Ces réglages sont propres à ce jeu.",
+                                    ),
+                                    |ui| {
+                                        dll_overrides_editor(
+                                            ui,
+                                            &pal,
+                                            &mut game,
+                                            &mut self.game_dll_rows,
+                                            &mut browse_dll_source,
+                                        );
+                                    },
+                                );
+                            });
                     });
                 }
-                ui.add_space(6.0);
-                let effective = game.prefix_path(&self.lib.settings);
-                ui.label(
-                    crate::i18n::rich(format!("Préfixe utilisé : {}", effective.display()))
-                        .size(11.0)
-                        .color(pal.text_faint),
-                );
-                // Les sauvegardes Dying Light (et d'autres jeux) vivent dans le
-                // préfixe historique `<jeu>`. Si une bascule d'installation a
-                // créé un dossier séparé, on permet de revenir aux anciennes
-                // sauvegardes sans éditer config.json à la main.
-                let legacy = config::prefix_root().join(&game.id);
-                if legacy.join("drive_c").is_dir() && legacy != effective {
-                    if widgets::ghost_button(ui, "Utiliser l'ancien préfixe", &pal, Icon::Refresh)
-                        .on_hover_text(
-                            "Revenir au dossier Proton historique de ce jeu, celui qui contient \
-                             probablement les sauvegardes d'avant la bascule Epic/GOG.",
-                        )
-                        .clicked()
-                    {
-                        game.prefix = Some(legacy.display().to_string());
-                    }
-                }
+                    });
+                },
+            );
 
-                section_hint(
-                    ui,
-                    "OPTIONS DE LANCEMENT",
-                    &pal,
-                    "Ces cases remplacent des commandes à taper. Elles enveloppent la commande du \
-                     jeu, de l'extérieur vers l'intérieur : gamescope, puis gamemoderun, puis le \
-                     jeu. Un outil absent est ignoré — le jeu démarre quand même — et signalé ici.",
-                );
-                launch_options_editor(
-                    ui,
-                    &pal,
-                    &mut game.launch,
-                    &mut game.proton_log,
-                    &mut game.umu,
-                    Some(&mut game.umu_game_id),
-                    &self.tools,
-                );
-                section_hint(
-                    ui,
-                    "ANTI-TRICHE",
-                    &pal,
-                    "Cochés, ces dossiers sont déclarés à ton Proton par PROTON_BATTLEYE_RUNTIME / \
-                     PROTON_EAC_RUNTIME : ils ne sont pas lancés directement (Steam ne les livre \
-                     pas avec un script `proton`), donc cocher les deux est sans risque.",
-                );
-                // Deux cases indépendantes, comme dans Heroic : un jeu peut avoir
-                // besoin des deux runtimes.
-                let mut battleye = game.anticheat.battleye();
-                let mut eac = game.anticheat.eac();
-                let mut changed = false;
-                changed |= widgets::setting_toggle(
-                    ui,
-                    &pal,
-                    "BattlEye AntiCheat Runtime",
-                    Some("Déclaré à Proton par PROTON_BATTLEYE_RUNTIME."),
-                    &mut battleye,
-                    "game_battleye",
-                )
-                .changed();
-                changed |= widgets::setting_toggle(
-                    ui,
-                    &pal,
-                    "EasyAntiCheat Runtime",
-                    Some("Déclaré à Proton par PROTON_EAC_RUNTIME."),
-                    &mut eac,
-                    "game_eac",
-                )
-                .changed();
-                if changed {
-                    game.anticheat = game.anticheat.with_battleye(battleye).with_eac(eac);
-                }
-                // Disponibilité réelle : on montre ce que Quark a trouvé (chemin
-                // compris) au lieu d'inviter à installer ce qui l'est déjà.
-                for (keyword, label, enabled) in [
-                    ("battleye", "BattlEye", game.anticheat.battleye()),
-                    ("easyanticheat", "EasyAntiCheat", game.anticheat.eac()),
-                ] {
-                    if !enabled {
-                        continue;
-                    }
-                    match proton::anticheat_runtime(&self.runtimes, keyword) {
-                        Some(runtime) => ui.label(
-                            crate::i18n::rich(format!(
-                                "{label} : trouvé — {} (variable {})",
-                                runtime.dir().display(),
-                                proton::anticheat_env_name(keyword)
-                            ))
-                            .size(11.0)
-                            .color(pal.text_dim),
-                        ),
-                        None => ui.label(
-                            crate::i18n::rich(format!(
-                                "{label} : non détecté (dossiers vus : {})",
-                                proton::anticheat_summary(&self.runtimes)
-                            ))
-                            .size(11.0)
-                            .color(pal.danger),
-                        ),
-                    };
-                }
-                section_hint(
-                    ui,
-                    "VARIABLES D'ENVIRONNEMENT",
-                    &pal,
-                    "Copiées depuis l'onglet « Par défaut » au moment de l'ajout : les modifier ici \
-                     ne touche que ce jeu. Format NOM=valeur.",
-                );
-                env_editor(ui, &pal, &mut game.env);
-
-                section(ui, "ARTWORKS", &pal);
-                let sources = match (game.steam_app_id, game.sgdb_id) {
-                    (Some(appid), Some(sgdb)) => format!("Steam AppID {appid} · SteamGridDB #{sgdb}"),
-                    (Some(appid), None) => format!("Steam AppID {appid}"),
-                    (None, Some(sgdb)) => format!("SteamGridDB #{sgdb}"),
-                    (None, None) => "aucune source (assets manuels)".to_string(),
-                };
-                ui.label(crate::i18n::rich(sources).size(12.0).color(pal.text_dim));
-                section(ui, "DONNÉES", &pal);
-                ui.label(
-                    crate::i18n::rich(format!(
-                        "Temps de jeu : {} · dernière session : {}",
-                        game.playtime_label(),
-                        game.last_played_label()
-                    ))
-                    .size(12.0)
-                    .color(pal.text_dim),
-                );
-                } else if self.game_tab == GameTab::Ps2 {
-                    let ra_state = self.ps2_ra.get(&game.id).cloned();
-                    let settings = self.lib.settings.clone();
-                    ps2_editor(
-                        ui,
-                        &pal,
-                        &mut game,
-                        &settings,
-                        ra_state.as_ref(),
-                        &mut ps2_read_serial,
-                        &mut ps2_search_ra,
-                        &mut ps2_fetch_ra,
-                        &mut ps2_open_ra,
-                        &mut ps2_cover,
-                    );
-                } else {
-                    dll_overrides_editor(
-                        ui,
-                        &pal,
-                        &mut game,
-                        &mut self.game_dll_rows,
-                        &mut browse_dll_source,
-                    );
-                }
-                });
-                ui.add_space(16.0);
+            widgets::footer_bar_sized(ui, &pal, width, |ui| {
                 ui.horizontal(|ui| {
                     let ready = !game.exe.trim().is_empty();
-                    if widgets::accent_button(ui, Vec2::new(160.0, 34.0), "Enregistrer", &pal, ready, Icon::None)
-                        .clicked()
+                    if widgets::accent_button(
+                        ui,
+                        Vec2::new(160.0, 34.0),
+                        "Enregistrer",
+                        &pal,
+                        ready,
+                        Icon::None,
+                    )
+                    .clicked()
                         && ready
                     {
                         save = true;
@@ -2918,14 +3775,19 @@ impl QuarkApp {
                         cancel = true;
                     }
                     ui.add_space(8.0);
-                    if widgets::ghost_button(ui, "Réinitialiser le temps de jeu", &pal, Icon::None)
-                        .clicked()
+                    if widgets::ghost_button(
+                        ui,
+                        "Réinitialiser le temps de jeu",
+                        &pal,
+                        Icon::None,
+                    )
+                    .clicked()
                     {
                         game.playtime_secs = 0;
                         game.last_played = None;
                     }
                     ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-                        if widgets::danger_button(
+                        if widgets::danger_ghost_button(
                             ui,
                             Vec2::new(150.0, 34.0),
                             "Supprimer",
@@ -2941,11 +3803,14 @@ impl QuarkApp {
                 });
                 ui.add_space(4.0);
                 ui.label(
-                    crate::i18n::rich("Les fichiers du jeu et le préfixe Proton ne sont jamais supprimés.")
-                        .size(11.0)
-                        .color(pal.text_faint),
+                    crate::i18n::rich(
+                        "Les fichiers du jeu et le préfixe Proton ne sont jamais supprimés.",
+                    )
+                    .size(11.5)
+                    .color(pal.text_faint),
                 );
             });
+        });
         if modal.should_close() {
             cancel = true;
         }
@@ -2959,7 +3824,9 @@ impl QuarkApp {
             game.sgdb_id = hit.sgdb_id;
             self.game_link_results.clear();
             self.game_link_warnings.clear();
-            self.toast_info("Jeu lié : enregistre les paramètres pour récupérer les images");
+            self.toast_info(
+                "Jeu lié : enregistre les paramètres pour récupérer les images",
+            );
         }
         if unlink {
             game.steam_app_id = None;
@@ -3014,7 +3881,9 @@ impl QuarkApp {
                 ),
             }
         }
-        if ps2_open_ra && let Some(ra_id) = game.ps2.as_ref().and_then(|ps2| ps2.ra_game_id) {
+        if ps2_open_ra
+            && let Some(ra_id) = game.ps2.as_ref().and_then(|ps2| ps2.ra_game_id)
+        {
             crate::ps2::open_ra_page(ra_id);
         }
         if ps2_cover {
@@ -3024,11 +3893,17 @@ impl QuarkApp {
                 .map(|ps2| ps2.serial.trim().to_string())
                 .unwrap_or_default();
             if serial.is_empty() {
-                self.toast_error("Saisis le numéro de série PS2 avant de charger la jaquette");
+                self.toast_error(
+                    "Saisis le numéro de série PS2 avant de charger la jaquette",
+                );
             } else if crate::ps2::cover_url(&serial).is_none() {
                 self.toast_error("Numéro de série PS2 invalide (attendu : SLUS-12345)");
             } else {
-                self.queue_asset_job(ctx, &game.id, crate::app::AssetSource::Ps2(serial));
+                self.queue_asset_job(
+                    ctx,
+                    &game.id,
+                    crate::app::AssetSource::Ps2(serial),
+                );
             }
         }
         if remove {
@@ -3039,7 +3914,9 @@ impl QuarkApp {
             let id = game.id.clone();
             let ids_changed =
                 game.steam_app_id != original_app_id || game.sgdb_id != original_sgdb_id;
-            let hit = if ids_changed && (game.steam_app_id.is_some() || game.sgdb_id.is_some()) {
+            let hit = if ids_changed
+                && (game.steam_app_id.is_some() || game.sgdb_id.is_some())
+            {
                 Some(crate::artwork::SearchHit {
                     source: if game.steam_app_id.is_some() {
                         crate::artwork::Source::Steam
@@ -3082,7 +3959,11 @@ impl QuarkApp {
             self.touch();
             self.toast_info("Paramètres du jeu enregistrés");
             if !new_serial.is_empty() && new_serial != original_serial {
-                self.queue_asset_job(ctx, &id, crate::app::AssetSource::Ps2(new_serial));
+                self.queue_asset_job(
+                    ctx,
+                    &id,
+                    crate::app::AssetSource::Ps2(new_serial),
+                );
             }
             if let Some(hit) = hit {
                 self.start_asset_job(ctx, &id, hit);
@@ -3571,25 +4452,26 @@ fn env_editor(ui: &mut egui::Ui, pal: &Palette, vars: &mut Vec<EnvVar>) -> bool 
     let mut changed = false;
     let mut remove: Option<usize> = None;
     let mut add = false;
+    widgets::style_text_inputs(ui, pal);
 
     if vars.is_empty() {
         ui.label(
-            crate::i18n::rich("aucune variable")
+            crate::i18n::rich("Aucune variable pour l'instant.")
                 .size(11.5)
                 .color(pal.text_faint),
         );
-        ui.add_space(4.0);
+        ui.add_space(6.0);
     }
 
     for index in 0..vars.len() {
         ui.horizontal(|ui| {
             let width = ui.available_width();
-            // Le nom prend un tiers de la ligne, la valeur tout le reste : une
-            // valeur longue (WINEDLLOVERRIDES=…) reste lisible sans défiler.
-            let name_width = ((width - 96.0) * 0.32).max(110.0);
+            let name_width = 220.0_f32.min((width - 96.0).max(120.0));
             let name = ui.add_sized(
-                Vec2::new(name_width, 26.0),
-                egui::TextEdit::singleline(&mut vars[index].name).hint_text(crate::i18n::tr("NOM")),
+                Vec2::new(name_width, 32.0),
+                egui::TextEdit::singleline(&mut vars[index].name)
+                    .hint_text(crate::i18n::tr("NOM"))
+                    .font(egui::FontId::monospace(12.0)),
             );
             if name.changed() {
                 changed = true;
@@ -3603,11 +4485,12 @@ fn env_editor(ui: &mut egui::Ui, pal: &Palette, vars: &mut Vec<EnvVar>) -> bool 
                 }
             }
             ui.label(crate::i18n::rich("=").size(12.0).color(pal.text_faint));
-            let value_width = (width - name_width - 66.0).max(150.0);
+            let value_width = (width - name_width - 70.0).max(150.0);
             let value = ui.add_sized(
-                Vec2::new(value_width, 26.0),
+                Vec2::new(value_width, 32.0),
                 egui::TextEdit::singleline(&mut vars[index].value)
-                    .hint_text(crate::i18n::tr("valeur")),
+                    .hint_text(crate::i18n::tr("valeur"))
+                    .font(egui::FontId::monospace(12.0)),
             );
             if value.changed() {
                 changed = true;
@@ -3617,7 +4500,7 @@ fn env_editor(ui: &mut egui::Ui, pal: &Palette, vars: &mut Vec<EnvVar>) -> bool 
                 remove = Some(index);
             }
         });
-        ui.add_space(2.0);
+        ui.add_space(6.0);
     }
 
     ui.horizontal(|ui| {
@@ -3906,14 +4789,6 @@ fn ps2_editor(
     let Some(ps2) = game.ps2.as_mut() else {
         return;
     };
-    section_hint(
-        ui,
-        "PLAYSTATION 2",
-        pal,
-        "Quark lance l'image disque avec PCSX2. Le numéro de série sert à retrouver la \
-         jaquette dans ps2-covers et à associer la fiche RetroAchievements ; il est lu \
-         automatiquement dans SYSTEM.CNF des fichiers .iso.",
-    );
     ui.label(
         crate::i18n::rich(format!("Image disque : {}", game.exe))
             .size(11.5)
@@ -3978,13 +4853,21 @@ fn ps2_editor(
         }
     }
 
-    section_hint(
-        ui,
-        "RETROACHIEVEMENTS",
-        pal,
-        "PCSX2 se connecte avec ton compte et débloque les succès. Quark lit la même \
-         progression avec la clé Web API pour l'afficher ici et dans l'overlay.",
-    );
+    ui.add_space(16.0);
+    ui.horizontal(|ui| {
+        ui.label(
+            crate::i18n::rich("RetroAchievements")
+                .size(13.0)
+                .strong()
+                .color(pal.text),
+        );
+        widgets::info_button(
+            ui,
+            pal,
+            "PCSX2 se connecte avec ton compte et débloque les succès. Quark lit la même progression avec la clé Web API pour l'afficher ici et dans l'overlay.",
+        );
+    });
+    ui.add_space(6.0);
     let mut ra_id = ps2.ra_game_id.unwrap_or(0);
     ui.horizontal_wrapped(|ui| {
         ui.label(
@@ -4141,14 +5024,6 @@ fn dll_overrides_editor(
     rows: &mut Vec<config::DllOverride>,
     browse: &mut bool,
 ) {
-    section_hint(
-        ui,
-        "DLL OVERRIDES",
-        pal,
-        "WINEDLLOVERRIDES indique à Wine quelle version d'une DLL charger. « n » \
-         prend la DLL native livrée avec le jeu, « b » celle de Wine ; « n,b » essaie \
-         la native puis la builtin. Ces réglages sont propres à ce jeu.",
-    );
     ui.label(
         crate::i18n::rich("Dossier source des DLL")
             .size(12.5)
@@ -4252,13 +5127,21 @@ fn dll_overrides_editor(
         }
     }
 
-    section_hint(
-        ui,
-        "OVERRIDES ACTIFS",
-        pal,
-        "Les overrides déjà enregistrés sont repris ici. Coche « n » pour la DLL \
-         native, « b » pour la DLL de Wine ; les deux ensemble donnent « n,b ».",
-    );
+    ui.add_space(16.0);
+    ui.horizontal(|ui| {
+        ui.label(
+            crate::i18n::rich("Overrides actifs")
+                .size(13.0)
+                .strong()
+                .color(pal.text),
+        );
+        widgets::info_button(
+            ui,
+            pal,
+            "Les overrides déjà enregistrés sont repris ici. Coche « n » pour la DLL native, « b » pour la DLL de Wine ; les deux ensemble donnent « n,b ».",
+        );
+    });
+    ui.add_space(6.0);
     if rows.is_empty() {
         ui.label(
             crate::i18n::rich("Aucun override. Coche une DLL ci-dessus ou ajoute-en une.")
@@ -4344,70 +5227,54 @@ fn dll_files(dir: &Path) -> Result<Vec<String>, String> {
     Ok(files)
 }
 
-fn theme_card(ui: &mut egui::Ui, mode: ThemeMode, selected: bool) -> bool {
+fn theme_card(
+    ui: &mut egui::Ui,
+    pal: &Palette,
+    mode: ThemeMode,
+    selected: bool,
+    width: f32,
+) -> bool {
     let preview = theme::palette(mode);
-    let (rect, response) = ui.allocate_exact_size(Vec2::new(124.0, 60.0), Sense::click());
+    let (rect, response) = ui.allocate_exact_size(Vec2::new(width, 74.0), Sense::click());
     let painter = ui.painter_at(rect);
-    let accent = theme::palette(ThemeMode::Amoled).accent;
     let border = if selected {
-        accent
+        pal.accent
     } else if response.hovered() {
         preview.text_dim
     } else {
         preview.border
     };
-    painter.rect_filled(rect, 9.0, preview.surface);
+    painter.rect_filled(rect, 10.0, preview.bg);
     painter.rect_stroke(
         rect,
-        9.0,
-        Stroke::new(if selected { 1.5_f32 } else { 1.0 }, border),
+        10.0,
+        Stroke::new(if selected { 2.0_f32 } else { 1.0 }, border),
         egui::StrokeKind::Inside,
     );
     painter.rect_filled(
         Rect::from_min_size(
             Pos2::new(rect.left() + 12.0, rect.top() + 12.0),
-            Vec2::new(80.0, 8.0),
+            Vec2::new((rect.width() - 24.0) * 0.62, 7.0),
         ),
-        4.0,
+        3.5,
         preview.accent,
     );
+    painter.rect_filled(
+        Rect::from_min_size(
+            Pos2::new(rect.left() + 12.0, rect.top() + 25.0),
+            Vec2::new((rect.width() - 24.0) * 0.34, 5.0),
+        ),
+        2.5,
+        preview.surface_hover,
+    );
     painter.text(
-        Pos2::new(rect.left() + 12.0, rect.bottom() - 11.0),
+        Pos2::new(rect.left() + 12.0, rect.bottom() - 10.0),
         Align2::LEFT_BOTTOM,
         mode.label(),
-        FontId::new(10.0, crate::fonts::bold_family()),
+        FontId::proportional(11.5),
         preview.text,
     );
-    response.clicked()
-}
-
-fn section(ui: &mut egui::Ui, title: &str, pal: &Palette) {
-    ui.add_space(22.0);
-    ui.label(
-        crate::i18n::rich(title)
-            .size(10.5)
-            .strong()
-            .color(pal.text_faint),
-    );
-    ui.add_space(3.0);
-    ui.separator();
-    ui.add_space(10.0);
-}
-
-/// Titre de section avec son ⓘ : l'explication reste disponible au survol au
-/// lieu d'occuper une ligne de texte gris sous chaque réglage.
-fn section_hint(ui: &mut egui::Ui, title: &str, pal: &Palette, hint: &str) {
-    ui.add_space(22.0);
-    ui.horizontal(|ui| {
-        let (bar, _) = ui.allocate_exact_size(Vec2::new(3.0, 15.0), Sense::hover());
-        ui.painter().rect_filled(bar, 1.5, pal.accent);
-        ui.add_space(7.0);
-        ui.label(crate::i18n::rich(title).size(11.5).strong().color(pal.text));
-        widgets::info_button(ui, pal, hint);
-    });
-    ui.add_space(5.0);
-    ui.separator();
-    ui.add_space(10.0);
+    response.on_hover_cursor(egui::CursorIcon::PointingHand).clicked()
 }
 
 fn info_line(ui: &mut egui::Ui, label: &str, value: &str, pal: &Palette) {
@@ -5274,40 +6141,81 @@ fn launch_options_editor(
     } else {
         "gamemoderun absent : l'option sera ignorée au lancement."
     };
-    changed |= widgets::setting_toggle(
-        ui,
-        pal,
-        "GameMode",
-        Some(gamemode_hint),
-        &mut launch.gamemode,
-        "launch_gamemode",
-    )
-    .changed();
-    changed |= widgets::setting_toggle(
-        ui,
-        pal,
-        "MangoHud",
-        Some("Compteur d'images et de températures, via MANGOHUD=1."),
-        &mut launch.mangohud,
-        "launch_mangohud",
-    )
-    .changed();
-    changed |= widgets::setting_toggle(
-        ui,
-        pal,
-        "PRIME (NVIDIA)",
-        Some("Force le rendu sur la carte dédiée des portables hybrides."),
-        &mut launch.prime,
-        "launch_prime",
-    )
-    .changed();
+    let mangohud_hint = "Compteur d'images et de températures, via MANGOHUD=1.";
+    let prime_hint = "Force le rendu sur la carte dédiée des portables hybrides.";
+    let umu_hint = if tools.umu_run {
+        "umu-launcher gère le préfixe et transmet GAMEID à Proton."
+    } else {
+        "umu-run absent : Quark refusera le lancement de ce jeu."
+    };
+    ui.columns(2, |columns| {
+        changed |= widgets::option_row(
+            &mut columns[0],
+            pal,
+            "GameMode",
+            Some(gamemode_hint),
+            &mut launch.gamemode,
+            "launch_gamemode",
+        )
+        .changed();
+        columns[0].add_space(8.0);
+        changed |= widgets::option_row(
+            &mut columns[0],
+            pal,
+            "PRIME (NVIDIA)",
+            Some(prime_hint),
+            &mut launch.prime,
+            "launch_prime",
+        )
+        .changed();
+        changed |= widgets::option_row(
+            &mut columns[1],
+            pal,
+            "MangoHud",
+            Some(mangohud_hint),
+            &mut launch.mangohud,
+            "launch_mangohud",
+        )
+        .changed();
+        columns[1].add_space(8.0);
+        changed |= widgets::option_row(
+            &mut columns[1],
+            pal,
+            "umu-launcher",
+            Some(umu_hint),
+            umu,
+            "launch_umu",
+        )
+        .changed();
+    });
 
+    if *umu {
+        if let Some(id) = umu_game_id.as_deref_mut() {
+            ui.add_space(8.0);
+            widgets::field(ui, pal, "GAMEID", |ui| {
+                let response = ui.add_sized(
+                    Vec2::new(120.0, 34.0),
+                    egui::TextEdit::singleline(id).hint_text(crate::i18n::tr("0")),
+                );
+                if response.changed() {
+                    changed = true;
+                }
+                ui.label(
+                    crate::i18n::rich("AppID ProtonDB · « 0 » pour un jeu inconnu")
+                        .size(10.5)
+                        .color(pal.text_faint),
+                );
+            });
+        }
+    }
+
+    ui.add_space(10.0);
     let gamescope_hint = if tools.gamescope {
         "Compositeur dédié : résolution, FSR et limite d'images."
     } else {
         "gamescope absent : l'option sera ignorée au lancement."
     };
-    changed |= widgets::setting_toggle(
+    changed |= widgets::option_row(
         ui,
         pal,
         "gamescope",
@@ -5317,10 +6225,11 @@ fn launch_options_editor(
     )
     .changed();
     if launch.gamescope {
+        ui.add_space(8.0);
         egui::Frame::new()
             .fill(pal.surface.gamma_multiply(0.6))
-            .corner_radius(7.0)
-            .inner_margin(egui::Margin::symmetric(12, 8))
+            .corner_radius(10.0)
+            .inner_margin(egui::Margin::symmetric(14, 12))
             .show(ui, |ui| {
                 ui.set_width(ui.available_width());
                 ui.horizontal_wrapped(|ui| {
@@ -5346,7 +6255,7 @@ fn launch_options_editor(
                                 .suffix(" px"),
                         )
                         .changed();
-                    ui.add_space(14.0);
+                    ui.add_space(18.0);
                     ui.label(crate::i18n::rich("Limite").size(11.5).color(pal.text_dim));
                     changed |= ui
                         .add(
@@ -5357,7 +6266,8 @@ fn launch_options_editor(
                         )
                         .changed();
                 });
-                changed |= widgets::setting_toggle(
+                ui.add_space(6.0);
+                changed |= widgets::option_row(
                     ui,
                     pal,
                     "FSR",
@@ -5369,7 +6279,8 @@ fn launch_options_editor(
             });
     }
 
-    changed |= widgets::setting_toggle(
+    ui.add_space(10.0);
+    changed |= widgets::option_row(
         ui,
         pal,
         "Journal Proton détaillé",
@@ -5378,64 +6289,36 @@ fn launch_options_editor(
         "launch_proton_log",
     )
     .changed();
-    let umu_hint = if tools.umu_run {
-        "umu-launcher gère le préfixe et transmet GAMEID à Proton."
-    } else {
-        "umu-run absent : Quark refusera le lancement de ce jeu."
-    };
-    changed |= widgets::setting_toggle(
-        ui,
-        pal,
-        "Lancer via umu-launcher",
-        Some(umu_hint),
-        umu,
-        "launch_umu",
-    )
-    .changed();
-    if *umu {
-        if let Some(id) = umu_game_id.as_deref_mut() {
-            ui.horizontal(|ui| {
-                ui.add_space(10.0);
-                ui.label(crate::i18n::rich("GAMEID").size(11.5).color(pal.text_dim));
-                ui.add(
-                    egui::TextEdit::singleline(id)
-                        .hint_text(crate::i18n::tr("0"))
-                        .desired_width(120.0),
-                );
-                ui.label(
-                    crate::i18n::rich("AppID ProtonDB · « 0 » pour un jeu inconnu")
-                        .size(10.5)
-                        .color(pal.text_faint),
-                );
-            });
-        }
-    }
 
-    ui.add_space(8.0);
+    ui.add_space(12.0);
+    widgets::field(ui, pal, "Commande wrapper", |ui| {
+        let response = ui.add_sized(
+            Vec2::new(ui.available_width(), 34.0),
+            egui::TextEdit::singleline(&mut launch.wrapper)
+                .hint_text(crate::i18n::tr("%command%"))
+                .font(egui::FontId::monospace(12.0)),
+        );
+        if response.changed() {
+            changed = true;
+        }
+    });
     ui.horizontal(|ui| {
         ui.label(
-            crate::i18n::rich("Commande wrapper")
-                .size(12.5)
-                .color(pal.text_dim),
+            crate::i18n::rich(
+                "%command% est remplacé par la commande du jeu ; sans %command%, la commande est placée devant.",
+            )
+            .size(11.0)
+            .color(pal.text_faint),
         );
         widgets::info_button(
             ui,
             pal,
-            "Comme les options de lancement Steam : %command% est remplacé par la \
-             commande du jeu. Exemple : env FOO=1 %command%. Sans %command%, la \
-             commande est placée devant.",
+            "Comme les options de lancement Steam : exemple « env FOO=1 %command% ».",
         );
     });
-    changed |= ui
-        .add(
-            egui::TextEdit::singleline(&mut launch.wrapper)
-                .hint_text(crate::i18n::tr("%command%"))
-                .desired_width(f32::INFINITY),
-        )
-        .changed();
 
     if launch.any() || *proton_log || *umu {
-        ui.add_space(6.0);
+        ui.add_space(8.0);
         if widgets::ghost_button(ui, "Tout réinitialiser", pal, Icon::None).clicked() {
             *launch = config::LaunchOptions::default();
             *proton_log = false;

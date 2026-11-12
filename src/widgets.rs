@@ -321,6 +321,68 @@ pub fn danger_button(
     resp
 }
 
+/// Bouton destructif discret : contour rouge, fond transparent, fond plein au
+/// survol. Pour les actions secondaires comme « Supprimer » dans un pied de
+/// fenêtre, sans le poids visuel du bouton rouge plein.
+pub fn danger_ghost_button(
+    ui: &mut egui::Ui,
+    size: Vec2,
+    label: &str,
+    pal: &Palette,
+    enabled: bool,
+    icon: Icon,
+) -> Response {
+    let label = crate::i18n::tr(label);
+    let sense = if enabled {
+        Sense::click()
+    } else {
+        Sense::hover()
+    };
+    let (rect, resp) = ui.allocate_exact_size(size, sense);
+    let hover = ui.ctx().animate_bool_with_time(
+        control_id(ui, rect, &label, "danger-ghost"),
+        enabled && resp.hovered(),
+        0.12,
+    );
+    let painter = ui.painter_at(rect);
+    if hover > 0.0 {
+        painter.rect_filled(rect, 8.0, pal.danger.gamma_multiply(0.20 * hover));
+    }
+    painter.rect_stroke(
+        rect,
+        8.0,
+        Stroke::new(1.0_f32, pal.danger.gamma_multiply(if enabled { 1.0 } else { 0.45 })),
+        egui::StrokeKind::Inside,
+    );
+    let ink = if enabled {
+        theme::lerp_color(pal.danger, Color32::WHITE, hover * 0.18)
+    } else {
+        pal.text_faint
+    };
+    let galley = painter.layout_no_wrap(label.clone(), FontId::proportional(13.0), ink);
+    let icon_w = if icon == Icon::None { 0.0 } else { 14.0 };
+    let gap = if icon_w > 0.0 { 8.0 } else { 0.0 };
+    let total = icon_w + gap + galley.size().x;
+    let x0 = rect.center().x - total / 2.0;
+    if icon != Icon::None {
+        paint_icon(
+            ui,
+            Rect::from_center_size(
+                Pos2::new(x0 + icon_w / 2.0, rect.center().y),
+                Vec2::splat(icon_w),
+            ),
+            icon,
+            ink,
+        );
+    }
+    painter.galley(
+        Pos2::new(x0 + icon_w + gap, rect.center().y - galley.size().y / 2.0),
+        galley,
+        ink,
+    );
+    resp
+}
+
 /// Bouton secondaire discret (contour au survol), largeur automatique.
 pub fn ghost_button(ui: &mut egui::Ui, label: &str, pal: &Palette, icon: Icon) -> Response {
     let label = crate::i18n::tr(label);
@@ -580,22 +642,41 @@ pub fn segmented(
     selected: usize,
 ) -> Option<usize> {
     const HEIGHT: f32 = 32.0;
-    const ICON: f32 = 13.0;
-    const GAP: f32 = 6.0;
-    const PAD: f32 = 20.0;
-    let font = FontId::proportional(12.0);
-    let galleys: Vec<_> = items
+    let mut font = FontId::proportional(12.0);
+    let mut galleys: Vec<_> = items
         .iter()
         .map(|(_, label)| {
             ui.painter()
                 .layout_no_wrap(crate::i18n::tr(label), font.clone(), pal.text)
         })
         .collect();
-    let widths: Vec<f32> = galleys
+    let mut widths: Vec<f32> = galleys
         .iter()
-        .map(|galley| galley.size().x + ICON + GAP + PAD)
+        .map(|galley| galley.size().x + 13.0 + 6.0 + 20.0)
         .collect();
-    let total = widths.iter().sum::<f32>() + 4.0;
+    let mut total = widths.iter().sum::<f32>() + 4.0;
+    // Cinq statuts tiennent difficilement dans une carte de 320 px. Quand les
+    // segments n'ont pas d'icône et dépassent la largeur disponible, on retire
+    // l'icône (déjà absente) et on resserre la police et le padding.
+    let compact = total > ui.available_width()
+        && items.iter().all(|(icon, _)| *icon == Icon::None);
+    if compact {
+        font = FontId::proportional(11.0);
+        galleys = items
+            .iter()
+            .map(|(_, label)| {
+                ui.painter()
+                    .layout_no_wrap(crate::i18n::tr(label), font.clone(), pal.text)
+            })
+            .collect();
+        widths = galleys
+            .iter()
+            .map(|galley| galley.size().x + 14.0)
+            .collect();
+        total = widths.iter().sum::<f32>() + 4.0;
+    }
+    let icon_w = if compact { 0.0 } else { 13.0 };
+    let gap = if compact { 0.0 } else { 6.0 };
     let (outer, _) = ui.allocate_exact_size(Vec2::new(total, HEIGHT), Sense::hover());
     let painter = ui.painter_at(outer);
     painter.rect_filled(outer, 10.0, pal.surface);
@@ -606,6 +687,11 @@ pub fn segmented(
         egui::StrokeKind::Inside,
     );
     let mut clicked = None;
+    let group = items
+        .iter()
+        .map(|(_, label)| *label)
+        .collect::<Vec<_>>()
+        .join("|");
     let mut x = outer.left() + 2.0;
     for (index, ((icon, _), galley)) in items.iter().zip(galleys).enumerate() {
         let rect = Rect::from_min_size(
@@ -613,10 +699,15 @@ pub fn segmented(
             Vec2::new(widths[index], HEIGHT - 4.0),
         );
         x += widths[index];
-        let resp = ui.interact(rect, ui.id().with(("quark_segment", index)), Sense::click());
+        let resp = ui.interact(
+            rect,
+            ui.id().with(("quark_segment", group.as_str(), index)),
+            Sense::click(),
+        );
         let on = index == selected;
         let hover = ui.ctx().animate_bool_with_time(
-            ui.id().with(("quark_segment_hover", index)),
+            ui.id()
+                .with(("quark_segment_hover", group.as_str(), index)),
             resp.hovered() && !on,
             0.12,
         );
@@ -630,19 +721,21 @@ pub fn segmented(
         } else {
             theme::lerp_color(pal.text_dim, pal.text, hover)
         };
-        let content = ICON + GAP + galley.size().x;
+        let content = icon_w + gap + galley.size().x;
         let x0 = rect.center().x - content / 2.0;
-        paint_icon(
-            ui,
-            Rect::from_center_size(
-                Pos2::new(x0 + ICON / 2.0, rect.center().y),
-                Vec2::splat(ICON),
-            ),
-            *icon,
-            ink,
-        );
+        if icon_w > 0.0 && *icon != Icon::None {
+            paint_icon(
+                ui,
+                Rect::from_center_size(
+                    Pos2::new(x0 + icon_w / 2.0, rect.center().y),
+                    Vec2::splat(icon_w),
+                ),
+                *icon,
+                ink,
+            );
+        }
         painter.galley(
-            Pos2::new(x0 + ICON + GAP, rect.center().y - galley.size().y / 2.0),
+            Pos2::new(x0 + icon_w + gap, rect.center().y - galley.size().y / 2.0),
             galley,
             ink,
         );
@@ -993,6 +1086,348 @@ pub fn floating_icon_button(
 /// qui encombraient les fenêtres. Le texte complet s'affiche au survol.
 pub fn info_button(ui: &mut egui::Ui, pal: &Palette, text: &str) -> Response {
     icon_button(ui, 16.0, Icon::Info, pal, text)
+}
+
+/// Applique le style des champs de saisie : fond plus sombre que la carte,
+/// contour fin et accent au focus. Le style reste limité à l'`Ui` courante.
+pub fn style_text_inputs(ui: &mut egui::Ui, pal: &Palette) {
+    let visuals = &mut ui.style_mut().visuals;
+    visuals.extreme_bg_color = pal.bg;
+    visuals.selection.bg_fill = pal.accent.gamma_multiply(0.35);
+    visuals.selection.stroke = Stroke::new(1.0_f32, pal.text);
+    for widget in [
+        &mut visuals.widgets.inactive,
+        &mut visuals.widgets.hovered,
+        &mut visuals.widgets.active,
+        &mut visuals.widgets.open,
+    ] {
+        widget.bg_fill = pal.bg;
+        widget.weak_bg_fill = pal.bg;
+        widget.bg_stroke = Stroke::new(1.0_f32, pal.border);
+        widget.corner_radius = egui::CornerRadius::same(8);
+    }
+    visuals.widgets.active.bg_stroke = Stroke::new(1.0_f32, pal.accent);
+    visuals.widgets.hovered.bg_stroke = Stroke::new(1.0_f32, pal.border);
+}
+
+/// Carte de réglages : fond `surface`, contour fin, coins de 12 px et titre de
+/// 15 px. Le ⓘ du titre remplace les anciennes barres de section.
+pub fn card<R>(
+    ui: &mut egui::Ui,
+    pal: &Palette,
+    title: &str,
+    hint: Option<&str>,
+    add_contents: impl FnOnce(&mut egui::Ui) -> R,
+) -> R {
+    egui::Frame::new()
+        .fill(pal.surface)
+        .stroke(Stroke::new(1.0_f32, pal.border))
+        .corner_radius(12.0)
+        .inner_margin(egui::Margin::symmetric(18, 16))
+        .show(ui, |ui| {
+            ui.set_width(ui.available_width());
+            ui.spacing_mut().item_spacing.y = 12.0;
+            ui.horizontal(|ui| {
+                ui.label(
+                    crate::i18n::rich(title)
+                        .size(15.0)
+                        .strong()
+                        .color(pal.text),
+                );
+                if let Some(hint) = hint {
+                    info_button(ui, pal, hint);
+                }
+            });
+            add_contents(ui)
+        })
+        .inner
+}
+
+/// Libellé de champ de 12 px suivi de son contrôle, avec 6 px d'écart.
+pub fn field<R>(
+    ui: &mut egui::Ui,
+    pal: &Palette,
+    label: &str,
+    add_contents: impl FnOnce(&mut egui::Ui) -> R,
+) -> R {
+    ui.vertical(|ui| {
+        ui.spacing_mut().item_spacing.y = 6.0;
+        ui.label(
+            crate::i18n::rich(label)
+                .size(12.0)
+                .color(pal.text_dim),
+        );
+        style_text_inputs(ui, pal);
+        add_contents(ui)
+    })
+    .inner
+}
+
+/// Champ de chemin pleine largeur suivi du bouton « Parcourir… ». Renvoie
+/// `(modifié, parcourir cliqué)`.
+pub fn path_field(
+    ui: &mut egui::Ui,
+    pal: &Palette,
+    value: &mut String,
+    hint: &str,
+    browse_label: &str,
+) -> (bool, bool) {
+    let mut changed = false;
+    let mut browse = false;
+    ui.horizontal(|ui| {
+        style_text_inputs(ui, pal);
+        let field_width = (ui.available_width() - 122.0).max(140.0);
+        let response = ui.add_sized(
+            Vec2::new(field_width, 34.0),
+            egui::TextEdit::singleline(value).hint_text(crate::i18n::tr(hint)),
+        );
+        changed = response.changed();
+        ui.add_space(8.0);
+        browse = ghost_button(ui, browse_label, pal, Icon::Folder).clicked();
+    });
+    (changed, browse)
+}
+
+/// Ligne d'option : titre et description à gauche, interrupteur à droite.
+/// Toute la ligne bascule la valeur, comme `setting_toggle`, avec le rendu des
+/// paramètres refondus (fond `bg`, rayon 10, contour fin).
+pub fn option_row(
+    ui: &mut egui::Ui,
+    pal: &Palette,
+    title: &str,
+    description: Option<&str>,
+    value: &mut bool,
+    id_salt: impl std::hash::Hash,
+) -> Response {
+    let id = ui.id().with(("quark_option_row", &id_salt));
+    let height = if description.is_some() { 64.0 } else { 48.0 };
+    let (rect, mut response) = ui.allocate_exact_size(
+        Vec2::new(ui.available_width(), height),
+        Sense::click(),
+    );
+    let hover = ui
+        .ctx()
+        .animate_bool_with_time(id.with("hover"), response.hovered(), 0.12);
+    let on = ui
+        .ctx()
+        .animate_bool_with_time(id.with("toggle"), *value, 0.18);
+    let painter = ui.painter_at(rect);
+    painter.rect_filled(rect, 10.0, pal.bg);
+    painter.rect_stroke(
+        rect,
+        10.0,
+        Stroke::new(1.0_f32, pal.border),
+        egui::StrokeKind::Inside,
+    );
+    if hover > 0.0 {
+        painter.rect_filled(rect, 10.0, pal.surface_hover.gamma_multiply(0.35 * hover));
+    }
+    let text_rect = Rect::from_min_max(
+        Pos2::new(rect.left() + 14.0, rect.top() + 8.0),
+        Pos2::new(rect.right() - 72.0, rect.bottom() - 8.0),
+    );
+    let mut child = ui.new_child(
+        egui::UiBuilder::new()
+            .max_rect(text_rect)
+            .layout(egui::Layout::top_down(egui::Align::Min)),
+    );
+    child.spacing_mut().item_spacing.y = 2.0;
+    child.label(crate::i18n::rich(title).size(13.0).color(pal.text));
+    if let Some(description) = description {
+        let label = child.add(
+            egui::Label::new(
+                crate::i18n::rich(description)
+                    .size(12.0)
+                    .color(pal.text_dim),
+            )
+            .truncate(),
+        );
+        label.on_hover_text(description);
+    }
+    let track = Rect::from_center_size(
+        Pos2::new(rect.right() - 31.0, rect.center().y),
+        Vec2::new(42.0, 23.0),
+    );
+    painter.rect_filled(
+        track,
+        track.height() / 2.0,
+        theme::lerp_color(pal.border, pal.accent, on),
+    );
+    let knob_x = track.left() + track.height() / 2.0 + (track.width() - track.height()) * on;
+    painter.circle_filled(
+        Pos2::new(knob_x, track.center().y),
+        track.height() / 2.0 - 3.0,
+        if on > 0.5 {
+            theme::on_accent(pal.accent)
+        } else {
+            pal.text_dim
+        },
+    );
+    if response.clicked()
+        || (response.has_focus()
+            && ui.input(|input| {
+                input.key_pressed(egui::Key::Enter) || input.key_pressed(egui::Key::Space)
+            }))
+    {
+        *value = !*value;
+        response.mark_changed();
+    }
+    response.on_hover_cursor(egui::CursorIcon::PointingHand)
+}
+
+/// Variante « statut » de `option_row` : une ligne verte « Trouvé · … » (ou
+/// grise « Introuvable ») remplace la description. Le chemin complet reste
+/// dans l'infobulle.
+pub fn option_row_status(
+    ui: &mut egui::Ui,
+    pal: &Palette,
+    title: &str,
+    status: &str,
+    found: bool,
+    detail: Option<&str>,
+    value: &mut bool,
+    id_salt: impl std::hash::Hash,
+) -> Response {
+    let id = ui.id().with(("quark_option_status", &id_salt));
+    let (rect, mut response) = ui.allocate_exact_size(
+        Vec2::new(ui.available_width(), 64.0),
+        Sense::click(),
+    );
+    let hover = ui
+        .ctx()
+        .animate_bool_with_time(id.with("hover"), response.hovered(), 0.12);
+    let on = ui
+        .ctx()
+        .animate_bool_with_time(id.with("toggle"), *value, 0.18);
+    let painter = ui.painter_at(rect);
+    painter.rect_filled(rect, 10.0, pal.bg);
+    painter.rect_stroke(
+        rect,
+        10.0,
+        Stroke::new(1.0_f32, pal.border),
+        egui::StrokeKind::Inside,
+    );
+    if hover > 0.0 {
+        painter.rect_filled(rect, 10.0, pal.surface_hover.gamma_multiply(0.35 * hover));
+    }
+    let text_rect = Rect::from_min_max(
+        Pos2::new(rect.left() + 14.0, rect.top() + 8.0),
+        Pos2::new(rect.right() - 72.0, rect.bottom() - 8.0),
+    );
+    let mut child = ui.new_child(
+        egui::UiBuilder::new()
+            .max_rect(text_rect)
+            .layout(egui::Layout::top_down(egui::Align::Min)),
+    );
+    child.spacing_mut().item_spacing.y = 2.0;
+    child.label(crate::i18n::rich(title).size(13.0).color(pal.text));
+    let color = if found {
+        Color32::from_rgb(0x5A, 0xD6, 0x8A)
+    } else {
+        pal.text_faint
+    };
+    let status_label = child.add(
+        egui::Label::new(crate::i18n::rich(status).size(12.0).color(color)).truncate(),
+    );
+    if let Some(detail) = detail {
+        status_label.on_hover_text(detail);
+    }
+    let track = Rect::from_center_size(
+        Pos2::new(rect.right() - 31.0, rect.center().y),
+        Vec2::new(42.0, 23.0),
+    );
+    painter.rect_filled(
+        track,
+        track.height() / 2.0,
+        theme::lerp_color(pal.border, pal.accent, on),
+    );
+    let knob_x = track.left() + track.height() / 2.0 + (track.width() - track.height()) * on;
+    painter.circle_filled(
+        Pos2::new(knob_x, track.center().y),
+        track.height() / 2.0 - 3.0,
+        if on > 0.5 {
+            theme::on_accent(pal.accent)
+        } else {
+            pal.text_dim
+        },
+    );
+    if response.clicked()
+        || (response.has_focus()
+            && ui.input(|input| {
+                input.key_pressed(egui::Key::Enter) || input.key_pressed(egui::Key::Space)
+            }))
+    {
+        *value = !*value;
+        response.mark_changed();
+    }
+    response.on_hover_cursor(egui::CursorIcon::PointingHand)
+}
+
+/// Deux colonnes égales, gouttière de 16 px, empilées sous 760 px de largeur.
+/// Barre de pied de fenêtre : bordure supérieure et padding 28×14. Le contenu
+/// est placé après la zone défilante, donc jamais recouvert par elle.
+/// Variante de `footer_bar` avec une largeur imposée : dans un modal, le pied
+/// ne doit pas élargir la fenêtre en réclamant toute la largeur disponible.
+pub fn footer_bar_sized<R>(
+    ui: &mut egui::Ui,
+    pal: &Palette,
+    width: f32,
+    add_contents: impl FnOnce(&mut egui::Ui) -> R,
+) -> R {
+    let response = egui::Frame::new()
+        .fill(pal.bg)
+        .inner_margin(egui::Margin::symmetric(28, 14))
+        .show(ui, |ui| {
+            // `width` est la largeur extérieure du pied : on retire les deux
+            // marges de 28 px pour que le fond ne déborde pas de la carte.
+            ui.set_width((width - 56.0).max(0.0));
+            add_contents(ui)
+        });
+    let rect = response.response.rect;
+    ui.painter().rect_filled(
+        Rect::from_min_size(rect.min, Vec2::new(rect.width(), 1.0)),
+        0.0,
+        pal.border,
+    );
+    response.inner
+}
+
+/// Entrée de navigation latérale : hauteur 36, rayon 8, fond `row_selected` et
+/// texte d'accent pour la page active, sans contour.
+pub fn nav_entry(ui: &mut egui::Ui, pal: &Palette, label: &str, selected: bool) -> bool {
+    let (rect, response) = ui.allocate_exact_size(
+        Vec2::new(ui.available_width(), 36.0),
+        Sense::click(),
+    );
+    let hover = ui.ctx().animate_bool_with_time(
+        ui.id().with(("quark_nav", label)),
+        response.hovered() && !selected,
+        0.12,
+    );
+    let painter = ui.painter_at(rect);
+    if selected {
+        painter.rect_filled(rect, 8.0, pal.row_selected);
+    } else if hover > 0.0 {
+        painter.rect_filled(rect, 8.0, pal.surface_hover.gamma_multiply(hover));
+    }
+    let ink = if selected {
+        pal.accent
+    } else {
+        theme::lerp_color(pal.text_dim, pal.text, hover)
+    };
+    let font = if selected {
+        FontId::new(13.0, crate::fonts::bold_family())
+    } else {
+        FontId::proportional(13.0)
+    };
+    painter.text(
+        Pos2::new(rect.left() + 12.0, rect.center().y),
+        Align2::LEFT_CENTER,
+        crate::i18n::tr(label),
+        font,
+        ink,
+    );
+    response.on_hover_cursor(egui::CursorIcon::PointingHand).clicked()
 }
 
 /// Onglet de contenu (fiche de jeu) : casse naturelle et soulignement bleu,

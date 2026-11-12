@@ -453,6 +453,24 @@ impl GameTab {
     ];
 }
 
+/// Section de la page « Réglages » des paramètres d'un jeu.
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub enum GameSection {
+    General,
+    Proton,
+    Env,
+    Data,
+}
+
+impl GameSection {
+    pub const ALL: [(GameSection, &'static str); 4] = [
+        (GameSection::General, "Général"),
+        (GameSection::Proton, "Proton & lancement"),
+        (GameSection::Env, "Variables d'environnement"),
+        (GameSection::Data, "Données"),
+    ];
+}
+
 /// Fenêtre « Personnaliser » d'un jeu (images et apparence).
 pub struct Customize {
     pub game_id: String,
@@ -651,6 +669,8 @@ pub struct QuarkApp {
     pub random_hero_game: Option<String>,
     pub editing: Option<Game>,
     pub game_tab: GameTab,
+    /// Section de l'onglet « Réglages » du jeu ouvert.
+    pub game_section: GameSection,
     /// Overrides de DLL du brouillon ouvert, repris depuis `WINEDLLOVERRIDES`.
     pub game_dll_rows: Vec<DllOverride>,
     pub game_dll_for: Option<String>,
@@ -1012,6 +1032,7 @@ impl QuarkApp {
             random_hero_game,
             editing: None,
             game_tab: GameTab::General,
+            game_section: GameSection::General,
             game_dll_rows: Vec::new(),
             game_dll_for: None,
             game_link_query: String::new(),
