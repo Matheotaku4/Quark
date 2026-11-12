@@ -682,5 +682,11 @@
   "Histoire principale": "Main story",
   "Histoire + extras": "Main + extras",
   "Complétionniste": "Completionist",
-  "Voir sur HowLongToBeat →": "View on HowLongToBeat →"
+  "Voir sur HowLongToBeat →": "View on HowLongToBeat →",
+  "Actions de la fiche": "Game page actions",
+  "Place les boutons Paramètres, Personnaliser, Journal et Supprimer dans la bannière ou à côté du bouton Jouer.": "Places the Settings, Customize, Logs and Remove buttons in the banner or next to the Play button.",
+  "En haut à droite": "Top right",
+  "À droite de Jouer": "Next to Play",
+  "Aucune DLL trouvée dans ce dossier ni dans ses sous-dossiers.": "No DLL found in this folder or its subfolders.",
+  "DLL du dossier source et de ses sous-dossiers": "DLLs in the source folder and its subfolders"
 }

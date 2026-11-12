@@ -7,7 +7,8 @@ use crate::app::{
     SettingsTab, UpdateState,
 };
 use crate::config::{
-    self, AssetKind, EnvVar, GameStatus, ProtonMode, StartPage, ThemeMode, ViewMode,
+    self, AssetKind, EnvVar, GameActionPlacement, GameStatus, ProtonMode, StartPage, ThemeMode,
+    ViewMode,
 };
 use crate::disk;
 use crate::proton::{self, ProtonRuntime, RuntimeKind};
@@ -18,8 +19,10 @@ use crate::widgets::{self, Icon};
 use eframe::egui::{
     self, Align, Align2, FontId, Layout, Pos2, Rect, Sense, Stroke, Vec2,
 };
+use std::collections::HashMap;
 use std::path::{Path, PathBuf};
-use std::time::Instant;
+use std::sync::{Mutex, OnceLock};
+use std::time::{Duration, Instant};
 
 impl QuarkApp {
     // -----------------------------------------------------------------------
@@ -892,6 +895,34 @@ impl QuarkApp {
                                     self.lib.settings.grid_tile_width = defaults.grid_tile_width;
                                     self.lib.settings.banner_scale = defaults.banner_scale;
                                     self.lib.settings.overview_width = defaults.overview_width;
+                                    self.touch();
+                                }
+                            },
+                        );
+                        ui.add_space(16.0);
+                        widgets::card(
+                            ui,
+                            &pal,
+                            "Actions de la fiche",
+                            Some(
+                                "Place les boutons Paramètres, Personnaliser, Journal et Supprimer dans la bannière ou à côté du bouton Jouer.",
+                            ),
+                            |ui| {
+                                let items: Vec<(Icon, &str)> = GameActionPlacement::ALL
+                                    .iter()
+                                    .map(|placement| (Icon::None, placement.label()))
+                                    .collect();
+                                let selected = GameActionPlacement::ALL
+                                    .iter()
+                                    .position(|placement| {
+                                        *placement == self.lib.settings.game_actions
+                                    })
+                                    .unwrap_or(0);
+                                if let Some(index) =
+                                    widgets::segmented(ui, &pal, &items, selected)
+                                {
+                                    self.lib.settings.game_actions =
+                                        GameActionPlacement::ALL[index];
                                     self.touch();
                                 }
                             },
@@ -3115,13 +3146,8 @@ impl QuarkApp {
 
                                     ui.add_space(16.0);
 
-                                    // À 1024 px, les deux cartes côte à côte
-                                    // dépassent la largeur utile : on les empile.
-                                    let side_by_side = ui.available_width() >= 670.0;
-                                    if side_by_side {
-                                        ui.columns(2, |columns| {
                                             widgets::card(
-                                                &mut columns[0],
+                                                ui,
                                                 &pal,
                                                 "Ma fiche",
                                                 None,
@@ -3191,8 +3217,9 @@ impl QuarkApp {
                                                 },
                                             );
 
+                                            ui.add_space(16.0);
                                             widgets::card(
-                                                &mut columns[1],
+                                                ui,
                                                 &pal,
                                                 "Fiche Steam",
                                                 None,
@@ -3400,156 +3427,6 @@ impl QuarkApp {
                                                     }
                                                 },
                                             );
-                                        });
-                                    } else {
-                                        widgets::card(
-                                            ui,
-                                            &pal,
-                                            "Ma fiche",
-                                            None,
-                                            |ui| {
-                                                ui.horizontal(|ui| {
-                                                    ui.label(
-                                                        crate::i18n::rich("Statut")
-                                                            .size(12.0)
-                                                            .color(pal.text_dim),
-                                                    );
-                                                    widgets::info_button(
-                                                        ui,
-                                                        &pal,
-                                                        "Statut personnel : il sert de filtre sur l'accueil et dans la colonne de gauche (menu Filtres). Aucun effet sur le lancement.",
-                                                    );
-                                                });
-                                                let labels: Vec<String> = GameStatus::ALL
-                                                    .iter()
-                                                    .map(|status| status.label())
-                                                    .collect();
-                                                let items: Vec<(Icon, &str)> = labels
-                                                    .iter()
-                                                    .map(|label| (Icon::None, label.as_str()))
-                                                    .collect();
-                                                let selected = GameStatus::ALL
-                                                    .iter()
-                                                    .position(|status| *status == game.status)
-                                                    .unwrap_or(0);
-                                                if let Some(index) = widgets::segmented(
-                                                    ui, &pal, &items, selected,
-                                                ) {
-                                                    game.status = GameStatus::ALL[index];
-                                                }
-                                                ui.add_space(4.0);
-                                                tags_editor(ui, &pal, &mut game.tags);
-                                                ui.add_space(4.0);
-                                                widgets::field(
-                                                    ui,
-                                                    &pal,
-                                                    "Notes personnelles",
-                                                    |ui| {
-                                                        ui.add_sized(
-                                                            Vec2::new(
-                                                                ui.available_width(),
-                                                                76.0,
-                                                            ),
-                                                            egui::TextEdit::multiline(
-                                                                &mut game.notes,
-                                                            )
-                                                            .hint_text(crate::i18n::tr(
-                                                                "Où j'en suis, ce que je veux retenir…",
-                                                            ))
-                                                            .desired_rows(3)
-                                                            .desired_width(
-                                                                ui.available_width(),
-                                                            ),
-                                                        );
-                                                    },
-                                                );
-                                            },
-                                        );
-                                        ui.add_space(16.0);
-                                        widgets::card(
-                                            ui,
-                                            &pal,
-                                            "Fiche Steam",
-                                            None,
-                                            |ui| {
-                                                ui.label(
-                                                    crate::i18n::rich(
-                                                        if game.steam_app_id.is_some() {
-                                                            "Développeur, genres, date de sortie et description viennent de l'API appdetails."
-                                                        } else {
-                                                            "Ce jeu n'est pas lié à une fiche Steam."
-                                                        },
-                                                    )
-                                                    .size(11.5)
-                                                    .color(pal.text_dim),
-                                                );
-                                                if game.steam_app_id.is_some()
-                                                    && widgets::ghost_button(
-                                                        ui,
-                                                        "Récupérer depuis Steam",
-                                                        &pal,
-                                                        Icon::Refresh,
-                                                    )
-                                                    .clicked()
-                                                {
-                                                    game.developer.clear();
-                                                    game.genres.clear();
-                                                    game.released.clear();
-                                                    game.description.clear();
-                                                    refresh_meta = true;
-                                                }
-                                                ui.horizontal(|ui| {
-                                                    widgets::style_text_inputs(ui, &pal);
-                                                    let field_width = (ui
-                                                        .available_width()
-                                                        - 118.0)
-                                                        .max(150.0);
-                                                    ui.add_sized(
-                                                        Vec2::new(field_width, 34.0),
-                                                        egui::TextEdit::singleline(
-                                                            &mut link_query,
-                                                        )
-                                                        .hint_text(crate::i18n::tr(
-                                                            "Rechercher un jeu (Steam, SteamGridDB)…",
-                                                        )),
-                                                    );
-                                                    if widgets::ghost_button(
-                                                        ui,
-                                                        "Rechercher",
-                                                        &pal,
-                                                        Icon::Search,
-                                                    )
-                                                    .clicked()
-                                                    {
-                                                        search_link = true;
-                                                    }
-                                                });
-                                                if !link_warnings.is_empty() {
-                                                    ui.label(
-                                                        crate::i18n::rich(
-                                                            link_warnings.join(" · "),
-                                                        )
-                                                        .size(10.0)
-                                                        .color(pal.text_faint),
-                                                    );
-                                                }
-                                                if game.steam_app_id.is_some()
-                                                    || game.sgdb_id.is_some()
-                                                {
-                                                    if widgets::ghost_button(
-                                                        ui,
-                                                        "Dissocier cette page",
-                                                        &pal,
-                                                        Icon::Close,
-                                                    )
-                                                    .clicked()
-                                                    {
-                                                        unlink = true;
-                                                    }
-                                                }
-                                            },
-                                        );
-                                    }
                                 }
                                 GameSection::Proton => {
                                     widgets::card(
@@ -5199,14 +5076,16 @@ fn dll_overrides_editor(
         match dll_files(&source) {
             Ok(files) if files.is_empty() => {
                 ui.label(
-                    crate::i18n::rich("Aucune DLL trouvée dans ce dossier.")
+                    crate::i18n::rich(
+                        "Aucune DLL trouvée dans ce dossier ni dans ses sous-dossiers.",
+                    )
                         .size(11.5)
                         .color(pal.text_faint),
                 );
             }
             Ok(files) => {
                 ui.label(
-                    crate::i18n::rich("DLL du dossier source")
+                    crate::i18n::rich("DLL du dossier source et de ses sous-dossiers")
                         .size(11.5)
                         .color(pal.text_dim),
                 );
@@ -5324,23 +5203,115 @@ fn dll_overrides_editor(
 }
 
 fn dll_file_stem(file_name: &str) -> &str {
-    file_name
-        .strip_suffix(".dll")
-        .or_else(|| file_name.strip_suffix(".DLL"))
-        .unwrap_or(file_name)
+    let name = file_name.rsplit(['/', '\\']).next().unwrap_or(file_name);
+    if name.len() >= 4 && name[name.len() - 4..].eq_ignore_ascii_case(".dll") {
+        &name[..name.len() - 4]
+    } else {
+        name
+    }
 }
 
+/// Liste les DLL du dossier source et de tous ses sous-dossiers. Le résultat
+/// est mis en cache quelques secondes : le panneau est redessiné à chaque frame
+/// et un dossier de jeu peut contenir des milliers de fichiers.
 fn dll_files(dir: &Path) -> Result<Vec<String>, String> {
-    let mut files = std::fs::read_dir(dir)
-        .map_err(|error| error.to_string())?
-        .filter_map(Result::ok)
-        .filter(|entry| entry.path().is_file())
-        .map(|entry| entry.file_name().to_string_lossy().to_string())
-        .filter(|name| name.to_ascii_lowercase().ends_with(".dll"))
-        .collect::<Vec<_>>();
+    type Scan = Result<Vec<String>, String>;
+    static CACHE: OnceLock<Mutex<HashMap<PathBuf, (Instant, Scan)>>> = OnceLock::new();
+    let cache = CACHE.get_or_init(|| Mutex::new(HashMap::new()));
+    let now = Instant::now();
+    if let Ok(mut cache) = cache.lock() {
+        if let Some((scanned, files)) = cache.get(dir) {
+            if now.duration_since(*scanned) < Duration::from_secs(2) {
+                return files.clone();
+            }
+        }
+        let files = dll_files_uncached(dir);
+        cache.retain(|_, (scanned, _)| now.duration_since(*scanned) < Duration::from_secs(30));
+        cache.insert(dir.to_path_buf(), (now, files.clone()));
+        files
+    } else {
+        dll_files_uncached(dir)
+    }
+}
+
+fn dll_files_uncached(dir: &Path) -> Result<Vec<String>, String> {
+    let mut files = Vec::new();
+    collect_dll_files(dir, dir, 0, &mut files)?;
     files.sort_by_key(|name| name.to_ascii_lowercase());
     files.dedup_by(|left, right| left.eq_ignore_ascii_case(right));
     Ok(files)
+}
+
+fn collect_dll_files(
+    root: &Path,
+    dir: &Path,
+    depth: usize,
+    files: &mut Vec<String>,
+) -> Result<(), String> {
+    // Les préfixes Proton restent peu profonds ; la limite évite de parcourir
+    // un arbre anormalement grand ou une arborescence de liens.
+    if depth > 12 {
+        return Ok(());
+    }
+    let entries = std::fs::read_dir(dir).map_err(|error| error.to_string())?;
+    for entry in entries.flatten() {
+        let Ok(kind) = entry.file_type() else {
+            continue;
+        };
+        if kind.is_symlink() {
+            continue;
+        }
+        let path = entry.path();
+        if kind.is_dir() {
+            // Un sous-dossier illisible ne doit pas masquer les DLL trouvées
+            // ailleurs dans le dossier du jeu.
+            let _ = collect_dll_files(root, &path, depth + 1, files);
+        } else if kind.is_file()
+            && path
+                .extension()
+                .and_then(|extension| extension.to_str())
+                .is_some_and(|extension| extension.eq_ignore_ascii_case("dll"))
+        {
+            let relative = path.strip_prefix(root).unwrap_or(&path);
+            files.push(relative.to_string_lossy().replace('\\', "/"));
+        }
+    }
+    Ok(())
+}
+
+#[cfg(test)]
+mod dll_tests {
+    use super::*;
+    use std::time::{SystemTime, UNIX_EPOCH};
+
+    #[test]
+    fn trouve_les_dll_des_sous_dossiers() {
+        let unique = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_nanos();
+        let root = std::env::temp_dir().join(format!(
+            "quark-dll-test-{}-{unique}",
+            std::process::id()
+        ));
+        let nested = root.join("bin").join("x64");
+        std::fs::create_dir_all(&nested).unwrap();
+        std::fs::write(root.join("root.dll"), b"").unwrap();
+        std::fs::write(nested.join("steam_api64.DLL"), b"").unwrap();
+        std::fs::write(nested.join("notes.txt"), b"").unwrap();
+
+        let files = dll_files_uncached(&root).unwrap();
+        assert_eq!(
+            files,
+            vec![
+                "bin/x64/steam_api64.DLL".to_string(),
+                "root.dll".to_string()
+            ]
+        );
+        assert_eq!(dll_file_stem("bin/x64/steam_api64.DLL"), "steam_api64");
+
+        std::fs::remove_dir_all(&root).unwrap();
+    }
 }
 
 fn theme_card(

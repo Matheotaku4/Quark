@@ -1,22 +1,20 @@
-## Quark 1.4.4 — Interface compacte et temps HowLongToBeat
+## Quark 1.4.5 — Fiche de jeu affinée et DLL récursives
 
-### Interface
+### Fiche de jeu
 
-- L'interface compacte devient le réglage par défaut : barre du haut de 54 px, colonne latérale de 252 px, marges et espacements resserrés. Les tailles de police ne changent pas.
-- **Apparence → Taille de l'interface** réunit six réglages : interface compacte, largeur de la barre latérale, hauteur des lignes de la bibliothèque, largeur des jaquettes, hauteur de la bannière et largeur du panneau d'aperçu. Un bouton rétablit les valeurs par défaut.
-- L'onglet **Accueil** quitte la barre du haut. La ligne **Accueil** reste juste au-dessus de **Filtres**, et la colonne de gauche reste visible en vue grille pour que l'Accueil soit toujours accessible.
-- La fiche d'un jeu n'a plus qu'un seul fond : la bannière du jeu floutée et assombrie. Le bandeau séparé en haut de page est supprimé.
-- Les boutons **Paramètres**, **Personnaliser**, **Journal** et **Supprimer** passent en haut à droite de la fiche, avec une couleur distincte pour chaque action.
-- L'aperçu de la fiche reste côte à côte avec les actualités dès 1024 px de largeur.
+- La bannière nette du jeu revient en haut de la fiche. La jaquette verticale est retirée.
+- Le titre affiche le logo SteamGridDB quand il existe. Le nom en texte sert uniquement de repli lorsqu'aucun logo n'est disponible.
+- Le temps de jeu et la dernière session ne sont plus affichés à droite du bouton **Jouer**. Ils restent uniquement dans le panneau **Aperçu**.
+- **Apparence → Actions de la fiche** permet de placer **Paramètres**, **Personnaliser**, **Journal** et **Supprimer** en haut à droite ou directement à droite de **Jouer**. Le réglage est enregistré.
+- Les cartes **Ma fiche** et **Fiche Steam** sont toujours empilées sur toute la largeur : leurs champs ne se chevauchent plus à 1024 px ni à 1360 px.
+- Le menu du clic droit reprend les couleurs des actions de la fiche : engrenage bleu, crayon doré, journal vert et poubelle rouge.
 
-### HowLongToBeat
+### DLL overrides
 
-- L'aperçu affiche désormais les temps **HowLongToBeat** du jeu : histoire principale, histoire + extras et complétionniste, avec un lien vers sa page HowLongToBeat.
-- Les temps sont récupérés une fois par jeu et mis en cache en mémoire. Aucune clé API n'est demandée.
-- Une indisponibilité du service ou l'absence de temps soumis affiche un message discret, sans bloquer la fiche ni les actualités.
+- La recherche des DLL parcourt désormais tous les sous-dossiers du dossier source, avec une limite de profondeur et sans suivre les liens symboliques.
+- Les DLL sont affichées avec leur chemin relatif, triées par nom. Le nom d'override reste le nom du fichier sans extension.
+- Le résultat est mis en cache quelques secondes pour ne pas relire l'arborescence du jeu à chaque image.
 
-### Technique
+### Vérifications
 
-- Le rendu hors écran conserve des temps HowLongToBeat de démonstration et ne fait aucun appel réseau.
-- La densité compacte est réappliquée après un changement de thème, sans modifier les polices.
-- La mise en page et les nouveaux réglages ont été vérifiés de 1024 à 1440 px, sans débordement horizontal.
+- Compilation `cargo build --release --locked`, tests unitaires et rendus hors écran de la fiche, de la grille, des paramètres et des dialogues aux largeurs 900, 1024 et 1360 px.

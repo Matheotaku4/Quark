@@ -827,7 +827,6 @@ impl QuarkApp {
             Err(err) => format!("\u{26a0} {err}"),
         };
         let prefix = game.prefix_path(&settings);
-        let running_secs = self.running_since(&id);
         let is_running = self.is_running(&id);
         // Fondu d'entrée à chaque changement de jeu, comme la fiche Steam. La
         // transition ne demande des images que pendant son déroulement.
@@ -906,10 +905,6 @@ impl QuarkApp {
         let store_playtime = store_playtime_record
             .and_then(|record| self.provider_playtime.get(&record.key))
             .cloned();
-        let playtime_hover = match &store_playtime {
-            Some(crate::providers::PlaytimeState::Failed(message)) => Some(message.clone()),
-            _ => None,
-        };
         let playtime_text = match (&store_playtime_record, store_playtime) {
             (Some(_), Some(crate::providers::PlaytimeState::Ready(seconds))) => {
                 if crate::i18n::is_english() {
@@ -1029,71 +1024,101 @@ impl QuarkApp {
                     |ui| {
                         let (hero, _) = ui.allocate_exact_size(hero_rect.size(), Sense::hover());
                         let painter = ui.painter_at(hero);
-                        // Actions de la fiche, en haut à droite de la bannière :
-                        // quatre pastilles colorées, lisibles même sur une image
-                        // claire. La poubelle reste la plus à droite, comme une
-                        // action destructive à l'écart.
-                        let action = 36.0;
-                        let actions_width = 4.0 * action + 3.0 * 8.0;
-                        let actions_rect = Rect::from_min_size(
-                            Pos2::new(hero.right() - 32.0 - actions_width, hero.top() + 14.0),
-                            Vec2::new(actions_width, action),
+                        let hero_path = game
+                            .artwork
+                            .get(AssetKind::Hero)
+                            .filter(|path| path.exists())
+                            .cloned();
+                        let hero_texture =
+                            hero_path.as_ref().and_then(|path| self.texture(ui.ctx(), path));
+                        if let Some(texture) = &hero_texture {
+                            // Bannière nette en haut de la fiche. Le bas se fond
+                            // dans la version floutée qui couvre toute la page.
+                            draw_cover(&painter, texture, hero);
+                            if let Some(previous) = &previous_hero {
+                                if let Some(old) = self.texture(ui.ctx(), previous) {
+                                    let mut old_painter = ui.painter_at(hero);
+                                    old_painter.set_opacity(1.0 - fade_eased);
+                                    draw_cover(&old_painter, &old, hero);
+                                }
+                            }
+                            if let Some(path) = hero_path.as_ref() {
+                                if let Some(blurred) = self.blurred_texture(
+                                    ui.ctx(),
+                                    path,
+                                    self.lib.settings.hero_background_blur,
+                                ) {
+                                    crate::images::draw_cover_blend_to_background(
+                                        &painter,
+                                        &blurred,
+                                        hero,
+                                        (hero.height() * 0.38).clamp(70.0, 190.0),
+                                    );
+                                }
+                            }
+                        } else {
+                            painter.rect_filled(hero, 0.0, pal.surface);
+                            hero_placeholder(
+                                &painter,
+                                hero,
+                                &game.monogram_letter(),
+                                pal.accent,
+                                0.0,
+                            );
+                        }
+
+                        // Deux voiles légers : le premier détache les actions du
+                        // haut, le second garde le logo et le bouton lisibles sur
+                        // une bannière claire.
+                        vertical_veil(
+                            &painter,
+                            Rect::from_min_max(
+                                hero.min,
+                                Pos2::new(hero.right(), hero.top() + 92.0),
+                            ),
+                            120,
+                            0,
                         );
-                        ui.scope_builder(
-                            egui::UiBuilder::new()
-                                .max_rect(actions_rect)
-                                .layout(Layout::left_to_right(Align::Center)),
-                            |ui| {
-                                ui.spacing_mut().item_spacing.x = 8.0;
-                                if widgets::tinted_icon_button(
-                                    ui,
-                                    action,
-                                    Icon::Gear,
-                                    pal.accent,
-                                    "Paramètres du jeu",
-                                )
-                                .clicked()
-                                {
-                                    gear_clicked = true;
-                                }
-                                if widgets::tinted_icon_button(
-                                    ui,
-                                    action,
-                                    Icon::Pencil,
-                                    theme::GOLD,
-                                    "Personnaliser",
-                                )
-                                .clicked()
-                                {
-                                    customize_clicked = true;
-                                }
-                                if widgets::tinted_icon_button(
-                                    ui,
-                                    action,
-                                    Icon::Log,
-                                    theme::SUCCESS,
-                                    "Journal de la session",
-                                )
-                                .clicked()
-                                {
-                                    log_clicked = true;
-                                }
-                                if widgets::tinted_icon_button(
-                                    ui,
-                                    action,
-                                    Icon::Trash,
-                                    pal.danger,
-                                    "Retirer de la bibliothèque",
-                                )
-                                .clicked()
-                                {
-                                    remove_clicked = true;
-                                }
-                            },
+                        vertical_veil(
+                            &painter,
+                            Rect::from_min_max(
+                                Pos2::new(hero.left(), hero.bottom() - 150.0),
+                                hero.max,
+                            ),
+                            0,
+                            185,
                         );
 
-                        // Note ProtonDB et mention « Linux natif », sous les
-                        // actions, en haut à gauche de la bannière.
+                        let placement = self.lib.settings.game_actions;
+                        let action = 36.0;
+                        // En haut à droite, les quatre actions restent au-dessus
+                        // de la bannière, avec les mêmes couleurs que le menu.
+                        if placement == config::GameActionPlacement::TopRight {
+                            let actions_width = 4.0 * action + 3.0 * 8.0;
+                            let actions_rect = Rect::from_min_size(
+                                Pos2::new(
+                                    hero.right() - 32.0 - actions_width,
+                                    hero.top() + 14.0,
+                                ),
+                                Vec2::new(actions_width, action),
+                            );
+                            ui.scope_builder(
+                                egui::UiBuilder::new()
+                                    .max_rect(actions_rect)
+                                    .layout(Layout::left_to_right(Align::Center)),
+                                |ui| {
+                                    let (gear, customize, log, remove) =
+                                        hero_action_buttons(ui, &pal, action);
+                                    gear_clicked |= gear;
+                                    customize_clicked |= customize;
+                                    log_clicked |= log;
+                                    remove_clicked |= remove;
+                                },
+                            );
+                        }
+
+                        // Note ProtonDB et mention « Linux natif », en haut à
+                        // gauche de la bannière.
                         let badge_rect = Rect::from_min_size(
                             Pos2::new(hero.left() + 32.0, hero.top() + 56.0),
                             Vec2::new((hero.width() - 240.0).max(120.0), 24.0),
@@ -1120,51 +1145,8 @@ impl QuarkApp {
                             },
                         );
 
-                        // Jaquette verticale à droite de la bannière : elle
-                        // donne un repère au jeu et reprend la composition de
-                        // la maquette (bannière + affiche).
-                        let cover_w = (hero.width() * 0.16).clamp(120.0, 190.0);
-                        let cover_h = cover_w * 1.34;
-                        let cover_rect = Rect::from_min_size(
-                            Pos2::new(hero.right() - 32.0 - cover_w, hero.top() + 58.0),
-                            Vec2::new(cover_w, cover_h),
-                        );
-                        painter.rect_filled(
-                            cover_rect.expand(5.0),
-                            14.0,
-                            Color32::from_black_alpha(90),
-                        );
-                        if let Some(texture) = game
-                            .artwork
-                            .get(AssetKind::Cover)
-                            .filter(|path| path.exists())
-                            .and_then(|path| self.texture(ui.ctx(), path))
-                        {
-                            rounded_cover_tinted(
-                                ui,
-                                cover_rect,
-                                &texture,
-                                12.0,
-                                Color32::WHITE,
-                            );
-                            painter.rect_stroke(
-                                cover_rect,
-                                12.0,
-                                egui::Stroke::new(1.0_f32, Color32::from_white_alpha(38)),
-                                egui::StrokeKind::Inside,
-                            );
-                        } else {
-                            painter.rect_filled(cover_rect, 12.0, Color32::from_black_alpha(150));
-                            hero_placeholder(
-                                &painter,
-                                cover_rect,
-                                &game.monogram_letter(),
-                                pal.accent,
-                                0.0,
-                            );
-                        }
-
-                        // Logo (ou titre) au-dessus du bouton Jouer.
+                        // Logo SteamGrid au-dessus du bouton Jouer, avec le titre
+                        // en texte seulement s'il n'y a pas de logo disponible.
                         let row_height = 44.0;
                         let row_y = hero.bottom() - 26.0 - row_height;
                         let logo_rect = Rect::from_min_size(
@@ -1174,18 +1156,40 @@ impl QuarkApp {
                             ),
                             Vec2::new((width * 0.55).min(540.0), 86.0),
                         );
-                        // Le titre est toujours du texte : un logo détouré
-                        // manquant laissait un grand vide blanc dans la
-                        // bannière, et la maquette place le nom en clair.
-                        painter.text(
-                            Pos2::new(hero.left() + 34.0, logo_rect.bottom()),
-                            Align2::LEFT_BOTTOM,
-                            &game.name,
-                            FontId::new(34.0, crate::fonts::bold_family()),
-                            pal.text,
-                        );
+                        let logo_texture = game
+                            .artwork
+                            .get(AssetKind::Logo)
+                            .filter(|path| path.exists())
+                            .and_then(|path| self.texture(ui.ctx(), path));
+                        if let Some(texture) = logo_texture {
+                            let size = texture.size_vec2();
+                            if size.x > 0.0 && size.y > 0.0 {
+                                let scale =
+                                    (logo_rect.width() / size.x).min(logo_rect.height() / size.y);
+                                let fitted = Rect::from_min_size(
+                                    Pos2::new(
+                                        logo_rect.left(),
+                                        logo_rect.bottom() - size.y * scale,
+                                    ),
+                                    size * scale,
+                                );
+                                painter.image(
+                                    texture.id(),
+                                    fitted,
+                                    Rect::from_min_max(Pos2::ZERO, Pos2::new(1.0, 1.0)),
+                                    Color32::from_white_alpha(245),
+                                );
+                            }
+                        } else {
+                            painter.text(
+                                Pos2::new(hero.left() + 34.0, logo_rect.bottom()),
+                                Align2::LEFT_BOTTOM,
+                                &game.name,
+                                FontId::new(34.0, crate::fonts::bold_family()),
+                                pal.text,
+                            );
+                        }
 
-                        // Bouton Jouer + temps de jeu (comme Steam).
                         let (label, icon) = if is_running {
                             ("Arr\u{ea}ter", Icon::Stop)
                         } else {
@@ -1208,40 +1212,17 @@ impl QuarkApp {
                                     icon,
                                 )
                                 .clicked();
-                                ui.add_space(20.0);
-                                let text = if is_running {
-                                    if crate::i18n::is_english() {
-                                        format!(
-                                            "In game for {}",
-                                            config::human_playtime(running_secs.max(1))
-                                        )
-                                    } else {
-                                        format!(
-                                            "En jeu depuis {}",
-                                            config::human_playtime(running_secs.max(1))
-                                        )
-                                    }
-                                } else {
-                                    playtime_text.clone()
-                                };
-                                let playtime =
-                                    ui.label(crate::i18n::rich(text).size(13.0).color(pal.text_dim));
-                                if let Some(message) = &playtime_hover {
-                                    playtime.on_hover_text(message);
-                                }
-                                if game.last_played.is_some() {
+                                if placement == config::GameActionPlacement::BesidePlay {
                                     ui.add_space(16.0);
-                                    ui.label(
-                                        crate::i18n::rich(format!(
-                                            "·  jou\u{e9} {}",
-                                            game.last_played_label()
-                                        ))
-                                        .size(12.5)
-                                        .color(pal.text_faint),
-                                    );
+                                    let (gear, customize, log, remove) =
+                                        hero_action_buttons(ui, &pal, action);
+                                    gear_clicked |= gear;
+                                    customize_clicked |= customize;
+                                    log_clicked |= log;
+                                    remove_clicked |= remove;
                                 }
                                 if game.status != GameStatus::None {
-                                    ui.add_space(14.0);
+                                    ui.add_space(16.0);
                                     status_chip(ui, &pal, game.status);
                                 }
                                 if let Some(progress) = ps2_progress {
@@ -2532,6 +2513,58 @@ enum RowAction {
     Remove,
 }
 
+/// Les quatre actions de la fiche, dans l'ordre visuel. Les couleurs sont
+/// partagées avec le menu du clic droit pour que les mêmes actions se lisent
+/// pareil partout.
+fn hero_action_buttons(
+    ui: &mut egui::Ui,
+    pal: &Palette,
+    size: f32,
+) -> (bool, bool, bool, bool) {
+    let mut gear = false;
+    let mut customize = false;
+    let mut log = false;
+    let mut remove = false;
+    ui.spacing_mut().item_spacing.x = 8.0;
+    if widgets::tinted_icon_button(ui, size, Icon::Gear, pal.accent, "Paramètres du jeu")
+        .clicked()
+    {
+        gear = true;
+    }
+    if widgets::tinted_icon_button(ui, size, Icon::Pencil, theme::GOLD, "Personnaliser")
+        .clicked()
+    {
+        customize = true;
+    }
+    if widgets::tinted_icon_button(ui, size, Icon::Log, theme::SUCCESS, "Journal de la session")
+        .clicked()
+    {
+        log = true;
+    }
+    if widgets::tinted_icon_button(ui, size, Icon::Trash, pal.danger, "Retirer de la bibliothèque")
+        .clicked()
+    {
+        remove = true;
+    }
+    (gear, customize, log, remove)
+}
+
+/// Voile vertical noir, utilisé pour garder le logo et les actions lisibles
+/// sur une bannière claire. Un maillage à quatre sommets évite les bandes.
+fn vertical_veil(painter: &egui::Painter, rect: Rect, top: u8, bottom: u8) {
+    if rect.width() <= 0.0 || rect.height() <= 0.0 {
+        return;
+    }
+    let mut veil = egui::Mesh::default();
+    veil.colored_vertex(rect.left_top(), Color32::from_black_alpha(top));
+    veil.colored_vertex(rect.right_top(), Color32::from_black_alpha(top));
+    veil.colored_vertex(rect.left_bottom(), Color32::from_black_alpha(bottom));
+    veil.colored_vertex(rect.right_bottom(), Color32::from_black_alpha(bottom));
+    veil.add_triangle(0, 1, 2);
+    veil.add_triangle(1, 2, 3);
+    painter.add(egui::Shape::mesh(veil));
+}
+
 /// Menu du clic droit sur un jeu (ligne ou tuile). Renvoie l'action choisie.
 ///
 /// Le menu ne touche à `self` que par la valeur renvoyée : il reste utilisable
@@ -2550,7 +2583,7 @@ fn game_context_menu(response: &egui::Response, bulk: usize, pal: &Palette) -> O
             ui,
             pal,
             Icon::Pencil,
-            Color32::from_rgb(0x4C, 0xB0, 0x6A),
+            theme::GOLD,
             "Personnaliser…",
         ) {
             action = Some(RowAction::Customize);
@@ -2560,7 +2593,7 @@ fn game_context_menu(response: &egui::Response, bulk: usize, pal: &Palette) -> O
             ui,
             pal,
             Icon::Gear,
-            Color32::from_rgb(0x3F, 0x9B, 0xE8),
+            pal.accent,
             "Paramètres…",
         ) {
             action = Some(RowAction::Settings);
@@ -2577,7 +2610,7 @@ fn game_context_menu(response: &egui::Response, bulk: usize, pal: &Palette) -> O
             ui,
             pal,
             Icon::Trash,
-            Color32::from_rgb(0xD9, 0x41, 0x41),
+            pal.danger,
             &label,
         ) {
             action = Some(RowAction::Remove);

@@ -6,7 +6,7 @@ own, launches Windows games through Proton (or umu-launcher), and stays out of
 the way with an AMOLED interface, a store page, save snapshots and an in-game
 overlay.
 
-This is the **1.4.4** documentation. Older release notes are kept on the GitHub
+This is the **1.4.5** documentation. Older release notes are kept on the GitHub
 releases page; `docs/release-notes.md` only describes the release currently
 being published.
 
@@ -27,17 +27,18 @@ The wiki is published from the versioned source in [`wiki/`](wiki/) by the
 | --- | --- |
 | ![Onboarding](docs/images/onboarding-fr.png) | ![What's new](docs/images/whats-new-fr.png) |
 
-## What's new in 1.4.4
+## What's new in 1.4.5
 
-- **A denser interface, same typography.** Compact mode is now the default: the top bar, sidebar, list rows, grid covers, page margins and card spacing all take less room, while font sizes are unchanged. Every dimension can be adjusted in **Settings → Appearance → Interface size**, with a reset button.
-- **Six size controls.** Sidebar width, library row height, cover width, banner height, overview width and compact spacing are all adjustable, from 1024 to 1440 px without horizontal overflow.
-- **One hero backdrop for a game.** The separate banner is gone: the game page uses a single blurred hero image as its background, with the cover and title over it. Settings, customize, logs and remove are now colored action buttons in the top-right corner.
-- **HowLongToBeat in the overview.** Main story, main + extras and completionist times are fetched once per game, cached in memory and shown beside the news. The block links to the game's HowLongToBeat page and degrades to a discreet message when the service is unavailable.
-- **Simpler navigation.** The Home tab left the top bar. Home is now the row above Filters in the left column, and that column stays visible in list and grid views so Home is always one click away.
+- **A sharper game page.** The game page opens on its real hero banner again, with no vertical cover beside it. The title uses the SteamGridDB logo when one is available, and falls back to the game name only when there is no logo.
+- **Playtime in one place.** The playtime and last-session labels no longer sit next to **Play**; they stay in the overview panel, where they belong.
+- **Choose where the actions live.** **Settings → Appearance → Game page actions** places the settings, customize, logs and remove buttons either in the top-right corner or directly to the right of the Play button. The choice is saved.
+- **DLL overrides see subfolders.** The source scan walks the game folder recursively, so DLLs in `bin/x64`, `Engine/Binaries` and other subfolders appear in the list. Results are cached briefly to keep the panel responsive.
+- **No more overlapping profile cards.** **My profile** and **Steam details** are now always stacked at full width, so their fields stay readable at every window size.
+- **Consistent action colours.** The right-click menu now uses the same gear, pencil, log and trash colours as the game page.
 
 ## Table of contents
 
-1. [What's new in 1.4.4](#whats-new-in-144)
+1. [What's new in 1.4.5](#whats-new-in-145)
 2. [What Quark does](#what-quark-does)
 3. [Installation](#installation)
 4. [First launch](#first-launch)
@@ -96,8 +97,8 @@ Download `quark-<version>-linux-x86_64.tar.gz` and its `.sha256` file from the
 then verify and unpack it:
 
 ```bash
-sha256sum -c quark-1.4.4-linux-x86_64.tar.gz.sha256
-tar -xzf quark-1.4.4-linux-x86_64.tar.gz
+sha256sum -c quark-1.4.5-linux-x86_64.tar.gz.sha256
+tar -xzf quark-1.4.5-linux-x86_64.tar.gz
 ./quark/quark
 ```
 
@@ -139,7 +140,7 @@ A new configuration opens a three-step welcome guide. It is not blocking:
 **Skip** closes it. The guide changes the interface language, startup page,
 theme and hero background live, then offers to add a first game. Existing
 configurations are marked as already welcomed, so updating from 1.1.4 never
-shows it unexpectedly; they still see the 1.4.4 summary once.
+shows it unexpectedly; they still see the 1.4.5 summary once.
 
 1. Open **Settings → Stores & tools** and install Legendary and/or gogdl with
    **Install / update**. Quark verifies the SHA-256 digest published by GitHub

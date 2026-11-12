@@ -815,6 +815,30 @@ pub struct GameGroup {
     rank: i32,
 }
 
+/// Emplacement des actions de la fiche d'un jeu (paramètres, personnaliser,
+/// journal, suppression).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[serde(rename_all = "snake_case")]
+pub enum GameActionPlacement {
+    /// En haut à droite de la bannière.
+    #[default]
+    TopRight,
+    /// Dans la ligne du bouton Jouer, juste à sa droite.
+    BesidePlay,
+}
+
+impl GameActionPlacement {
+    pub const ALL: [GameActionPlacement; 2] =
+        [GameActionPlacement::TopRight, GameActionPlacement::BesidePlay];
+
+    pub fn label(self) -> &'static str {
+        match self {
+            GameActionPlacement::TopRight => "En haut à droite",
+            GameActionPlacement::BesidePlay => "À droite de Jouer",
+        }
+    }
+}
+
 /// Statut personnel d'un jeu, comme les colonnes de la bibliothèque Steam.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
 #[serde(rename_all = "snake_case")]
@@ -1004,6 +1028,8 @@ pub struct Settings {
     pub banner_scale: f32,
     /// Largeur du panneau d'aperçu à droite des actualités.
     pub overview_width: f32,
+    /// Emplacement des actions de la fiche d'un jeu.
+    pub game_actions: GameActionPlacement,
     /// Clé API SteamGridDB (https://www.steamgriddb.com/profile/preferences/api).
     pub sgdb_api_key: String,
     /// Chemin explicite de PCSX2. Vide = détection dans le PATH et Flatpak.
@@ -1116,6 +1142,7 @@ impl Default for Settings {
             grid_tile_width: 144.0,
             banner_scale: 0.9,
             overview_width: 268.0,
+            game_actions: GameActionPlacement::TopRight,
             sgdb_api_key: String::new(),
             pcsx2_path: String::new(),
             ra_username: String::new(),
