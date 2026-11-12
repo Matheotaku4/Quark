@@ -5,7 +5,7 @@
 //! session à côté, puis tous les jeux, triés selon le choix du joueur.
 
 use crate::app::QuarkApp;
-use crate::config::{self, AssetKind, HomeSort};
+use crate::config::{self, AssetKind};
 use crate::images::{self, draw_cover};
 use crate::proton::{self, LaunchKind};
 use crate::theme::{self, Palette};
@@ -409,14 +409,12 @@ impl QuarkApp {
     fn home_grid(&mut self, ui: &mut egui::Ui) {
         let pal = self.pal;
         let sort = self.lib.settings.home_sort;
-        let mut new_sort: Option<HomeSort> = None;
 
         ui.add_space(10.0);
         ui.horizontal(|ui| {
             ui.add_space(PADDING);
-            // Vrai titre de section (comme la maquette) : le tri choisi est
-            // déjà lisible sur les puces à droite, inutile de le répéter en
-            // petites capitales grises.
+            // Vrai titre de section (comme la maquette). Le tri vit dans le
+            // panneau « Filtres », avec les vues et le regroupement.
             ui.label(
                 crate::i18n::rich("Toute la bibliothèque")
                     .font(FontId::new(21.0, crate::fonts::bold_family()))
@@ -424,12 +422,6 @@ impl QuarkApp {
             );
             ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
                 ui.add_space(PADDING);
-                for option in HomeSort::ALL.iter().rev() {
-                    if sort_chip(ui, &option.label(), sort == *option, &pal) {
-                        new_sort = Some(*option);
-                    }
-                    ui.add_space(6.0);
-                }
                 self.filter_menu_inline(ui);
             });
         });
@@ -597,10 +589,6 @@ impl QuarkApp {
                 self.home = false;
             }
         }
-        if let Some(option) = new_sort {
-            self.lib.settings.home_sort = option;
-            self.touch();
-        }
     }
 }
 
@@ -621,24 +609,4 @@ pub(crate) fn linux_chip(ui: &mut egui::Ui, pal: &Palette) {
     )
     .on_hover_text("Ce jeu est un binaire Linux : il démarre sans Proton.");
     let _ = pal;
-}
-
-/// Pastille de tri de la grille.
-fn sort_chip(ui: &mut egui::Ui, label: &str, selected: bool, pal: &Palette) -> bool {
-    let ink = if selected {
-        theme::on_accent(pal.accent)
-    } else {
-        pal.text_dim
-    };
-    ui.add(
-        egui::Button::new(crate::i18n::rich(label).size(12.0).color(ink))
-            .fill(if selected { pal.accent } else { pal.surface })
-            .stroke(egui::Stroke::new(
-                1.0_f32,
-                if selected { pal.accent } else { pal.border },
-            ))
-            .corner_radius(16.0)
-            .min_size(Vec2::new(0.0, 30.0)),
-    )
-    .clicked()
 }

@@ -3,7 +3,7 @@
 //! ni d'objets d'interface.
 
 use crate::app::QuarkApp;
-use crate::config::{GameStatus, GroupBy, LibrarySort, SavedView};
+use crate::config::{GameStatus, GroupBy, HomeSort, LibrarySort, SavedView};
 use crate::widgets::{self, Icon};
 use eframe::egui::{self, Align, Color32, Layout, Vec2};
 
@@ -35,6 +35,19 @@ impl QuarkApp {
         } else {
             format!("{} · {active}", crate::i18n::tr("Filtres"))
         };
+
+        // Les vues enregistrées, le tri et le regroupement vivent désormais ici :
+        // la colonne de la bibliothèque garde une seule commande, sous Accueil.
+        let views = self.lib.settings.saved_views.clone();
+        let active_view = views
+            .iter()
+            .find(|view| view.matches(&self.lib.settings, &self.filter))
+            .map(|view| view.name.clone())
+            .unwrap_or_else(|| "Choisir une vue…".to_string());
+        let mut apply_view: Option<usize> = None;
+        let mut sort = self.lib.settings.library_sort;
+        let mut home_sort = self.lib.settings.home_sort;
+        let mut group = self.lib.settings.group_by;
 
         let response = widgets::ghost_button(ui, &label, &pal, Icon::Filter);
             egui::Popup::from_toggle_button_response(&response)
@@ -70,8 +83,121 @@ impl QuarkApp {
                     ui.add_space(6.0);
                     egui::ScrollArea::vertical()
                         .id_salt("quark_filter_menu_scroll")
-                        .max_height(430.0)
+                        .max_height(560.0)
                         .show(ui, |ui| {
+                            ui.label(
+                                crate::i18n::rich("Affichage")
+                                    .size(9.5)
+                                    .strong()
+                                    .color(pal.text_faint),
+                            );
+                            ui.add_space(4.0);
+                            ui.horizontal(|ui| {
+                                egui::ComboBox::from_id_salt("quark_filter_views")
+                                    .selected_text(
+                                        crate::i18n::rich(active_view.clone()).size(11.0),
+                                    )
+                                    .width(190.0)
+                                    .show_ui(ui, |ui| {
+                                        if views.is_empty() {
+                                            ui.label(
+                                                crate::i18n::rich("Aucune vue enregistrée")
+                                                    .size(11.0)
+                                                    .color(pal.text_faint),
+                                            );
+                                        }
+                                        for (index, view) in views.iter().enumerate() {
+                                            if ui
+                                                .selectable_label(
+                                                    view.matches(&self.lib.settings, &self.filter),
+                                                    &view.name,
+                                                )
+                                                .clicked()
+                                            {
+                                                apply_view = Some(index);
+                                                ui.close();
+                                            }
+                                        }
+                                    });
+                                if widgets::icon_button(
+                                    ui,
+                                    24.0,
+                                    Icon::Plus,
+                                    &pal,
+                                    "Enregistrer la vue actuelle (filtres, tri et regroupement)",
+                                )
+                                .clicked()
+                                {
+                                    self.saved_view_name.clear();
+                                    self.saved_view_error = None;
+                                    self.saved_views_open = true;
+                                }
+                            });
+                            ui.add_space(8.0);
+                            if self.home {
+                                ui.label(
+                                    crate::i18n::rich("Trier")
+                                        .size(9.5)
+                                        .strong()
+                                        .color(pal.text_faint),
+                                );
+                                ui.add_space(4.0);
+                                ui.horizontal_wrapped(|ui| {
+                                    for option in HomeSort::ALL {
+                                        if widgets::chip(
+                                            ui,
+                                            &option.label(),
+                                            home_sort == option,
+                                            &pal,
+                                        ) {
+                                            home_sort = option;
+                                        }
+                                        ui.add_space(4.0);
+                                    }
+                                });
+                            } else {
+                                ui.horizontal(|ui| {
+                                    egui::ComboBox::from_id_salt("quark_filter_sort")
+                                        .selected_text(crate::i18n::rich(format!(
+                                            "Tri : {}",
+                                            sort.label()
+                                        ))
+                                        .size(11.0))
+                                        .width(130.0)
+                                        .show_ui(ui, |ui| {
+                                            for option in LibrarySort::ALL {
+                                                ui.selectable_value(
+                                                    &mut sort,
+                                                    option,
+                                                    option.label(),
+                                                );
+                                            }
+                                        });
+                                    egui::ComboBox::from_id_salt("quark_filter_group")
+                                        .selected_text(crate::i18n::rich(format!(
+                                            "Grouper : {}",
+                                            group.label()
+                                        ))
+                                        .size(11.0))
+                                        .width(130.0)
+                                        .show_ui(ui, |ui| {
+                                            for option in GroupBy::ALL {
+                                                ui.selectable_value(
+                                                    &mut group,
+                                                    option,
+                                                    option.label(),
+                                                );
+                                            }
+                                        })
+                                        .response
+                                        .on_hover_text(
+                                            "Le regroupement s'applique à la vue liste.",
+                                        );
+                                });
+                            }
+                            ui.add_space(10.0);
+                            ui.separator();
+                            ui.add_space(8.0);
                             ui.label(
                                 crate::i18n::rich("Statut")
                                     .size(9.5)
@@ -163,6 +289,22 @@ impl QuarkApp {
                         });
                 });
 
+        if sort != self.lib.settings.library_sort {
+            self.lib.settings.library_sort = sort;
+            self.touch();
+        }
+        if home_sort != self.lib.settings.home_sort {
+            self.lib.settings.home_sort = home_sort;
+            self.touch();
+        }
+        if group != self.lib.settings.group_by {
+            self.lib.settings.group_by = group;
+            self.touch();
+        }
+        if let Some(index) = apply_view {
+            self.apply_saved_view(index);
+        }
+
         if status != self.lib.settings.home_status
             || tag != self.lib.settings.home_tag
             || genre != self.lib.settings.home_genre
@@ -171,109 +313,6 @@ impl QuarkApp {
             self.lib.settings.home_tag = tag;
             self.lib.settings.home_genre = genre;
             self.touch();
-        }
-    }
-
-    /// Barre compacte au-dessus des filtres : vues nommées, tri et
-    /// regroupement. Elle n'apparaît que dans la colonne de la bibliothèque.
-    pub(crate) fn library_view_bar(&mut self, ui: &mut egui::Ui) {
-        let pal = self.pal;
-        let views = self.lib.settings.saved_views.clone();
-        let active = views
-            .iter()
-            .find(|view| view.matches(&self.lib.settings, &self.filter))
-            .map(|view| view.name.clone())
-            .unwrap_or_else(|| "Choisir une vue…".to_string());
-        let mut apply: Option<usize> = None;
-
-        ui.add_space(8.0);
-        ui.horizontal(|ui| {
-            ui.add_space(12.0);
-            egui::ComboBox::from_id_salt("quark_saved_views")
-                .selected_text(crate::i18n::rich(active).size(11.0))
-                .width(96.0)
-                .show_ui(ui, |ui| {
-                    if views.is_empty() {
-                        ui.label(
-                            crate::i18n::rich("Aucune vue enregistrée")
-                                .size(11.0)
-                                .color(pal.text_faint),
-                        );
-                    }
-                    for (index, view) in views.iter().enumerate() {
-                        if ui
-                            .selectable_label(
-                                view.matches(&self.lib.settings, &self.filter),
-                                &view.name,
-                            )
-                            .clicked()
-                        {
-                            apply = Some(index);
-                        }
-                    }
-                });
-            if widgets::icon_button(
-                ui,
-                24.0,
-                Icon::Plus,
-                &pal,
-                "Enregistrer la vue actuelle (filtres, tri et regroupement)",
-            )
-            .clicked()
-            {
-                self.saved_view_name.clear();
-                self.saved_view_error = None;
-                self.saved_views_open = true;
-            }
-
-            // Le tri vit sur la même rangée que les vues : la maquette tient
-            // les commandes de la colonne en deux lignes seulement.
-            let mut sort = self.lib.settings.library_sort;
-            egui::ComboBox::from_id_salt("quark_library_sort")
-                .selected_text(crate::i18n::rich(format!("Tri : {}", sort.label())).size(11.0))
-                .width(100.0)
-                .show_ui(ui, |ui| {
-                    for option in LibrarySort::ALL {
-                        ui.selectable_value(&mut sort, option, option.label());
-                    }
-                });
-            if sort != self.lib.settings.library_sort {
-                self.lib.settings.library_sort = sort;
-                self.touch();
-            }
-        });
-
-        if self.home {
-            if let Some(index) = apply {
-                self.apply_saved_view(index);
-            }
-            return;
-        }
-
-        ui.add_space(4.0);
-        ui.horizontal(|ui| {
-            ui.add_space(12.0);
-            let mut group = self.lib.settings.group_by;
-            egui::ComboBox::from_id_salt("quark_library_group")
-                .selected_text(crate::i18n::rich(format!("Grouper : {}", group.label())).size(11.0))
-                .width(118.0)
-                .show_ui(ui, |ui| {
-                    for option in GroupBy::ALL {
-                        ui.selectable_value(&mut group, option, option.label());
-                    }
-                })
-                .response
-                .on_hover_text("Le regroupement s'applique à la vue liste.");
-            if group != self.lib.settings.group_by {
-                self.lib.settings.group_by = group;
-                self.touch();
-            }
-            ui.add_space(4.0);
-            self.filter_menu_inline(ui);
-        });
-
-        if let Some(index) = apply {
-            self.apply_saved_view(index);
         }
     }
 

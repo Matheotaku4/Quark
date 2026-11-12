@@ -6,7 +6,7 @@ own, launches Windows games through Proton (or umu-launcher), and stays out of
 the way with an AMOLED interface, a store page, save snapshots and an in-game
 overlay.
 
-This is the **1.4.1** documentation. Older release notes are kept on the GitHub
+This is the **1.4.2** documentation. Older release notes are kept on the GitHub
 releases page; `docs/release-notes.md` only describes the release currently
 being published.
 
@@ -27,11 +27,12 @@ The wiki is published from the versioned source in [`wiki/`](wiki/) by the
 | --- | --- |
 | ![Onboarding](docs/images/onboarding-fr.png) | ![What's new](docs/images/whats-new-fr.png) |
 
-## What's new in 1.4.1
+## What's new in 1.4.2
 
-- **Labelled top bar.** On wide windows, Settings, Transfers (with the active count) and Search or command (Ctrl K) show a label instead of a bare icon; narrower windows keep the icons.
-- **Store section chips.** A row of chips (Top discounts, Recommended, then each catalogue section) scrolls the page to the chosen section.
-- **Maintenance.** Compiler warnings on unused imports and float literals are fixed, and a language-dependent test no longer races with the translation tests.
+- **One Filters panel.** Saved views, sort and grouping now live in the library's **Filters** panel, placed directly under **Home**. The same panel carries the status, genre and tag filters.
+- **Search icon and store results.** The library search is now a magnifier button. It lists installed games first, then games you own in Steam, Epic Games or GOG, in two sections.
+- **Hero actions.** Game settings, customization, the session log and removal are icon-only buttons in the top-left of the hero; the information button and the overflow menu are gone.
+- **Home sorting.** The home sort chips moved into Filters, leaving a single command beside “All games”.
 
 | PlayStation 2 |
 | --- |
@@ -39,7 +40,7 @@ The wiki is published from the versioned source in [`wiki/`](wiki/) by the
 
 ## Table of contents
 
-1. [What's new in 1.4.1](#whats-new-in-141)
+1. [What's new in 1.4.2](#whats-new-in-142)
 2. [What Quark does](#what-quark-does)
 3. [Installation](#installation)
 4. [First launch](#first-launch)
@@ -97,8 +98,8 @@ Download `quark-<version>-linux-x86_64.tar.gz` and its `.sha256` file from the
 then verify and unpack it:
 
 ```bash
-sha256sum -c quark-1.4.1-linux-x86_64.tar.gz.sha256
-tar -xzf quark-1.4.1-linux-x86_64.tar.gz
+sha256sum -c quark-1.4.2-linux-x86_64.tar.gz.sha256
+tar -xzf quark-1.4.2-linux-x86_64.tar.gz
 ./quark/quark
 ```
 
@@ -140,7 +141,7 @@ A new configuration opens a three-step welcome guide. It is not blocking:
 **Skip** closes it. The guide changes the interface language, startup page,
 theme and hero background live, then offers to add a first game. Existing
 configurations are marked as already welcomed, so updating from 1.1.4 never
-shows it unexpectedly; they still see the 1.4.1 summary once.
+shows it unexpectedly; they still see the 1.4.2 summary once.
 
 1. Open **Settings → Stores & tools** and install Legendary and/or gogdl with
    **Install / update**. Quark verifies the SHA-256 digest published by GitHub

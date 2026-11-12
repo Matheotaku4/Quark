@@ -604,6 +604,11 @@ pub struct QuarkApp {
     /// du clavier suivent la mise en page réelle (2 à 8 colonnes).
     pub grid_columns: usize,
     pub filter: String,
+    /// Recherche rapide (loupe de la barre du haut) : installés puis achetés.
+    pub library_search_open: bool,
+    pub library_search_query: String,
+    /// Demande le focus du champ à la première image du panneau.
+    pub library_search_focus: bool,
     /// Palette de commandes (Ctrl+K) : ouverte, requête et ligne sélectionnée.
     pub command_palette_open: bool,
     pub command_query: String,
@@ -968,6 +973,9 @@ impl QuarkApp {
             pal,
             tab: start_tab,
             filter: String::new(),
+            library_search_open: false,
+            library_search_query: String::new(),
+            library_search_focus: false,
             command_palette_open: false,
             command_query: String::new(),
             command_selected: 0,
@@ -3092,19 +3100,22 @@ impl QuarkApp {
                             ui.add_space(10.0);
                         }
                         if self.tab == Tab::Library {
-                            // La recherche cède de la place quand la fenêtre est
-                            // étroite (1024 px minimum) au lieu de chevaucher
-                            // les onglets.
-                            let search_width = (ui.available_width() - 12.0).clamp(180.0, 320.0);
-                            ui.add_sized(
-                                Vec2::new(search_width, 38.0),
-                                egui::TextEdit::singleline(&mut self.filter)
-                                    .id(egui::Id::new("quark_filter"))
-                                    .hint_text(crate::i18n::tr(
-                                        "Rechercher dans la bibliothèque  ·  Ctrl+F",
-                                    ))
-                                    .font(FontId::proportional(12.5)),
-                            );
+                            ui.add_space(8.0);
+                            if widgets::icon_button(
+                                ui,
+                                34.0,
+                                Icon::Search,
+                                &pal,
+                                "Rechercher · Ctrl+F",
+                            )
+                            .clicked()
+                            {
+                                self.library_search_open = !self.library_search_open;
+                                self.library_search_focus = self.library_search_open;
+                                if !self.library_search_open {
+                                    self.library_search_query.clear();
+                                }
+                            }
                         } else if self.tab == Tab::Store {
                             ui.label(
                                 crate::i18n::rich("Catalogue Steam")
@@ -3307,6 +3318,7 @@ impl QuarkApp {
         }
         self.startup_sync(ctx);
         self.top_bar(ctx);
+        self.library_search_dialog(ctx);
         self.config_error_banner(ctx);
         match self.tab {
             Tab::Store => self.store_tab(ctx),
@@ -3361,6 +3373,9 @@ impl QuarkApp {
         if self.command_palette_open {
             return;
         }
+        if self.library_search_open {
+            return;
+        }
         if self.add.open
             || self.settings_open
             || self.saved_views_open
@@ -3373,7 +3388,6 @@ impl QuarkApp {
             return;
         }
         let typing = ctx.wants_keyboard_input();
-        let filter_id = egui::Id::new("quark_filter");
         let (down, up, left, right, enter, escape, find, slash) = ctx.input(|i| {
             (
                 i.key_pressed(egui::Key::ArrowDown),
@@ -3388,13 +3402,11 @@ impl QuarkApp {
         });
 
         if find || (!typing && slash) {
-            ctx.memory_mut(|memory| memory.request_focus(filter_id));
+            self.library_search_open = true;
+            self.library_search_focus = true;
             return;
         }
         if typing {
-            if escape {
-                ctx.memory_mut(|memory| memory.surrender_focus(filter_id));
-            }
             return;
         }
         if escape {

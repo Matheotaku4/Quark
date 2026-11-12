@@ -590,5 +590,19 @@
   "Transferts": "Transfers",
   "Rechercher ou commande": "Search or command",
   "Top réductions": "Top discounts",
-  "Recommandé pour vous": "Recommended for you"
+  "Recommandé pour vous": "Recommended for you",
+  "Rechercher · Ctrl+F": "Search · Ctrl+F",
+  "Rechercher un jeu…": "Search for a game…",
+  "RECHERCHER": "SEARCH",
+  "Tape le nom d'un jeu installé ou acheté.": "Type the name of an installed or purchased game.",
+  "INSTALLÉS": "INSTALLED",
+  "ACHETÉS": "PURCHASED",
+  "Aucun jeu trouvé pour": "No game found for",
+  "Installé · Bibliothèque": "Installed · Library",
+  "Acheté": "Purchased",
+  "Exécutable introuvable": "Executable not found",
+  "Affichage": "Display",
+  "Trier": "Sort",
+  "Paramètres du jeu": "Game settings",
+  "Enregistrer la vue actuelle (filtres, tri et regroupement)": "Save the current view (filters, sort and grouping)"
 }

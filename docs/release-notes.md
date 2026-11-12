@@ -1,11 +1,12 @@
-## Quark 1.4.1 — Barre du haut libellée et pastilles de la Boutique
+## Quark 1.4.2 — Filtres regroupés et recherche étendue
 
 ### Interface
 
-- Sur les fenêtres larges, « Paramètres », « Transferts · n » et « Rechercher ou commande · Ctrl K » ont un libellé dans la barre du haut ; en dessous, les icônes restent.
-- Boutique : une rangée de pastilles (Top réductions, Recommandé, puis chaque section) fait défiler la page jusqu'à la section choisie.
+- Les vues enregistrées, le tri et le groupement rejoignent le panneau **Filtres**, désormais placé directement sous **Accueil** dans la bibliothèque. Le même panneau garde les filtres de statut, de genre et de tags.
+- La recherche de la bibliothèque devient une icône : elle liste d'abord les jeux installés, puis les jeux achetés dans Steam, Epic Games et GOG, en deux sections distinctes.
+- La fiche du jeu expose les paramètres, la personnalisation, le journal de session et le retrait en haut à gauche du héro, en icônes seules. Le bouton d'information et le menu « ··· » sont retirés.
+- Les puces de tri de l'accueil sont intégrées au panneau Filtres : le titre de section ne garde qu'une commande.
 
 ### Correctifs
 
-- Les imports `RichText` inutilisés et deux littéraux flottants signalés par le compilateur sont corrigés (ces derniers deviendront une erreur dans une future version de Rust).
-- Les tests qui supposent le français prennent désormais le même verrou de langue que ceux d'`i18n` : `game_search` ne peut plus lire « MB » pendant qu'un autre test passe en anglais.
+- Les résultats de recherche sont dédoublonnés entre la bibliothèque Quark et les installations de boutique liées.
