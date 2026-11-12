@@ -200,21 +200,21 @@ fn dynamic_english(text: &str) -> String {
 pub fn release_summary() -> [&'static str; 6] {
     if is_english() {
         [
-            "On wide windows, the top bar shows \"Settings\", \"Transfers\" and \"Search or command\" with their labels.",
-            "The Store has a row of chips that jumps straight to each section.",
-            "My Games has a List view with an Open or Install button that is always visible (1.4.0).",
-            "A game page keeps its actions in one \"···\" menu and shows an overview on wide windows.",
-            "Playtime is saved every minute: a crash no longer loses the whole session.",
-            "Internal fixes: compiler warnings and a language-dependent test. No migration needed.",
+            "The game page has its sharp banner back and uses the SteamGridDB logo when one exists, with the title as a fallback.",
+            "Playtime and the last session stay in the overview instead of sitting next to Play.",
+            "Appearance now chooses whether the game actions sit in the top-right corner or right next to Play.",
+            "DLL overrides scans subfolders and shows each DLL with its relative path.",
+            "My profile and Steam details are stacked, so they no longer overlap at any window width.",
+            "The right-click menu uses the same action colours as the game page.",
         ]
     } else {
         [
-            "Sur les fenêtres larges, la barre du haut affiche « Paramètres », « Transferts » et « Rechercher ou commande » avec leur libellé.",
-            "La Boutique a une rangée de pastilles qui mène directement à chaque section.",
-            "« Mes jeux » propose une vue Liste avec un bouton Ouvrir ou Installer toujours visible (1.4.0).",
-            "La fiche d'un jeu réunit ses actions dans un menu « ··· » et affiche un aperçu sur les fenêtres larges.",
-            "Le temps de jeu est enregistré chaque minute : un plantage ne fait plus perdre toute la session.",
-            "Correctifs internes : avertissements du compilateur et un test dépendant de la langue. Aucune migration.",
+            "La fiche retrouve sa bannière nette et affiche le logo SteamGridDB quand il existe, avec le titre en texte en repli.",
+            "Le temps de jeu et la dernière session restent dans l'aperçu au lieu d'être à côté de Jouer.",
+            "Apparence choisit si les actions de la fiche se placent en haut à droite ou juste à droite de Jouer.",
+            "DLL overrides parcourt les sous-dossiers et affiche chaque DLL avec son chemin relatif.",
+            "Ma fiche et Fiche Steam sont empilées : elles ne se chevauchent plus, quelle que soit la largeur.",
+            "Le menu du clic droit reprend les couleurs des actions de la fiche.",
         ]
     }
 }
@@ -273,11 +273,11 @@ mod tests {
     fn le_resume_de_version_suit_la_langue() {
         let _guard = language_lock();
         set_language(UiLanguage::French);
-        assert!(release_summary()[0].starts_with("Sur les fenêtres larges, la barre du haut"));
-        assert!(release_summary()[1].starts_with("La Boutique a une rangée"));
+        assert!(release_summary()[0].starts_with("La fiche retrouve sa bannière nette"));
+        assert!(release_summary()[1].starts_with("Le temps de jeu et la dernière session"));
         set_language(UiLanguage::English);
-        assert!(release_summary()[0].starts_with("On wide windows, the top bar"));
-        assert!(release_summary()[1].starts_with("The Store has a row"));
+        assert!(release_summary()[0].starts_with("The game page has its sharp banner"));
+        assert!(release_summary()[1].starts_with("Playtime and the last session"));
         assert!(release_title().starts_with("What's new"));
         set_language(UiLanguage::French);
     }

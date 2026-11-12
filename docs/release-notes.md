@@ -1,20 +1,12 @@
-## Quark 1.4.5 — Fiche de jeu affinée et DLL récursives
+## Quark 1.4.6 — Correctif de la fenêtre Nouveautés
 
-### Fiche de jeu
+### Correctif
 
-- La bannière nette du jeu revient en haut de la fiche. La jaquette verticale est retirée.
-- Le titre affiche le logo SteamGridDB quand il existe. Le nom en texte sert uniquement de repli lorsqu'aucun logo n'est disponible.
-- Le temps de jeu et la dernière session ne sont plus affichés à droite du bouton **Jouer**. Ils restent uniquement dans le panneau **Aperçu**.
-- **Apparence → Actions de la fiche** permet de placer **Paramètres**, **Personnaliser**, **Journal** et **Supprimer** en haut à droite ou directement à droite de **Jouer**. Le réglage est enregistré.
-- Les cartes **Ma fiche** et **Fiche Steam** sont toujours empilées sur toute la largeur : leurs champs ne se chevauchent plus à 1024 px ni à 1360 px.
-- Le menu du clic droit reprend les couleurs des actions de la fiche : engrenage bleu, crayon doré, journal vert et poubelle rouge.
-
-### DLL overrides
-
-- La recherche des DLL parcourt désormais tous les sous-dossiers du dossier source, avec une limite de profondeur et sans suivre les liens symboliques.
-- Les DLL sont affichées avec leur chemin relatif, triées par nom. Le nom d'override reste le nom du fichier sans extension.
-- Le résultat est mis en cache quelques secondes pour ne pas relire l'arborescence du jeu à chaque image.
+- La fenêtre **Nouveautés** affichait encore le résumé des versions 1.4.0 et 1.4.4 après la mise à jour vers 1.4.5. Elle décrit maintenant les changements réels de cette version.
+- Le résumé français et anglais couvre la bannière et le logo SteamGridDB, le temps de jeu déplacé dans l'aperçu, l'emplacement des actions de la fiche, la recherche DLL récursive, les cartes Ma fiche / Fiche Steam empilées et les couleurs du menu contextuel.
 
 ### Vérifications
 
-- Compilation `cargo build --release --locked`, tests unitaires et rendus hors écran de la fiche, de la grille, des paramètres et des dialogues aux largeurs 900, 1024 et 1360 px.
+- Fenêtre réelle sous X11 virtuel (Xvfb) à 1360 × 900 puis 1024 × 768, avec souris et clavier : bannière, logo et repli texte, les deux placements d'actions, persistance du réglage, cartes empilées, DLL en sous-dossier et menu contextuel.
+- `cargo test --locked` : 291 tests réussis, un test préexistant volontairement filtré.
+- `cargo build --release --locked` réussi ; archive et somme SHA-256 vérifiées après publication.
