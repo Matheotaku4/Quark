@@ -83,7 +83,10 @@ impl QuarkApp {
                     ui.add_space(6.0);
                     egui::ScrollArea::vertical()
                         .id_salt("quark_filter_menu_scroll")
-                        .max_height(560.0)
+                        // Sur l'accueil, le bouton est au milieu de la page :
+                        // une hauteur plus courte garde le panneau sous lui au
+                        // lieu de le faire basculer au-dessus de la barre du haut.
+                        .max_height(if self.home { 330.0 } else { 560.0 })
                         .show(ui, |ui| {
                             ui.label(
                                 crate::i18n::rich("Affichage")
