@@ -16,7 +16,7 @@ use crate::theme::{self, Palette};
 use crate::update;
 use crate::widgets::{self, Icon};
 use eframe::egui::{
-    self, Align, Align2, Color32, FontId, Layout, Pos2, Rect, Sense, Stroke, Vec2,
+    self, Align, Align2, FontId, Layout, Pos2, Rect, Sense, Stroke, Vec2,
 };
 use std::path::{Path, PathBuf};
 use std::time::Instant;
@@ -778,6 +778,122 @@ impl QuarkApp {
                                     .size(11.0)
                                     .color(pal.text_faint),
                                 );
+                            },
+                        );
+                        ui.add_space(16.0);
+                        widgets::card(
+                            ui,
+                            &pal,
+                            "Taille de l'interface",
+                            Some(
+                                "Change la place occupée par les éléments, jamais la taille du texte. Les réglages s'appliquent immédiatement.",
+                            ),
+                            |ui| {
+                                if widgets::option_row(
+                                    ui,
+                                    &pal,
+                                    "Interface compacte",
+                                    Some(
+                                        "Resserre les marges, les espacements et la barre du haut. Les polices et les paramètres gardent leur taille.",
+                                    ),
+                                    &mut self.lib.settings.ui_compact,
+                                    "ui_compact",
+                                )
+                                .changed()
+                                {
+                                    self.touch();
+                                }
+                                ui.add_space(8.0);
+                                widgets::field(ui, &pal, "Largeur de la barre latérale", |ui| {
+                                    let mut width = self.lib.settings.sidebar_width;
+                                    if ui
+                                        .add(
+                                            egui::Slider::new(&mut width, 220.0..=340.0)
+                                                .suffix(" px")
+                                                .fixed_decimals(0),
+                                        )
+                                        .changed()
+                                    {
+                                        self.lib.settings.sidebar_width = width;
+                                        self.touch();
+                                    }
+                                });
+                                widgets::field(ui, &pal, "Hauteur des lignes de la liste", |ui| {
+                                    let mut height = self.lib.settings.sidebar_row_height;
+                                    if ui
+                                        .add(
+                                            egui::Slider::new(&mut height, 42.0..=56.0)
+                                                .suffix(" px")
+                                                .fixed_decimals(0),
+                                        )
+                                        .changed()
+                                    {
+                                        self.lib.settings.sidebar_row_height = height;
+                                        self.touch();
+                                    }
+                                });
+                                widgets::field(ui, &pal, "Largeur des jaquettes", |ui| {
+                                    let mut width = self.lib.settings.grid_tile_width;
+                                    if ui
+                                        .add(
+                                            egui::Slider::new(&mut width, 120.0..=220.0)
+                                                .suffix(" px")
+                                                .fixed_decimals(0),
+                                        )
+                                        .changed()
+                                    {
+                                        self.lib.settings.grid_tile_width = width;
+                                        self.touch();
+                                    }
+                                });
+                                widgets::field(ui, &pal, "Hauteur de la bannière", |ui| {
+                                    let mut percent =
+                                        (self.lib.settings.banner_scale * 100.0).round();
+                                    if ui
+                                        .add(
+                                            egui::Slider::new(&mut percent, 60.0..=110.0)
+                                                .suffix(" %")
+                                                .fixed_decimals(0),
+                                        )
+                                        .changed()
+                                    {
+                                        self.lib.settings.banner_scale = percent / 100.0;
+                                        self.touch();
+                                    }
+                                });
+                                widgets::field(ui, &pal, "Largeur du panneau d'aperçu", |ui| {
+                                    let mut width = self.lib.settings.overview_width;
+                                    if ui
+                                        .add(
+                                            egui::Slider::new(&mut width, 230.0..=340.0)
+                                                .suffix(" px")
+                                                .fixed_decimals(0),
+                                        )
+                                        .changed()
+                                    {
+                                        self.lib.settings.overview_width = width;
+                                        self.touch();
+                                    }
+                                });
+                                ui.add_space(8.0);
+                                if widgets::ghost_button(
+                                    ui,
+                                    "Réinitialiser la taille",
+                                    &pal,
+                                    Icon::Refresh,
+                                )
+                                .clicked()
+                                {
+                                    let defaults = config::Settings::default();
+                                    self.lib.settings.ui_compact = defaults.ui_compact;
+                                    self.lib.settings.sidebar_width = defaults.sidebar_width;
+                                    self.lib.settings.sidebar_row_height =
+                                        defaults.sidebar_row_height;
+                                    self.lib.settings.grid_tile_width = defaults.grid_tile_width;
+                                    self.lib.settings.banner_scale = defaults.banner_scale;
+                                    self.lib.settings.overview_width = defaults.overview_width;
+                                    self.touch();
+                                }
                             },
                         );
                         ui.add_space(16.0);

@@ -1037,51 +1037,6 @@ pub fn home_row(ui: &mut egui::Ui, selected: bool, pal: &Palette) -> (bool, bool
 /// Bouton icône posé **sur une image** (bannière) : un fond translucide rend le
 /// symbole lisible quelle que soit l'image, et sa couleur s'oppose au fond
 /// (sombre sur une bannière claire, clair sur une bannière sombre).
-pub fn floating_icon_button(
-    ui: &mut egui::Ui,
-    size: f32,
-    icon: Icon,
-    pal: &Palette,
-    tooltip: &str,
-    on_light: bool,
-) -> Response {
-    let (rect, resp) = ui.allocate_exact_size(Vec2::splat(size), Sense::click());
-    let painter = ui.painter_at(rect);
-    let hover = ui.ctx().animate_bool_with_time(
-        control_id(ui, rect, tooltip, "floating"),
-        resp.hovered(),
-        0.12,
-    );
-    let backdrop = if on_light {
-        Color32::from_rgba_unmultiplied(255, 255, 255, 190)
-    } else {
-        Color32::from_rgba_unmultiplied(0, 0, 0, 120)
-    };
-    painter.rect_filled(rect, 5.0, backdrop);
-    if hover > 0.0 {
-        painter.rect_filled(
-            rect,
-            5.0,
-            if on_light {
-                Color32::from_rgba_unmultiplied(255, 255, 255, 40)
-            } else {
-                Color32::from_rgba_unmultiplied(255, 255, 255, 30)
-            },
-        );
-    }
-    let fg = if on_light {
-        theme::on_surface(Color32::from_rgb(0xF4, 0xF7, 0xFB))
-    } else {
-        theme::lerp_color(pal.text, Color32::WHITE, hover)
-    };
-    paint_icon(ui, rect.shrink(size * (0.26 + 0.02 * hover)), icon, fg);
-    if tooltip.is_empty() {
-        resp
-    } else {
-        resp.on_hover_text(tooltip)
-    }
-}
-
 /// Petit ⓘ ) côté d'un réglage : l'explication remplace les lignes de conseil
 /// qui encombraient les fenêtres. Le texte complet s'affiche au survol.
 pub fn info_button(ui: &mut egui::Ui, pal: &Palette, text: &str) -> Response {

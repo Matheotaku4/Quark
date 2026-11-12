@@ -990,6 +990,20 @@ pub struct Settings {
     pub hero_background: bool,
     /// Rayon du flou du fond, en pixels logiques.
     pub hero_background_blur: f32,
+    /// Interface resserrée : moins de marges et d'espacement, sans toucher aux
+    /// tailles de police. Vrai par défaut pour une fenêtre plus dense.
+    pub ui_compact: bool,
+    /// Largeur de la colonne de gauche, en pixels logiques.
+    pub sidebar_width: f32,
+    /// Hauteur d'une ligne de jeu dans la colonne de gauche.
+    pub sidebar_row_height: f32,
+    /// Largeur visée d'une jaquette dans la vue grille. Elle détermine le
+    /// nombre de colonnes ; les jaquettes se partagent ensuite la largeur.
+    pub grid_tile_width: f32,
+    /// Facteur de hauteur de la bannière de la fiche (0,7 à 1,1).
+    pub banner_scale: f32,
+    /// Largeur du panneau d'aperçu à droite des actualités.
+    pub overview_width: f32,
     /// Clé API SteamGridDB (https://www.steamgriddb.com/profile/preferences/api).
     pub sgdb_api_key: String,
     /// Chemin explicite de PCSX2. Vide = détection dans le PATH et Flatpak.
@@ -1096,6 +1110,12 @@ impl Default for Settings {
             my_games_list: true,
             hero_background: false,
             hero_background_blur: 14.0,
+            ui_compact: true,
+            sidebar_width: 252.0,
+            sidebar_row_height: 44.0,
+            grid_tile_width: 144.0,
+            banner_scale: 0.9,
+            overview_width: 268.0,
             sgdb_api_key: String::new(),
             pcsx2_path: String::new(),
             ra_username: String::new(),

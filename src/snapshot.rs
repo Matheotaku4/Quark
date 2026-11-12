@@ -440,6 +440,31 @@ pub fn run(opts: &SnapshotOptions) -> Result<(), String> {
     if let Some(needle) = &opts.select {
         app.selected = Some(pick_game(&app, needle)?);
     }
+    if opts.demo {
+        // Temps HowLongToBeat factices : le rendu hors écran ne fait aucun
+        // appel réseau, mais l'aperçu montre le bloc tel qu'en vrai.
+        if let Some(id) = app.selected.clone() {
+            if let Some(game) = app.lib.get(&id) {
+                let (main, extra, hundred) = match game.name.as_str() {
+                    "The Witcher 3: Wild Hunt" => (51.7, 103.8, 164.0),
+                    "Celeste" => (8.3, 14.6, 39.2),
+                    "Hollow Knight" => (26.5, 42.0, 64.0),
+                    "7 Days to Die" => (28.0, 63.0, 148.0),
+                    _ => (4.0, 6.5, 9.0),
+                };
+                app.hltb.insert(
+                    id,
+                    crate::app::HltbState::Ready(crate::howlongtobeat::Report {
+                        game_id: 10_270,
+                        name: game.name.clone(),
+                        main: Some(main),
+                        main_extra: Some(extra),
+                        completionist: Some(hundred),
+                    }),
+                );
+            }
+        }
+    }
     if opts.marked {
         // Sélection multiple (Ctrl+clic) : deux jeux en plus du courant.
         app.marked = app

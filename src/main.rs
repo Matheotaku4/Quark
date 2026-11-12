@@ -15,6 +15,7 @@ mod i18n;
 mod icon;
 mod images;
 mod net;
+mod howlongtobeat;
 mod news;
 mod overlay;
 mod process;

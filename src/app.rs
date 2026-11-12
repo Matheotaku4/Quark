@@ -6,6 +6,7 @@ use crate::config::{
     human_playtime,
 };
 use crate::disk::{self, DiskReport};
+use crate::howlongtobeat::{self, Report as HltbReport};
 use crate::i18n;
 use crate::news::{self, NewsItem};
 use crate::proton::{self, ProtonRuntime};
@@ -260,6 +261,20 @@ pub enum ProtonDbState {
 pub struct ProtonDbJob {
     pub app_id: u32,
     pub rx: Receiver<Result<Report, String>>,
+}
+
+/// Temps HowLongToBeat d'un jeu (mis en cache par identifiant de jeu).
+#[derive(Clone)]
+pub enum HltbState {
+    Loading,
+    Ready(HltbReport),
+    Failed(String),
+}
+
+/// Recherche HowLongToBeat en cours.
+pub struct HltbJob {
+    pub game_id: String,
+    pub rx: Receiver<Result<HltbReport, String>>,
 }
 
 /// Fenêtre « Journal » : ce que la dernière session a affiché.
@@ -710,6 +725,8 @@ pub struct QuarkApp {
     /// Rendu hors écran : aucune sauvegarde réelle n'est effectuée.
     pub snapshot_mode: bool,
     pub applied_theme: Option<ThemeMode>,
+    /// Dernière densité appliquée : évite de recopier le style à chaque image.
+    pub applied_compact: Option<bool>,
     /// Panneau d'informations du jeu (masqué par défaut, bouton ⓘ).
     pub show_info: bool,
     /// Artworks à télécharger après le job en cours.
@@ -739,6 +756,9 @@ pub struct QuarkApp {
     /// Notes ProtonDB, une recherche par appid.
     pub protondb: HashMap<u32, ProtonDbState>,
     pub protondb_job: Option<ProtonDbJob>,
+    /// Temps HowLongToBeat, une recherche par jeu.
+    pub hltb: HashMap<String, HltbState>,
+    pub hltb_job: Option<HltbJob>,
     /// Journal de session ouvert (bouton « Journal »).
     pub logs: Option<LogView>,
     pub save_job: Option<SaveJob>,
@@ -978,6 +998,7 @@ impl QuarkApp {
         // n'arrache pas l'utilisateur de la page où il se trouve.
         let (start_tab, start_home) = startup_route(lib.settings.start_page);
         theme::apply(ctx, lib.settings.theme);
+        theme::apply_density(ctx, lib.settings.ui_compact);
         let pal = theme::palette(lib.settings.theme);
         let (store_recommendations, store_recommendation_source) =
             crate::steam_store::recommendations_for(store_snapshot.as_ref(), &lib.games, None);
@@ -985,6 +1006,7 @@ impl QuarkApp {
         let config_error = lib.load_error.clone();
         Self {
             applied_theme: Some(lib.settings.theme),
+            applied_compact: Some(lib.settings.ui_compact),
             selected,
             grid_columns: 3,
             runtimes,
@@ -1070,6 +1092,8 @@ impl QuarkApp {
             startup_update_done: false,
             protondb: HashMap::new(),
             protondb_job: None,
+            hltb: HashMap::new(),
+            hltb_job: None,
             logs: None,
             save_job: None,
             save_preview: None,
@@ -1256,6 +1280,8 @@ impl QuarkApp {
         self.ensure_news(ctx);
         self.ensure_protondb(ctx);
         self.poll_protondb();
+        self.ensure_hltb(ctx);
+        self.poll_hltb();
         self.poll_metadata(ctx);
         self.poll_disk(ctx);
         self.poll_steam_import(ctx);
@@ -1388,6 +1414,7 @@ impl QuarkApp {
         if self.job.is_some()
             || self.news_job.is_some()
             || self.protondb_job.is_some()
+            || self.hltb_job.is_some()
             || !self.running.is_empty()
             || self.logs.is_some()
         {
@@ -2887,6 +2914,70 @@ impl QuarkApp {
     }
 
     // -----------------------------------------------------------------------
+    // Temps HowLongToBeat
+    // -----------------------------------------------------------------------
+
+    /// Charge les temps HowLongToBeat du jeu sélectionné, une seule fois.
+    /// Le rendu hors écran reste sans réseau et utilise les valeurs de démo.
+    fn ensure_hltb(&mut self, ctx: &egui::Context) {
+        if self.snapshot_mode
+            || self.hltb_job.is_some()
+            || self.tab != Tab::Library
+            || (self.home && self.overlay.is_none())
+        {
+            return;
+        }
+        let Some(id) = self.selected.clone() else {
+            return;
+        };
+        let Some(game) = self.lib.get(&id) else {
+            return;
+        };
+        if self.hltb.contains_key(&id) {
+            return;
+        }
+        let title = game.name.clone();
+        let (tx, rx) = channel();
+        let repaint = ctx.clone();
+        std::thread::spawn(move || {
+            let client = artwork::http();
+            let _ = tx.send(howlongtobeat::fetch(&client, &title));
+            repaint.request_repaint();
+        });
+        self.hltb.insert(id.clone(), HltbState::Loading);
+        self.hltb_job = Some(HltbJob {
+            game_id: id,
+            rx,
+        });
+        ctx.request_repaint_after(Duration::from_millis(200));
+    }
+
+    fn poll_hltb(&mut self) {
+        let received = self
+            .hltb_job
+            .as_ref()
+            .map(|job| (job.game_id.clone(), job.rx.try_recv()));
+        match received {
+            Some((game_id, Ok(Ok(report)))) => {
+                self.hltb_job = None;
+                self.hltb.insert(game_id, HltbState::Ready(report));
+            }
+            Some((game_id, Ok(Err(message)))) => {
+                self.hltb_job = None;
+                self.hltb.insert(game_id, HltbState::Failed(message));
+            }
+            Some((game_id, Err(TryRecvError::Disconnected))) => {
+                self.hltb_job = None;
+                self.hltb.insert(
+                    game_id,
+                    HltbState::Failed("recherche HowLongToBeat interrompue".to_string()),
+                );
+            }
+            _ => {}
+        }
+    }
+
+    // -----------------------------------------------------------------------
     // Icône de la zone de notification
     // -----------------------------------------------------------------------
 
@@ -2957,13 +3048,14 @@ impl QuarkApp {
 
     fn top_bar(&mut self, ctx: &egui::Context) {
         let pal = self.pal;
+        let compact = self.lib.settings.ui_compact;
         egui::TopBottomPanel::top("quark_topbar")
-            .exact_height(62.0)
+            .exact_height(if compact { 54.0 } else { 62.0 })
             .frame(
                 egui::Frame::new()
                     .fill(pal.header)
                     .stroke(Stroke::new(1.0_f32, pal.border))
-                    .inner_margin(egui::Margin::symmetric(22, 0)),
+                    .inner_margin(egui::Margin::symmetric(if compact { 18 } else { 22 }, 0)),
             )
             .show(ctx, |ui| {
                 ui.horizontal_centered(|ui| {
@@ -2987,15 +3079,11 @@ impl QuarkApp {
                     );
                     ui.add_space(26.0);
 
-                    // L'accueil a son propre onglet : il reste une page de la
-                    // bibliothèque (`Tab::Library` + `home`), mais l'utilisateur
-                    // le trouve au même niveau que les trois autres.
-                    let home_active = self.tab == Tab::Library && self.home;
-                    let library_active = self.tab == Tab::Library && !self.home;
-                    if widgets::tab(ui, "Accueil", home_active, &pal).clicked() {
-                        self.tab = Tab::Library;
-                        self.home = true;
-                    }
+                    // L'accueil n'a plus d'onglet dédié : il s'ouvre par la
+                    // ligne « Accueil » de la colonne de gauche, juste au-dessus
+                    // des filtres. « Bibliothèque » reste actif sur les deux
+                    // pages, comme un seul et même espace.
+                    let library_active = self.tab == Tab::Library;
                     if widgets::tab(ui, "Boutique", self.tab == Tab::Store, &pal).clicked() {
                         self.tab = Tab::Store;
                     }
@@ -3325,8 +3413,17 @@ impl QuarkApp {
 
         if self.applied_theme != Some(self.lib.settings.theme) {
             theme::apply(ctx, self.lib.settings.theme);
+            // `theme::apply` remet le style d'egui à neuf : la densité choisie
+            // doit être reposée dans la foulée, sinon un changement de thème
+            // rouvrirait les marges compactes.
+            theme::apply_density(ctx, self.lib.settings.ui_compact);
             self.pal = theme::palette(self.lib.settings.theme);
             self.applied_theme = Some(self.lib.settings.theme);
+            self.applied_compact = Some(self.lib.settings.ui_compact);
+        }
+        if self.applied_compact != Some(self.lib.settings.ui_compact) {
+            theme::apply_density(ctx, self.lib.settings.ui_compact);
+            self.applied_compact = Some(self.lib.settings.ui_compact);
         }
 
         self.frames_alive = self.frames_alive.saturating_add(1);

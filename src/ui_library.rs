@@ -27,19 +27,18 @@ impl QuarkApp {
         // Vue grille : **seulement** la grille. La fiche du jeu s'ouvre en
         // surimpression, avec sa croix, et se ferme d'un clic à côté.
         let grid_only = view == ViewMode::Grid;
-        // L'accueil est une page pleine largeur : la colonne de gauche
-        // n'apparaît que dans la bibliothèque elle-même.
-        if !grid_only && !self.home {
-            egui::SidePanel::left("quark_library_list")
-                .exact_width(292.0)
-                .resizable(false)
-                .frame(
-                    egui::Frame::new()
-                        .fill(pal.panel)
-                        .stroke(egui::Stroke::new(1.0_f32, pal.border)),
-                )
-                .show(ctx, |ui| self.sidebar(ui));
-        }
+        // La colonne de gauche reste visible dans toutes les vues de la
+        // bibliothèque : c'est là que vivent « Accueil » et les filtres, même
+        // quand la grille occupe le reste de la fenêtre.
+        egui::SidePanel::left("quark_library_list")
+            .exact_width(self.lib.settings.sidebar_width.clamp(220.0, 340.0))
+            .resizable(false)
+            .frame(
+                egui::Frame::new()
+                    .fill(pal.panel)
+                    .stroke(egui::Stroke::new(1.0_f32, pal.border)),
+            )
+            .show(ctx, |ui| self.sidebar(ui));
 
         // La fiche dessine sa propre bannière floutée : le panneau doit laisser
         // passer le fond au lieu de le repeindre en noir uni.
@@ -339,12 +338,6 @@ impl QuarkApp {
         ui.add_space(14.0);
         ui.horizontal(|ui| {
             ui.add_space(24.0);
-            // La vue Grille n'a pas de colonne de gauche : sans ce bouton,
-            // l'accueil n'y serait accessible que par la barre du haut.
-            if widgets::ghost_button(ui, "Accueil", &pal, Icon::Home).clicked() {
-                self.home = true;
-            }
-            ui.add_space(8.0);
             ui.label(
                 crate::i18n::rich(format!(
                     "{} jeu{} · clic pour ouvrir la fiche",
@@ -375,7 +368,8 @@ impl QuarkApp {
         let padding = 24.0;
         let gap = 16.0;
         let available = (ui.available_width() - padding * 2.0).max(240.0);
-        let columns = ((available + gap) / 172.0).floor().clamp(2.0, 8.0) as usize;
+        let target = self.lib.settings.grid_tile_width.clamp(120.0, 220.0);
+        let columns = ((available + gap) / target).floor().clamp(2.0, 8.0) as usize;
         self.grid_columns = columns;
         let tile_w = ((available - gap * (columns as f32 - 1.0)) / columns as f32)
             .floor()
@@ -586,7 +580,6 @@ impl QuarkApp {
     fn sidebar(&mut self, ui: &mut egui::Ui) {
         let pal = self.pal;
         let ids = self.display_ids();
-        let view = self.lib.settings.view;
         let total = self.lib.games.len();
         // Sélection multiple (Ctrl+clic) : les actions sont appliquées après la
         // mise en page, pour ne pas emprunter `self` pendant les clôtures.
@@ -654,7 +647,6 @@ impl QuarkApp {
         }
         ui.add_space(8.0);
 
-        let age = self.page_at.elapsed().as_secs_f32();
         egui::ScrollArea::vertical()
             .id_salt("quark_library_scroll")
             .auto_shrink([false, false])
@@ -688,131 +680,31 @@ impl QuarkApp {
                     return;
                 }
 
-                match view {
-                    ViewMode::List => {
-                        ui.add_space(2.0);
-                        // Comme les colonnes de Steam : une section par statut,
-                        // avec son titre et son nombre de jeux. Un clic sur le
-                        // titre replie la section.
-                        let groups = self.lib.grouped_ids(&ids, self.lib.settings.group_by);
-                        for (position, group) in groups.iter().enumerate() {
-                            if !group.label.is_empty()
-                                && !library_section(
-                                    ui,
-                                    &pal,
-                                    &group.key,
-                                    &group.label,
-                                    group.ids.len(),
-                                    position == 0,
-                                    group.color.map(|(r, g, b)| Color32::from_rgb(r, g, b)),
-                                )
-                            {
-                                continue;
-                            }
-                            for id in &group.ids {
-                                self.sidebar_row(ui, id);
-                            }
-                        }
-                        ui.add_space(10.0);
+                ui.add_space(2.0);
+                // Comme les colonnes de Steam : une section par statut, avec
+                // son titre et son nombre de jeux. Un clic sur le titre replie
+                // la section. Les lignes restent identiques en vue grille :
+                // la grille principale n'est pas dupliquée dans la colonne.
+                let groups = self.lib.grouped_ids(&ids, self.lib.settings.group_by);
+                for (position, group) in groups.iter().enumerate() {
+                    if !group.label.is_empty()
+                        && !library_section(
+                            ui,
+                            &pal,
+                            &group.key,
+                            &group.label,
+                            group.ids.len(),
+                            position == 0,
+                            group.color.map(|(r, g, b)| Color32::from_rgb(r, g, b)),
+                        )
+                    {
+                        continue;
                     }
-                    ViewMode::Grid => {
-                        ui.add_space(4.0);
-                        let padding = 14.0;
-                        let gap = 10.0;
-                        let available = ui.available_width() - padding * 2.0;
-                        let columns = 3;
-                        self.grid_columns = columns;
-                        let tile_w = ((available - gap * (columns as f32 - 1.0)) / columns as f32)
-                            .floor()
-                            .max(80.0);
-                        let tile_h = tile_w * theme::COVER_RATIO;
-
-                        let mut index = 0usize;
-                        while index < ids.len() {
-                            ui.horizontal(|ui| {
-                                // Sans cela, l'espacement d'egui s'ajoutait aux
-                                // colonnes et la dernière sortait du panneau.
-                                ui.spacing_mut().item_spacing.x = 0.0;
-                                ui.add_space(padding);
-                                for slot in 0..columns {
-                                    let Some(id) = ids.get(index + slot) else {
-                                        break;
-                                    };
-                                    let Some(game) = self.lib.get(id).cloned() else {
-                                        continue;
-                                    };
-                                    if slot > 0 {
-                                        ui.add_space(gap);
-                                    }
-                                    let selected = self.selected.as_deref() == Some(id.as_str());
-                                    let marked = self.is_marked(id);
-                                    let running = self.is_running(id);
-                                    let tile_pal = pal.with_accent(self.game_accent(&game));
-                                    // Cascade verticale : chaque rangée démarre un
-                                    // peu après la précédente.
-                                    let appear = ((age - (index + slot) as f32 * 0.02) / 0.3)
-                                        .clamp(0.0, 1.0);
-                                    if appear < 1.0 {
-                                        ui.ctx().request_repaint();
-                                    }
-                                    let ps2_progress = self.ps2_progress(&game);
-                                    let response = game_tile(
-                                        ui,
-                                        &tile_pal,
-                                        &game,
-                                        ps2_progress,
-                                        Vec2::new(tile_w, tile_h),
-                                        selected,
-                                        marked,
-                                        running,
-                                        appear,
-                                        &mut self.thumbnails,
-                                    );
-                                    let clicked = response.clicked();
-                                    let double = response.double_clicked();
-                                    match game_context_menu(
-                                        &response,
-                                        if marked && self.marked.len() > 1 {
-                                            self.marked.len()
-                                        } else {
-                                            0
-                                        },
-                                        &pal,
-                                    ) {
-                                        Some(RowAction::Launch) => self.launch(ui.ctx(), id),
-                                        Some(RowAction::Customize) => {
-                                            self.select(id);
-                                            self.open_customize(id);
-                                        }
-                                        Some(RowAction::Settings) => {
-                                            self.select(id);
-                                            self.editing = Some(game.clone());
-                                        }
-                                        Some(RowAction::Remove) => {
-                                            self.select(id);
-                                            self.confirm_remove = vec![id.clone()];
-                                        }
-                                        None => {
-                                            if clicked {
-                                                if ui.input(|i| i.modifiers.command) {
-                                                    self.toggle_marked(id);
-                                                } else {
-                                                    self.select(id);
-                                                }
-                                            }
-                                            if double {
-                                                self.launch(ui.ctx(), id);
-                                            }
-                                        }
-                                    }
-                                }
-                            });
-                            ui.add_space(gap);
-                            index += columns;
-                        }
-                        ui.add_space(10.0);
+                    for id in &group.ids {
+                        self.sidebar_row(ui, id);
                     }
                 }
+                ui.add_space(10.0);
             });
 
         if remove_marked {
@@ -850,6 +742,7 @@ impl QuarkApp {
         let running = self.is_running(id);
         let row_pal = pal;
         let ps2_progress = self.ps2_progress(&game);
+        let row_height = self.lib.settings.sidebar_row_height.clamp(42.0, 56.0);
         let response = game_row(
             ui,
             &row_pal,
@@ -859,6 +752,7 @@ impl QuarkApp {
             marked,
             running,
             &mut self.thumbnails,
+            row_height,
         );
         let clicked = response.clicked();
         let double = response.double_clicked();
@@ -884,6 +778,11 @@ impl QuarkApp {
                         self.toggle_marked(id);
                     } else {
                         self.select(id);
+                        // En vue grille, la fiche s'ouvre en surimpression,
+                        // comme depuis une tuile de la grille principale.
+                        if self.lib.settings.view == ViewMode::Grid {
+                            self.overlay = Some(id.to_string());
+                        }
                     }
                 }
                 if double {
@@ -1049,9 +948,14 @@ impl QuarkApp {
                 }
             }
         };
+        // Temps HowLongToBeat : lus une fois par jeu, affichés dans l'aperçu.
+        let hltb_state = self.hltb.get(&id).cloned();
 
         // Fond de la fiche : la bannière du jeu, floutée et assombrie, au lieu
         // d'un noir complet. Peinte avant la zone défilante, donc derrière.
+        // La couleur du thème sert de repli quand le jeu n'a pas de bannière.
+        let backdrop_area = Rect::from_min_max(ui.cursor().min, ui.max_rect().max);
+        ui.painter_at(backdrop_area).rect_filled(backdrop_area, 0.0, pal.bg);
         if let Some(hero) = game
             .artwork
             .get(AssetKind::Hero)
@@ -1101,7 +1005,9 @@ impl QuarkApp {
             .auto_shrink([false, false])
             .show(ui, |ui| {
                 let width = ui.available_width();
-                let hero_height = theme::hero_height(width);
+                let hero_height = (theme::hero_height(width)
+                    * self.lib.settings.banner_scale.clamp(0.7, 1.1))
+                .max(240.0);
                 let hero_rect = Rect::from_min_size(ui.cursor().min, Vec2::new(width, hero_height));
 
                 // La bannière est dessinée dans un enfant dont la zone couvre
@@ -1123,65 +1029,15 @@ impl QuarkApp {
                     |ui| {
                         let (hero, _) = ui.allocate_exact_size(hero_rect.size(), Sense::hover());
                         let painter = ui.painter_at(hero);
-                        let hero_path = game
-                            .artwork
-                            .get(AssetKind::Hero)
-                            .filter(|p| p.exists())
-                            .cloned();
-                        // Bannière claire : les icônes doivent passer en sombre.
-                        let hero_light = hero_path
-                            .as_ref()
-                            .map(|path| self.is_light_image(path))
-                            .unwrap_or(false);
-                        let hero_tex = hero_path
-                            .as_ref()
-                            .and_then(|path| self.texture(ui.ctx(), path));
-                        if let Some(texture) = hero_tex {
-                            // Recadrée, jamais étirée : quelle que soit la
-                            // largeur de la fenêtre (plein écran compris), la
-                            // bannière garde ses proportions et les bords qui
-                            // dépassent sont rognés par le painter. La bannière
-                            // garde son bas net : aucun fondu vers le noir.
-                            draw_cover(&painter, &texture, hero);
-                            if let Some(previous) = &previous_hero {
-                                if let Some(old) = self.texture(ui.ctx(), previous) {
-                                    let mut painter = ui.painter_at(hero);
-                                    painter.set_opacity(1.0 - fade_eased);
-                                    draw_cover(&painter, &old, hero);
-                                }
-                            }
-                            // Transition fine vers le fond : la version floutée
-                            // de la même bannière recouvre le bas du hero en
-                            // fondu, si bien que les deux se rejoignent.
-                            if let Some(path) = hero_path.as_ref() {
-                                if let Some(blurred) = self.blurred_texture(ui.ctx(), path, self.lib.settings.hero_background_blur) {
-                                    crate::images::draw_cover_blend_to_background(
-                                        &painter,
-                                        &blurred,
-                                        hero,
-                                        (hero.height() * 0.4).clamp(70.0, 220.0),
-                                    );
-                                }
-                            }
-                        } else {
-                            // Sans bannière, un aplat teinté et la lettre du
-                            // jeu : l'espace reste habité au lieu de ressembler
-                            // à une image qui n'a pas chargé.
-                            painter.rect_filled(hero, 0.0, pal.surface);
-                            hero_placeholder(
-                                &painter,
-                                hero,
-                                &game.monogram_letter(),
-                                pal.accent,
-                                0.0,
-                            );
-                        }
-
-                        // Actions de la fiche, en haut à gauche de la bannière :
-                        // quatre icônes seules, sans menu ni bouton d'information.
+                        // Actions de la fiche, en haut à droite de la bannière :
+                        // quatre pastilles colorées, lisibles même sur une image
+                        // claire. La poubelle reste la plus à droite, comme une
+                        // action destructive à l'écart.
+                        let action = 36.0;
+                        let actions_width = 4.0 * action + 3.0 * 8.0;
                         let actions_rect = Rect::from_min_size(
-                            Pos2::new(hero.left() + 32.0, hero.top() + 14.0),
-                            Vec2::new(4.0 * 34.0 + 3.0 * 8.0, 34.0),
+                            Pos2::new(hero.right() - 32.0 - actions_width, hero.top() + 14.0),
+                            Vec2::new(actions_width, action),
                         );
                         ui.scope_builder(
                             egui::UiBuilder::new()
@@ -1189,49 +1045,45 @@ impl QuarkApp {
                                 .layout(Layout::left_to_right(Align::Center)),
                             |ui| {
                                 ui.spacing_mut().item_spacing.x = 8.0;
-                                if widgets::floating_icon_button(
+                                if widgets::tinted_icon_button(
                                     ui,
-                                    34.0,
+                                    action,
                                     Icon::Gear,
-                                    &pal,
-                                    &crate::i18n::tr("Paramètres du jeu"),
-                                    hero_light,
+                                    pal.accent,
+                                    "Paramètres du jeu",
                                 )
                                 .clicked()
                                 {
                                     gear_clicked = true;
                                 }
-                                if widgets::floating_icon_button(
+                                if widgets::tinted_icon_button(
                                     ui,
-                                    34.0,
+                                    action,
                                     Icon::Pencil,
-                                    &pal,
-                                    &crate::i18n::tr("Personnaliser"),
-                                    hero_light,
+                                    theme::GOLD,
+                                    "Personnaliser",
                                 )
                                 .clicked()
                                 {
                                     customize_clicked = true;
                                 }
-                                if widgets::floating_icon_button(
+                                if widgets::tinted_icon_button(
                                     ui,
-                                    34.0,
+                                    action,
                                     Icon::Log,
-                                    &pal,
-                                    &crate::i18n::tr("Journal de la session"),
-                                    hero_light,
+                                    theme::SUCCESS,
+                                    "Journal de la session",
                                 )
                                 .clicked()
                                 {
                                     log_clicked = true;
                                 }
-                                if widgets::floating_icon_button(
+                                if widgets::tinted_icon_button(
                                     ui,
-                                    34.0,
+                                    action,
                                     Icon::Trash,
-                                    &pal,
-                                    &crate::i18n::tr("Retirer de la bibliothèque"),
-                                    hero_light,
+                                    pal.danger,
+                                    "Retirer de la bibliothèque",
                                 )
                                 .clicked()
                                 {
@@ -1482,18 +1334,29 @@ impl QuarkApp {
                         // jeu à droite (temps de jeu, dernière session, genres).
                         // En dessous de 900 px, les actualités gardent toute la
                         // largeur comme avant.
-                        const SIDE: f32 = 300.0;
-                        if width >= 900.0 {
-                            let main_width = width - SIDE - 32.0;
+                        // L'aperçu reste visible dès 1024 px, là où la
+                        // colonne de gauche laissait autrefois trop peu de
+                        // place pour les actualités et la carte côte à côte.
+                        let side = self.lib.settings.overview_width.clamp(230.0, 340.0);
+                        if width >= side + 340.0 {
+                            let main_width = width - side - 32.0;
                             ui.horizontal_top(|ui| {
                                 ui.vertical(|ui| {
                                     ui.set_width(main_width);
                                     self.news_section(ui, &game, &pal, main_width);
                                 });
                                 ui.vertical(|ui| {
-                                    ui.set_width(SIDE);
+                                    ui.set_width(side);
                                     ui.add_space(26.0);
-                                    overview_card(ui, &game, &pal, &playtime_text);
+                                    if let Some(url) = overview_card(
+                                        ui,
+                                        &game,
+                                        &pal,
+                                        &playtime_text,
+                                        hltb_state.as_ref(),
+                                    ) {
+                                        open_url = Some(url);
+                                    }
                                 });
                             });
                         } else {
@@ -2819,7 +2682,14 @@ fn library_section(
 
 /// Carte « Aperçu » de la fiche : l'essentiel d'un coup d'œil, sans ouvrir le
 /// bloc d'informations. `playtime` est déjà adapté à la boutique liée.
-fn overview_card(ui: &mut egui::Ui, game: &Game, pal: &Palette, playtime: &str) {
+fn overview_card(
+    ui: &mut egui::Ui,
+    game: &Game,
+    pal: &Palette,
+    playtime: &str,
+    hltb: Option<&crate::app::HltbState>,
+) -> Option<String> {
+    let mut open_hltb = false;
     egui::Frame::new()
         .fill(pal.surface)
         .stroke(egui::Stroke::new(1.0_f32, pal.border))
@@ -2842,7 +2712,107 @@ fn overview_card(ui: &mut egui::Ui, game: &Game, pal: &Palette, playtime: &str) 
                         .color(pal.text),
                 );
             }
+
+            // HowLongToBeat : un bloc distinct, pour ne pas mélanger les temps
+            // de la communauté aux statistiques locales de Quark.
+            ui.add_space(12.0);
+            ui.separator();
+            ui.add_space(8.0);
+            ui.horizontal(|ui| {
+                ui.label(
+                    crate::i18n::rich("HOWLONGTOBEAT")
+                        .size(10.0)
+                        .strong()
+                        .color(pal.accent),
+                );
+                if let Some(crate::app::HltbState::Ready(report)) = hltb {
+                    if let Some(headline) = report.headline() {
+                        ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
+                            ui.label(
+                                crate::i18n::rich(crate::howlongtobeat::Report::hours_label(
+                                    headline,
+                                ))
+                                .size(12.5)
+                                .strong()
+                                .color(pal.text),
+                            );
+                        });
+                    }
+                }
+            });
+            ui.add_space(5.0);
+            match hltb {
+                Some(crate::app::HltbState::Loading) | None => {
+                    ui.label(
+                        crate::i18n::rich("Recherche des temps…")
+                            .size(11.5)
+                            .color(pal.text_faint),
+                    );
+                }
+                Some(crate::app::HltbState::Failed(message)) => {
+                    ui.label(
+                        crate::i18n::rich("Temps indisponibles")
+                            .size(11.5)
+                            .color(pal.text_faint),
+                    )
+                    .on_hover_text(message);
+                }
+                Some(crate::app::HltbState::Ready(report)) => {
+                    if report.headline().is_none() {
+                        ui.label(
+                            crate::i18n::rich("Pas encore de temps soumis.")
+                                .size(11.5)
+                                .color(pal.text_faint),
+                        );
+                    } else {
+                        if let Some(main) = report.main {
+                            overview_line(
+                                ui,
+                                pal,
+                                "Histoire principale",
+                                &crate::howlongtobeat::Report::hours_label(main),
+                            );
+                        }
+                        if let Some(extra) = report.main_extra {
+                            overview_line(
+                                ui,
+                                pal,
+                                "Histoire + extras",
+                                &crate::howlongtobeat::Report::hours_label(extra),
+                            );
+                        }
+                        if let Some(hundred) = report.completionist {
+                            overview_line(
+                                ui,
+                                pal,
+                                "Complétionniste",
+                                &crate::howlongtobeat::Report::hours_label(hundred),
+                            );
+                        }
+                        let link = ui.label(
+                            crate::i18n::rich("Voir sur HowLongToBeat →")
+                                .size(10.5)
+                                .color(pal.text_faint)
+                                .underline(),
+                        );
+                        if link
+                            .on_hover_cursor(egui::CursorIcon::PointingHand)
+                            .clicked()
+                        {
+                            open_hltb = true;
+                        }
+                    }
+                }
+            }
         });
+    if open_hltb {
+        hltb.and_then(|state| match state {
+            crate::app::HltbState::Ready(report) => Some(report.url()),
+            _ => None,
+        })
+    } else {
+        None
+    }
 }
 
 /// Une ligne « libellé … valeur » de la carte d'aperçu.
@@ -2866,9 +2836,12 @@ fn game_row(
     marked: bool,
     running: bool,
     textures: &mut crate::images::ThumbnailCache,
+    row_height: f32,
 ) -> egui::Response {
-    let (rect, response) =
-        ui.allocate_exact_size(Vec2::new(ui.available_width(), 46.0), Sense::click());
+    let (rect, response) = ui.allocate_exact_size(
+        Vec2::new(ui.available_width(), row_height.max(42.0)),
+        Sense::click(),
+    );
     let painter = ui.painter_at(rect);
     let id = egui::Id::new(("quark_row", game.id.as_str()));
     let hover = ui
@@ -3040,106 +3013,6 @@ fn draw_ra_badge(
         galley,
         pal.text,
     );
-}
-
-/// Tuile de la vue grille (couverture verticale 2:3).
-fn game_tile(
-    ui: &mut egui::Ui,
-    pal: &Palette,
-    game: &Game,
-    ps2_progress: Option<crate::app::Ps2Progress>,
-    size: Vec2,
-    selected: bool,
-    marked: bool,
-    running: bool,
-    // Progression de l'apparition de la page (0 → 1), décalée par tuile.
-    appear: f32,
-    textures: &mut crate::images::ThumbnailCache,
-) -> egui::Response {
-    let (rect, response) = ui.allocate_exact_size(size, Sense::click());
-    // Les tuiles montent de quelques pixels en apparaissant ; la place réservée
-    // ne bouge pas, seule la peinture est décalée.
-    let rect = rect.translate(Vec2::new(0.0, (1.0 - appear) * 9.0));
-    let mut painter = ui.painter_at(rect);
-    painter.set_opacity(appear);
-    let id = egui::Id::new(("quark_tile", game.id.as_str()));
-    let hover = ui
-        .ctx()
-        .animate_bool_with_time(id.with("hover"), response.hovered(), 0.12);
-    let mark = ui
-        .ctx()
-        .animate_bool_with_time(id.with("selected"), selected || marked, 0.16);
-
-    // Le survol « soulève » la tuile : la couverture se resserre d'un ou deux
-    // pixels et un liseré s'allume. Tout est peint, la grille ne bouge pas.
-    let cover_rect = rect.shrink(2.0 * hover);
-    painter.rect_filled(rect, 6.0, pal.surface);
-    let cover = game
-        .artwork
-        .get(AssetKind::Cover)
-        .filter(|p| p.exists())
-        .cloned();
-    let texture = cover.as_ref().and_then(|path| textures.get(ui.ctx(), path));
-    match texture {
-        // Couverture recadrée au centre quand le format diffère (jamais
-        // déformée), grâce au painter limité à la tuile.
-        Some(texture) => rounded_cover_tinted(
-            ui,
-            cover_rect,
-            texture,
-            8.0,
-            Color32::from_white_alpha((appear * 255.0).round() as u8),
-        ),
-        None => widgets::monogram(
-            &painter,
-            cover_rect,
-            &game.monogram_letter(),
-            theme::monogram_color(&game.name),
-            pal,
-        ),
-    }
-
-    let accent = mark.max(hover);
-    if accent > 0.0 {
-        painter.rect_stroke(
-            rect,
-            8.0,
-            egui::Stroke::new((2.0 + mark).min(3.0), pal.accent.gamma_multiply(accent)),
-            egui::StrokeKind::Inside,
-        );
-    }
-    if game.exe_missing() {
-        painter.rect_stroke(
-            rect,
-            8.0,
-            egui::Stroke::new(2.0_f32, pal.danger),
-            egui::StrokeKind::Inside,
-        );
-    }
-    if let Some(progress) = ps2_progress {
-        draw_ra_badge(&painter, cover_rect, pal, progress);
-    }
-    if running {
-        let badge = Rect::from_min_size(
-            Pos2::new(rect.left() + 6.0, rect.top() + 6.0),
-            Vec2::new(34.0, 18.0),
-        );
-        // La pastille respire tant qu'un jeu tourne : c'est le seul état
-        // animé en continu, et il ne dure que le temps de la partie.
-        let time = ui.input(|i| i.time) as f32;
-        let pulse = 0.62 + 0.38 * (time * 2.6).sin().abs();
-        ui.ctx().request_repaint();
-        painter.rect_filled(badge, 3.0, pal.accent.gamma_multiply(0.55 + 0.25 * pulse));
-        painter.text(
-            badge.center(),
-            Align2::CENTER_CENTER,
-            "EN JEU",
-            FontId::proportional(9.5),
-            eframe::egui::Color32::BLACK,
-        );
-    }
-
-    response.on_hover_text(format!("{} · clic droit : paramètres", game.name))
 }
 
 /// Couleur d'une pastille de statut (`None` : pas de pastille).

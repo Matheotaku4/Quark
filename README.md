@@ -6,7 +6,7 @@ own, launches Windows games through Proton (or umu-launcher), and stays out of
 the way with an AMOLED interface, a store page, save snapshots and an in-game
 overlay.
 
-This is the **1.4.3** documentation. Older release notes are kept on the GitHub
+This is the **1.4.4** documentation. Older release notes are kept on the GitHub
 releases page; `docs/release-notes.md` only describes the release currently
 being published.
 
@@ -27,20 +27,17 @@ The wiki is published from the versioned source in [`wiki/`](wiki/) by the
 | --- | --- |
 | ![Onboarding](docs/images/onboarding-fr.png) | ![What's new](docs/images/whats-new-fr.png) |
 
-## What's new in 1.4.3
+## What's new in 1.4.4
 
-- **Game settings, rebuilt.** A wide modal (up to 960 px) with a game header, General / PlayStation 2 / DLL overrides tabs, a 220 px section navigation, cards for every group and a fixed footer. Fields, paths, option rows and status rows now come from shared components.
-- **Settings as pages, not sections.** Quark settings use the full window with a 220 px navigation. Appearance shows the theme grid in five columns; every other tab uses cards, segmented choices and `option_row` toggles.
-- **Launch options and environment variables.** Launch tools sit in a two-column option grid, gamescope opens its own surface panel, and the wrapper keeps a dedicated reset. Environment variables use a fixed name column, an inline `=` and a remove button.
-- **Readable from 1024 px.** The two profile cards stack below 670 px of content, and segmented controls switch to a compact style when their labels would overflow.
-
-| PlayStation 2 |
-| --- |
-| ![PlayStation 2 settings](docs/images/ps2-tab-en.png) |
+- **A denser interface, same typography.** Compact mode is now the default: the top bar, sidebar, list rows, grid covers, page margins and card spacing all take less room, while font sizes are unchanged. Every dimension can be adjusted in **Settings → Appearance → Interface size**, with a reset button.
+- **Six size controls.** Sidebar width, library row height, cover width, banner height, overview width and compact spacing are all adjustable, from 1024 to 1440 px without horizontal overflow.
+- **One hero backdrop for a game.** The separate banner is gone: the game page uses a single blurred hero image as its background, with the cover and title over it. Settings, customize, logs and remove are now colored action buttons in the top-right corner.
+- **HowLongToBeat in the overview.** Main story, main + extras and completionist times are fetched once per game, cached in memory and shown beside the news. The block links to the game's HowLongToBeat page and degrades to a discreet message when the service is unavailable.
+- **Simpler navigation.** The Home tab left the top bar. Home is now the row above Filters in the left column, and that column stays visible in list and grid views so Home is always one click away.
 
 ## Table of contents
 
-1. [What's new in 1.4.3](#whats-new-in-143)
+1. [What's new in 1.4.4](#whats-new-in-144)
 2. [What Quark does](#what-quark-does)
 3. [Installation](#installation)
 4. [First launch](#first-launch)
@@ -81,9 +78,10 @@ The wiki is published from the versioned source in [`wiki/`](wiki/) by the
 - **Local save snapshots.** Ludusavi creates verified snapshots before a launch
   and after a session, with preview, inventory and restore.
 - **A sober, configurable interface.** Thirteen dark themes, French or English,
-  list or grid, a home carousel, a random blurred hero background, status
-  columns, tags, filters, a Ctrl+K command palette and an embedded Archivo font
-  with Lucide icons.
+  compact spacing and adjustable panel sizes, list or grid, a home carousel, a
+  random blurred hero background, HowLongToBeat times in the game overview,
+  status columns, tags, filters, a Ctrl+K command palette and an embedded
+  Archivo font with Lucide icons.
 
 Quark is not a store: it never buys anything, and it never downloads or
 extracts games from third-party download sites. Store search results open in
@@ -98,8 +96,8 @@ Download `quark-<version>-linux-x86_64.tar.gz` and its `.sha256` file from the
 then verify and unpack it:
 
 ```bash
-sha256sum -c quark-1.4.3-linux-x86_64.tar.gz.sha256
-tar -xzf quark-1.4.3-linux-x86_64.tar.gz
+sha256sum -c quark-1.4.4-linux-x86_64.tar.gz.sha256
+tar -xzf quark-1.4.4-linux-x86_64.tar.gz
 ./quark/quark
 ```
 
@@ -141,7 +139,7 @@ A new configuration opens a three-step welcome guide. It is not blocking:
 **Skip** closes it. The guide changes the interface language, startup page,
 theme and hero background live, then offers to add a first game. Existing
 configurations are marked as already welcomed, so updating from 1.1.4 never
-shows it unexpectedly; they still see the 1.4.3 summary once.
+shows it unexpectedly; they still see the 1.4.4 summary once.
 
 1. Open **Settings → Stores & tools** and install Legendary and/or gogdl with
    **Install / update**. Quark verifies the SHA-256 digest published by GitHub
@@ -158,8 +156,10 @@ shows it unexpectedly; they still see the 1.4.3 summary once.
 
 ### Home
 
-Home has its own tab in the top bar, next to Store, My games and Library. The
-home page is a carousel of recently played games. The banner is the game's
+Home is the first row of the left column, just above **Filters**. The top bar
+keeps Store, My games and Library; the Library tab stays selected on Home. The
+left column is also visible in grid view, so Home and Filters remain reachable
+from every library layout. The home page is a carousel of recently played games. The banner is the game's
 hero image, the logo (or title) sits above a **Continue/Stop** button, and the
 playtime, last session, ProtonDB rating and native-Linux badge are visible at a
 glance. Below the carousel, the whole library is shown as covers. Sort it by
@@ -432,7 +432,8 @@ Settings occupy the whole window, with a left sidebar and sections separated by
 accented headings. The content scrolls independently and `Esc` or the top-right
 **×** closes the page.
 
-- **Appearance:** interface language, 13 themes, random hero background,
+- **Appearance:** interface language, 13 themes, interface size (compact mode,
+  sidebar, rows, covers, banner and overview widths), random hero background,
   startup page, list/grid, carousel, notification icon.
 - **In game:** overlay shortcut, screenshot key, achievement display and
   cloud-save toggle.
@@ -443,7 +444,8 @@ accented headings. The content scrolls independently and `Esc` or the top-right
 - **About:** version, updates, release link, guide and what's-new actions.
 
 **Appearance** contains the startup page, interface language, 13-theme grid,
-random hero background, default view, home carousel and notification icon. **In game** contains the overlay shortcut, screenshot key, achievement
+interface size controls, random hero background, default view, home carousel
+and notification icon. **In game** contains the overlay shortcut, screenshot key, achievement
 display and cloud-save toggle. **New games** contains the values copied into
 each newly added game (prefix, install folder, arguments, runtime, anti-cheat,
 launch options, environment variables). These are defaults, not global

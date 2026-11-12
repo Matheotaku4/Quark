@@ -399,6 +399,25 @@ pub fn apply(ctx: &egui::Context, mode: ThemeMode) {
     ctx.set_style(style);
 }
 
+/// Règle uniquement la densité (marges, espacements, barres de défilement).
+/// Les polices restent identiques : « compact » ne doit jamais rendre le texte
+/// plus petit, seulement libérer de la place autour.
+pub fn apply_density(ctx: &egui::Context, compact: bool) {
+    ctx.style_mut(|style| {
+        if compact {
+            style.spacing.item_spacing = Vec2::new(6.0, 5.0);
+            style.spacing.button_padding = Vec2::new(9.0, 4.0);
+            style.spacing.scroll.bar_width = 8.0;
+            style.spacing.menu_margin = egui::Margin::same(5);
+        } else {
+            style.spacing.item_spacing = Vec2::new(8.0, 7.0);
+            style.spacing.button_padding = Vec2::new(12.0, 6.0);
+            style.spacing.scroll.bar_width = 10.0;
+            style.spacing.menu_margin = egui::Margin::same(7);
+        }
+    });
+}
+
 /// Hauteur de bannière : une bande panoramique qui laisse respirer le titre et
 /// l'action principale sans repousser les actualités hors de l'écran.
 pub fn hero_height(width: f32) -> f32 {
