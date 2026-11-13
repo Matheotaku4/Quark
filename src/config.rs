@@ -1008,7 +1008,7 @@ pub struct Settings {
     /// neuve ou une configuration antérieure à 1.2.
     pub last_seen_version: String,
     /// « Mes jeux » en liste (une ligne par jeu, bouton d'action visible) au lieu
-    /// de la grille de jaquettes. Faux par défaut : l'affichage historique.
+    /// de la grille de jaquettes. Vrai par défaut depuis la refonte de l'interface.
     pub my_games_list: bool,
     /// Affiche un hero aléatoire flouté derrière l'accueil et la bibliothèque.
     pub hero_background: bool,
@@ -2858,9 +2858,10 @@ mod tests {
     }
 
     #[test]
-    fn mes_jeux_s_ouvre_en_grille_par_defaut() {
-        // Les configurations existantes n'ont pas ce réglage : elles gardent la grille.
-        assert!(!Settings::default().my_games_list);
+    fn mes_jeux_s_ouvre_en_liste_par_defaut() {
+        // Depuis la refonte de l'interface, « Mes jeux » ouvre la liste ; le
+        // réglage `#[serde(default)]` applique ce défaut aux anciennes configs.
+        assert!(Settings::default().my_games_list);
     }
 
     #[test]

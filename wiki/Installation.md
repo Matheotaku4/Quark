@@ -3,7 +3,7 @@
 > [Home](Home) · **Installation** · [Getting started](Getting-Started) ·
 > [Troubleshooting](Troubleshooting)
 
-![Settings page](https://raw.githubusercontent.com/Matheotaku4/Quark-Launcher/main/docs/images/settings-en.png)
+![Settings page](https://raw.githubusercontent.com/Matheotaku4/Quark/main/docs/images/settings-en.png)
 
 ## Requirements
 
@@ -19,13 +19,13 @@ Quark needs no Quark account and sends no telemetry.
 
 ## Release archive
 
-1. Download `quark-1.3.1-linux-x86_64.tar.gz` and its `.sha256` file from the
-   [latest release](https://github.com/Matheotaku4/Quark-Launcher/releases/latest).
+1. Download `quark-1.4.6-linux-x86_64.tar.gz` and its `.sha256` file from the
+   [latest release](https://github.com/Matheotaku4/Quark/releases/latest).
 2. Verify the archive **before** extracting it:
 
    ```bash
-   sha256sum -c quark-1.3.1-linux-x86_64.tar.gz.sha256
-   tar -xzf quark-1.3.1-linux-x86_64.tar.gz
+   sha256sum -c quark-1.4.6-linux-x86_64.tar.gz.sha256
+   tar -xzf quark-1.4.6-linux-x86_64.tar.gz
    ./quark/quark
    ```
 
@@ -47,7 +47,7 @@ in `quark.desktop`.
 
 ## Update from 1.1.4 or later
 
-Quark 1.3.1 keeps the `config.json` format used by 1.1.4 and adds fields with
+Quark 1.4.6 keeps the `config.json` format used by 1.1.4 and adds fields with
 default values. Updating does not require resetting the library and does not
 force the welcome guide on existing installations.
 
@@ -67,12 +67,12 @@ executable is kept until the next successful start.
 
 If automatic updates are disabled or fail:
 
-1. Quit Quark, then download the 1.3.1 archive and its checksum.
+1. Quit Quark, then download the 1.4.6 archive and its checksum.
 2. Verify the checksum, then replace only the binary:
 
    ```bash
-   sha256sum -c quark-1.3.1-linux-x86_64.tar.gz.sha256
-   tar -xzf quark-1.3.1-linux-x86_64.tar.gz
+   sha256sum -c quark-1.4.6-linux-x86_64.tar.gz.sha256
+   tar -xzf quark-1.4.6-linux-x86_64.tar.gz
    install -Dm755 quark/quark ~/.local/bin/quark
    ```
 
@@ -80,7 +80,7 @@ If automatic updates are disabled or fail:
 
 Your games, prefixes, saves, artwork, Legendary/gogdl accounts and statistics
 stay in the same folders. The welcome guide is skipped for an existing library;
-the **What's new in 1.3.1** summary appears once.
+the **What's new in 1.4.6** summary appears once.
 
 > Do not delete `~/.config/quark/config.json` to "repair" an update. If the file
 > cannot be read, Quark keeps a `config.json.corrompu-<timestamp>` copy and
@@ -89,8 +89,8 @@ the **What's new in 1.3.1** summary appears once.
 ## Build from source
 
 ```bash
-git clone https://github.com/Matheotaku4/Quark-Launcher.git
-cd Quark-Launcher
+git clone https://github.com/Matheotaku4/Quark.git
+cd Quark
 cargo build --release --locked
 ./target/release/quark
 ```
@@ -132,7 +132,7 @@ does not contain a game's saves.
   published checksum before running.
 - An update that does not match the expected tag is refused.
 - The release notes for the current release are in
-  [`docs/release-notes.md`](https://github.com/Matheotaku4/Quark-Launcher/blob/main/docs/release-notes.md).
+  [`docs/release-notes.md`](https://github.com/Matheotaku4/Quark/blob/main/docs/release-notes.md).
 
 ## If something goes wrong
 

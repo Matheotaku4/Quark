@@ -4,7 +4,7 @@
 > RetroAchievements** · [Overlay](Overlay-and-Achievements) ·
 > [Troubleshooting](Troubleshooting)
 
-![PlayStation 2 game tab](https://raw.githubusercontent.com/Matheotaku4/Quark-Launcher/main/docs/images/ps2-tab-en.png)
+![PlayStation 2 game tab](https://raw.githubusercontent.com/Matheotaku4/Quark/main/docs/images/ps2-tab-en.png)
 
 ## What the integration does
 

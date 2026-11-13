@@ -10,10 +10,10 @@ This is the **1.4.6** documentation. Older release notes are kept on the GitHub
 releases page; `docs/release-notes.md` only describes the release currently
 being published.
 
-**Documentation:** [GitHub Wiki](https://github.com/Matheotaku4/Quark-Launcher/wiki) ·
-[Getting started](https://github.com/Matheotaku4/Quark-Launcher/wiki/Getting-Started) ·
-[Proton and Wine options](https://github.com/Matheotaku4/Quark-Launcher/wiki/Proton-Wine-and-Launch-Options) ·
-[Troubleshooting](https://github.com/Matheotaku4/Quark-Launcher/wiki/Troubleshooting).
+**Documentation:** [GitHub Wiki](https://github.com/Matheotaku4/Quark/wiki) ·
+[Getting started](https://github.com/Matheotaku4/Quark/wiki/Getting-Started) ·
+[Proton and Wine options](https://github.com/Matheotaku4/Quark/wiki/Proton-Wine-and-Launch-Options) ·
+[Troubleshooting](https://github.com/Matheotaku4/Quark/wiki/Troubleshooting).
 The wiki is published from the versioned source in [`wiki/`](wiki/) by the
 `.github/workflows/wiki.yml` workflow.
 
@@ -97,7 +97,7 @@ your browser.
 ### Release archive
 
 Download `quark-<version>-linux-x86_64.tar.gz` and its `.sha256` file from the
-[latest release](https://github.com/Matheotaku4/Quark-Launcher/releases/latest),
+[latest release](https://github.com/Matheotaku4/Quark/releases/latest),
 then verify and unpack it:
 
 ```bash
@@ -125,8 +125,8 @@ X11 or Wayland, OpenGL and the usual font/GL libraries of your distribution.
 ### Build from source
 
 ```bash
-git clone https://github.com/Matheotaku4/Quark-Launcher.git
-cd Quark-Launcher
+git clone https://github.com/Matheotaku4/Quark.git
+cd Quark
 cargo build --release --locked
 ./target/release/quark
 ```

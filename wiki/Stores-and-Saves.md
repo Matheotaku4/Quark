@@ -3,7 +3,7 @@
 > [Home](Home) · [Getting started](Getting-Started) · **Stores** ·
 > [Library](Library-and-Views) · [Troubleshooting](Troubleshooting)
 
-![Store page](https://raw.githubusercontent.com/Matheotaku4/Quark-Launcher/main/docs/images/store-en.png)
+![Store page](https://raw.githubusercontent.com/Matheotaku4/Quark/main/docs/images/store-en.png)
 
 ## The three sources
 

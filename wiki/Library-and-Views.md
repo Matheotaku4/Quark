@@ -3,7 +3,7 @@
 > [Home](Home) · [Getting started](Getting-Started) · **Library** ·
 > [Stores](Stores-and-Saves) · [Settings](Settings)
 
-![Library in list view](https://raw.githubusercontent.com/Matheotaku4/Quark-Launcher/main/docs/images/library-fr.png)
+![Library in list view](https://raw.githubusercontent.com/Matheotaku4/Quark/main/docs/images/library-fr.png)
 
 ## Two layouts
 

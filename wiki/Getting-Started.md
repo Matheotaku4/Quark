@@ -3,7 +3,7 @@
 > [Home](Home) · [Installation](Installation) · **Getting started** ·
 > [Library](Library-and-Views) · [Settings](Settings)
 
-![Welcome guide](https://raw.githubusercontent.com/Matheotaku4/Quark-Launcher/main/docs/images/onboarding-en.png)
+![Welcome guide](https://raw.githubusercontent.com/Matheotaku4/Quark/main/docs/images/onboarding-en.png)
 
 ## The welcome guide
 
@@ -35,7 +35,7 @@ concrete changes in a few sentences, not a commit log. Once closed, the version
 is stored in `last_seen_version`. To see it again: **Settings → About → Review
 what's new**.
 
-![What's new in 1.3.1](https://raw.githubusercontent.com/Matheotaku4/Quark-Launcher/main/docs/images/whats-new-en.png)
+![What's new in 1.4.6](https://raw.githubusercontent.com/Matheotaku4/Quark/main/docs/images/whats-new-en.png)
 
 ## Add a game
 

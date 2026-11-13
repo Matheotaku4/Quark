@@ -20,5 +20,5 @@
 **Help**
 
 - [Troubleshooting](Troubleshooting)
-- [Latest release](https://github.com/Matheotaku4/Quark-Launcher/releases/latest)
-- [Repository](https://github.com/Matheotaku4/Quark-Launcher)
+- [Latest release](https://github.com/Matheotaku4/Quark/releases/latest)
+- [Repository](https://github.com/Matheotaku4/Quark)

@@ -3,7 +3,7 @@
 > [Home](Home) · [Themes and appearance](Themes-and-Appearance) ·
 > **Settings** · [Proton and Wine](Proton-Wine-and-Launch-Options)
 
-![Settings](https://raw.githubusercontent.com/Matheotaku4/Quark-Launcher/main/docs/images/settings-en.png)
+![Settings](https://raw.githubusercontent.com/Matheotaku4/Quark/main/docs/images/settings-en.png)
 
 Since 1.2, settings fill the whole window, with side navigation and separate
 sections. Every change is saved automatically; there is no **Apply** button.

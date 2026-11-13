@@ -5,10 +5,10 @@ games and your Steam, Epic Games and GOG libraries together, launches Windows
 games through Proton or umu-launcher, and adds an in-game overlay, screenshots,
 achievements and verified local saves.
 
-This documentation describes **Quark 1.3.1**. It is also versioned in the
-repository under [`wiki/`](https://github.com/Matheotaku4/Quark-Launcher/tree/main/wiki).
+This documentation describes **Quark 1.4.6**. It is also versioned in the
+repository under [`wiki/`](https://github.com/Matheotaku4/Quark/tree/main/wiki).
 
-![Quark home](https://raw.githubusercontent.com/Matheotaku4/Quark-Launcher/main/docs/images/home-en.png)
+![Quark home](https://raw.githubusercontent.com/Matheotaku4/Quark/main/docs/images/home-en.png)
 
 ## Where to start
 
@@ -77,7 +77,7 @@ repository under [`wiki/`](https://github.com/Matheotaku4/Quark-Launcher/tree/ma
 
 Quark is distributed under the MIT licence. The Archivo font is under the SIL
 Open Font License and the Lucide icons under ISC. See
-[`assets/fonts/`](https://github.com/Matheotaku4/Quark-Launcher/tree/main/assets/fonts)
+[`assets/fonts/`](https://github.com/Matheotaku4/Quark/tree/main/assets/fonts)
 and the release notes for the exact files.
 
 ---

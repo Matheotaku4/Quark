@@ -874,7 +874,7 @@ fn apply_dialog(app: &mut QuarkApp, dialog: &str) -> Result<(), String> {
             app.update = crate::app::UpdateState::Available(crate::update::Release {
                 tag_name: "v0.4.0".to_string(),
                 name: "Quark v0.4.0".to_string(),
-                html_url: "https://github.com/Matheotaku4/Quark-Launcher/releases".to_string(),
+                html_url: "https://github.com/Matheotaku4/Quark/releases".to_string(),
                 assets: vec![crate::update::Asset {
                     name: "quark-0.4.0-linux-x86_64.tar.gz".to_string(),
                     browser_download_url: String::new(),
