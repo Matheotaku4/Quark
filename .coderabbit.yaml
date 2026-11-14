@@ -1,0 +1,9 @@
+reviews:
+  profile: assertive
+  collapse_walkthrough: false
+  review_details: true
+  instructions: >-
+    Rédige toujours tes résumés et tes explications en français clair et simple,
+    comme si tu t'adressais à quelqu'un qui ne sait pas coder. Explique l'impact
+    concret de chaque bug pour l'utilisateur final, et fournis des instructions
+    prêtes à être copiées-collées pour qu'un autre agent IA puisse corriger le problème.
