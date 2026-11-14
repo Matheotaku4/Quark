@@ -62,8 +62,7 @@ screenshots, but the shortcut may not work.
 ~/.local/share/quark/screenshots/<game>/
 ```
 
-- Epic and GOG screenshots play a short sound and show a desktop notification.
-- Steam screenshots stay silent.
+- Every screenshot plays a short chime and shows a desktop notification, including Steam captures.
 - The key can be changed in **Settings → In game**.
 - Capture goes through X11/XWayland; on native Wayland the compositor may ask
   for permission or refuse.

@@ -28,7 +28,6 @@ pub struct Target {
 pub struct CaptureEvent {
     pub path: PathBuf,
     pub game_name: String,
-    pub provider: Option<Provider>,
 }
 
 #[derive(Debug, Clone)]
@@ -850,7 +849,6 @@ fn hotkey_loop(
                         let _ = sender.send(HotkeyEvent::Capture(CaptureEvent {
                             path,
                             game_name: target.name.clone(),
-                            provider: target.provider,
                         }));
                     }
                 });

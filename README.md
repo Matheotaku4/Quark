@@ -70,7 +70,7 @@ The wiki is published from the versioned source in [`wiki/`](wiki/) by the
 - **A real in-game overlay.** Press `Shift+Backspace` to open a Steam-like
   panel over the game and read its achievements. Enable **Show FPS in-game** to
   install small `d3d11.dll` and `dxgi.dll` proxies that draw a Steam-like
-  counter in DirectX 11 and 12 games. `F12` takes a screenshot.
+  counter in DirectX 11 and 12 games. `F12` takes a screenshot and plays a short chime.
 - **Cloud saves for Epic and GOG.** The account save is fetched after an
   installation, then synchronized again when the game exits, using the same
   upstream data as the official clients.
@@ -338,8 +338,8 @@ session clock, store and achievement progress. It is closed by the same
 shortcut, `Esc`, or the close button.
 
 `F12` takes a screenshot under
-`~/.local/share/quark/screenshots/<game>/`. Epic and GOG captures also play a
-short chime and raise a desktop notification; Steam captures stay silent. The
+`~/.local/share/quark/screenshots/<game>/` and plays a short chime for every
+store, including Steam. A desktop notification confirms the saved file. The
 overlay remains mouse-transparent while closed, so it never steals a click from
 the game.
 

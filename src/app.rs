@@ -3688,9 +3688,9 @@ impl QuarkApp {
             });
     }
 
-    /// Captures F12 et événements de l'overlay. Le son et la notification ne
-    /// sont joués que pour Epic/GOG, comme demandé ; Steam garde l'overlay
-    /// silencieux.
+    /// Captures F12 et événements de l'overlay. Toutes les captures jouent le
+    /// carillon et affichent une notification, quelle que soit la boutique :
+    /// c'est le retour attendu de la touche F12, y compris pour Steam.
     fn poll_overlay(&mut self, ctx: &egui::Context) {
         // Overlay désactivé : relâcher la touche globale F12, sinon elle
         // resterait prise au détriment du jeu.
@@ -3754,17 +3754,11 @@ impl QuarkApp {
                 .and_then(|name| name.to_str())
                 .unwrap_or("capture.png")
                 .to_string();
-            let provider = capture.provider;
-            if matches!(
-                provider,
-                Some(crate::providers::Provider::Epic) | Some(crate::providers::Provider::Gog)
-            ) {
-                crate::overlay::play_chime();
-                crate::overlay::desktop_notification(
-                    "Capture enregistrée",
-                    &format!("{} · {file}", capture.game_name),
-                );
-            }
+            crate::overlay::play_chime();
+            crate::overlay::desktop_notification(
+                "Capture enregistrée",
+                &format!("{} · {file}", capture.game_name),
+            );
             self.toast_info(format!("Capture enregistrée · {}", capture.path.display()));
             ctx.request_repaint();
         }
