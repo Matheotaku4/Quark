@@ -2752,7 +2752,7 @@ impl QuarkApp {
                                     }
                                     ui.vertical(|ui| {
                                         ui.label(
-                                            crate::i18n::rich(&game.name).size(13.0).color(
+                                            crate::i18n::raw(&game.name).size(13.0).color(
                                                 if game.owned { pal.text_faint } else { pal.text },
                                             ),
                                         )
@@ -2911,7 +2911,7 @@ impl QuarkApp {
                     );
                     ui.add(
                         egui::Label::new(
-                            crate::i18n::rich(&game.name)
+                            crate::i18n::raw(&game.name)
                                 .size(24.0)
                                 .strong()
                                 .color(pal.text),
@@ -3255,7 +3255,7 @@ impl QuarkApp {
                                                                                             );
                                                                                             ui.add(
                                                                                                 egui::Label::new(
-                                                                                                    crate::i18n::rich(&hit.title)
+                                                                                                    crate::i18n::raw(&hit.title)
                                                                                                         .size(12.0)
                                                                                                         .color(pal.text),
                                                                                                 )
@@ -3816,7 +3816,7 @@ impl QuarkApp {
         let modal = egui::Modal::new(egui::Id::new("quark_customize")).show(ctx, |ui| {
             ui.set_min_width(700.0);
             ui.label(
-                crate::i18n::rich(format!("Personnaliser · {}", game.name))
+                crate::i18n::rich_with("Personnaliser · {}", &[&game.name])
                     .size(17.0)
                     .color(pal.text),
             );
@@ -4181,7 +4181,7 @@ impl QuarkApp {
         let modal = egui::Modal::new(egui::Id::new("quark_confirm_uninstall")).show(ctx, |ui| {
             ui.set_min_width(520.0);
             ui.label(
-                crate::i18n::rich(format!("Désinstaller « {title} » ?"))
+                crate::i18n::rich_with("Désinstaller « {} » ?", &[&title])
                     .size(14.0)
                     .color(pal.text),
             );
@@ -5379,7 +5379,7 @@ impl QuarkApp {
                 ui.set_max_width((ctx.screen_rect().width() - 160.0).clamp(420.0, 720.0));
                 ui.horizontal(|ui| {
                     ui.label(
-                        crate::i18n::rich(format!("Succès \u{b7} {title}"))
+                        crate::i18n::rich_with("Succès \u{b7} {}", &[&title])
                             .size(17.0)
                             .color(pal.text),
                     );
@@ -5526,7 +5526,7 @@ impl QuarkApp {
                                                 ui.spacing_mut().item_spacing.y = 1.0;
                                                 ui.horizontal(|ui| {
                                                     ui.label(
-                                                        crate::i18n::rich(&row.name)
+                                                        crate::i18n::raw(&row.name)
                                                             .size(12.5)
                                                             .strong()
                                                             .color(if row.unlocked {
@@ -5648,7 +5648,7 @@ impl QuarkApp {
                 ui.set_max_width((ctx.screen_rect().width() - 120.0).clamp(520.0, 980.0));
                 ui.horizontal(|ui| {
                     ui.label(
-                        crate::i18n::rich(format!("Journal · {name}"))
+                        crate::i18n::rich_with("Journal · {}", &[&name])
                             .size(17.0)
                             .color(pal.text),
                     );

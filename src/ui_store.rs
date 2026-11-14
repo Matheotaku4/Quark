@@ -367,7 +367,7 @@ impl QuarkApp {
                                     .color(pal.accent),
                             );
                             ui.label(
-                                crate::i18n::rich(&job.title)
+                                crate::i18n::raw(&job.title)
                                     .size(21.0)
                                     .strong()
                                     .color(pal.text),
@@ -583,7 +583,7 @@ fn search_hit_row(ui: &mut egui::Ui, pal: &Palette, hit: &crate::game_search::Si
             ui.add_space(6.0);
             ui.add(
                 egui::Label::new(
-                    crate::i18n::rich(&hit.title)
+                    crate::i18n::raw(&hit.title)
                         .size(12.5)
                         .strong()
                         .color(pal.text),
@@ -745,7 +745,7 @@ fn top_played_card(ui: &mut egui::Ui, pal: &Palette, items: &[StoreItem]) {
                     );
                     ui.add_space(4.0);
                     ui.add(
-                        egui::Label::new(crate::i18n::rich(&item.name).size(12.0).color(pal.text))
+                        egui::Label::new(crate::i18n::raw(&item.name).size(12.0).color(pal.text))
                             .truncate(),
                     );
                     ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
@@ -887,7 +887,7 @@ fn hero_card(
             .layout(Layout::top_down(Align::Min)),
     );
     child.label(
-        crate::i18n::rich(&item.name)
+        crate::i18n::raw(&item.name)
             .size(24.0)
             .strong()
             .color(Color32::WHITE),
@@ -1028,7 +1028,7 @@ fn deal_card(
     );
     child.add(
         egui::Label::new(
-            crate::i18n::rich(&item.name)
+            crate::i18n::raw(&item.name)
                 .size(11.5)
                 .strong()
                 .color(pal.text),
@@ -1143,7 +1143,7 @@ fn card(ui: &mut egui::Ui, pal: &Palette, item: &StoreItem, open_item: &mut Opti
     );
     child.add(
         egui::Label::new(
-            crate::i18n::rich(&item.name)
+            crate::i18n::raw(&item.name)
                 .size(12.0)
                 .strong()
                 .color(pal.text),

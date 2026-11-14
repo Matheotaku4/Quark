@@ -2012,7 +2012,7 @@ impl QuarkApp {
                             ui.spacing_mut().item_spacing.y = 1.0;
                             ui.horizontal(|ui| {
                                 ui.label(
-                                    crate::i18n::rich(&row.name)
+                                    crate::i18n::raw(&row.name)
                                         .size(12.5)
                                         .strong()
                                         .color(if row.unlocked { pal.text } else { pal.text_dim }),

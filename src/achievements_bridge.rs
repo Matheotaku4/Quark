@@ -182,12 +182,31 @@ fn handle(stream: &mut TcpStream, token: &str, events: &Sender<Report>) -> std::
         let expected = header_value(&head, "content-length")
             .and_then(|value| value.parse::<usize>().ok())
             .unwrap_or(0);
-        while raw.len() < head_end + expected && raw.len() <= MAX_REQUEST {
+        // Ce bloc s'exécute avant le contrôle du jeton : la longueur annoncée
+        // par le client ne doit ni déborder à l'addition ni dépasser le plafond.
+        let Some(total) = head_end
+            .checked_add(expected)
+            .filter(|total| *total <= MAX_REQUEST)
+        else {
+            return respond(
+                stream,
+                "413 Payload Too Large",
+                r#"{"ok":false,"error":"requête trop grande"}"#,
+            );
+        };
+        while raw.len() < total {
             let read = stream.read(&mut chunk)?;
             if read == 0 {
                 break;
             }
             raw.extend_from_slice(&chunk[..read]);
+            if raw.len() > MAX_REQUEST {
+                return respond(
+                    stream,
+                    "413 Payload Too Large",
+                    r#"{"ok":false,"error":"requête trop grande"}"#,
+                );
+            }
         }
     }
     let text = String::from_utf8_lossy(&raw).into_owned();
@@ -351,6 +370,49 @@ mod tests {
         assert_eq!(report.unlock.name, "Premier pas");
         assert_eq!(report.unlock.at, 1_700_000_000);
         assert!(!report.unlock.synced);
+    }
+
+    /// Envoie des en-têtes bruts (sans corps) et renvoie la réponse.
+    fn raw_call(bridge: &Bridge, head: &str) -> String {
+        let addr = bridge
+            .url()
+            .trim_start_matches("http://")
+            .split('/')
+            .next()
+            .unwrap();
+        let mut stream = TcpStream::connect(addr).unwrap();
+        stream
+            .set_read_timeout(Some(Duration::from_secs(2)))
+            .unwrap();
+        stream.write_all(head.as_bytes()).unwrap();
+        let mut response = String::new();
+        stream.read_to_string(&mut response).unwrap();
+        response
+    }
+
+    #[test]
+    fn une_longueur_annoncee_demesuree_est_refusee_sans_paniquer() {
+        let (tx, _rx) = channel();
+        let bridge = start(tx, || {}).unwrap();
+        // Sans jeton : la longueur est lue avant l'authentification.
+        for length in [
+            usize::MAX.to_string(),
+            "18446744073709551615".to_string(),
+            (MAX_REQUEST + 1).to_string(),
+        ] {
+            let head = format!(
+                "POST /achievements HTTP/1.1\r\nHost: 127.0.0.1\r\nContent-Length: {length}\r\n\r\n"
+            );
+            let response = raw_call(&bridge, &head);
+            assert!(
+                response.starts_with("HTTP/1.1 413"),
+                "{length} : {response}"
+            );
+        }
+        // Le pont reste utilisable après ces requêtes hostiles.
+        let body = r#"{"game":"quark-1","achievement":"ACH_OK","name":"Toujours là"}"#;
+        let response = call(&bridge, body, bridge.token());
+        assert!(response.starts_with("HTTP/1.1 200"), "{response}");
     }
 
     #[test]
