@@ -2,9 +2,7 @@
 //! Aucune dépendance à une police d'icônes : tout est tracé.
 
 use crate::theme::{self, Palette};
-use eframe::egui::{
-    self, Align2, Color32, FontId, Pos2, Rect, Response, Sense, Stroke, Vec2,
-};
+use eframe::egui::{self, Align2, Color32, FontId, Pos2, Rect, Response, Sense, Stroke, Vec2};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Icon {
@@ -23,6 +21,10 @@ pub enum Icon {
     Folder,
     /// Crayon (modifier la fiche, les tags, les notes).
     Pencil,
+    /// Étoile pleine : jeu favori.
+    Star,
+    /// Étoile vide : jeu non favori.
+    StarOff,
     /// Logo Steam, pour l'import de la bibliothèque.
     Steam,
     /// Croix de fermeture.
@@ -62,6 +64,8 @@ impl Icon {
             Icon::Grid => "\u{e0ff}",
             Icon::Folder => "\u{e0d7}",
             Icon::Pencil => "\u{e1f9}",
+            Icon::Star => "\u{e176}",
+            Icon::StarOff => "\u{e2b0}",
             // Lucide n'a pas de logo Steam : la manette représente la boutique.
             Icon::Steam => "\u{e0df}",
             Icon::Close => "\u{e1b2}",
@@ -351,7 +355,10 @@ pub fn danger_ghost_button(
     painter.rect_stroke(
         rect,
         8.0,
-        Stroke::new(1.0_f32, pal.danger.gamma_multiply(if enabled { 1.0 } else { 0.45 })),
+        Stroke::new(
+            1.0_f32,
+            pal.danger.gamma_multiply(if enabled { 1.0 } else { 0.45 }),
+        ),
         egui::StrokeKind::Inside,
     );
     let ink = if enabled {
@@ -574,10 +581,14 @@ pub fn pill_button(
     }
     let (rect, resp) = ui.allocate_exact_size(Vec2::new(width, 36.0), Sense::click());
     let painter = ui.painter_at(rect);
-    let hover = ui
-        .ctx()
-        .animate_bool_with_time(control_id(ui, rect, &label, "pill"), resp.hovered(), 0.12);
-    painter.rect_filled(rect, 18.0, theme::lerp_color(pal.surface, pal.surface_hover, hover));
+    let hover =
+        ui.ctx()
+            .animate_bool_with_time(control_id(ui, rect, &label, "pill"), resp.hovered(), 0.12);
+    painter.rect_filled(
+        rect,
+        18.0,
+        theme::lerp_color(pal.surface, pal.surface_hover, hover),
+    );
     painter.rect_stroke(
         rect,
         18.0,
@@ -588,7 +599,10 @@ pub fn pill_button(
     let mut x = rect.left() + 12.0;
     paint_icon(
         ui,
-        Rect::from_center_size(Pos2::new(x + ICON / 2.0, rect.center().y), Vec2::splat(ICON)),
+        Rect::from_center_size(
+            Pos2::new(x + ICON / 2.0, rect.center().y),
+            Vec2::splat(ICON),
+        ),
         icon,
         ink,
     );
@@ -658,8 +672,7 @@ pub fn segmented(
     // Cinq statuts tiennent difficilement dans une carte de 320 px. Quand les
     // segments n'ont pas d'icône et dépassent la largeur disponible, on retire
     // l'icône (déjà absente) et on resserre la police et le padding.
-    let compact = total > ui.available_width()
-        && items.iter().all(|(icon, _)| *icon == Icon::None);
+    let compact = total > ui.available_width() && items.iter().all(|(icon, _)| *icon == Icon::None);
     if compact {
         font = FontId::proportional(11.0);
         galleys = items
@@ -706,8 +719,7 @@ pub fn segmented(
         );
         let on = index == selected;
         let hover = ui.ctx().animate_bool_with_time(
-            ui.id()
-                .with(("quark_segment_hover", group.as_str(), index)),
+            ui.id().with(("quark_segment_hover", group.as_str(), index)),
             resp.hovered() && !on,
             0.12,
         );
@@ -1083,12 +1095,7 @@ pub fn card<R>(
             ui.set_width(ui.available_width());
             ui.spacing_mut().item_spacing.y = 12.0;
             ui.horizontal(|ui| {
-                ui.label(
-                    crate::i18n::rich(title)
-                        .size(15.0)
-                        .strong()
-                        .color(pal.text),
-                );
+                ui.label(crate::i18n::rich(title).size(15.0).strong().color(pal.text));
                 if let Some(hint) = hint {
                     info_button(ui, pal, hint);
                 }
@@ -1107,11 +1114,7 @@ pub fn field<R>(
 ) -> R {
     ui.vertical(|ui| {
         ui.spacing_mut().item_spacing.y = 6.0;
-        ui.label(
-            crate::i18n::rich(label)
-                .size(12.0)
-                .color(pal.text_dim),
-        );
+        ui.label(crate::i18n::rich(label).size(12.0).color(pal.text_dim));
         style_text_inputs(ui, pal);
         add_contents(ui)
     })
@@ -1156,10 +1159,8 @@ pub fn option_row(
 ) -> Response {
     let id = ui.id().with(("quark_option_row", &id_salt));
     let height = if description.is_some() { 64.0 } else { 48.0 };
-    let (rect, mut response) = ui.allocate_exact_size(
-        Vec2::new(ui.available_width(), height),
-        Sense::click(),
-    );
+    let (rect, mut response) =
+        ui.allocate_exact_size(Vec2::new(ui.available_width(), height), Sense::click());
     let hover = ui
         .ctx()
         .animate_bool_with_time(id.with("hover"), response.hovered(), 0.12);
@@ -1244,10 +1245,8 @@ pub fn option_row_status(
     id_salt: impl std::hash::Hash,
 ) -> Response {
     let id = ui.id().with(("quark_option_status", &id_salt));
-    let (rect, mut response) = ui.allocate_exact_size(
-        Vec2::new(ui.available_width(), 64.0),
-        Sense::click(),
-    );
+    let (rect, mut response) =
+        ui.allocate_exact_size(Vec2::new(ui.available_width(), 64.0), Sense::click());
     let hover = ui
         .ctx()
         .animate_bool_with_time(id.with("hover"), response.hovered(), 0.12);
@@ -1281,9 +1280,8 @@ pub fn option_row_status(
     } else {
         pal.text_faint
     };
-    let status_label = child.add(
-        egui::Label::new(crate::i18n::rich(status).size(12.0).color(color)).truncate(),
-    );
+    let status_label =
+        child.add(egui::Label::new(crate::i18n::rich(status).size(12.0).color(color)).truncate());
     if let Some(detail) = detail {
         status_label.on_hover_text(detail);
     }
@@ -1350,10 +1348,8 @@ pub fn footer_bar_sized<R>(
 /// Entrée de navigation latérale : hauteur 36, rayon 8, fond `row_selected` et
 /// texte d'accent pour la page active, sans contour.
 pub fn nav_entry(ui: &mut egui::Ui, pal: &Palette, label: &str, selected: bool) -> bool {
-    let (rect, response) = ui.allocate_exact_size(
-        Vec2::new(ui.available_width(), 36.0),
-        Sense::click(),
-    );
+    let (rect, response) =
+        ui.allocate_exact_size(Vec2::new(ui.available_width(), 36.0), Sense::click());
     let hover = ui.ctx().animate_bool_with_time(
         ui.id().with(("quark_nav", label)),
         response.hovered() && !selected,
@@ -1382,7 +1378,9 @@ pub fn nav_entry(ui: &mut egui::Ui, pal: &Palette, label: &str, selected: bool) 
         font,
         ink,
     );
-    response.on_hover_cursor(egui::CursorIcon::PointingHand).clicked()
+    response
+        .on_hover_cursor(egui::CursorIcon::PointingHand)
+        .clicked()
 }
 
 /// Onglet de contenu (fiche de jeu) : casse naturelle et soulignement bleu,

@@ -69,18 +69,12 @@ pub fn rich(text: impl Into<String>) -> RichText {
     RichText::new(tr(&text.into()))
 }
 
-/// Traduit un libellé sans perdre les marqueurs de style quand l'appelant doit
-/// continuer à construire un `RichText` (taille, couleur, etc.).
-pub fn label(text: &str) -> String {
-    tr(text)
-}
-
 /// Quelques formes produites par `format!` ne peuvent pas figurer telles
 /// quelles dans le catalogue. Ces règles restent volontairement conservatrices :
 /// elles ne touchent qu'aux mots français isolés, jamais aux noms de jeux.
 fn dynamic_english(text: &str) -> String {
     let mut out = text.to_string();
-    let rules: [(&str, &str); 64] = [
+    let rules: [(&str, &str); 63] = [
         ("Aucun jeu sélectionné", "No game selected"),
         ("Aucun jeu ne correspond", "No game matches"),
         ("Aucun résultat", "No results"),
@@ -133,7 +127,6 @@ fn dynamic_english(text: &str) -> String {
         ("calcul en cours", "calculating"),
         ("Dossier analysé : ", "Scanned folder: "),
         ("Image disque : ", "Disc image: "),
-        ("Émulateur : ", "Emulator: "),
         ("Détecté : ", "Detected: "),
         (
             "Lecture du dossier impossible : ",
@@ -200,21 +193,21 @@ fn dynamic_english(text: &str) -> String {
 pub fn release_summary() -> [&'static str; 6] {
     if is_english() {
         [
-            "The game page has its sharp banner back and uses the SteamGridDB logo when one exists, with the title as a fallback.",
-            "Playtime and the last session stay in the overview instead of sitting next to Play.",
-            "Appearance now chooses whether the game actions sit in the top-right corner or right next to Play.",
-            "DLL overrides scans subfolders and shows each DLL with its relative path.",
-            "My profile and Steam details are stacked, so they no longer overlap at any window width.",
-            "The right-click menu uses the same action colours as the game page.",
+            "Games can be starred as favorites; they appear in a Favorites strip on Home and first with the \"Favorites first\" sort.",
+            "Desktop notifications report the end of an installation, a backup or a game session, with three independent settings.",
+            "quark launch <game> starts a game from the terminal and quark list prints the library, without opening the UI.",
+            "PlayStation 2 and PCSX2 support has been removed; existing configurations still load and every other game is kept.",
+            "Update checks now query the current Quark repository, and the README and wiki links are up to date.",
+            "cargo check no longer reports any warning, and the documentation describes version 1.5.0.",
         ]
     } else {
         [
-            "La fiche retrouve sa bannière nette et affiche le logo SteamGridDB quand il existe, avec le titre en texte en repli.",
-            "Le temps de jeu et la dernière session restent dans l'aperçu au lieu d'être à côté de Jouer.",
-            "Apparence choisit si les actions de la fiche se placent en haut à droite ou juste à droite de Jouer.",
-            "DLL overrides parcourt les sous-dossiers et affiche chaque DLL avec son chemin relatif.",
-            "Ma fiche et Fiche Steam sont empilées : elles ne se chevauchent plus, quelle que soit la largeur.",
-            "Le menu du clic droit reprend les couleurs des actions de la fiche.",
+            "Les jeux peuvent être marqués comme favoris ; ils apparaissent dans un bandeau Favoris sur l'accueil et en tête avec le tri « Favoris d'abord ».",
+            "Les notifications bureau signalent la fin d'une installation, d'une sauvegarde ou d'une session, avec trois réglages indépendants.",
+            "quark launch <jeu> lance un jeu depuis le terminal et quark list affiche la bibliothèque, sans ouvrir l'interface.",
+            "Le support PlayStation 2 et PCSX2 a été retiré ; les configurations existantes restent lisibles et les autres jeux sont conservés.",
+            "La vérification des mises à jour interroge le dépôt Quark actuel, et les liens du README et du wiki sont à jour.",
+            "cargo check ne produit plus aucun avertissement, et la documentation décrit la version 1.5.0.",
         ]
     }
 }
@@ -273,11 +266,11 @@ mod tests {
     fn le_resume_de_version_suit_la_langue() {
         let _guard = language_lock();
         set_language(UiLanguage::French);
-        assert!(release_summary()[0].starts_with("La fiche retrouve sa bannière nette"));
-        assert!(release_summary()[1].starts_with("Le temps de jeu et la dernière session"));
+        assert!(release_summary()[0].starts_with("Les jeux peuvent être marqués comme favoris"));
+        assert!(release_summary()[1].starts_with("Les notifications bureau"));
         set_language(UiLanguage::English);
-        assert!(release_summary()[0].starts_with("The game page has its sharp banner"));
-        assert!(release_summary()[1].starts_with("Playtime and the last session"));
+        assert!(release_summary()[0].starts_with("Games can be starred as favorites"));
+        assert!(release_summary()[1].starts_with("Desktop notifications"));
         assert!(release_title().starts_with("What's new"));
         set_language(UiLanguage::French);
     }

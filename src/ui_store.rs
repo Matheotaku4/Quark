@@ -9,9 +9,7 @@ use crate::app::{QuarkApp, SiteSearchState};
 use crate::steam_store::{StoreItem, StoreSection};
 use crate::theme::Palette;
 use crate::widgets::{self, Icon};
-use eframe::egui::{
-    self, Align, Align2, Color32, FontId, Layout, Pos2, Rect, Sense, Vec2,
-};
+use eframe::egui::{self, Align, Align2, Color32, FontId, Layout, Pos2, Rect, Sense, Vec2};
 
 const PAGE_MARGIN: f32 = 30.0;
 const CARD_WIDTH: f32 = 238.0;
@@ -747,12 +745,8 @@ fn top_played_card(ui: &mut egui::Ui, pal: &Palette, items: &[StoreItem]) {
                     );
                     ui.add_space(4.0);
                     ui.add(
-                        egui::Label::new(
-                            crate::i18n::rich(&item.name)
-                                .size(12.0)
-                                .color(pal.text),
-                        )
-                        .truncate(),
+                        egui::Label::new(crate::i18n::rich(&item.name).size(12.0).color(pal.text))
+                            .truncate(),
                     );
                     ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
                         if let Some(peak) = item.players_peak {
@@ -772,7 +766,6 @@ fn top_played_card(ui: &mut egui::Ui, pal: &Palette, items: &[StoreItem]) {
             }
         });
 }
-
 
 /// Première offre en promotion, mise en avant en haut de page.
 fn hero_item(sections: &[StoreSection]) -> Option<StoreItem> {

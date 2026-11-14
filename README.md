@@ -6,14 +6,14 @@ own, launches Windows games through Proton (or umu-launcher), and stays out of
 the way with an AMOLED interface, a store page, save snapshots and an in-game
 overlay.
 
-This is the **1.4.6** documentation. Older release notes are kept on the GitHub
+This is the **1.5.0** documentation. Older release notes are kept on the GitHub
 releases page; `docs/release-notes.md` only describes the release currently
 being published.
 
-**Documentation:** [GitHub Wiki](https://github.com/Matheotaku4/Quark-Launcher/wiki) ·
-[Getting started](https://github.com/Matheotaku4/Quark-Launcher/wiki/Getting-Started) ·
-[Proton and Wine options](https://github.com/Matheotaku4/Quark-Launcher/wiki/Proton-Wine-and-Launch-Options) ·
-[Troubleshooting](https://github.com/Matheotaku4/Quark-Launcher/wiki/Troubleshooting).
+**Documentation:** [GitHub Wiki](https://github.com/Matheotaku4/Quark/wiki) ·
+[Getting started](https://github.com/Matheotaku4/Quark/wiki/Getting-Started) ·
+[Proton and Wine options](https://github.com/Matheotaku4/Quark/wiki/Proton-Wine-and-Launch-Options) ·
+[Troubleshooting](https://github.com/Matheotaku4/Quark/wiki/Troubleshooting).
 The wiki is published from the versioned source in [`wiki/`](wiki/) by the
 `.github/workflows/wiki.yml` workflow.
 
@@ -27,22 +27,18 @@ The wiki is published from the versioned source in [`wiki/`](wiki/) by the
 | --- | --- |
 | ![Onboarding](docs/images/onboarding-fr.png) | ![What's new](docs/images/whats-new-fr.png) |
 
-## What's new in 1.4.6
+## What's new in 1.5.0
 
-This patch corrects the **What's new** window, which still showed the 1.4.0/1.4.4 summary after updating to 1.4.5. The window now describes the actual changes of this release in French and English.
-
-The 1.4.5 improvements remain:
-
-- **A sharper game page.** The game page opens on its real hero banner again, with no vertical cover beside it. The title uses the SteamGridDB logo when one is available, and falls back to the game name only when there is no logo.
-- **Playtime in one place.** The playtime and last-session labels no longer sit next to **Play**; they stay in the overview panel, where they belong.
-- **Choose where the actions live.** **Settings → Appearance → Game page actions** places the settings, customize, logs and remove buttons either in the top-right corner or directly to the right of the Play button. The choice is saved.
-- **DLL overrides see subfolders.** The source scan walks the game folder recursively, so DLLs in `bin/x64`, `Engine/Binaries` and other subfolders appear in the list. Results are cached briefly to keep the panel responsive.
-- **No more overlapping profile cards.** **My profile** and **Steam details** are now always stacked at full width, so their fields stay readable at every window size.
-- **Consistent action colours.** The right-click menu now uses the same gear, pencil, log and trash colours as the game page.
+- **Favorites.** A star on the game page and in the right-click menu pins a game to a new **Favorites** strip on Home; **Favorites first** sorts it above the rest in both Home and Library.
+- **Desktop notifications.** **Settings → In game** can notify when an installation, a Ludusavi backup or a game session finishes. Nothing is sent while the Quark window is focused.
+- **Launch from the terminal.** `quark launch <game>` starts a game without opening the UI; `quark list` prints the library for scripts. Exact titles win, then a case-insensitive substring, and an ambiguous or unknown title exits with code 1.
+- **PlayStation 2 support removed.** PCSX2, PS2 covers and RetroAchievements are gone. Existing configurations still load: the old fields are ignored and every other game is kept.
+- **Update checks fixed.** The updater now queries `Matheotaku4/Quark` instead of the old `Quark-Launcher` repository.
+- **Cleaner code and docs.** `cargo check` has no warnings, the wiki and README describe 1.5.0, and the test workflow uses `--locked`.
 
 ## Table of contents
 
-1. [What's new in 1.4.6](#whats-new-in-146)
+1. [What's new in 1.5.0](#whats-new-in-150)
 2. [What Quark does](#what-quark-does)
 3. [Installation](#installation)
 4. [First launch](#first-launch)
@@ -50,16 +46,15 @@ The 1.4.5 improvements remain:
 6. [One game, several installations](#one-game-several-installations)
 7. [Stores, accounts and cloud saves](#stores-accounts-and-cloud-saves)
 8. [Achievements and the in-game overlay](#achievements-and-the-in-game-overlay)
-9. [PlayStation 2 with PCSX2](#playstation-2-with-pcsx2)
-10. [Proton, umu and launch options](#proton-umu-and-launch-options)
-11. [Local saves and snapshots](#local-saves-and-snapshots)
-12. [Settings](#settings)
-13. [Command line](#command-line)
-14. [Files, data and privacy](#files-data-and-privacy)
-15. [Project layout](#project-layout)
-16. [Development and tests](#development-and-tests)
-17. [Known limitations](#known-limitations)
-18. [Licence](#licence)
+9. [Proton, umu and launch options](#proton-umu-and-launch-options)
+10. [Local saves and snapshots](#local-saves-and-snapshots)
+11. [Settings](#settings)
+12. [Command line](#command-line)
+13. [Files, data and privacy](#files-data-and-privacy)
+14. [Project layout](#project-layout)
+15. [Development and tests](#development-and-tests)
+16. [Known limitations](#known-limitations)
+17. [Licence](#licence)
 
 ## What Quark does
 
@@ -72,9 +67,6 @@ The 1.4.5 improvements remain:
 - **Proton without command lines.** Per-game runtime, prefix, GameMode,
   MangoHud, gamescope, PRIME offload, a free wrapper command, environment
   variables, BattlEye/EasyAntiCheat runtimes and umu-launcher.
-- **PlayStation 2 through PCSX2.** Disc images become ordinary library entries:
-  serial detection, community covers and RetroAchievements progress, without
-  creating a Wine prefix for the emulator.
 - **A real in-game overlay.** Press `Shift+Backspace` to open a Steam-like
   panel over the game and read its achievements. `F12` takes a screenshot.
 - **Cloud saves for Epic and GOG.** The account save is fetched after an
@@ -97,12 +89,12 @@ your browser.
 ### Release archive
 
 Download `quark-<version>-linux-x86_64.tar.gz` and its `.sha256` file from the
-[latest release](https://github.com/Matheotaku4/Quark-Launcher/releases/latest),
+[latest release](https://github.com/Matheotaku4/Quark/releases/latest),
 then verify and unpack it:
 
 ```bash
-sha256sum -c quark-1.4.6-linux-x86_64.tar.gz.sha256
-tar -xzf quark-1.4.6-linux-x86_64.tar.gz
+sha256sum -c quark-1.5.0-linux-x86_64.tar.gz.sha256
+tar -xzf quark-1.5.0-linux-x86_64.tar.gz
 ./quark/quark
 ```
 
@@ -125,8 +117,8 @@ X11 or Wayland, OpenGL and the usual font/GL libraries of your distribution.
 ### Build from source
 
 ```bash
-git clone https://github.com/Matheotaku4/Quark-Launcher.git
-cd Quark-Launcher
+git clone https://github.com/Matheotaku4/Quark.git
+cd Quark
 cargo build --release --locked
 ./target/release/quark
 ```
@@ -144,7 +136,7 @@ A new configuration opens a three-step welcome guide. It is not blocking:
 **Skip** closes it. The guide changes the interface language, startup page,
 theme and hero background live, then offers to add a first game. Existing
 configurations are marked as already welcomed, so updating from 1.1.4 never
-shows it unexpectedly; they still see the 1.4.6 summary once.
+shows it unexpectedly; they still see the 1.5.0 summary once.
 
 1. Open **Settings → Stores & tools** and install Legendary and/or gogdl with
    **Install / update**. Quark verifies the SHA-256 digest published by GitHub
@@ -246,7 +238,7 @@ a **···** menu with the same actions as the right-click menu.
 ## One game, several installations
 
 Quark 1.1 introduces a `Game → Installations` model. A `Game` carries the
-shared data (name, artwork, notes, tags, status, playtime, sessions); each
+shared data (name, artwork, notes, favorite, tags, status, playtime, sessions); each
 `Installation` carries one edition:
 
 - store or local source, product ID and install folder;
@@ -359,44 +351,6 @@ the desktop's global-shortcut policy may prevent a global key; the overlay still
 works with the close button and the in-app screenshot path. The shortcut thread
 is stopped when the game ends or when the key changes.
 
-## PlayStation 2 with PCSX2
-
-Quark treats a PS2 disc image as a native game entry: there is no Wine prefix
-and no Proton runtime. Install PCSX2 (from your distribution, pcsx2.net or
-Flathub) and Quark finds `pcsx2-qt`, `pcsx2` or the Flatpak export
-`net.pcsx2.PCSX2`. If the emulator lives elsewhere, set its binary in
-**Settings → Stores & tools**.
-
-Use **+ → PlayStation 2 game (ISO)…** and pick an image. Supported formats are
-`.iso`, `.chd`, `.cso`, `.bin/.cue` and `.gz`; the serial number is read
-automatically from `SYSTEM.CNF` in uncompressed `.iso` files. For other formats,
-open the game's **PlayStation 2** tab and enter the serial by hand
-(`SLUS-20062`). The tab can also re-read the ISO, reload the cover and manage
-the RetroAchievements entry.
-
-Covers come from the community repository
-[xlenore/ps2-covers](https://github.com/xlenore/ps2-covers), at
-`covers/default/<SERIAL>.jpg`. A missing cover only leaves the monogram; it
-never blocks the launch.
-
-### RetroAchievements
-
-PCSX2 has its own RetroAchievements integration and remains responsible for
-signing in and unlocking achievements. Quark uses the official Web API only to
-read the same progress:
-
-1. Create an account on [retroachievements.org](https://retroachievements.org)
-   and copy the **Web API key** from your profile → **Keys**.
-2. Enter the username and key in **Settings → Stores & tools**.
-3. Open a PS2 game, then **PlayStation 2 → Search by title**. Quark queries the
-   PlayStation 2 game list and proposes the closest title; correct the RA ID if
-   needed (the API has no serial-number lookup).
-4. **Show achievements** loads the list in the game page. The in-game overlay
-   uses the same data the next time the game is launched.
-
-The key is stored locally in `config.json`, like the SteamGridDB key, and is
-only sent to `retroachievements.org`.
-
 ## Proton, umu and launch options
 
 Quark detects Proton builds under `steamapps/common/Proton*` and
@@ -477,6 +431,8 @@ the manual archive remains available for read-only installs and for a recovery.
 ```text
 quark                     Open the launcher
 quark --doctor            Check the local environment
+quark launch <game>       Launch a game without opening the UI
+quark list                List the library for scripts
 quark --search <query>    Search Steam / SteamGridDB without opening the UI
 quark --fetch <name>      Search a title and download its artwork
 quark --news <appid|name> Read the Steam news feed
@@ -485,6 +441,10 @@ quark --update            Check and download the latest release archive
 quark --ui <file.png>     Render the interface off-screen (no display needed)
 quark --tray              Run the notification-icon process
 ```
+
+`quark launch` matches an exact title first, then a case-insensitive substring,
+and exits with code 1 when the title is ambiguous or unknown. `quark list` prints
+the status and playtime of every game.
 
 `--ui` accepts `--demo`, `--view`, `--group`, `--tab`, `--theme`, `--lang`,
 `--select`, `--dialog`, `--hero-bg`, `--blur`, `--size`, `--frames`, `--hover`,

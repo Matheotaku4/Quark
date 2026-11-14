@@ -6,8 +6,6 @@ use super::tools::ManagedToolId;
 use std::path::PathBuf;
 use std::time::Duration;
 
-pub const PINNED_VERSION: &str = "0.21.1";
-
 /// Page de connexion manuelle de `legendary auth --disable-webview` : elle
 /// affiche la réponse JSON dont il faut copier la valeur `authorizationCode`.
 pub const LOGIN_URL: &str = "https://legendary.gl/epiclogin";
@@ -118,10 +116,6 @@ impl LegendaryAdapter {
         Self::user_config_path().is_file()
     }
 
-    pub fn login_status_args() -> Vec<String> {
-        vec!["status".into(), "--json".into()]
-    }
-
     pub fn login_args(code: &str) -> Vec<String> {
         vec!["auth".into(), "--code".into(), code.into()]
     }
@@ -154,25 +148,12 @@ impl LegendaryAdapter {
         ]
     }
 
-    pub fn update_args(app_name: &str) -> Vec<String> {
-        vec!["update".into(), app_name.into()]
-    }
-    pub fn repair_args(app_name: &str) -> Vec<String> {
-        vec!["repair".into(), app_name.into()]
-    }
-    pub fn launch_args(app_name: &str) -> Vec<String> {
-        vec!["launch".into(), app_name.into()]
-    }
     pub fn achievements_args(app_name: &str) -> Vec<String> {
         vec!["achievements".into(), app_name.into(), "--json".into()]
     }
     pub fn info_args(app_name: &str) -> Vec<String> {
         vec!["info".into(), app_name.into(), "--json".into()]
     }
-    pub fn cloud_saves_args(app_name: &str) -> Vec<String> {
-        vec!["sync-saves".into(), app_name.into()]
-    }
-
     /// Paramètres de lancement calculés par Legendary, sans lancer le jeu.
     /// `--json` les renvoie avant l'exécution ; ils contiennent le jeton Epic
     /// éphémère et l'identité du compte, que Quark ne peut pas inventer.
@@ -314,22 +295,6 @@ impl LegendaryAdapter {
         parse_installed_json(&output.stdout, fetched_at)
     }
 
-    pub fn login_state(&self, _output: &CommandOutput) -> LoginState {
-        // status --json output fields are not pinned/documented sufficiently to parse safely.
-        LoginState::Unknown
-    }
-
-    pub fn supports_achievements(&self) -> CapabilityState {
-        // `legendary achievements <app> --json` existe depuis la 0.21.0 et la
-        // version épinglée est la 0.21.1.
-        CapabilityState::Supported
-    }
-
-    pub fn supports_cloud_saves(&self) -> CapabilityState {
-        // `legendary sync-saves` compare les dates locales et distantes et
-        // télécharge ou envoie la sauvegarde la plus récente.
-        CapabilityState::Supported
-    }
 }
 
 impl Default for LegendaryAdapter {
@@ -382,12 +347,6 @@ pub fn parse_launch_parameters(stdout: &str) -> Result<EpicLaunchParameters, Str
     })
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum LoginState {
-    Connected,
-    SignedOut,
-    Unknown,
-}
 
 /// Lit la sortie de `legendary list` : CSV depuis la 1.0.2, JSON accepté pour
 /// les versions précédentes et les sorties déjà enregistrées.

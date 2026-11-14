@@ -3,7 +3,7 @@
 > [Home](Home) · [Getting started](Getting-Started) · **Themes and
 > appearance** · [Settings](Settings)
 
-![Appearance in French](https://raw.githubusercontent.com/Matheotaku4/Quark-Launcher/main/docs/images/settings-fr.png)
+![Appearance in French](https://raw.githubusercontent.com/Matheotaku4/Quark/main/docs/images/settings-fr.png)
 
 ## A full-screen page, not a small dialog
 
@@ -54,7 +54,7 @@ Each palette defines the background, panels, surfaces, text, borders and an
 accent colour with hover and pressed variants. The theme does not change a
 game's own accent colour: it is still computed from its artwork.
 
-![Appearance in English](https://raw.githubusercontent.com/Matheotaku4/Quark-Launcher/main/docs/images/settings-en.png)
+![Appearance in English](https://raw.githubusercontent.com/Matheotaku4/Quark/main/docs/images/settings-en.png)
 
 ## Random hero background
 

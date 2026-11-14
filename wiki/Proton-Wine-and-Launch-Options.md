@@ -25,10 +25,9 @@ Quark then manages neither the prefix, Proton variables nor anti-cheat runtimes.
 
 ## How Quark chooses the launch mode
 
-1. **PlayStation 2**: the game has a PS2 configuration, so Quark launches PCSX2.
-2. **Native**: the game is explicitly marked native.
-3. **Specific Proton runtime**: the game uses that runtime.
-4. **Automatic**: Quark looks at the executable extension. An `.exe`, `.bat` or
+1. **Native**: the game is explicitly marked native.
+2. **Specific Proton runtime**: the game uses that runtime.
+3. **Automatic**: Quark looks at the executable extension. An `.exe`, `.bat` or
    `.msi` goes through Proton; a Linux binary stays native.
 
 If **umu-launcher** is checked on a Windows game, Quark launches `umu-run`
@@ -281,8 +280,6 @@ folder.
 ## See also
 
 - [Stores and saves](Stores-and-Saves) for prefixes and accounts.
-- [PlayStation 2 and RetroAchievements](PlayStation-2-and-RetroAchievements):
-  PS2 games run natively through PCSX2, without Wine.
 - [Troubleshooting](Troubleshooting) for errors that do not come from the game.
 - [Settings](Settings) for the defaults of new games.
 

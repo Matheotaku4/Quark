@@ -1,20 +1,19 @@
 # Wiki source
 
 This directory is the versioned source of the
-[Quark GitHub Wiki](https://github.com/Matheotaku4/Quark-Launcher/wiki). All
+[Quark GitHub Wiki](https://github.com/Matheotaku4/Quark/wiki). All
 pages are written in English and use GitHub Wiki links
 (`[Installation](Installation)`).
 
 - `Home.md` — entry point and navigation.
 - `_Sidebar.md` — wiki sidebar.
 - `_Footer.md` — wiki footer.
-- one file per page, named after its wiki title, including
-  `PlayStation-2-and-RetroAchievements.md`.
+- one file per page, named after its wiki title.
 
 ## Publishing
 
 GitHub keeps a wiki in a separate Git repository:
-`https://github.com/Matheotaku4/Quark-Launcher.wiki.git`.
+`https://github.com/Matheotaku4/Quark.wiki.git`.
 
 The workflow [`.github/workflows/wiki.yml`](../.github/workflows/wiki.yml) copies
 every `*.md` page except this README into that repository on each push touching
@@ -30,10 +29,10 @@ credential file in this directory.
 ## Manual fallback
 
 ```bash
-git clone https://github.com/Matheotaku4/Quark-Launcher.wiki.git /tmp/quark-wiki
+git clone https://github.com/Matheotaku4/Quark.wiki.git /tmp/quark-wiki
 rsync -av --exclude README.md wiki/ /tmp/quark-wiki/
 cd /tmp/quark-wiki
 git add -A
-git commit -m "Quark 1.3.1 documentation"
+git commit -m "Quark 1.5.0 documentation"
 git push
 ```

@@ -74,14 +74,6 @@ progress. Icons are cached locally.
 
 An achievement unlocked during the session can carry a **session** badge.
 
-## PlayStation 2 and RetroAchievements
-
-A PS2 game with a RetroAchievements ID shows its progress in the same overlay.
-PCSX2 signs in and unlocks achievements itself; Quark reads the list through the
-official Web API. Configure the username and Web API key in **Settings → Stores
-& tools**, then link the game by title from its **PlayStation 2** tab. See
-[PlayStation 2 and RetroAchievements](PlayStation-2-and-RetroAchievements).
-
 ## Local achievements API
 
 A game or script can report an unlock through the small local server:
@@ -127,16 +119,14 @@ achievements remain managed by the Steam client.
 | Screenshots are not where expected | Check `~/.local/share/quark/screenshots/` and folder permissions. |
 | A local achievement does not arrive | Check the URL, token and `QUARK_GAME_ID`; the server only listens on loopback. |
 | EOS does not appear | Check the active prefix, reinstall the EOS overlay and test the game without the Quark overlay. |
-| PS2 achievements are missing | Check the RA ID, the username and Web API key in **Stores & tools**. |
 
 ## See also
 
 - [Stores and saves](Stores-and-Saves)
-- [PlayStation 2 and RetroAchievements](PlayStation-2-and-RetroAchievements)
 - [Proton, Wine and options](Proton-Wine-and-Launch-Options)
 - [Settings](Settings)
 - [Troubleshooting](Troubleshooting)
 
 ---
 
-[Home](Home) · [Stores](Stores-and-Saves) · [PlayStation 2](PlayStation-2-and-RetroAchievements) · [Settings](Settings)
+[Home](Home) · [Stores](Stores-and-Saves) · [Settings](Settings)

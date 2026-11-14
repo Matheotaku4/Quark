@@ -18,10 +18,7 @@ pub fn bytes(
     max: u64,
     label: &str,
 ) -> Result<Vec<u8>, String> {
-    if response
-        .content_length()
-        .is_some_and(|length| length > max)
-    {
+    if response.content_length().is_some_and(|length| length > max) {
         return Err(format!("{label} trop volumineux"));
     }
     let mut body = Vec::new();

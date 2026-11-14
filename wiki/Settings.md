@@ -3,10 +3,11 @@
 > [Home](Home) · [Themes and appearance](Themes-and-Appearance) ·
 > **Settings** · [Proton and Wine](Proton-Wine-and-Launch-Options)
 
-![Settings](https://raw.githubusercontent.com/Matheotaku4/Quark-Launcher/main/docs/images/settings-en.png)
+![Settings](https://raw.githubusercontent.com/Matheotaku4/Quark/main/docs/images/settings-en.png)
 
-Since 1.2, settings fill the whole window, with side navigation and separate
-sections. Every change is saved automatically; there is no **Apply** button.
+Since 1.4, settings fill the whole window as cards, with side navigation and
+separate sections. Every change is saved automatically; there is no **Apply**
+button.
 
 ## Appearance
 
@@ -15,7 +16,7 @@ sections. Every change is saved automatically; there is no **Apply** button.
 - **Random hero background** and **Blur**: a blurred banner behind Home and
   Library, picked once per session.
 - **Startup**: startup page (Home, Library, Store, My games).
-- **Library**: list or grid layout.
+- **Library**: list or grid layout, and the compact interface density.
 - **Home**: carousel sort, automatic advance and interval.
 - **Notification area**: keep Quark in the tray icon instead of quitting.
 
@@ -25,7 +26,10 @@ Details and screenshots: [Themes and appearance](Themes-and-Appearance).
 
 - **Overlay**: enable it, choose the global shortcut and show locked, compact
   achievements with progress and rarity.
-- **Screenshots**: capture key and notifications.
+- **Screenshots**: capture key.
+- **Desktop notifications**: end of an installation, a Ludusavi backup or a
+  game session. Each can be disabled independently; nothing is sent while the
+  Quark window is focused.
 - **Cloud saves**: Epic/GOG synchronization after installation and on exit.
 - **Epic overlay (EOS)**: download and enable the EOS overlay in the game prefix
   when available.
@@ -71,12 +75,8 @@ local file.
 - **Tools managed by Quark**: Legendary, gogdl, Ludusavi; install, update and
   SHA-256 verification.
 - **Epic overlay (EOS)**: download and activation.
-- **PlayStation 2 · PCSX2**: emulator binary, automatic detection and Flatpak
-  export.
-- **RetroAchievements**: username and Web API key used to read PS2 progress.
 
-See [Stores and saves](Stores-and-Saves) and
-[PlayStation 2 and RetroAchievements](PlayStation-2-and-RetroAchievements).
+See [Stores and saves](Stores-and-Saves).
 
 ## Statistics
 
@@ -126,7 +126,6 @@ synchronization.
 - [Themes and appearance](Themes-and-Appearance)
 - [Proton, Wine and launch options](Proton-Wine-and-Launch-Options)
 - [Stores and saves](Stores-and-Saves)
-- [PlayStation 2 and RetroAchievements](PlayStation-2-and-RetroAchievements)
 - [Troubleshooting](Troubleshooting)
 
 ---

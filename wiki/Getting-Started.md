@@ -3,7 +3,7 @@
 > [Home](Home) · [Installation](Installation) · **Getting started** ·
 > [Library](Library-and-Views) · [Settings](Settings)
 
-![Welcome guide](https://raw.githubusercontent.com/Matheotaku4/Quark-Launcher/main/docs/images/onboarding-en.png)
+![Welcome guide](https://raw.githubusercontent.com/Matheotaku4/Quark/main/docs/images/onboarding-en.png)
 
 ## The welcome guide
 
@@ -35,7 +35,7 @@ concrete changes in a few sentences, not a commit log. Once closed, the version
 is stored in `last_seen_version`. To see it again: **Settings → About → Review
 what's new**.
 
-![What's new in 1.3.1](https://raw.githubusercontent.com/Matheotaku4/Quark-Launcher/main/docs/images/whats-new-en.png)
+![What's new in 1.5.0](https://raw.githubusercontent.com/Matheotaku4/Quark/main/docs/images/whats-new-en.png)
 
 ## Add a game
 
@@ -49,15 +49,6 @@ The **+** button in the top bar opens the add form.
 3. Check the runtime: **Automatic** is right in most cases.
 4. Optionally add arguments, a prefix, anti-cheat or graphics options.
 5. **Add**. The game page can then receive artwork and tags.
-
-### PlayStation 2 game
-
-Use **+ → PlayStation 2 game (ISO)…** and pick an image. Quark reads the serial
-number from `SYSTEM.CNF` for uncompressed `.iso` files, fetches the community
-cover and launches PCSX2. `.chd`, `.cso`, `.bin/.cue` and `.gz` images are
-accepted with a serial entered by hand in the game's **PlayStation 2** tab.
-
-See [PlayStation 2 and RetroAchievements](PlayStation-2-and-RetroAchievements).
 
 ### Scan a folder
 
@@ -90,11 +81,10 @@ a Quark server.
 | Native Linux game | **Native** (no Proton) |
 | Old game or video that rejects DXVK | Try Proton, then a compatibility variable |
 | Game with anti-cheat | Choose the matching anti-cheat runtime on the game page |
-| PlayStation 2 disc image | PCSX2, selected automatically for the game |
 
 Automatic mode looks at the executable extension: an `.exe` goes through
-Proton, a Linux binary stays native, and a disc image goes through PCSX2. To
-force a choice, open the game page and then **Game settings**.
+Proton, a Linux binary stays native. To force a choice, open the game page and
+then **Game settings**.
 
 ## A useful first launch
 
@@ -117,16 +107,13 @@ beginning:
 - **Appearance**: language, theme, startup page, random hero, home page.
 - **New games**: values copied into each new game. These are not global
   settings: changing a default does not affect existing games.
-- **Stores & tools**: accounts, synchronization, Legendary, gogdl, Ludusavi,
-  PCSX2 and RetroAchievements.
+- **Stores & tools**: accounts, synchronization, Legendary, gogdl and Ludusavi.
 - **In game**: overlay, screenshots, achievements, cloud saves.
 
 ## What next?
 
 - [Library and views](Library-and-Views) to organize games.
 - [Stores and saves](Stores-and-Saves) for Epic, GOG and cloud saves.
-- [PlayStation 2 and RetroAchievements](PlayStation-2-and-RetroAchievements) for
-  PCSX2, covers and achievement progress.
 - [Themes and appearance](Themes-and-Appearance) for the thirteen themes and the
   hero background.
 

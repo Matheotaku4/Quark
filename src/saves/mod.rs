@@ -251,17 +251,6 @@ impl SaveManager {
         ))
     }
 
-    pub fn restore_command(
-        &self,
-        _identity: &SaveIdentity,
-        _backup_id: &str,
-        confirmed: bool,
-    ) -> Result<ProviderCommand, String> {
-        if !confirmed {
-            return Err("restauration non exécutée sans confirmation explicite".into());
-        }
-        Err("une restauration doit passer par l'inventaire et l'aperçu validé".into())
-    }
 
     fn confirmed_restore_command(
         &self,
@@ -1160,30 +1149,6 @@ mod tests {
     fn rejects_backup_ids_with_path_separators() {
         let json = r#"{"games":{"Title":{"backups":[{"locked":false,"name":"../escape","os":"linux","when":"2026-10-30T12:00:00Z"}]}}}"#;
         assert!(parse_backups(json, "Title").is_err());
-    }
-
-    #[test]
-    fn restoring_requires_explicit_confirmation_and_a_safe_backup_id() {
-        let manager = TestManager::new();
-        let game = identity(Provider::Steam, "620", "Portal 2");
-        assert!(
-            manager
-                .manager
-                .restore_command(&game, "backup-1", false)
-                .is_err()
-        );
-        assert!(
-            manager
-                .manager
-                .restore_command(&game, "../../live", true)
-                .is_err()
-        );
-        assert!(
-            manager
-                .manager
-                .restore_command(&game, "backup 1", true)
-                .is_err()
-        );
     }
 
     #[test]

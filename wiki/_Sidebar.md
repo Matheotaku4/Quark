@@ -8,7 +8,6 @@
 
 - [Library and views](Library-and-Views)
 - [Stores and saves](Stores-and-Saves)
-- [PlayStation 2 and RetroAchievements](PlayStation-2-and-RetroAchievements)
 - [Overlay and achievements](Overlay-and-Achievements)
 
 **Configure**
@@ -20,5 +19,5 @@
 **Help**
 
 - [Troubleshooting](Troubleshooting)
-- [Latest release](https://github.com/Matheotaku4/Quark-Launcher/releases/latest)
-- [Repository](https://github.com/Matheotaku4/Quark-Launcher)
+- [Latest release](https://github.com/Matheotaku4/Quark/releases/latest)
+- [Repository](https://github.com/Matheotaku4/Quark)

@@ -314,8 +314,6 @@ pub enum AssetSource {
     Auto(SearchHit),
     /// Choix manuels de l'utilisateur, les autres propositions restant en secours.
     Chosen(AssetPlan, String),
-    /// Jaquette PS2 du dépôt ps2-covers, désignée par le numéro de série.
-    Ps2(String),
 }
 
 /// Téléchargement d'artworks en cours.
@@ -329,8 +327,6 @@ pub struct AssetJob {
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub enum PickerTarget {
     AddExe,
-    /// Image disque PS2 choisie depuis « Ajouter un jeu ».
-    AddPs2Iso,
     AddPrefix,
     GameExe,
     GamePrefix,
@@ -342,8 +338,6 @@ pub enum PickerTarget {
     /// Dossier choisi pour l'installation en cours, sans changer le réglage.
     InstallDestination,
     ScanFolder,
-    /// Binaire PCSX2 choisi à la main, quand il n'est pas dans le PATH.
-    Pcsx2Path,
     /// Image choisie sur le disque pour un artwork du jeu personnalisé.
     CustomArtwork(AssetKind),
     SaveFolder(crate::providers::ProviderGameKey),
@@ -368,7 +362,6 @@ pub struct ProviderInstallJob {
 /// dans le préfixe du jeu. L'overlay est global à Epic mais activé par préfixe.
 pub struct EosOverlayJob {
     pub progress: Arc<Mutex<crate::providers::runner::InstallProgress>>,
-    pub cancel: Arc<AtomicBool>,
     pub rx: Receiver<Result<(PathBuf, Option<PathBuf>), String>>,
 }
 
@@ -455,15 +448,12 @@ impl SettingsTab {
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub enum GameTab {
     General,
-    /// Numéro de série, jaquette et progression RetroAchievements.
-    Ps2,
     DllOverrides,
 }
 
 impl GameTab {
-    pub const ALL: [(GameTab, &'static str); 3] = [
+    pub const ALL: [(GameTab, &'static str); 2] = [
         (GameTab::General, "Réglages"),
-        (GameTab::Ps2, "PlayStation 2"),
         (GameTab::DllOverrides, "DLL overrides"),
     ];
 }
@@ -601,23 +591,6 @@ pub enum AchievementsState {
     Failed(String),
 }
 
-/// Nombre de succès RetroAchievements obtenus, pour les badges de liste.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub(crate) struct Ps2Progress {
-    pub unlocked: u32,
-    pub total: u32,
-}
-
-impl Ps2Progress {
-    pub(crate) fn ratio(self) -> f32 {
-        if self.total == 0 {
-            0.0
-        } else {
-            (self.unlocked as f32 / self.total as f32).clamp(0.0, 1.0)
-        }
-    }
-}
-
 /// Bannière en cours de fondu : l'image du jeu précédent reste dessinée
 /// par-dessus la nouvelle pendant quelques dixièmes de seconde, si bien que la
 /// fiche change de jeu sans à-coup.
@@ -739,9 +712,6 @@ pub struct QuarkApp {
     /// Couleur d'accent de chaque jeu, déduite de sa couverture (une seule
     /// analyse par image).
     pub accents: HashMap<PathBuf, egui::Color32>,
-    /// Images claires (bannière bleu ciel…) : une seule analyse par fichier,
-    /// pour y poser des icônes sombres.
-    pub light_images: HashMap<PathBuf, bool>,
     /// Actualités par jeu (chargées une fois, mises en cache).
     pub news: HashMap<String, NewsState>,
     /// Chargement d'actualités en cours.
@@ -918,14 +888,6 @@ pub struct QuarkApp {
     >,
     /// Fenêtre des succès ouverte, s'il y en a une.
     pub achievements_open: Option<crate::providers::ProviderGameKey>,
-    /// Progression RetroAchievements des jeux PS2, par identifiant Quark.
-    pub ps2_ra: HashMap<String, AchievementsState>,
-    pub ps2_ra_job: Option<(
-        String,
-        Receiver<Result<crate::providers::AchievementInfo, String>>,
-    )>,
-    /// Recherche d'une fiche RetroAchievements par titre.
-    pub ps2_search_job: Option<(String, Receiver<Result<Option<crate::ps2::RaGame>, String>>)>,
     /// Onglet de la fiche jeu : actualités ou succès.
     pub detail_tab: DetailTab,
     /// Temps de jeu publié par la boutique, lu seulement pour la fiche
@@ -1083,7 +1045,6 @@ impl QuarkApp {
             textures: crate::images::TextureCache::default(),
             thumbnails: crate::images::ThumbnailCache::default(),
             accents: HashMap::new(),
-            light_images: HashMap::new(),
             news: HashMap::new(),
             news_job: None,
             update: UpdateState::Idle,
@@ -1155,9 +1116,6 @@ impl QuarkApp {
             achievements: HashMap::new(),
             achievements_job: None,
             achievements_open: None,
-            ps2_ra: HashMap::new(),
-            ps2_ra_job: None,
-            ps2_search_job: None,
             detail_tab: DetailTab::News,
             provider_playtime: HashMap::new(),
             playtime_job: None,
@@ -1228,6 +1186,13 @@ impl QuarkApp {
         });
     }
 
+    /// Notification de bureau, jamais quand Quark a le focus.
+    fn notify_desktop(ctx: &egui::Context, summary: &str, body: &str) {
+        if !ctx.input(|input| input.focused) {
+            crate::overlay::desktop_notification(summary, body);
+        }
+    }
+
     pub fn toast_error(&mut self, text: impl Into<String>) {
         let now = Instant::now();
         self.toasts.push(Toast {
@@ -1250,16 +1215,6 @@ impl QuarkApp {
             .unwrap_or_default();
         self.add.custom_prefix = settings.default_prefix.is_some();
         self.add.prefix = settings.default_prefix.clone().unwrap_or_default();
-    }
-
-    /// Vrai si l'image est claire, calculé une seule fois par fichier.
-    pub fn is_light_image(&mut self, path: &std::path::Path) -> bool {
-        if let Some(light) = self.light_images.get(path) {
-            return *light;
-        }
-        let light = crate::images::is_light(path);
-        self.light_images.insert(path.to_path_buf(), light);
-        light
     }
 
     // -----------------------------------------------------------------------
@@ -1294,7 +1249,6 @@ impl QuarkApp {
         self.poll_install_size(ctx);
         self.poll_provider_covers(ctx);
         self.poll_achievements(ctx);
-        self.poll_ps2(ctx);
         self.poll_session_sync(ctx);
         self.poll_overlay(ctx);
         self.poll_provider_playtime();
@@ -1459,6 +1413,7 @@ impl QuarkApp {
     fn poll_running_games(&mut self, ctx: &egui::Context) {
         self.checkpoint_running_sessions();
         let mut finished: Vec<(String, u64, i64, Option<crate::saves::SaveIdentity>)> = Vec::new();
+        let mut session_saved = false;
         for (id, game) in self.running.iter_mut() {
             match game.child.try_wait() {
                 Ok(None) => {
@@ -1510,6 +1465,13 @@ impl QuarkApp {
                     "{name} : session de {}",
                     human_playtime(secs.max(1))
                 ));
+                if self.lib.settings.notify_session_done {
+                    Self::notify_desktop(
+                        ctx,
+                        "Partie terminée",
+                        &format!("{name} · {}", human_playtime(secs.max(1))),
+                    );
+                }
             }
             // Le temps de jeu de la boutique vient de bouger : la prochaine
             // ouverture de la fiche le relit au lieu de garder l'ancien.
@@ -1520,11 +1482,27 @@ impl QuarkApp {
                 self.provider_playtime.remove(&key);
             }
             self.touch();
+            // La fin de session doit être écrite sans attendre un mouvement de
+            // souris : on force la sauvegarde après la boucle.
+            session_saved = true;
             if self.lib.settings.cloud_saves
                 && self.cloud_sync.is_none()
                 && self.can_auto_sync_cloud(&id)
             {
                 self.sync_cloud_saves(ctx, &id);
+            }
+        }
+        if session_saved {
+            match self.lib.save() {
+                Ok(()) => {
+                    self.dirty = false;
+                    self.config_error = None;
+                }
+                Err(err) => {
+                    let message = format!("Sauvegarde impossible : {err}");
+                    self.config_error = Some(message.clone());
+                    self.toast_error(message);
+                }
             }
         }
     }
@@ -1813,17 +1791,7 @@ impl QuarkApp {
                     "Choisir un exécutable"
                 })
                 .set_directory(&start);
-            if matches!(&thread_target, PickerTarget::AddPs2Iso) {
-                dialog = dialog
-                    .add_filter(
-                        "Images disque PS2",
-                        &[
-                            "iso", "ISO", "chd", "CHD", "cso", "CSO", "bin", "BIN", "cue", "CUE",
-                            "gz", "GZ",
-                        ],
-                    )
-                    .add_filter("Tous les fichiers", &["*"]);
-            } else if matches!(&thread_target, PickerTarget::CustomArtwork(_)) {
+            if matches!(&thread_target, PickerTarget::CustomArtwork(_)) {
                 dialog = dialog.add_filter(
                     "Images",
                     &["png", "PNG", "jpg", "JPG", "jpeg", "JPEG", "webp", "WEBP"],
@@ -1882,7 +1850,6 @@ impl QuarkApp {
         match target {
             PickerTarget::ScanFolder => self.start_scan(ctx, path),
             PickerTarget::AddExe => self.add.exe = text,
-            PickerTarget::AddPs2Iso => self.add_ps2_image(ctx, path),
             PickerTarget::AddPrefix => {
                 self.add.prefix = text;
                 self.add.custom_prefix = true;
@@ -1901,10 +1868,6 @@ impl QuarkApp {
                 if let Some(game) = self.editing.as_mut() {
                     game.dll_source = Some(text);
                 }
-            }
-            PickerTarget::Pcsx2Path => {
-                self.lib.settings.pcsx2_path = text;
-                self.touch();
             }
             PickerTarget::DefaultPrefix => {
                 self.lib.settings.default_prefix = Some(text);
@@ -2054,7 +2017,6 @@ impl QuarkApp {
         let label = match &source {
             AssetSource::Auto(hit) => hit.title.clone(),
             AssetSource::Chosen(_, label) => label.clone(),
-            AssetSource::Ps2(serial) => format!("PS2 {serial}"),
         };
         let thread_id = id.clone();
         let ctx = ctx.clone();
@@ -2067,9 +2029,6 @@ impl QuarkApp {
                     &crate::config::artwork_root().join(&thread_id),
                     &plan,
                 ),
-                AssetSource::Ps2(serial) => {
-                    crate::ps2::fetch_cover_for(&client, &thread_id, &serial)
-                }
             };
             let _ = tx.send(result);
             ctx.request_repaint();
@@ -2260,40 +2219,6 @@ impl QuarkApp {
         }
         self.add.scan.search_rx = Some((index, rx));
         ctx.request_repaint_after(Duration::from_millis(120));
-    }
-
-    /// Ajoute une image PS2 comme jeu : PCSX2, numéro de série lu dans l'ISO
-    /// et jaquette communautaire demandée en arrière-plan.
-    pub fn add_ps2_image(&mut self, ctx: &egui::Context, path: PathBuf) {
-        if !crate::ps2::is_disc_image(&path) {
-            self.toast_error("Choisis une image PS2 (.iso, .chd, .cso, .bin/.cue…).");
-            return;
-        }
-        let serial = crate::ps2::serial_from_iso(&path).unwrap_or_default();
-        let name = crate::ps2::title_from_path(&path);
-        let settings = self.lib.settings.clone();
-        let mut game = Game::new(name.clone(), path.display().to_string());
-        game.proton = ProtonMode::Native;
-        game.args = settings.default_args.trim().to_string();
-        game.launch = settings.default_launch.clone();
-        game.ps2 = Some(crate::config::Ps2Config {
-            serial: serial.clone(),
-            ra_game_id: None,
-        });
-        let id = game.id.clone();
-        self.lib.games.push(game);
-        self.selected = Some(id.clone());
-        self.add.open = false;
-        self.tab = Tab::Library;
-        if serial.is_empty() {
-            self.toast_info(format!(
-                "{name} ajouté · numéro de série à saisir dans la fiche du jeu"
-            ));
-        } else {
-            self.toast_info(format!("{name} ajouté · {serial}"));
-            self.queue_asset_job(ctx, &id, AssetSource::Ps2(serial));
-        }
-        self.touch();
     }
 
     /// Ajoute tous les candidats retenus comme jeux.
@@ -2767,7 +2692,6 @@ impl QuarkApp {
                                     provider,
                                     key: provider_record.as_ref().map(|record| record.key.clone()),
                                     game_id: id.to_string(),
-                                    ra_game_id: game.ps2.as_ref().and_then(|ps2| ps2.ra_game_id),
                                     started,
                                 },
                                 &screenshot,
@@ -2945,10 +2869,7 @@ impl QuarkApp {
             repaint.request_repaint();
         });
         self.hltb.insert(id.clone(), HltbState::Loading);
-        self.hltb_job = Some(HltbJob {
-            game_id: id,
-            rx,
-        });
+        self.hltb_job = Some(HltbJob { game_id: id, rx });
         ctx.request_repaint_after(Duration::from_millis(200));
     }
 
@@ -3102,7 +3023,11 @@ impl QuarkApp {
                         // recherche) et demande donc plus de place que les autres
                         // onglets. En dessous, on garde les icônes seules pour ne
                         // pas faire chevaucher les onglets.
-                        let wide_threshold = if self.tab == Tab::Library { 1480.0 } else { 1180.0 };
+                        let wide_threshold = if self.tab == Tab::Library {
+                            1480.0
+                        } else {
+                            1180.0
+                        };
                         let wide = ctx.screen_rect().width() >= wide_threshold;
                         let settings_hint = crate::i18n::tr("Paramètres · Ctrl+Q pour quitter");
                         let settings_clicked = if wide {
@@ -3127,7 +3052,14 @@ impl QuarkApp {
                         // tous les onglets, avec le nombre de transferts actifs.
                         let active = self.active_install_count();
                         let response = if wide {
-                            widgets::pill_button(ui, &pal, Icon::Download, "Transferts", active, None)
+                            widgets::pill_button(
+                                ui,
+                                &pal,
+                                Icon::Download,
+                                "Transferts",
+                                active,
+                                None,
+                            )
                         } else {
                             widgets::icon_button(ui, 32.0, Icon::Download, &pal, "Téléchargements")
                         };
@@ -3182,14 +3114,8 @@ impl QuarkApp {
                         // segmenté aux libellés visibles, et un bouton
                         // « Ajouter » explicite à la place de trois icônes.
                         if self.tab == Tab::Library {
-                            if widgets::icon_button(
-                                ui,
-                                34.0,
-                                Icon::Plus,
-                                &pal,
-                                "Ajouter un jeu",
-                            )
-                            .clicked()
+                            if widgets::icon_button(ui, 34.0, Icon::Plus, &pal, "Ajouter un jeu")
+                                .clicked()
                             {
                                 self.open_add_dialog();
                             }
@@ -3687,9 +3613,9 @@ impl QuarkApp {
                     .insert(key, crate::providers::PlaytimeState::Ready(seconds));
                 self.playtime_job = None;
             }
-            Ok((key, Err(error))) => {
+            Ok((key, Err(_))) => {
                 self.provider_playtime
-                    .insert(key, crate::providers::PlaytimeState::Failed(error));
+                    .insert(key, crate::providers::PlaytimeState::Failed);
                 self.playtime_job = None;
             }
             Err(TryRecvError::Disconnected) => {
@@ -3698,9 +3624,7 @@ impl QuarkApp {
                 // bloqué sur « chargement » indéfiniment.
                 for state in self.provider_playtime.values_mut() {
                     if matches!(state, crate::providers::PlaytimeState::Loading) {
-                        *state = crate::providers::PlaytimeState::Failed(
-                            "lecture du temps de jeu interrompue".to_string(),
-                        );
+                        *state = crate::providers::PlaytimeState::Failed;
                     }
                 }
             }
@@ -3771,7 +3695,6 @@ impl QuarkApp {
                     provider: record.map(|record| record.key.provider),
                     key: record.map(|record| record.key.clone()),
                     game_id: id.clone(),
-                    ra_game_id: game.ps2.as_ref().and_then(|ps2| ps2.ra_game_id),
                     started: session.started,
                 })
             });
@@ -3807,22 +3730,6 @@ impl QuarkApp {
                     None => {
                         self.game_overlay.set_achievements_loading(true);
                         self.request_achievements(ctx, &key);
-                    }
-                }
-            } else if let Some((game_id, ra_id)) = self.game_overlay.target_ra() {
-                match self.ps2_ra.get(&game_id).cloned() {
-                    Some(AchievementsState::Ready(info)) => {
-                        self.game_overlay.set_achievements(info);
-                    }
-                    Some(AchievementsState::Failed(error)) => {
-                        self.game_overlay.set_achievements_error(Some(error));
-                    }
-                    Some(AchievementsState::Loading) => {
-                        self.game_overlay.set_achievements_loading(true);
-                    }
-                    None => {
-                        self.game_overlay.set_achievements_loading(true);
-                        self.request_ps2_ra(ctx, &game_id, ra_id);
                     }
                 }
             }
@@ -4605,11 +4512,7 @@ impl QuarkApp {
             let _ = tx.send(result);
             repaint.request_repaint();
         });
-        self.eos_overlay_job = Some(EosOverlayJob {
-            progress,
-            cancel,
-            rx,
-        });
+        self.eos_overlay_job = Some(EosOverlayJob { progress, rx });
         self.toast_info("Téléchargement de l'overlay Epic (EOS)…");
         ctx.request_repaint_after(Duration::from_millis(120));
     }
@@ -4964,6 +4867,15 @@ impl QuarkApp {
                         "Sauvegarde Ludusavi {label} · {} · {} octets",
                         record.title, record.processed_bytes
                     ));
+                    if self.lib.settings.notify_save_done
+                        && matches!(record.phase, crate::saves::BackupPhase::AfterExit)
+                    {
+                        Self::notify_desktop(
+                            ctx,
+                            "Sauvegarde terminée",
+                            &format!("{} · {} octets", record.title, record.processed_bytes),
+                        );
+                    }
                     self.save_background_jobs.remove(index);
                 }
                 Ok(Err(error)) => {
@@ -5726,16 +5638,6 @@ impl QuarkApp {
         }
     }
 
-    /// Ouvre la confirmation d'installation Epic : taille et dossier avant de
-    /// lancer Legendary. Le dossier proposé vient des réglages.
-    pub fn request_epic_install(
-        &mut self,
-        ctx: &egui::Context,
-        key: &crate::providers::ProviderGameKey,
-    ) {
-        self.open_install_request(ctx, key);
-    }
-
     fn start_epic_install(&mut self, ctx: &egui::Context, destination: PathBuf) {
         let Some(key) = self.epic_install_pending.take() else {
             return;
@@ -5916,6 +5818,9 @@ impl QuarkApp {
         }
         self.touch();
         self.toast_info(format!("{title} installé et détecté localement"));
+        if self.lib.settings.notify_install_done {
+            Self::notify_desktop(ctx, "Installation terminée", &title);
+        }
         self.adopt_provider_install(ctx, &key);
         self.lib.migrate_installations();
         // Récupère immédiatement la sauvegarde cloud : un jeu installé sur une
@@ -5979,16 +5884,6 @@ impl QuarkApp {
                 "Installation {name} de {title} non confirmée : {error}"
             ));
         }
-    }
-
-    /// Installation GOG depuis « Mes jeux » : confirmation avec taille et
-    /// dossier, puis gogdl télécharge dans le dossier parent choisi.
-    pub fn request_gog_install(
-        &mut self,
-        ctx: &egui::Context,
-        key: &crate::providers::ProviderGameKey,
-    ) {
-        self.open_install_request(ctx, key);
     }
 
     fn start_gog_install(&mut self, ctx: &egui::Context, destination: PathBuf) {
@@ -6645,173 +6540,6 @@ impl QuarkApp {
                 self.achievements_job = None;
             }
             Err(TryRecvError::Empty) => ctx.request_repaint_after(Duration::from_millis(150)),
-        }
-    }
-
-    /// Cherche la fiche RetroAchievements d'un jeu PS2 par son titre.
-    pub fn start_ps2_ra_search(&mut self, ctx: &egui::Context, game_id: &str, title: &str) {
-        if self.ps2_search_job.is_some() {
-            self.toast_info("Une recherche RetroAchievements est déjà en cours");
-            return;
-        }
-        let settings = self.lib.settings.clone();
-        if !crate::ps2::ra_configured(&settings) {
-            self.toast_error(
-                "Renseigne le pseudo et la clé Web API RetroAchievements dans les paramètres",
-            );
-            return;
-        }
-        let (tx, rx) = channel();
-        let repaint = ctx.clone();
-        let title = title.trim().to_string();
-        std::thread::spawn(move || {
-            let client = artwork::http();
-            let result = crate::ps2::search_ra_game(&client, &settings, &title);
-            let _ = tx.send(result);
-            repaint.request_repaint();
-        });
-        self.ps2_search_job = Some((game_id.to_string(), rx));
-        ctx.request_repaint_after(Duration::from_millis(150));
-    }
-
-    /// Progression RetroAchievements connue d'un jeu PS2, pour les badges de
-    /// liste. Un jeu sans fiche RA, ou dont la lecture a échoué, n'affiche rien.
-    pub(crate) fn ps2_progress(&self, game: &Game) -> Option<Ps2Progress> {
-        game.ps2.as_ref()?.ra_game_id?;
-        match self.ps2_ra.get(&game.id) {
-            Some(AchievementsState::Ready(info)) if info.total > 0 => Some(Ps2Progress {
-                unlocked: info.unlocked.min(info.total),
-                total: info.total,
-            }),
-            _ => None,
-        }
-    }
-
-    /// Charge les progressions RA des jeux visibles, une requête à la fois.
-    /// L'API n'accepte pas de lot pour les fiches complètes ; les appels
-    /// restent donc espacés et ne se répètent pas une fois le résultat reçu.
-    pub(crate) fn prefetch_ps2_progress(&mut self, ctx: &egui::Context, ids: &[String]) {
-        if self.ps2_ra_job.is_some() || !crate::ps2::ra_configured(&self.lib.settings) {
-            return;
-        }
-        for id in ids {
-            let Some(game) = self.lib.get(id) else {
-                continue;
-            };
-            let Some(ra_game_id) = game.ps2.as_ref().and_then(|ps2| ps2.ra_game_id) else {
-                continue;
-            };
-            if self.ps2_ra.contains_key(id) {
-                continue;
-            }
-            self.request_ps2_ra(ctx, id, ra_game_id);
-            break;
-        }
-    }
-
-    /// Demande la progression RetroAchievements d'un jeu PS2.
-    pub fn request_ps2_ra(&mut self, ctx: &egui::Context, game_id: &str, ra_game_id: u64) {
-        if self.ps2_ra_job.is_some() {
-            return;
-        }
-        let settings = self.lib.settings.clone();
-        if !crate::ps2::ra_configured(&settings) {
-            self.ps2_ra.insert(
-                game_id.to_string(),
-                AchievementsState::Failed(
-                    "RetroAchievements n'est pas configuré : Paramètres → Boutiques & outils."
-                        .into(),
-                ),
-            );
-            return;
-        }
-        self.ps2_ra
-            .insert(game_id.to_string(), AchievementsState::Loading);
-        let (tx, rx) = channel();
-        let repaint = ctx.clone();
-        let id = game_id.to_string();
-        std::thread::spawn(move || {
-            let client = artwork::http();
-            let result = crate::ps2::fetch_ra_achievements(&client, &settings, ra_game_id);
-            let _ = tx.send(result);
-            repaint.request_repaint();
-        });
-        self.ps2_ra_job = Some((id, rx));
-        ctx.request_repaint_after(Duration::from_millis(150));
-    }
-
-    fn poll_ps2(&mut self, ctx: &egui::Context) {
-        let search = self
-            .ps2_search_job
-            .as_ref()
-            .map(|(id, rx)| (id.clone(), rx.try_recv()));
-        if let Some((id, result)) = search {
-            match result {
-                Ok(Ok(Some(found))) => {
-                    let title = found.title.clone();
-                    let ra_id = found.id;
-                    if let Some(editing) = self.editing.as_mut()
-                        && editing.id == id
-                    {
-                        if let Some(ps2) = editing.ps2.as_mut() {
-                            ps2.ra_game_id = Some(ra_id);
-                        }
-                    } else if let Some(game) = self.lib.get_mut(&id)
-                        && let Some(ps2) = game.ps2.as_mut()
-                    {
-                        ps2.ra_game_id = Some(ra_id);
-                        self.touch();
-                    }
-                    self.toast_info(format!("RetroAchievements : {title} · #{ra_id}"));
-                    self.ps2_search_job = None;
-                }
-                Ok(Ok(None)) => {
-                    self.toast_info(
-                        "Aucune fiche RetroAchievements trouvée pour ce titre : ajuste le                          titre ou saisis l'identifiant à la main",
-                    );
-                    self.ps2_search_job = None;
-                }
-                Ok(Err(error)) => {
-                    self.toast_error(error);
-                    self.ps2_search_job = None;
-                }
-                Err(TryRecvError::Disconnected) => {
-                    self.toast_error("Recherche RetroAchievements interrompue");
-                    self.ps2_search_job = None;
-                }
-                Err(TryRecvError::Empty) => {
-                    ctx.request_repaint_after(Duration::from_millis(150));
-                }
-            }
-        }
-
-        let achievements = self
-            .ps2_ra_job
-            .as_ref()
-            .map(|(id, rx)| (id.clone(), rx.try_recv()));
-        if let Some((id, result)) = achievements {
-            match result {
-                Ok(Ok(info)) => {
-                    self.ps2_ra.insert(id, AchievementsState::Ready(info));
-                    self.ps2_ra_job = None;
-                }
-                Ok(Err(error)) => {
-                    self.ps2_ra.insert(id, AchievementsState::Failed(error));
-                    self.ps2_ra_job = None;
-                }
-                Err(TryRecvError::Disconnected) => {
-                    self.ps2_ra.insert(
-                        id,
-                        AchievementsState::Failed(
-                            "Lecture RetroAchievements interrompue".to_string(),
-                        ),
-                    );
-                    self.ps2_ra_job = None;
-                }
-                Err(TryRecvError::Empty) => {
-                    ctx.request_repaint_after(Duration::from_millis(150));
-                }
-            }
         }
     }
 

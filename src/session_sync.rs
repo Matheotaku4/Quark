@@ -386,10 +386,7 @@ impl QuarkApp {
                         (AssetKind::Cover, art.cover.as_ref()),
                         (AssetKind::Hero, art.hero.as_ref()),
                     ] {
-                        let missing = game
-                            .artwork
-                            .get(kind)
-                            .is_none_or(|path| !path.exists());
+                        let missing = game.artwork.get(kind).is_none_or(|path| !path.exists());
                         if missing {
                             if let Some((path, _)) = image {
                                 game.artwork.set(kind, path.clone());
@@ -430,7 +427,6 @@ impl QuarkApp {
         self.ensure_provider_artwork(ctx);
     }
 }
-
 
 #[cfg(test)]
 mod tests {

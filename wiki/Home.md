@@ -5,10 +5,26 @@ games and your Steam, Epic Games and GOG libraries together, launches Windows
 games through Proton or umu-launcher, and adds an in-game overlay, screenshots,
 achievements and verified local saves.
 
-This documentation describes **Quark 1.3.1**. It is also versioned in the
-repository under [`wiki/`](https://github.com/Matheotaku4/Quark-Launcher/tree/main/wiki).
+This documentation describes **Quark 1.5.0**. It is also versioned in the
+repository under [`wiki/`](https://github.com/Matheotaku4/Quark/tree/main/wiki).
 
-![Quark home](https://raw.githubusercontent.com/Matheotaku4/Quark-Launcher/main/docs/images/home-en.png)
+![Quark home](https://raw.githubusercontent.com/Matheotaku4/Quark/main/docs/images/home-en.png)
+
+## What's new in 1.5
+
+- **1.5.0** adds game favorites and a Favorites strip on Home, desktop
+  notifications, `quark launch`/`quark list`, and removes the PlayStation 2,
+  PCSX2 and RetroAchievements support. Update checks now use the Quark
+  repository again.
+- **1.4.5** sharpens the game page: the hero banner is back, the SteamGridDB
+  logo replaces the title when available, playtime and last session move to the
+  overview panel, and the game actions can sit in the top-right corner or beside
+  **Play**.
+- **1.4.4** adds HowLongToBeat times to the game overview.
+- **1.4.3** turns the settings into full-width cards and makes the interface
+  denser by default.
+- **1.4.2** redesigns the store into two columns with a SteamGridDB banner and
+  logo, and moves the **Filters** panel under the Home button.
 
 ## Where to start
 
@@ -18,7 +34,6 @@ repository under [`wiki/`](https://github.com/Matheotaku4/Quark-Launcher/tree/ma
 | Learn the first launch, library and basic settings | [Getting started](Getting-Started) |
 | Understand the list, grid, views and filters | [Library and views](Library-and-Views) |
 | Use Steam, Epic, GOG, accounts and cloud saves | [Stores and saves](Stores-and-Saves) |
-| Play PlayStation 2 games and read RetroAchievements | [PlayStation 2 and RetroAchievements](PlayStation-2-and-RetroAchievements) |
 | Configure Proton, umu, Wine, variables and launch options | [Proton, Wine and launch options](Proton-Wine-and-Launch-Options) |
 | Change themes, language, hero background or startup page | [Themes and appearance](Themes-and-Appearance) |
 | Use the overlay, screenshots and achievements | [Overlay and achievements](Overlay-and-Achievements) |
@@ -28,7 +43,7 @@ repository under [`wiki/`](https://github.com/Matheotaku4/Quark-Launcher/tree/ma
 ## What Quark does
 
 - **One library.** Local and store games share covers, hero images, logos,
-  notes, tags, playtime and statistics. A game can have several installations
+  notes, favorites, tags, playtime and statistics. A game can have several installations
   without appearing twice.
 - **Steam, Epic Games and GOG.** Steam is read from local libraries. Legendary
   manages Epic and gogdl manages GOG. Passwords never pass through Quark; only
@@ -36,9 +51,6 @@ repository under [`wiki/`](https://github.com/Matheotaku4/Quark-Launcher/tree/ma
 - **Proton without command lines.** Per-game runtime, prefix, GameMode,
   MangoHud, gamescope, PRIME, a free wrapper command, environment variables,
   anti-cheat runtimes and umu-launcher.
-- **PlayStation 2 through PCSX2.** A disc image becomes a normal library entry
-  with serial detection, community covers and RetroAchievements progress,
-  without creating a Wine prefix for the emulator.
 - **A real overlay.** `Shift+Backspace` opens a panel above the game and `F12`
   takes a screenshot. Epic and GOG achievements share the same view.
 - **Saves.** Epic/GOG cloud synchronization and Ludusavi snapshots verified
@@ -77,14 +89,13 @@ repository under [`wiki/`](https://github.com/Matheotaku4/Quark-Launcher/tree/ma
 
 Quark is distributed under the MIT licence. The Archivo font is under the SIL
 Open Font License and the Lucide icons under ISC. See
-[`assets/fonts/`](https://github.com/Matheotaku4/Quark-Launcher/tree/main/assets/fonts)
+[`assets/fonts/`](https://github.com/Matheotaku4/Quark/tree/main/assets/fonts)
 and the release notes for the exact files.
 
 ---
 
 [Installation](Installation) · [Getting started](Getting-Started) ·
 [Library](Library-and-Views) · [Stores](Stores-and-Saves) ·
-[PlayStation 2](PlayStation-2-and-RetroAchievements) ·
 [Proton and Wine](Proton-Wine-and-Launch-Options) ·
 [Themes](Themes-and-Appearance) · [Overlay](Overlay-and-Achievements) ·
 [Settings](Settings) · [Troubleshooting](Troubleshooting)

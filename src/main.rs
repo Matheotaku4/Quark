@@ -11,18 +11,17 @@ mod config;
 mod disk;
 mod fonts;
 mod game_search;
+mod howlongtobeat;
 mod i18n;
 mod icon;
 mod images;
 mod net;
-mod howlongtobeat;
 mod news;
 mod overlay;
 mod process;
 mod proton;
 mod protondb;
 mod providers;
-mod ps2;
 mod saves;
 mod scan;
 mod session;
@@ -100,6 +99,8 @@ fn cli(args: &[String]) -> Option<i32> {
                  quark                    Lance le launcher\n  \
                  quark --doctor           Affiche l'environnement détecté (dossiers, Proton, jeux)\n  \
                  quark --search <nom>     Recherche un jeu sur Steam + SteamGridDB\n  \
+                 quark launch <jeu>       Lance un jeu sans ouvrir l'interface\n  \
+                 quark list               Liste les jeux de la bibliothèque\n  \
                  quark --fetch <nom>      Télécharge les artworks du premier résultat\n",
                 env!("CARGO_PKG_VERSION")
             );
@@ -419,6 +420,33 @@ fn cli(args: &[String]) -> Option<i32> {
             }
             Some(0)
         }
+        "launch" => {
+            let Some(query) = args.get(1) else {
+                eprintln!("Usage : quark launch <nom du jeu>");
+                return Some(2);
+            };
+            match launch_from_cli(query) {
+                Ok(()) => Some(0),
+                Err(err) => {
+                    eprintln!("{err}");
+                    Some(1)
+                }
+            }
+        }
+        "list" => {
+            let lib = config::Library::load();
+            let mut games: Vec<_> = lib.games.iter().collect();
+            games.sort_by_key(|game| game.name.to_lowercase());
+            for game in games {
+                println!(
+                    "{:<36} {:<12} {}",
+                    game.name,
+                    game.status.label(),
+                    game.playtime_label()
+                );
+            }
+            Some(0)
+        }
         "--search" => {
             let query = args.get(1).cloned().unwrap_or_else(|| {
                 eprintln!("Usage : quark --search <nom du jeu>");
@@ -564,6 +592,64 @@ fn cli(args: &[String]) -> Option<i32> {
     }
 }
 
+/// Jeux dont le nom correspond à la requête : correspondance exacte d'abord,
+/// puis sous-chaîne insensible à la casse. Une requête vide ne correspond à rien.
+fn matching_games<'a>(games: &'a [config::Game], query: &str) -> Vec<&'a config::Game> {
+    let query = query.trim().to_lowercase();
+    if query.is_empty() {
+        return Vec::new();
+    }
+    let exact: Vec<&config::Game> = games
+        .iter()
+        .filter(|game| game.name.to_lowercase() == query)
+        .collect();
+    if !exact.is_empty() {
+        return exact;
+    }
+    games
+        .iter()
+        .filter(|game| game.name.to_lowercase().contains(&query))
+        .collect()
+}
+
+/// Lance un jeu depuis le terminal. La commande reste attachée à la session
+/// pour que le journal et les flux du jeu restent ouverts jusqu'à sa fin.
+fn launch_from_cli(query: &str) -> Result<(), String> {
+    let lib = config::Library::load();
+    let matches = matching_games(&lib.games, query);
+    match matches.len() {
+        0 => {
+            return Err(format!(
+                "Aucun jeu ne correspond à « {query} ». Utilise `quark list` pour voir la bibliothèque."
+            ));
+        }
+        1 => {}
+        _ => {
+            let mut message = format!("Plusieurs jeux correspondent à « {query} » :\n");
+            for game in &matches {
+                message.push_str(&format!("  - {}\n", game.name));
+            }
+            message.push_str("Précise le nom pour choisir un jeu.");
+            return Err(message);
+        }
+    }
+    let game = matches[0];
+    let runtimes = proton::detect_runtimes();
+    let resolved = proton::resolve(game, &lib.settings, &runtimes)?;
+    let mut session = session::start(game, &resolved)
+        .map_err(|err| format!("Lancement de {} impossible : {err}", game.name))?;
+    println!("{} lancé · {}", game.name, resolved.label());
+    println!("journal : {}", session.log.display());
+    use std::io::Write as _;
+    let _ = std::io::stdout().flush();
+    let status = session
+        .child
+        .wait()
+        .map_err(|err| format!("Attente de {} impossible : {err}", game.name))?;
+    println!("{} terminé ({status})", game.name);
+    Ok(())
+}
+
 /// « 1360x860 » -> taille.
 fn parse_size(text: &str) -> Option<eframe::egui::Vec2> {
     let (width, height) = text.split_once(|c| c == 'x' || c == 'X')?;
@@ -580,4 +666,38 @@ fn parse_point(text: &str) -> Option<eframe::egui::Pos2> {
         x.trim().parse().ok()?,
         y.trim().parse().ok()?,
     ))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn game(name: &str) -> config::Game {
+        let mut game = config::Game::default();
+        game.name = name.to_string();
+        game
+    }
+
+    #[test]
+    fn le_lancement_prefere_une_correspondance_exacte() {
+        let games = [game("Portal"), game("Portal 2")];
+        let matches = matching_games(&games, "portal");
+        assert_eq!(matches.len(), 1);
+        assert_eq!(matches[0].name, "Portal");
+    }
+
+    #[test]
+    fn le_lancement_accepte_une_sous_chaine_et_ignore_la_casse() {
+        let games = [game("The Witcher 3: Wild Hunt"), game("Celeste")];
+        let matches = matching_games(&games, "WITCHER");
+        assert_eq!(matches.len(), 1);
+        assert_eq!(matches[0].name, "The Witcher 3: Wild Hunt");
+    }
+
+    #[test]
+    fn le_lancement_signale_les_requetes_vides_ou_inconnues() {
+        let games = [game("Portal 2")];
+        assert!(matching_games(&games, "  ").is_empty());
+        assert!(matching_games(&games, "zzzz").is_empty());
+    }
 }

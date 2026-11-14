@@ -378,9 +378,8 @@ impl AssetPlan {
         if url.trim().is_empty() {
             return;
         }
-        let preview = preview.filter(|thumb| {
-            thumb.starts_with("https://") || thumb.starts_with("http://")
-        });
+        let preview =
+            preview.filter(|thumb| thumb.starts_with("https://") || thumb.starts_with("http://"));
         if let Some(entry) = self.kinds.iter_mut().find(|(k, _)| *k == kind) {
             if !entry.1.contains(&url) {
                 entry.1.push(url);
@@ -418,7 +417,10 @@ impl AssetPlan {
     }
 
     fn preview_for(&self, kind: AssetKind, url: &str) -> Option<String> {
-        let index = self.candidates(kind).iter().position(|candidate| candidate == url)?;
+        let index = self
+            .candidates(kind)
+            .iter()
+            .position(|candidate| candidate == url)?;
         self.previews
             .iter()
             .find(|(k, _)| *k == kind)
@@ -922,7 +924,10 @@ mod icon_tests {
         );
         let chosen = plan.with_choices(&[(AssetKind::Cover, 1)]);
         assert_eq!(
-            chosen.candidates(AssetKind::Cover).first().map(String::as_str),
+            chosen
+                .candidates(AssetKind::Cover)
+                .first()
+                .map(String::as_str),
             Some("https://cdn/full-2.png")
         );
         assert_eq!(

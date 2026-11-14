@@ -35,10 +35,9 @@ pub fn install(ctx: &egui::Context) {
         "archivo-bold".to_owned(),
         Arc::new(FontData::from_static(ARCHIVO_BOLD)),
     );
-    fonts.font_data.insert(
-        "lucide".to_owned(),
-        Arc::new(FontData::from_static(LUCIDE)),
-    );
+    fonts
+        .font_data
+        .insert("lucide".to_owned(), Arc::new(FontData::from_static(LUCIDE)));
     fonts
         .families
         .entry(FontFamily::Proportional)

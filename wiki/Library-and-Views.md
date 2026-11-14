@@ -3,7 +3,7 @@
 > [Home](Home) · [Getting started](Getting-Started) · **Library** ·
 > [Stores](Stores-and-Saves) · [Settings](Settings)
 
-![Library in list view](https://raw.githubusercontent.com/Matheotaku4/Quark-Launcher/main/docs/images/library-fr.png)
+![Library in list view](https://raw.githubusercontent.com/Matheotaku4/Quark/main/docs/images/library-fr.png)
 
 ## Two layouts
 
@@ -31,7 +31,7 @@ keeps that state visible after switching pages.
 
 ## Sort, filter, group
 
-**Sort**: name, last session, date added or playtime.
+**Sort**: name, last session, date added, playtime or **Favorites first**.
 
 **Filters**: the funnel button above the list groups status (`To play`,
 `Playing`, `Completed`, `Dropped`), Steam genre and personal tag. Filters
@@ -61,12 +61,15 @@ cleaned on load and save. The list is limited to 32 views.
 
 ## Home
 
-Home shows a carousel of recently played games, then the library as covers. The
-carousel can advance automatically; the delay is set in
-**Settings → Appearance → Home**.
+Home shows a carousel of recently played games, then a **Favorites** strip with
+the games you starred, then the library as covers. The carousel can advance
+automatically; the delay is set in **Settings → Appearance → Home**.
 
-The main button becomes **Stop** while the game is running. Playtime, last
-session, ProtonDB rating and the native Linux badge are visible on the banner.
+The main button becomes **Stop** while the game is running. Since 1.4.5,
+playtime and the last session live in the overview panel rather than beside
+**Play**; the ProtonDB rating and the native Linux badge stay on the banner.
+The game actions can be placed in the top-right corner or beside **Play** in
+**Settings → Appearance**.
 
 **Random hero background**: when enabled, Quark picks a banner from the library
 at startup, blurs it and draws it behind Home and Library. The radius is set
@@ -80,7 +83,8 @@ The game page shows:
 - the banner, logo or title and the ProtonDB/Linux badges;
 - the **Play/Stop** button, playtime and last session;
 - the **News**, **Achievements** and **History** tabs;
-- the **Logs**, **Information**, **Customize** and **Game settings** actions.
+- the **Logs**, **Information**, **Customize** and **Game settings** actions;
+- a star button to add or remove the game from the **Favorites** strip.
 
 **History** summarizes sessions, shows the last twelve weeks and lists recent
 play sessions. Playtime published by Epic or GOG replaces local playtime when
@@ -133,7 +137,6 @@ explicitly remove them in the relevant tools.
 ## Going further
 
 - [Stores and saves](Stores-and-Saves)
-- [PlayStation 2 and RetroAchievements](PlayStation-2-and-RetroAchievements)
 - [Proton, Wine and launch options](Proton-Wine-and-Launch-Options)
 - [Settings](Settings)
 

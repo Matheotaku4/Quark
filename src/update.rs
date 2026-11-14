@@ -12,7 +12,7 @@ use std::io::Read as _;
 use std::path::{Path, PathBuf};
 
 /// Dépôt dont on suit les releases.
-pub const REPO: &str = "Matheotaku4/Quark-Launcher";
+pub const REPO: &str = "Matheotaku4/Quark";
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct Release {

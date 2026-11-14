@@ -135,10 +135,6 @@ pub struct ThumbnailCache {
 }
 
 impl ThumbnailCache {
-    pub fn len(&self) -> usize {
-        self.entries.len()
-    }
-
     /// Miniature d'un fichier local, redimensionnée une seule fois puis gardée
     /// en texture. Le fichier d'origine n'est jamais réécrit.
     pub fn get(&mut self, ctx: &egui::Context, path: &Path) -> Option<&TextureHandle> {
@@ -292,26 +288,6 @@ impl QuarkApp {
     ) -> Option<TextureHandle> {
         self.blurs.get(ctx, path, radius).cloned()
     }
-}
-
-/// Dessine la texture dans `rect` en conservant ses proportions.
-
-/// Dessine la texture dans `rect` en conservant ses proportions, collée en bas
-/// à gauche : le logo de la fiche occupe ainsi la même place que le titre de
-/// secours, au lieu de flotter au centre de la bannière.
-pub fn draw_fit_left(ui: &mut egui::Ui, texture: &TextureHandle, rect: egui::Rect) {
-    let size = texture.size_vec2();
-    if size.x <= 0.0 || size.y <= 0.0 || rect.width() <= 0.0 || rect.height() <= 0.0 {
-        return;
-    }
-    let scale = (rect.width() / size.x).min(rect.height() / size.y);
-    let target = size * scale;
-    let fitted =
-        egui::Rect::from_min_size(egui::pos2(rect.left(), rect.bottom() - target.y), target);
-    ui.put(
-        fitted,
-        egui::Image::new(egui::load::SizedTexture::new(texture.id(), target)),
-    );
 }
 
 /// Dessine la texture en remplissant `rect` sans jamais la déformer : l'image
@@ -553,31 +529,6 @@ pub fn accent_from_path(path: &Path) -> Option<egui::Color32> {
 /// Sert à poser des icônes sombres sur une bannière claire : une icône blanche
 /// sur une image bleu ciel devient invisible. Le calcul échantillonne l'image
 /// (32 × 32 points au plus) et n'a lieu qu'une fois par fichier côté appelant.
-pub fn is_light(path: &Path) -> bool {
-    let Ok(bytes) = std::fs::read(path) else {
-        return false;
-    };
-    let Ok(image) = image::load_from_memory(&bytes) else {
-        return false;
-    };
-    let image = image.to_rgb8();
-    let (width, height) = image.dimensions();
-    if width == 0 || height == 0 {
-        return false;
-    }
-    let step_x = (width / 32).max(1);
-    let step_y = (height / 32).max(1);
-    let mut total = 0.0_f32;
-    let mut count = 0.0_f32;
-    for y in (0..height).step_by(step_y as usize) {
-        for x in (0..width).step_by(step_x as usize) {
-            let pixel = image.get_pixel(x, y);
-            total += 0.299 * pixel[0] as f32 + 0.587 * pixel[1] as f32 + 0.114 * pixel[2] as f32;
-            count += 1.0;
-        }
-    }
-    count > 0.0 && total / count > 150.0
-}
 
 /// Teinte en degrés d'une couleur RVB (0-360).
 fn hue_degrees(r: f32, g: f32, b: f32) -> f32 {
@@ -635,24 +586,6 @@ mod tests {
             .save(&gris)
             .unwrap();
         assert!(accent_from_path(&gris).is_none());
-    }
-
-    #[test]
-    fn une_image_claire_est_reconnue() {
-        let dir = std::env::temp_dir().join("quark-light-test");
-        std::fs::create_dir_all(&dir).unwrap();
-        let clair = dir.join("clair.png");
-        image::RgbImage::from_pixel(32, 18, image::Rgb([0x7F, 0xC8, 0xFF]))
-            .save(&clair)
-            .unwrap();
-        assert!(is_light(&clair));
-        let sombre = dir.join("sombre.png");
-        image::RgbImage::from_pixel(32, 18, image::Rgb([12, 16, 22]))
-            .save(&sombre)
-            .unwrap();
-        assert!(!is_light(&sombre));
-        // Fichier absent : on ne casse rien, on suppose sombre.
-        assert!(!is_light(&dir.join("absent.png")));
     }
 
     #[test]

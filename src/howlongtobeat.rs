@@ -142,14 +142,8 @@ fn fetch_token(client: &reqwest::blocking::Client, path: &str) -> Result<Token, 
         .ok_or_else(|| "jeton HowLongToBeat absent".to_string())?;
     Ok(Token {
         value: value.to_string(),
-        hp_key: raw
-            .get("hpKey")
-            .and_then(Value::as_str)
-            .map(str::to_string),
-        hp_val: raw
-            .get("hpVal")
-            .and_then(Value::as_str)
-            .map(str::to_string),
+        hp_key: raw.get("hpKey").and_then(Value::as_str).map(str::to_string),
+        hp_val: raw.get("hpVal").and_then(Value::as_str).map(str::to_string),
     })
 }
 
@@ -303,7 +297,14 @@ mod tests {
     #[test]
     fn le_meilleur_resultat_ignore_les_dlc() {
         let games = vec![
-            game(1, "The Witcher 3: Wild Hunt - Blood and Wine", "dlc", 10.0, 12.0, 15.0),
+            game(
+                1,
+                "The Witcher 3: Wild Hunt - Blood and Wine",
+                "dlc",
+                10.0,
+                12.0,
+                15.0,
+            ),
             game(2, "The Witcher 3: Wild Hunt", "game", 51.6, 103.8, 164.0),
             game(3, "The Witcher 3", "game", 50.0, 100.0, 160.0),
         ];

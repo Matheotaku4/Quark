@@ -483,24 +483,6 @@ impl ThemeMode {
         })
     }
 
-    /// Description courte affichée sous le nom du thème.
-    pub fn description(self) -> String {
-        crate::i18n::tr(match self {
-            ThemeMode::Amoled => "Noir pur, contraste maximal",
-            ThemeMode::Graphite => "Noir doux et ardoise",
-            ThemeMode::CatppuccinMocha => "Pastel chaleureux sur espresso",
-            ThemeMode::CatppuccinMacchiato => "Pastel doux sur bleu nuit",
-            ThemeMode::CatppuccinFrappe => "Pastel froid sur ardoise",
-            ThemeMode::Dracula => "Violet et cyan sur nuit",
-            ThemeMode::Nord => "Bleu arctique et brume",
-            ThemeMode::GruvboxDark => "Ambre et terre cuite",
-            ThemeMode::TokyoNight => "Bleu électrique et néon",
-            ThemeMode::RosePine => "Rose poudré et mauve",
-            ThemeMode::Everforest => "Vert forêt et sauge",
-            ThemeMode::OneDark => "Bleu acier et graphite",
-            ThemeMode::Kanagawa => "Encre japonaise et indigo",
-        })
-    }
 }
 
 fn deserialize_theme<'de, D>(deserializer: D) -> Result<ThemeMode, D::Error>
@@ -566,10 +548,17 @@ pub enum HomeSort {
     Added,
     /// Nombre d'heures jouées, le plus élevé d'abord.
     Playtime,
+    /// Favoris d'abord, puis dernière session.
+    Favorites,
 }
 
 impl HomeSort {
-    pub const ALL: [HomeSort; 3] = [HomeSort::Recent, HomeSort::Added, HomeSort::Playtime];
+    pub const ALL: [HomeSort; 4] = [
+        HomeSort::Recent,
+        HomeSort::Added,
+        HomeSort::Playtime,
+        HomeSort::Favorites,
+    ];
 
     /// Nombre de jeux montrés dans le carrousel de l'accueil.
     pub const CAROUSEL: usize = 5;
@@ -579,6 +568,7 @@ impl HomeSort {
             HomeSort::Recent => "Joués récemment",
             HomeSort::Added => "Ajoutés récemment",
             HomeSort::Playtime => "Plus joués",
+            HomeSort::Favorites => "Favoris d'abord",
         })
     }
 }
@@ -695,14 +685,16 @@ pub enum LibrarySort {
     Recent,
     Added,
     Playtime,
+    Favorites,
 }
 
 impl LibrarySort {
-    pub const ALL: [LibrarySort; 4] = [
+    pub const ALL: [LibrarySort; 5] = [
         LibrarySort::Name,
         LibrarySort::Recent,
         LibrarySort::Added,
         LibrarySort::Playtime,
+        LibrarySort::Favorites,
     ];
 
     pub fn label(self) -> String {
@@ -711,6 +703,7 @@ impl LibrarySort {
             LibrarySort::Recent => "Dernière session",
             LibrarySort::Added => "Ajout récent",
             LibrarySort::Playtime => "Temps joué",
+            LibrarySort::Favorites => "Favoris d'abord",
         })
     }
 
@@ -719,6 +712,7 @@ impl LibrarySort {
             "recent" => LibrarySort::Recent,
             "added" => LibrarySort::Added,
             "playtime" => LibrarySort::Playtime,
+            "favorites" | "favoris" => LibrarySort::Favorites,
             _ => LibrarySort::Name,
         }
     }
@@ -828,8 +822,10 @@ pub enum GameActionPlacement {
 }
 
 impl GameActionPlacement {
-    pub const ALL: [GameActionPlacement; 2] =
-        [GameActionPlacement::TopRight, GameActionPlacement::BesidePlay];
+    pub const ALL: [GameActionPlacement; 2] = [
+        GameActionPlacement::TopRight,
+        GameActionPlacement::BesidePlay,
+    ];
 
     pub fn label(self) -> &'static str {
         match self {
@@ -1008,7 +1004,7 @@ pub struct Settings {
     /// neuve ou une configuration antérieure à 1.2.
     pub last_seen_version: String,
     /// « Mes jeux » en liste (une ligne par jeu, bouton d'action visible) au lieu
-    /// de la grille de jaquettes. Faux par défaut : l'affichage historique.
+    /// de la grille de jaquettes. Vrai par défaut : la liste compacte.
     pub my_games_list: bool,
     /// Affiche un hero aléatoire flouté derrière l'accueil et la bibliothèque.
     pub hero_background: bool,
@@ -1032,12 +1028,6 @@ pub struct Settings {
     pub game_actions: GameActionPlacement,
     /// Clé API SteamGridDB (https://www.steamgriddb.com/profile/preferences/api).
     pub sgdb_api_key: String,
-    /// Chemin explicite de PCSX2. Vide = détection dans le PATH et Flatpak.
-    pub pcsx2_path: String,
-    /// Pseudo RetroAchievements, utilisé avec la clé Web API ci-dessous.
-    pub ra_username: String,
-    /// Clé Web API RetroAchievements (profil → Keys).
-    pub ra_api_key: String,
     /// Langue demandée à l'API Steam (storesearch).
     pub language: String,
     /// Pays demandé à l'API Steam (storesearch).
@@ -1095,6 +1085,12 @@ pub struct Settings {
     pub overlay_compact: bool,
     /// Affiche la progression et la rareté dans l'overlay.
     pub overlay_show_progress: bool,
+    /// Notifie la fin d'une installation Epic/GOG.
+    pub notify_install_done: bool,
+    /// Notifie la fin d'une sauvegarde Ludusavi.
+    pub notify_save_done: bool,
+    /// Notifie la fin d'une session de jeu.
+    pub notify_session_done: bool,
     /// Synchronise les sauvegardes cloud Epic/GOG après installation et à la
     /// fermeture du jeu.
     pub cloud_saves: bool,
@@ -1144,9 +1140,6 @@ impl Default for Settings {
             overview_width: 268.0,
             game_actions: GameActionPlacement::TopRight,
             sgdb_api_key: String::new(),
-            pcsx2_path: String::new(),
-            ra_username: String::new(),
-            ra_api_key: String::new(),
             language: "french".to_string(),
             country: "FR".to_string(),
             default_proton: None,
@@ -1168,6 +1161,9 @@ impl Default for Settings {
             overlay_show_locked: true,
             overlay_compact: false,
             overlay_show_progress: true,
+            notify_install_done: true,
+            notify_save_done: true,
+            notify_session_done: true,
             cloud_saves: true,
             carousel_auto: true,
             carousel_secs: 8.0,
@@ -1332,17 +1328,6 @@ impl Installation {
     }
 }
 
-/// Informations propres à un jeu PlayStation 2 émulé par PCSX2.
-#[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq, Eq)]
-#[serde(default)]
-pub struct Ps2Config {
-    /// Numéro de série du disque (`SLUS-20062`), lu dans `SYSTEM.CNF`.
-    pub serial: String,
-    /// Identifiant de la fiche RetroAchievements, choisi par titre puis
-    /// conservé : l'API ne permet pas de le déduire du numéro de série.
-    pub ra_game_id: Option<u64>,
-}
-
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(default)]
 pub struct Game {
@@ -1368,9 +1353,6 @@ pub struct Game {
     /// Dossier analysé pour proposer des DLL dans l'onglet « DLL overrides ».
     /// Vide = dossier de l'exécutable du jeu.
     pub dll_source: Option<String>,
-    /// Présent pour un jeu PlayStation 2 lancé par PCSX2. `exe` pointe alors
-    /// sur l'image disque, pas sur un binaire Windows.
-    pub ps2: Option<Ps2Config>,
     /// Runtime anti-triche à utiliser pour ce jeu (aucun par défaut).
     pub anticheat: AnticheatMode,
     /// Options de lancement graphiques (GameMode, MangoHud, gamescope…).
@@ -1387,6 +1369,8 @@ pub struct Game {
     pub status: GameStatus,
     /// Notes personnelles, libres.
     pub notes: String,
+    /// Jeu marqué comme favori, épinglé en tête de l'accueil et de la bibliothèque.
+    pub favorite: bool,
     /// Tags personnels (« coop », « détente »…) qui servent de catégories.
     pub tags: Vec<String>,
     /// Fiche Steam : développeur, genres, date de sortie, description courte.
@@ -1420,7 +1404,6 @@ impl Default for Game {
             prefix: None,
             env: Vec::new(),
             dll_source: None,
-            ps2: None,
             anticheat: AnticheatMode::None,
             launch: LaunchOptions::default(),
             umu: false,
@@ -1428,6 +1411,7 @@ impl Default for Game {
             proton_log: false,
             status: GameStatus::None,
             notes: String::new(),
+            favorite: false,
             tags: Vec::new(),
             developer: String::new(),
             genres: Vec::new(),
@@ -2206,6 +2190,11 @@ impl Library {
             }),
             LibrarySort::Added => games.sort_by(|a, b| b.added_at.cmp(&a.added_at)),
             LibrarySort::Playtime => games.sort_by(|a, b| b.playtime_secs.cmp(&a.playtime_secs)),
+            LibrarySort::Favorites => games.sort_by(|a, b| {
+                b.favorite
+                    .cmp(&a.favorite)
+                    .then_with(|| a.name.to_lowercase().cmp(&b.name.to_lowercase()))
+            }),
         }
         games.into_iter().map(|game| game.id.clone()).collect()
     }
@@ -2454,7 +2443,27 @@ impl Library {
             }),
             HomeSort::Added => games.sort_by(|a, b| b.added_at.cmp(&a.added_at)),
             HomeSort::Playtime => games.sort_by(|a, b| b.playtime_secs.cmp(&a.playtime_secs)),
+            HomeSort::Favorites => games.sort_by(|a, b| {
+                b.favorite.cmp(&a.favorite).then_with(|| {
+                    b.last_played
+                        .unwrap_or(0)
+                        .cmp(&a.last_played.unwrap_or(0))
+                        .then_with(|| b.added_at.cmp(&a.added_at))
+                })
+            }),
         }
+        games.into_iter().map(|g| g.id.clone()).collect()
+    }
+
+    /// Identifiants des jeux favoris, dans l'ordre de la dernière session.
+    pub fn favorite_ids(&self) -> Vec<String> {
+        let mut games: Vec<&Game> = self.games.iter().filter(|game| game.favorite).collect();
+        games.sort_by(|a, b| {
+            b.last_played
+                .unwrap_or(0)
+                .cmp(&a.last_played.unwrap_or(0))
+                .then_with(|| b.added_at.cmp(&a.added_at))
+        });
         games.into_iter().map(|g| g.id.clone()).collect()
     }
 }
@@ -2626,23 +2635,6 @@ mod tests {
         );
         settings.default_install_dir = Some("   ".to_string());
         assert!(settings.install_root().ends_with("Games"));
-    }
-
-    #[test]
-    fn un_jeu_ps2_garde_son_serial_et_sa_fiche_ra() {
-        let mut game = Game::new("Shadow of the Colossus", "/jeux/shadow.iso");
-        assert!(game.ps2.is_none());
-        game.ps2 = Some(Ps2Config {
-            serial: "SCUS-97472".to_string(),
-            ra_game_id: Some(238),
-        });
-        let text = serde_json::to_string(&game).unwrap();
-        let decoded: Game = serde_json::from_str(&text).unwrap();
-        assert_eq!(decoded.ps2, game.ps2);
-        // Une configuration 1.2.1 ne contient pas `ps2` : le champ reste
-        // optionnel et ne casse pas le chargement.
-        let old: Game = serde_json::from_str(r#"{"name":"Old","exe":"/old"}"#).unwrap();
-        assert!(old.ps2.is_none());
     }
 
     #[test]
@@ -2823,6 +2815,46 @@ mod tests {
     }
 
     #[test]
+    fn les_favoris_passent_devant_les_autres_jeux() {
+        let mut lib = Library::default();
+        let mut a = game("a");
+        a.name = "Alpha".to_string();
+        a.last_played = Some(50);
+        let mut b = game("b");
+        b.name = "Bravo".to_string();
+        b.favorite = true;
+        b.last_played = Some(10);
+        let mut c = game("c");
+        c.name = "Charlie".to_string();
+        c.favorite = true;
+        c.last_played = Some(90);
+        lib.games = vec![a, b, c];
+
+        assert_eq!(
+            lib.home_ids(HomeSort::Favorites),
+            vec!["c".to_string(), "b".to_string(), "a".to_string()]
+        );
+        assert_eq!(
+            lib.favorite_ids(),
+            vec!["c".to_string(), "b".to_string()]
+        );
+        assert_eq!(
+            lib.sorted_ids_by(LibrarySort::Favorites),
+            vec!["b".to_string(), "c".to_string(), "a".to_string()]
+        );
+    }
+
+    #[test]
+    fn un_favori_est_persiste_avec_la_fiche() {
+        let mut game = game("a");
+        assert!(!game.favorite);
+        game.favorite = true;
+        let json = serde_json::to_string(&game).unwrap();
+        let back: Game = serde_json::from_str(&json).unwrap();
+        assert!(back.favorite);
+    }
+
+    #[test]
     fn une_session_est_archivee_dans_l_historique() {
         let mut game = game("a");
         game.status = GameStatus::Backlog;
@@ -2858,9 +2890,25 @@ mod tests {
     }
 
     #[test]
-    fn mes_jeux_s_ouvre_en_grille_par_defaut() {
-        // Les configurations existantes n'ont pas ce réglage : elles gardent la grille.
-        assert!(!Settings::default().my_games_list);
+    fn mes_jeux_s_ouvre_en_liste_par_defaut() {
+        // La liste compacte est l'affichage par défaut des nouvelles installations.
+        assert!(Settings::default().my_games_list);
+    }
+
+    #[test]
+    fn une_configuration_ps2_se_charge_sans_perdre_les_jeux() {
+        // Une ancienne configuration peut encore contenir les champs PS2 retirés :
+        // serde les ignore, sans empêcher le chargement du reste de la bibliothèque.
+        let raw = r#"{
+            "games": [{"name": "Ancien jeu PS2", "exe": "/jeux/ancien.iso",
+                       "ps2": {"serial": "SLUS-20062", "ra_game_id": 238}}],
+            "settings": {"pcsx2_path": "/usr/bin/pcsx2", "ra_username": "joueur",
+                         "ra_api_key": "cle"}
+        }"#;
+        let lib: Library = serde_json::from_str(raw).expect("configuration héritée lisible");
+        assert_eq!(lib.games.len(), 1);
+        assert_eq!(lib.games[0].name, "Ancien jeu PS2");
+        assert_eq!(lib.games[0].exe, "/jeux/ancien.iso");
     }
 
     #[test]

@@ -49,15 +49,15 @@ impl QuarkApp {
             })
             .collect();
 
+        ui.label(
+            crate::i18n::rich(
+                "Lancée automatiquement au démarrage, boutique par boutique. \
+                 Chaque synchronisation remplace seulement les jeux de sa boutique.",
+            )
+            .size(11.5)
+            .color(pal.text_dim),
+        );
         ui.horizontal(|ui| {
-            ui.label(
-                crate::i18n::rich(
-                    "Lancée automatiquement au démarrage, boutique par boutique. \
-                     Chaque synchronisation remplace seulement les jeux de sa boutique.",
-                )
-                .size(11.5)
-                .color(pal.text_dim),
-            );
             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                 if widgets::ghost_button(ui, "Tout synchroniser", &pal, Icon::Refresh).clicked() {
                     self.start_steam_sync(ctx);

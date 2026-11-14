@@ -50,247 +50,228 @@ impl QuarkApp {
         let mut group = self.lib.settings.group_by;
 
         let response = widgets::ghost_button(ui, &label, &pal, Icon::Filter);
-            egui::Popup::from_toggle_button_response(&response)
-                .close_behavior(egui::PopupCloseBehavior::CloseOnClickOutside)
-                .frame(
-                    egui::Frame::menu(ui.style())
-                        .fill(pal.header)
-                        .stroke(egui::Stroke::new(1.0_f32, pal.border))
-                        .corner_radius(8.0)
-                        .inner_margin(12.0),
-                )
-                .show(|ui| {
-                    ui.set_min_width(300.0);
-                    ui.set_max_width(340.0);
-                    ui.horizontal(|ui| {
+        egui::Popup::from_toggle_button_response(&response)
+            .close_behavior(egui::PopupCloseBehavior::CloseOnClickOutside)
+            .frame(
+                egui::Frame::menu(ui.style())
+                    .fill(pal.header)
+                    .stroke(egui::Stroke::new(1.0_f32, pal.border))
+                    .corner_radius(8.0)
+                    .inner_margin(12.0),
+            )
+            .show(|ui| {
+                ui.set_min_width(300.0);
+                ui.set_max_width(340.0);
+                ui.horizontal(|ui| {
+                    ui.label(
+                        crate::i18n::rich("FILTRES")
+                            .size(10.0)
+                            .strong()
+                            .color(pal.accent),
+                    );
+                    ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
+                        if active > 0
+                            && widgets::ghost_button(ui, "Tout effacer", &pal, Icon::None).clicked()
+                        {
+                            status = GameStatus::None;
+                            tag.clear();
+                            genre.clear();
+                        }
+                    });
+                });
+                ui.add_space(6.0);
+                egui::ScrollArea::vertical()
+                    .id_salt("quark_filter_menu_scroll")
+                    // Sur l'accueil, le bouton est au milieu de la page :
+                    // une hauteur plus courte garde le panneau sous lui au
+                    // lieu de le faire basculer au-dessus de la barre du haut.
+                    .max_height(if self.home { 330.0 } else { 560.0 })
+                    .show(ui, |ui| {
                         ui.label(
-                            crate::i18n::rich("FILTRES")
-                                .size(10.0)
+                            crate::i18n::rich("Affichage")
+                                .size(9.5)
                                 .strong()
-                                .color(pal.accent),
+                                .color(pal.text_faint),
                         );
-                        ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-                            if active > 0
-                                && widgets::ghost_button(ui, "Tout effacer", &pal, Icon::None)
-                                    .clicked()
+                        ui.add_space(4.0);
+                        ui.horizontal(|ui| {
+                            egui::ComboBox::from_id_salt("quark_filter_views")
+                                .selected_text(crate::i18n::rich(active_view.clone()).size(11.0))
+                                .width(190.0)
+                                .show_ui(ui, |ui| {
+                                    if views.is_empty() {
+                                        ui.label(
+                                            crate::i18n::rich("Aucune vue enregistrée")
+                                                .size(11.0)
+                                                .color(pal.text_faint),
+                                        );
+                                    }
+                                    for (index, view) in views.iter().enumerate() {
+                                        if ui
+                                            .selectable_label(
+                                                view.matches(&self.lib.settings, &self.filter),
+                                                &view.name,
+                                            )
+                                            .clicked()
+                                        {
+                                            apply_view = Some(index);
+                                            ui.close();
+                                        }
+                                    }
+                                });
+                            if widgets::icon_button(
+                                ui,
+                                24.0,
+                                Icon::Plus,
+                                &pal,
+                                "Enregistrer la vue actuelle (filtres, tri et regroupement)",
+                            )
+                            .clicked()
                             {
-                                status = GameStatus::None;
-                                tag.clear();
-                                genre.clear();
+                                self.saved_view_name.clear();
+                                self.saved_view_error = None;
+                                self.saved_views_open = true;
                             }
                         });
-                    });
-                    ui.add_space(6.0);
-                    egui::ScrollArea::vertical()
-                        .id_salt("quark_filter_menu_scroll")
-                        // Sur l'accueil, le bouton est au milieu de la page :
-                        // une hauteur plus courte garde le panneau sous lui au
-                        // lieu de le faire basculer au-dessus de la barre du haut.
-                        .max_height(if self.home { 330.0 } else { 560.0 })
-                        .show(ui, |ui| {
+                        ui.add_space(8.0);
+                        if self.home {
                             ui.label(
-                                crate::i18n::rich("Affichage")
+                                crate::i18n::rich("Trier")
                                     .size(9.5)
                                     .strong()
                                     .color(pal.text_faint),
                             );
                             ui.add_space(4.0);
-                            ui.horizontal(|ui| {
-                                egui::ComboBox::from_id_salt("quark_filter_views")
-                                    .selected_text(
-                                        crate::i18n::rich(active_view.clone()).size(11.0),
-                                    )
-                                    .width(190.0)
-                                    .show_ui(ui, |ui| {
-                                        if views.is_empty() {
-                                            ui.label(
-                                                crate::i18n::rich("Aucune vue enregistrée")
-                                                    .size(11.0)
-                                                    .color(pal.text_faint),
-                                            );
-                                        }
-                                        for (index, view) in views.iter().enumerate() {
-                                            if ui
-                                                .selectable_label(
-                                                    view.matches(&self.lib.settings, &self.filter),
-                                                    &view.name,
-                                                )
-                                                .clicked()
-                                            {
-                                                apply_view = Some(index);
-                                                ui.close();
-                                            }
-                                        }
-                                    });
-                                if widgets::icon_button(
-                                    ui,
-                                    24.0,
-                                    Icon::Plus,
-                                    &pal,
-                                    "Enregistrer la vue actuelle (filtres, tri et regroupement)",
-                                )
-                                .clicked()
-                                {
-                                    self.saved_view_name.clear();
-                                    self.saved_view_error = None;
-                                    self.saved_views_open = true;
+                            ui.horizontal_wrapped(|ui| {
+                                for option in HomeSort::ALL {
+                                    if widgets::chip(ui, &option.label(), home_sort == option, &pal)
+                                    {
+                                        home_sort = option;
+                                    }
+                                    ui.add_space(4.0);
                                 }
                             });
-                            ui.add_space(8.0);
-                            if self.home {
-                                ui.label(
-                                    crate::i18n::rich("Trier")
-                                        .size(9.5)
-                                        .strong()
-                                        .color(pal.text_faint),
-                                );
-                                ui.add_space(4.0);
-                                ui.horizontal_wrapped(|ui| {
-                                    for option in HomeSort::ALL {
-                                        if widgets::chip(
-                                            ui,
-                                            &option.label(),
-                                            home_sort == option,
-                                            &pal,
-                                        ) {
-                                            home_sort = option;
+                        } else {
+                            ui.horizontal(|ui| {
+                                egui::ComboBox::from_id_salt("quark_filter_sort")
+                                    .selected_text(
+                                        crate::i18n::rich(format!("Tri : {}", sort.label()))
+                                            .size(11.0),
+                                    )
+                                    .width(130.0)
+                                    .show_ui(ui, |ui| {
+                                        for option in LibrarySort::ALL {
+                                            ui.selectable_value(&mut sort, option, option.label());
                                         }
-                                        ui.add_space(4.0);
-                                    }
-                                });
-                            } else {
-                                ui.horizontal(|ui| {
-                                    egui::ComboBox::from_id_salt("quark_filter_sort")
-                                        .selected_text(crate::i18n::rich(format!(
-                                            "Tri : {}",
-                                            sort.label()
-                                        ))
-                                        .size(11.0))
-                                        .width(130.0)
-                                        .show_ui(ui, |ui| {
-                                            for option in LibrarySort::ALL {
-                                                ui.selectable_value(
-                                                    &mut sort,
-                                                    option,
-                                                    option.label(),
-                                                );
-                                            }
-                                        });
-                                    egui::ComboBox::from_id_salt("quark_filter_group")
-                                        .selected_text(crate::i18n::rich(format!(
-                                            "Grouper : {}",
-                                            group.label()
-                                        ))
-                                        .size(11.0))
-                                        .width(130.0)
-                                        .show_ui(ui, |ui| {
-                                            for option in GroupBy::ALL {
-                                                ui.selectable_value(
-                                                    &mut group,
-                                                    option,
-                                                    option.label(),
-                                                );
-                                            }
-                                        })
-                                        .response
-                                        .on_hover_text(
-                                            "Le regroupement s'applique à la vue liste.",
-                                        );
-                                });
+                                    });
+                                egui::ComboBox::from_id_salt("quark_filter_group")
+                                    .selected_text(
+                                        crate::i18n::rich(format!("Grouper : {}", group.label()))
+                                            .size(11.0),
+                                    )
+                                    .width(130.0)
+                                    .show_ui(ui, |ui| {
+                                        for option in GroupBy::ALL {
+                                            ui.selectable_value(&mut group, option, option.label());
+                                        }
+                                    })
+                                    .response
+                                    .on_hover_text("Le regroupement s'applique à la vue liste.");
+                            });
+                        }
+                        ui.add_space(10.0);
+                        ui.separator();
+                        ui.add_space(8.0);
+                        ui.label(
+                            crate::i18n::rich("Statut")
+                                .size(9.5)
+                                .strong()
+                                .color(pal.text_faint),
+                        );
+                        ui.add_space(3.0);
+                        ui.horizontal_wrapped(|ui| {
+                            if widgets::chip_colored(
+                                ui,
+                                "Tous",
+                                status == GameStatus::None,
+                                &pal,
+                                pal.accent,
+                            ) {
+                                status = GameStatus::None;
                             }
+                            for option in GameStatus::ALL.iter().skip(1) {
+                                let selected = status == *option;
+                                let (r, g, b) = option.color();
+                                if widgets::chip_colored(
+                                    ui,
+                                    &option.label(),
+                                    selected,
+                                    &pal,
+                                    Color32::from_rgb(r, g, b),
+                                ) {
+                                    status = if selected { GameStatus::None } else { *option };
+                                }
+                                ui.add_space(4.0);
+                            }
+                        });
+                        if !genres.is_empty() {
                             ui.add_space(10.0);
-                            ui.separator();
-                            ui.add_space(8.0);
                             ui.label(
-                                crate::i18n::rich("Statut")
+                                crate::i18n::rich("Genre")
                                     .size(9.5)
                                     .strong()
                                     .color(pal.text_faint),
                             );
                             ui.add_space(3.0);
                             ui.horizontal_wrapped(|ui| {
-                                if widgets::chip_colored(
-                                    ui,
-                                    "Tous",
-                                    status == GameStatus::None,
-                                    &pal,
-                                    pal.accent,
-                                ) {
-                                    status = GameStatus::None;
-                                }
-                                for option in GameStatus::ALL.iter().skip(1) {
-                                    let selected = status == *option;
-                                    let (r, g, b) = option.color();
-                                    if widgets::chip_colored(
+                                for (name, count) in &genres {
+                                    let selected = genre.eq_ignore_ascii_case(name);
+                                    if widgets::chip(
                                         ui,
-                                        &option.label(),
+                                        &format!("{name} · {count}"),
                                         selected,
                                         &pal,
-                                        Color32::from_rgb(r, g, b),
                                     ) {
-                                        status = if selected { GameStatus::None } else { *option };
+                                        genre = if selected {
+                                            String::new()
+                                        } else {
+                                            name.clone()
+                                        };
                                     }
                                     ui.add_space(4.0);
                                 }
                             });
-                            if !genres.is_empty() {
-                                ui.add_space(10.0);
-                                ui.label(
-                                    crate::i18n::rich("Genre")
-                                        .size(9.5)
-                                        .strong()
-                                        .color(pal.text_faint),
-                                );
-                                ui.add_space(3.0);
-                                ui.horizontal_wrapped(|ui| {
-                                    for (name, count) in &genres {
-                                        let selected = genre.eq_ignore_ascii_case(name);
-                                        if widgets::chip(
-                                            ui,
-                                            &format!("{name} · {count}"),
-                                            selected,
-                                            &pal,
-                                        ) {
-                                            genre = if selected {
-                                                String::new()
-                                            } else {
-                                                name.clone()
-                                            };
-                                        }
-                                        ui.add_space(4.0);
+                        }
+                        if !tags.is_empty() {
+                            ui.add_space(10.0);
+                            ui.label(
+                                crate::i18n::rich("Tags")
+                                    .size(9.5)
+                                    .strong()
+                                    .color(pal.text_faint),
+                            );
+                            ui.add_space(3.0);
+                            ui.horizontal_wrapped(|ui| {
+                                for (name, count) in &tags {
+                                    let selected = tag.eq_ignore_ascii_case(name);
+                                    if widgets::chip(
+                                        ui,
+                                        &format!("#{name} · {count}"),
+                                        selected,
+                                        &pal,
+                                    ) {
+                                        tag = if selected {
+                                            String::new()
+                                        } else {
+                                            name.clone()
+                                        };
                                     }
-                                });
-                            }
-                            if !tags.is_empty() {
-                                ui.add_space(10.0);
-                                ui.label(
-                                    crate::i18n::rich("Tags")
-                                        .size(9.5)
-                                        .strong()
-                                        .color(pal.text_faint),
-                                );
-                                ui.add_space(3.0);
-                                ui.horizontal_wrapped(|ui| {
-                                    for (name, count) in &tags {
-                                        let selected = tag.eq_ignore_ascii_case(name);
-                                        if widgets::chip(
-                                            ui,
-                                            &format!("#{name} · {count}"),
-                                            selected,
-                                            &pal,
-                                        ) {
-                                            tag = if selected {
-                                                String::new()
-                                            } else {
-                                                name.clone()
-                                            };
-                                        }
-                                        ui.add_space(4.0);
-                                    }
-                                });
-                            }
-                        });
-                });
+                                    ui.add_space(4.0);
+                                }
+                            });
+                        }
+                    });
+            });
 
         if sort != self.lib.settings.library_sort {
             self.lib.settings.library_sort = sort;

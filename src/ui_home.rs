@@ -11,9 +11,7 @@ use crate::proton::{self, LaunchKind};
 use crate::theme::{self, Palette};
 use crate::ui_library::protondb_badge;
 use crate::widgets::{self, Icon};
-use eframe::egui::{
-    self, Align, Align2, Color32, FontId, Layout, Pos2, Rect, Sense, Vec2,
-};
+use eframe::egui::{self, Align, Align2, Color32, FontId, Layout, Pos2, Rect, Sense, Vec2};
 use std::path::PathBuf;
 use std::time::Duration;
 
@@ -55,10 +53,20 @@ impl QuarkApp {
             .show(ui, |ui| {
                 ui.add_space(18.0);
                 if recent.is_empty() {
-                    self.home_empty(ui);
+                    if self.lib.games.is_empty() {
+                        self.home_empty(ui);
+                    } else {
+                        if self.favorites_section(ui) {
+                            ui.add_space(30.0);
+                        }
+                        self.home_grid(ui);
+                    }
                 } else {
                     self.carousel_section(ui, &recent);
                     ui.add_space(30.0);
+                    if self.favorites_section(ui) {
+                        ui.add_space(30.0);
+                    }
                     self.home_grid(ui);
                 }
                 ui.add_space(34.0);
@@ -186,7 +194,7 @@ impl QuarkApp {
 
         let settings = self.lib.settings.clone();
         let native = proton::resolve(&game, &settings, &self.runtimes)
-            .map(|resolved| matches!(resolved.kind, LaunchKind::Native | LaunchKind::Emulator))
+            .map(|resolved| matches!(resolved.kind, LaunchKind::Native))
             .unwrap_or_else(|_| game.is_native());
         let running = self.is_running(&id);
         let running_secs = self.running_since(&id);
@@ -305,7 +313,10 @@ impl QuarkApp {
                     };
                     let meta_line = if game.last_played.is_some() {
                         if crate::i18n::is_english() {
-                            format!("{playtime}  \u{b7}  last played {}", game.last_played_label())
+                            format!(
+                                "{playtime}  \u{b7}  last played {}",
+                                game.last_played_label()
+                            )
                         } else {
                             format!("{playtime}  \u{b7}  jou\u{e9} {}", game.last_played_label())
                         }
@@ -400,6 +411,163 @@ impl QuarkApp {
                 }
             }
         }
+    }
+
+    // -----------------------------------------------------------------------
+    // Favoris
+    // -----------------------------------------------------------------------
+
+    /// Bandeau horizontal des jeux étoilés, au-dessus de la bibliothèque.
+    /// Retourne faux quand aucun favori n'existe, pour ne pas laisser de vide.
+    fn favorites_section(&mut self, ui: &mut egui::Ui) -> bool {
+        let ids = self.lib.favorite_ids();
+        if ids.is_empty() {
+            return false;
+        }
+        let pal = self.pal;
+        let entries: Vec<(crate::config::Game, Option<egui::TextureHandle>)> = ids
+            .iter()
+            .filter_map(|id| {
+                let game = self.lib.get(id)?.clone();
+                let texture = game
+                    .artwork
+                    .get(AssetKind::Cover)
+                    .filter(|path| path.exists())
+                    .and_then(|path| self.texture_thumb(ui.ctx(), path));
+                Some((game, texture))
+            })
+            .collect();
+        if entries.is_empty() {
+            return false;
+        }
+
+        ui.horizontal(|ui| {
+            ui.add_space(PADDING);
+            let (star, _) = ui.allocate_exact_size(Vec2::splat(17.0), Sense::hover());
+            widgets::paint_icon(ui, star, Icon::Star, theme::GOLD);
+            ui.add_space(7.0);
+            ui.label(
+                crate::i18n::rich("Favoris")
+                    .font(FontId::new(21.0, crate::fonts::bold_family()))
+                    .color(pal.text),
+            );
+        });
+        ui.add_space(12.0);
+
+        let tile_w = 132.0;
+        let cover_h = 176.0;
+        let tile_h = cover_h + 46.0;
+        let mut opened: Option<String> = None;
+        egui::ScrollArea::horizontal()
+            .id_salt("quark_home_favorites")
+            .show(ui, |ui| {
+                ui.horizontal(|ui| {
+                    ui.add_space(PADDING);
+                    for (index, (game, texture)) in entries.iter().enumerate() {
+                        if index > 0 {
+                            ui.add_space(12.0);
+                        }
+                        let (tile, response) = ui.allocate_exact_size(
+                            Vec2::new(tile_w, tile_h),
+                            Sense::click(),
+                        );
+                        let anim = ui.ctx().animate_bool_with_time(
+                            egui::Id::new(("quark_favorite_tile", game.id.as_str())),
+                            response.hovered(),
+                            0.14,
+                        );
+                        let painter = ui.painter_at(tile);
+                        let cover = Rect::from_min_size(tile.min, Vec2::new(tile_w, cover_h))
+                            .shrink(2.0 * anim);
+                        painter.rect_filled(cover, TILE_RADIUS, pal.surface);
+                        match texture {
+                            Some(texture) => {
+                                images::rounded_cover_tinted(
+                                    ui,
+                                    cover,
+                                    texture,
+                                    TILE_RADIUS,
+                                    Color32::WHITE,
+                                );
+                            }
+                            None => {
+                                widgets::monogram(
+                                    &painter,
+                                    cover,
+                                    &game.monogram_letter(),
+                                    theme::monogram_color(&game.name),
+                                    &pal,
+                                );
+                            }
+                        }
+                        if anim > 0.0 {
+                            painter.rect_stroke(
+                                tile,
+                                TILE_RADIUS,
+                                egui::Stroke::new(2.0_f32, pal.accent.gamma_multiply(anim)),
+                                egui::StrokeKind::Inside,
+                            );
+                        }
+                        // Étoile de repère, sur une pastille sombre pour rester
+                        // lisible sur toutes les jaquettes.
+                        let badge = Pos2::new(cover.right() - 13.0, cover.top() + 13.0);
+                        painter.circle_filled(badge, 11.0, Color32::from_black_alpha(150));
+                        widgets::paint_icon(
+                            ui,
+                            Rect::from_center_size(badge, Vec2::splat(13.0)),
+                            Icon::Star,
+                            theme::GOLD,
+                        );
+
+                        let mut job = egui::text::LayoutJob::default();
+                        job.wrap.max_rows = 1;
+                        job.wrap.overflow_character = Some('\u{2026}');
+                        job.wrap.max_width = tile_w;
+                        job.append(
+                            &game.name,
+                            0.0,
+                            egui::TextFormat {
+                                font_id: FontId::new(13.5, crate::fonts::bold_family()),
+                                color: pal.text,
+                                ..Default::default()
+                            },
+                        );
+                        let galley = painter.layout_job(job);
+                        painter.galley(
+                            Pos2::new(tile.left(), cover.bottom() + 7.0),
+                            galley,
+                            pal.text,
+                        );
+                        painter.text(
+                            Pos2::new(tile.left(), cover.bottom() + 25.0),
+                            Align2::LEFT_TOP,
+                            if game.playtime_secs == 0 {
+                                "jamais lanc\u{e9}".to_string()
+                            } else {
+                                game.playtime_label()
+                            },
+                            FontId::proportional(11.5),
+                            pal.text_dim,
+                        );
+                        if response.clicked() {
+                            opened = Some(game.id.clone());
+                        }
+                        let _ = response.on_hover_cursor(egui::CursorIcon::PointingHand);
+                    }
+                    ui.add_space(PADDING);
+                });
+            });
+
+        if let Some(id) = opened {
+            if self.lib.settings.view == crate::config::ViewMode::Grid {
+                self.selected = Some(id.clone());
+                self.overlay = Some(id);
+            } else {
+                self.selected = Some(id);
+                self.home = false;
+            }
+        }
+        true
     }
 
     // -----------------------------------------------------------------------

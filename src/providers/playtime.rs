@@ -12,7 +12,7 @@ use super::{Provider, ProviderGameKey};
 pub enum PlaytimeState {
     Loading,
     Ready(u64),
-    Failed(String),
+    Failed,
     #[default]
     Unknown,
 }
@@ -38,10 +38,7 @@ mod tests {
     #[test]
     fn un_temps_de_boutique_ne_devient_jamais_une_valeur_locale() {
         assert!(matches!(PlaytimeState::Unknown, PlaytimeState::Unknown));
-        assert!(matches!(
-            PlaytimeState::Failed("x".into()),
-            PlaytimeState::Failed(_)
-        ));
+        assert!(matches!(PlaytimeState::Failed, PlaytimeState::Failed));
         assert!(matches!(
             PlaytimeState::Ready(3600),
             PlaytimeState::Ready(3600)

@@ -18,6 +18,8 @@ changes nothing.
 For a launch outside the interface:
 
 ```bash
+quark list
+quark launch "Hollow Knight"
 quark --search "Hollow Knight"
 quark --news 367520
 ```
@@ -183,7 +185,6 @@ Those files contain account secrets.
 ## See also
 
 - [Installation](Installation)
-- [PlayStation 2 and RetroAchievements](PlayStation-2-and-RetroAchievements)
 - [Proton, Wine and launch options](Proton-Wine-and-Launch-Options)
 - [Stores and saves](Stores-and-Saves)
 - [Overlay and achievements](Overlay-and-Achievements)

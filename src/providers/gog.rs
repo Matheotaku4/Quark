@@ -9,8 +9,6 @@ use super::tools::ManagedToolId;
 use std::path::{Path, PathBuf};
 use std::time::Duration;
 
-pub const PINNED_VERSION: &str = "1.4.0";
-
 /// Page d'autorisation GOG utilisée par gogdl (client public de GOG Galaxy).
 /// Après la connexion, l'adresse de retour contient `?code=…`.
 pub const LOGIN_URL: &str = "https://auth.gog.com/auth?client_id=46899977096215655\
@@ -129,11 +127,6 @@ impl GogAdapter {
         vec!["auth".into(), "--code".into(), code.into()]
     }
 
-    /// gogdl ne liste rien, mais l'API GOG le fait avec la session gogdl.
-    pub fn library_capability() -> CapabilityState {
-        CapabilityState::Supported
-    }
-
     /// `--path` est le dossier **parent** : gogdl y ajoute le nom de dossier
     /// publié par `gogdl info` (`folder_name`). DLC et langue sont explicites
     /// pour que rien ne dépende d'un choix interactif.
@@ -155,28 +148,6 @@ impl GogAdapter {
     pub fn info_args(game_id: &str, platform: &str) -> Vec<String> {
         vec![
             "info".into(),
-            game_id.into(),
-            "--platform".into(),
-            platform.into(),
-        ]
-    }
-
-    pub fn update_args(game_id: &str, destination: &Path, platform: &str) -> Vec<String> {
-        let mut args = Self::install_args(game_id, destination, platform);
-        args[0] = "update".into();
-        args
-    }
-
-    pub fn repair_args(game_id: &str, destination: &Path, platform: &str) -> Vec<String> {
-        let mut args = Self::install_args(game_id, destination, platform);
-        args[0] = "repair".into();
-        args
-    }
-
-    pub fn launch_args(game_id: &str, install_path: &Path, platform: &str) -> Vec<String> {
-        vec![
-            "launch".into(),
-            install_path.display().to_string(),
             game_id.into(),
             "--platform".into(),
             platform.into(),
@@ -457,11 +428,6 @@ pub fn merge_gog(existing: &[ProviderGame], refreshed: &[ProviderGame]) -> Vec<P
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn la_bibliotheque_gog_est_annoncee_comme_disponible() {
-        assert_eq!(GogAdapter::library_capability(), CapabilityState::Supported);
-    }
 
     #[test]
     fn gogdl_install_keeps_game_id_and_destination_as_separate_arguments() {

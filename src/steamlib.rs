@@ -329,9 +329,11 @@ fn safe_install_dir(value: &str) -> bool {
         && value != "."
         && value != ".."
         && path.components().count() == 1
-        && matches!(path.components().next(), Some(std::path::Component::Normal(_)))
+        && matches!(
+            path.components().next(),
+            Some(std::path::Component::Normal(_))
+        )
 }
-
 
 #[cfg(test)]
 mod tests {
@@ -435,5 +437,4 @@ mod tests {
         assert!(!safe_install_dir(".."));
         assert!(!safe_install_dir(""));
     }
-
 }

@@ -105,7 +105,7 @@ pub const HELP: &str = "\
       [--dialog none|add|artwork|exe|scan|settings|settings-defaults|\n\
       settings-ingame|settings-env|settings-artworks|settings-stats|\n\
       settings-disk|\n\
-      settings-about|game|game-ps2|game-dll|logs|updates|customize|remove|steam|overlay|install|\n\
+      settings-about|game|game-dll|logs|updates|customize|remove|steam|overlay|install|\n\
       site-search|command|command-search|history|saved-views|onboarding|\n\
       onboarding-settings|whats-new]\n\
       [--hover X,Y] [--click X,Y] [--button left|right]\n\
@@ -160,22 +160,6 @@ pub fn run(opts: &SnapshotOptions) -> Result<(), String> {
         }
         app.selected = app.lib.games.first().map(|g| g.id.clone());
         app.filter.clear();
-        // Un jeu PS2 avec sa progression RA : les badges de liste et le
-        // panneau de « Mes jeux » ont ainsi une donnée réelle à afficher.
-        if let Some(game) = app
-            .lib
-            .games
-            .iter()
-            .find(|game| game.ps2.as_ref().and_then(|ps2| ps2.ra_game_id).is_some())
-            .cloned()
-        {
-            app.lib.settings.ra_username = "DemoPlayer".to_string();
-            app.lib.settings.ra_api_key = "demo".to_string();
-            app.ps2_ra.insert(
-                game.id.clone(),
-                crate::app::AchievementsState::Ready(demo_ps2_achievements()),
-            );
-        }
         // Runtimes factices : la VM n'a ni Steam ni Proton.
         app.runtimes = demo_runtimes();
         // Outils externes : la VM n'a ni gamescope ni umu-launcher, on montre
@@ -874,7 +858,7 @@ fn apply_dialog(app: &mut QuarkApp, dialog: &str) -> Result<(), String> {
             app.update = crate::app::UpdateState::Available(crate::update::Release {
                 tag_name: "v0.4.0".to_string(),
                 name: "Quark v0.4.0".to_string(),
-                html_url: "https://github.com/Matheotaku4/Quark-Launcher/releases".to_string(),
+                html_url: "https://github.com/Matheotaku4/Quark/releases".to_string(),
                 assets: vec![crate::update::Asset {
                     name: "quark-0.4.0-linux-x86_64.tar.gz".to_string(),
                     browser_download_url: String::new(),
@@ -903,7 +887,7 @@ fn apply_dialog(app: &mut QuarkApp, dialog: &str) -> Result<(), String> {
             customize.plan = Some(plan);
             app.customize = Some(customize);
         }
-        "game" | "game-dll" | "game-ps2" => {
+        "game" | "game-dll" => {
             let id = app
                 .selected
                 .clone()
@@ -927,28 +911,6 @@ fn apply_dialog(app: &mut QuarkApp, dialog: &str) -> Result<(), String> {
             game.launch.gamescope_fps = 60;
             game.launch.prime = true;
             game.launch.wrapper = "env DXVK_HUD=0 %command%".to_string();
-            game.proton_log = true;
-            if dialog == "game-ps2" {
-                game.name = "Shadow of the Colossus".to_string();
-                game.exe = "/data/demo-jeux/ps2/Shadow of the Colossus (USA).iso".to_string();
-                game.ps2 = Some(crate::config::Ps2Config {
-                    serial: "SCUS-97472".to_string(),
-                    ra_game_id: Some(238),
-                });
-                game.proton = crate::config::ProtonMode::Native;
-                app.game_dll_for = Some(game.id.clone());
-                app.game_dll_rows = crate::config::dll_overrides_from_env(&game.env);
-                app.game_tab = crate::app::GameTab::Ps2;
-                app.lib.settings.ra_username = "DemoPlayer".to_string();
-                app.lib.settings.ra_api_key = "demo".to_string();
-                // Le rendu hors écran n'a pas PCSX2 : un binaire neutre évite
-                // une alerte rouge qui n'a rien à voir avec la fiche testée.
-                app.lib.settings.pcsx2_path = "/bin/true".to_string();
-                app.ps2_ra.insert(
-                    game.id.clone(),
-                    crate::app::AchievementsState::Ready(demo_ps2_achievements()),
-                );
-            }
             if dialog == "game-dll" {
                 // Overrides déjà présents : l'onglet doit les reprendre, y
                 // compris l'entrée sans « = » utilisée par les anciennes configs.
@@ -1477,30 +1439,6 @@ fn demo_library() -> Result<Library, String> {
     games.push(game);
 
     let mut game = demo_game(
-        "Shadow of the Colossus",
-        "/jeux/ps2/Shadow of the Colossus (USA).iso",
-        &[AssetKind::Cover, AssetKind::Icon],
-        &art,
-        None,
-    );
-    game.ps2 = Some(crate::config::Ps2Config {
-        serial: "SCUS-97472".to_string(),
-        ra_game_id: Some(238),
-    });
-    game.proton = crate::config::ProtonMode::Native;
-    game.playtime_secs = 8 * 3600 + 1_200;
-    game.last_played = Some(now - 2 * 86_400);
-    game.status = crate::config::GameStatus::Finished;
-    game.tags = vec!["aventure".to_string(), "classique".to_string()];
-    game.developer = "Team Ico".to_string();
-    game.genres = vec!["Action-Aventure".to_string()];
-    game.released = "18 oct. 2005".to_string();
-    game.description = "Un jeune homme et sa monture traversent des terres interdites pour \
-                        ramener une princesse à la vie."
-        .to_string();
-    games.push(game);
-
-    let mut game = demo_game(
         "Les Chevaliers de Baphomet",
         "/jeux/baphomet/baphomet.exe",
         &[],
@@ -1731,53 +1669,6 @@ fn demo_large_library(count: usize, cover: Option<&Path>) -> Result<Vec<Game>, S
         games.push(game);
     }
     Ok(games)
-}
-
-fn demo_ps2_achievements() -> crate::providers::AchievementInfo {
-    let mut info = crate::providers::AchievementInfo {
-        total: 3,
-        unlocked: 1,
-        rows: vec![
-            crate::providers::AchievementRow {
-                key: "1".to_string(),
-                id: "1".to_string(),
-                name: "The First Colossus".to_string(),
-                description: "Topple the first giant.".to_string(),
-                unlocked: true,
-                progress: 1.0,
-                session: false,
-                rarity: Some(82.0),
-                icon_url: None,
-                icon_path: None,
-            },
-            crate::providers::AchievementRow {
-                key: "2".to_string(),
-                id: "2".to_string(),
-                name: "Aerial Wanderer".to_string(),
-                description: "Defeat a colossus without touching the ground.".to_string(),
-                unlocked: false,
-                progress: 0.0,
-                session: false,
-                rarity: Some(12.4),
-                icon_url: None,
-                icon_path: None,
-            },
-            crate::providers::AchievementRow {
-                key: "3".to_string(),
-                id: "3".to_string(),
-                name: "Forbidden Land".to_string(),
-                description: "Reach the far end of the bridge.".to_string(),
-                unlocked: false,
-                progress: 0.0,
-                session: false,
-                rarity: Some(47.0),
-                icon_url: None,
-                icon_path: None,
-            },
-        ],
-    };
-    info.normalize();
-    info
 }
 
 fn demo_game(

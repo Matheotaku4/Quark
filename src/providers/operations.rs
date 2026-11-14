@@ -1,6 +1,6 @@
 //! Provider title matching and installation lifecycle state.
 
-use super::model::{InstallState, ManualGameGroup, ProviderGame, ProviderGameKey};
+use super::model::{ManualGameGroup, ProviderGame, ProviderGameKey};
 use std::path::PathBuf;
 
 #[derive(Debug, Clone, PartialEq)]
@@ -10,12 +10,9 @@ pub enum OperationState {
         progress: Option<f32>,
         message: String,
     },
-    NeedsConfirmation(String),
     Succeeded {
         install_path: PathBuf,
     },
-    Failed(String),
-    Cancelled,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -41,10 +38,6 @@ impl InstallOperation {
         };
     }
 
-    pub fn request_confirmation(&mut self, message: impl Into<String>) {
-        self.state = OperationState::NeedsConfirmation(message.into());
-    }
-
     pub fn complete_verified(&mut self, install_path: PathBuf) -> Result<(), String> {
         if !matches!(self.state, OperationState::Running { .. }) {
             return Err("installation non confirmée ou non démarrée".into());
@@ -66,32 +59,6 @@ impl InstallOperation {
         Ok(())
     }
 
-    pub fn fail(&mut self, message: impl Into<String>) {
-        self.state = OperationState::Failed(message.into());
-    }
-    pub fn cancel(&mut self) {
-        self.state = OperationState::Cancelled;
-    }
-
-    pub fn apply_to(&self, game: &mut ProviderGame) {
-        if game.key != self.key {
-            return;
-        }
-        match &self.state {
-            OperationState::Queued => game.install_state = InstallState::Queued,
-            OperationState::Running { .. } => game.install_state = InstallState::Installing,
-            OperationState::NeedsConfirmation(_) => {
-                // A URI handoff or provider prompt is not proof the game exists locally.
-                game.install_state = InstallState::Unknown;
-            }
-            OperationState::Succeeded { install_path } => {
-                game.install_state = InstallState::Installed;
-                game.install_path = Some(install_path.clone());
-            }
-            OperationState::Failed(_) => game.install_state = InstallState::Failed,
-            OperationState::Cancelled => game.install_state = InstallState::NotInstalled,
-        }
-    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -187,7 +154,7 @@ pub fn remove_install_directory(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::providers::model::{Provider, ProviderGame};
+    use crate::providers::model::{InstallState, Provider, ProviderGame, ProviderGameKey};
 
     fn record(provider: Provider, id: &str, title: &str) -> ProviderGame {
         ProviderGame {
@@ -291,37 +258,6 @@ mod tests {
         let _ = std::fs::remove_dir_all(outside);
     }
 
-    #[test]
-    fn operation_changes_only_the_provider_record_with_the_same_key() {
-        let key = ProviderGameKey {
-            provider: Provider::Steam,
-            product_id: "620".into(),
-        };
-        let mut operation = InstallOperation::new(key, PathBuf::from("/tmp"));
-        operation.start();
-        let mut other = record(Provider::Epic, "620", "Portal 2");
-        operation.apply_to(&mut other);
-        assert_eq!(other.install_state, InstallState::NotInstalled);
-    }
-
-    #[test]
-    fn client_handoff_needs_confirmation_and_never_marks_install_complete() {
-        let key = ProviderGameKey {
-            provider: Provider::Steam,
-            product_id: "620".into(),
-        };
-        let mut operation = InstallOperation::new(key, PathBuf::from("/games"));
-        operation.start();
-        operation.request_confirmation("Confirme la détection du manifeste Steam");
-        assert!(matches!(
-            operation.state,
-            OperationState::NeedsConfirmation(_)
-        ));
-        let mut game = record(Provider::Steam, "620", "Portal 2");
-        operation.apply_to(&mut game);
-        assert_eq!(game.install_state, InstallState::Unknown);
-        assert!(game.install_path.is_none());
-    }
     #[test]
     fn la_suppression_d_un_dossier_installe_refuse_les_chemins_dangereux() {
         let root = std::env::temp_dir().join(format!("quark-remove-{}", std::process::id()));

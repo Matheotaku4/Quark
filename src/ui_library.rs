@@ -2,28 +2,20 @@
 
 use crate::app::{NewsState, QuarkApp};
 use crate::config::{self, AssetKind, Game, GameStatus, ViewMode};
-use crate::images::{
-    draw_cover, hero_placeholder, rounded_cover, rounded_cover_tinted,
-};
+use crate::images::{draw_cover, hero_placeholder, rounded_cover, rounded_cover_tinted};
 use crate::news;
 use crate::proton::{self, LaunchKind};
 use crate::stats;
 use crate::theme::{self, Palette};
 use crate::ui_home::linux_chip;
 use crate::widgets::{self, Icon};
-use eframe::egui::{
-    self, Align, Align2, Color32, FontId, Layout, Pos2, Rect, Sense, Vec2,
-};
+use eframe::egui::{self, Align, Align2, Color32, FontId, Layout, Pos2, Rect, Sense, Vec2};
 use std::time::Instant;
 
 impl QuarkApp {
     pub(crate) fn library_tab(&mut self, ctx: &egui::Context) {
         let pal = self.pal;
         let view = self.lib.settings.view;
-        // La progression RA est visible dès la liste : on la demande pour les
-        // jeux affichés, sans attendre l'ouverture de la fiche PS2.
-        let progress_ids = self.display_ids();
-        self.prefetch_ps2_progress(ctx, &progress_ids);
         // Vue grille : **seulement** la grille. La fiche du jeu s'ouvre en
         // surimpression, avec sa croix, et se ferme d'un clic à côté.
         let grid_only = view == ViewMode::Grid;
@@ -199,9 +191,7 @@ impl QuarkApp {
                             .as_deref()
                             .is_none_or(|id| self.lib.get(id).is_none())
                     })
-                    .filter(|record| {
-                        config::normalized_search(&record.title).contains(&needle)
-                    })
+                    .filter(|record| config::normalized_search(&record.title).contains(&needle))
                     .cloned()
                     .collect();
                 let purchased: Vec<crate::providers::ProviderGame> = self
@@ -219,9 +209,7 @@ impl QuarkApp {
                             .as_deref()
                             .is_none_or(|id| self.lib.get(id).is_none())
                     })
-                    .filter(|record| {
-                        config::normalized_search(&record.title).contains(&needle)
-                    })
+                    .filter(|record| config::normalized_search(&record.title).contains(&needle))
                     .cloned()
                     .collect();
                 let installed_count = installed.len() + installed_provider.len();
@@ -232,8 +220,8 @@ impl QuarkApp {
                             "{} « {query} ».",
                             crate::i18n::tr("Aucun jeu trouvé pour")
                         ))
-                            .size(12.0)
-                            .color(pal.text_dim),
+                        .size(12.0)
+                        .color(pal.text_dim),
                     );
                     return;
                 }
@@ -248,9 +236,9 @@ impl QuarkApp {
                                     "{} · {installed_count}",
                                     crate::i18n::tr("INSTALLÉS")
                                 ))
-                                    .size(9.5)
-                                    .strong()
-                                    .color(pal.accent),
+                                .size(9.5)
+                                .strong()
+                                .color(pal.accent),
                             );
                             ui.add_space(2.0);
                             for game in installed.iter().take(10) {
@@ -283,9 +271,9 @@ impl QuarkApp {
                                     crate::i18n::tr("ACHETÉS"),
                                     purchased.len()
                                 ))
-                                    .size(9.5)
-                                    .strong()
-                                    .color(pal.text_faint),
+                                .size(9.5)
+                                .strong()
+                                .color(pal.text_faint),
                             );
                             ui.add_space(2.0);
                             for record in purchased.iter().take(10) {
@@ -500,9 +488,6 @@ impl QuarkApp {
                                     4.0,
                                     Color32::from_rgb(r, g, b),
                                 );
-                            }
-                            if let Some(progress) = self.ps2_progress(&game) {
-                                draw_ra_badge(&painter, cover, &pal, progress);
                             }
                             if response.clicked() {
                                 opened = Some(id.clone());
@@ -741,13 +726,11 @@ impl QuarkApp {
         let marked = self.is_marked(id);
         let running = self.is_running(id);
         let row_pal = pal;
-        let ps2_progress = self.ps2_progress(&game);
         let row_height = self.lib.settings.sidebar_row_height.clamp(42.0, 56.0);
         let response = game_row(
             ui,
             &row_pal,
             &game,
-            ps2_progress,
             selected,
             marked,
             running,
@@ -761,8 +744,9 @@ impl QuarkApp {
         } else {
             0
         };
-        match game_context_menu(&response, bulk, &pal) {
+        match game_context_menu(&response, bulk, &pal, game.favorite) {
             Some(RowAction::Launch) => self.launch(ui.ctx(), id),
+            Some(RowAction::Favorite) => self.toggle_favorite(id),
             Some(RowAction::Customize) => {
                 self.select(id);
                 self.open_customize(id);
@@ -792,6 +776,22 @@ impl QuarkApp {
         }
     }
 
+    /// Étoile de la fiche : le favori est persisté comme le reste de la fiche.
+    fn toggle_favorite(&mut self, id: &str) {
+        let Some(game) = self.lib.get_mut(id) else {
+            return;
+        };
+        game.favorite = !game.favorite;
+        let favorite = game.favorite;
+        let name = game.name.clone();
+        self.touch();
+        if favorite {
+            self.toast_info(format!("{name} ajouté aux favoris"));
+        } else {
+            self.toast_info(format!("{name} retiré des favoris"));
+        }
+    }
+
     // -----------------------------------------------------------------------
     // Panneau du jeu (bannière, Jouer, temps de jeu, paramètres)
     // -----------------------------------------------------------------------
@@ -809,7 +809,6 @@ impl QuarkApp {
         // Le chrome garde l'accent du thème (bleu de la maquette) ; la
         // couleur de jaquette reste réservée aux vignettes.
         let pal = self.pal;
-        let ps2_progress = self.ps2_progress(&game);
 
         let settings = self.lib.settings.clone();
         let resolved = proton::resolve(&game, &settings, &self.runtimes);
@@ -820,7 +819,7 @@ impl QuarkApp {
         // Binaire Linux : le jeu démarre sans Proton (mention sur la bannière).
         let native = resolved
             .as_ref()
-            .map(|r| matches!(r.kind, LaunchKind::Native | LaunchKind::Emulator))
+            .map(|r| matches!(r.kind, LaunchKind::Native))
             .unwrap_or_else(|_| game.is_native());
         let launch_label = match &resolved {
             Ok(r) => r.label(),
@@ -921,7 +920,7 @@ impl QuarkApp {
                     )
                 }
             }
-            (Some(_), Some(crate::providers::PlaytimeState::Failed(_))) => {
+            (Some(_), Some(crate::providers::PlaytimeState::Failed)) => {
                 if crate::i18n::is_english() {
                     format!("{} time unavailable", store_label.unwrap_or("store"))
                 } else {
@@ -950,7 +949,8 @@ impl QuarkApp {
         // d'un noir complet. Peinte avant la zone défilante, donc derrière.
         // La couleur du thème sert de repli quand le jeu n'a pas de bannière.
         let backdrop_area = Rect::from_min_max(ui.cursor().min, ui.max_rect().max);
-        ui.painter_at(backdrop_area).rect_filled(backdrop_area, 0.0, pal.bg);
+        ui.painter_at(backdrop_area)
+            .rect_filled(backdrop_area, 0.0, pal.bg);
         if let Some(hero) = game
             .artwork
             .get(AssetKind::Hero)
@@ -1012,6 +1012,7 @@ impl QuarkApp {
                 // bannière faisaient reculer le curseur et le contenu suivant
                 // s'affichait par-dessus l'image.
                 let mut play_clicked = false;
+                let mut favorite_clicked = false;
                 let mut gear_clicked = false;
                 let mut customize_clicked = false;
                 let mut log_clicked = false;
@@ -1091,10 +1092,10 @@ impl QuarkApp {
 
                         let placement = self.lib.settings.game_actions;
                         let action = 36.0;
-                        // En haut à droite, les quatre actions restent au-dessus
+                        // En haut à droite, les cinq actions restent au-dessus
                         // de la bannière, avec les mêmes couleurs que le menu.
                         if placement == config::GameActionPlacement::TopRight {
-                            let actions_width = 4.0 * action + 3.0 * 8.0;
+                            let actions_width = 5.0 * action + 4.0 * 8.0;
                             let actions_rect = Rect::from_min_size(
                                 Pos2::new(
                                     hero.right() - 32.0 - actions_width,
@@ -1107,8 +1108,9 @@ impl QuarkApp {
                                     .max_rect(actions_rect)
                                     .layout(Layout::left_to_right(Align::Center)),
                                 |ui| {
-                                    let (gear, customize, log, remove) =
-                                        hero_action_buttons(ui, &pal, action);
+                                    let (favorite, gear, customize, log, remove) =
+                                        hero_action_buttons(ui, &pal, action, game.favorite);
+                                    favorite_clicked |= favorite;
                                     gear_clicked |= gear;
                                     customize_clicked |= customize;
                                     log_clicked |= log;
@@ -1214,8 +1216,9 @@ impl QuarkApp {
                                 .clicked();
                                 if placement == config::GameActionPlacement::BesidePlay {
                                     ui.add_space(16.0);
-                                    let (gear, customize, log, remove) =
-                                        hero_action_buttons(ui, &pal, action);
+                                    let (favorite, gear, customize, log, remove) =
+                                        hero_action_buttons(ui, &pal, action, game.favorite);
+                                    favorite_clicked |= favorite;
                                     gear_clicked |= gear;
                                     customize_clicked |= customize;
                                     log_clicked |= log;
@@ -1225,26 +1228,14 @@ impl QuarkApp {
                                     ui.add_space(16.0);
                                     status_chip(ui, &pal, game.status);
                                 }
-                                if let Some(progress) = ps2_progress {
-                                    ui.add_space(14.0);
-                                    ui.label(
-                                        crate::i18n::rich(format!(
-                                            "RetroAchievements · {}/{}",
-                                            progress.unlocked, progress.total
-                                        ))
-                                        .size(11.5)
-                                        .strong()
-                                        .color(pal.accent),
-                                    )
-                                    .on_hover_text(
-                                        "Progression lue depuis RetroAchievements ; PCSX2 gère les déblocages.",
-                                    );
-                                }
                             },
                         );
                     },
                 );
 
+                if favorite_clicked {
+                    self.toggle_favorite(&id);
+                }
                 if gear_clicked {
                     self.editing = Some(game.clone());
                 }
@@ -1345,7 +1336,7 @@ impl QuarkApp {
                         }
                     }
                     crate::app::DetailTab::Achievements => {
-                        self.achievements_section(ui, &game, store_record.as_ref(), &pal, width);
+                        self.achievements_section(ui, store_record.as_ref(), &pal, width);
                     }
                     crate::app::DetailTab::History => {
                         self.history_section(ui, &game, &pal, width);
@@ -1837,227 +1828,16 @@ impl QuarkApp {
         ui.add_space(6.0);
     }
 
-    /// Succès RetroAchievements d'un jeu PlayStation 2, dans sa fiche.
-    /// PCSX2 reste seul responsable des déblocages ; Quark relit la même
-    /// progression avec la clé Web API.
-    fn ps2_achievements_section(
-        &mut self,
-        ui: &mut egui::Ui,
-        game: &Game,
-        pal: &Palette,
-        width: f32,
-    ) {
-        let Some(ra_game_id) = game.ps2.as_ref().and_then(|ps2| ps2.ra_game_id) else {
-            ui.horizontal(|ui| {
-                ui.add_space(32.0);
-                ui.vertical(|ui| {
-                    ui.set_max_width((width - 64.0).max(200.0));
-                    ui.label(
-                        crate::i18n::rich(
-                            "Associe une fiche RetroAchievements au jeu dans sa fiche PS2 pour \
-                             afficher sa progression.",
-                        )
-                        .size(11.5)
-                        .color(pal.text_dim),
-                    );
-                });
-            });
-            return;
-        };
-        if !crate::ps2::ra_configured(&self.lib.settings) {
-            ui.horizontal(|ui| {
-                ui.add_space(32.0);
-                ui.vertical(|ui| {
-                    ui.set_max_width((width - 64.0).max(200.0));
-                    ui.label(
-                        crate::i18n::rich(
-                            "Pseudo et clé Web API RetroAchievements à renseigner dans \
-                             Paramètres → Boutiques & outils.",
-                        )
-                        .size(11.5)
-                        .color(pal.text_dim),
-                    );
-                });
-            });
-            return;
-        }
-
-        let mut state = self.ps2_ra.get(&game.id).cloned();
-        if state.is_none() {
-            self.request_ps2_ra(ui.ctx(), &game.id, ra_game_id);
-            state = self.ps2_ra.get(&game.id).cloned();
-        }
-        let mut refresh = false;
-        ui.horizontal(|ui| {
-            ui.add_space(32.0);
-            ui.vertical(|ui| {
-                ui.set_max_width((width - 64.0).max(200.0));
-                ui.label(
-                    crate::i18n::rich("RETROACHIEVEMENTS")
-                        .size(11.0)
-                        .color(pal.text_faint),
-                );
-                if let Some(crate::app::AchievementsState::Ready(info)) = &state
-                    && info.total > 0
-                {
-                    ui.add_space(4.0);
-                    ui.label(
-                        crate::i18n::rich(format!(
-                            "{} / {} succès débloqués",
-                            info.unlocked, info.total
-                        ))
-                        .size(15.0)
-                        .strong()
-                        .color(pal.text),
-                    );
-                    ui.add_space(6.0);
-                    let (bar, _) = ui.allocate_exact_size(
-                        Vec2::new((width - 190.0).max(200.0), 5.0),
-                        Sense::hover(),
-                    );
-                    ui.painter().rect_filled(bar, 2.5, pal.border);
-                    let ratio = info.unlocked as f32 / info.total as f32;
-                    ui.painter().rect_filled(
-                        Rect::from_min_size(
-                            bar.min,
-                            Vec2::new(bar.width() * ratio.clamp(0.0, 1.0), bar.height()),
-                        ),
-                        2.5,
-                        pal.accent,
-                    );
-                }
-            });
-            ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-                ui.add_space(32.0);
-                if widgets::ghost_button(ui, "Actualiser", pal, Icon::Refresh).clicked() {
-                    refresh = true;
-                }
-            });
-        });
-        if refresh {
-            self.ps2_ra.remove(&game.id);
-            self.request_ps2_ra(ui.ctx(), &game.id, ra_game_id);
-        }
-        ui.add_space(12.0);
-
-        match state {
-            None | Some(crate::app::AchievementsState::Loading) => {
-                ui.horizontal(|ui| {
-                    ui.add_space(32.0);
-                    ui.add(egui::Spinner::new().size(14.0));
-                    ui.add_space(6.0);
-                    ui.label(
-                        crate::i18n::rich("Lecture de la progression RetroAchievements…")
-                            .size(11.5)
-                            .color(pal.text_dim),
-                    );
-                });
-                ui.ctx()
-                    .request_repaint_after(std::time::Duration::from_millis(200));
-            }
-            Some(crate::app::AchievementsState::Failed(message)) => {
-                ui.horizontal(|ui| {
-                    ui.add_space(32.0);
-                    ui.vertical(|ui| {
-                        ui.set_max_width((width - 64.0).max(200.0));
-                        ui.label(crate::i18n::rich(message).size(11.5).color(pal.danger));
-                        ui.add_space(4.0);
-                        ui.label(
-                            crate::i18n::rich(
-                                "Vérifie le pseudo et la clé Web API dans Paramètres → \
-                                 Boutiques & outils.",
-                            )
-                            .size(10.5)
-                            .color(pal.text_faint),
-                        );
-                    });
-                });
-            }
-            Some(crate::app::AchievementsState::Ready(info)) if info.total == 0 => {
-                ui.horizontal(|ui| {
-                    ui.add_space(32.0);
-                    ui.label(
-                        crate::i18n::rich("Cette fiche ne publie aucun succès.")
-                            .size(11.5)
-                            .color(pal.text_dim),
-                    );
-                });
-            }
-            Some(crate::app::AchievementsState::Ready(info)) => {
-                if info.rows.iter().any(|row| row.rarity.is_some()) {
-                    ui.horizontal(|ui| {
-                        ui.add_space(32.0);
-                        ui.label(
-                            crate::i18n::rich("Triés du plus courant au plus rare")
-                                .size(10.0)
-                                .color(pal.text_faint),
-                        );
-                    });
-                    ui.add_space(4.0);
-                }
-                for row in crate::providers::achievements::sorted_rows(&info.rows) {
-                    ui.horizontal(|ui| {
-                        ui.add_space(32.0);
-                        let (dot, _) = ui.allocate_exact_size(Vec2::splat(14.0), Sense::hover());
-                        ui.painter().circle_filled(
-                            dot.center(),
-                            4.0,
-                            if row.unlocked { pal.accent } else { pal.border },
-                        );
-                        ui.vertical(|ui| {
-                            ui.set_max_width((width - 80.0).max(200.0));
-                            ui.spacing_mut().item_spacing.y = 1.0;
-                            ui.horizontal_wrapped(|ui| {
-                                ui.label(
-                                    crate::i18n::rich(&row.name)
-                                        .size(12.5)
-                                        .strong()
-                                        .color(if row.unlocked { pal.text } else { pal.text_dim }),
-                                );
-                                if let Some(rarity) = row.rarity {
-                                    let text = if rarity < 0.1 {
-                                        "< 0,1 %".to_string()
-                                    } else if crate::i18n::is_english() {
-                                        format!("{rarity:.1} %")
-                                    } else {
-                                        format!("{rarity:.1} %").replace('.', ",")
-                                    };
-                                    ui.label(
-                                        crate::i18n::rich(text).size(9.5).color(pal.text_faint),
-                                    )
-                                    .on_hover_text("Pourcentage de joueurs ayant obtenu ce succès");
-                                }
-                            });
-                            if !row.description.is_empty() {
-                                ui.label(
-                                    crate::i18n::rich(&row.description)
-                                        .size(11.0)
-                                        .color(pal.text_dim),
-                                );
-                            }
-                        });
-                    });
-                    ui.add_space(6.0);
-                }
-            }
-        }
-    }
-
     /// Succès du jeu, dans la fiche et non dans une fenêtre : même source que
     /// la fenêtre de « Mes jeux », fusionnée avec les déblocages de session.
     fn achievements_section(
         &mut self,
         ui: &mut egui::Ui,
-        game: &Game,
         record: Option<&crate::providers::ProviderGame>,
         pal: &Palette,
         width: f32,
     ) {
         ui.add_space(27.0);
-        if game.ps2.is_some() {
-            self.ps2_achievements_section(ui, game, pal, width);
-            return;
-        }
         let Some(record) = record else {
             ui.horizontal(|ui| {
                 ui.add_space(32.0);
@@ -2508,32 +2288,40 @@ impl QuarkApp {
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum RowAction {
     Launch,
+    Favorite,
     Customize,
     Settings,
     Remove,
 }
 
-/// Les quatre actions de la fiche, dans l'ordre visuel. Les couleurs sont
+/// Les cinq actions de la fiche, dans l'ordre visuel. Les couleurs sont
 /// partagées avec le menu du clic droit pour que les mêmes actions se lisent
 /// pareil partout.
 fn hero_action_buttons(
     ui: &mut egui::Ui,
     pal: &Palette,
     size: f32,
-) -> (bool, bool, bool, bool) {
+    favorite: bool,
+) -> (bool, bool, bool, bool, bool) {
+    let mut favorite_clicked = false;
     let mut gear = false;
     let mut customize = false;
     let mut log = false;
     let mut remove = false;
     ui.spacing_mut().item_spacing.x = 8.0;
-    if widgets::tinted_icon_button(ui, size, Icon::Gear, pal.accent, "Paramètres du jeu")
-        .clicked()
+    let (icon, color, tooltip) = if favorite {
+        (Icon::Star, theme::GOLD, "Retirer des favoris")
+    } else {
+        (Icon::StarOff, pal.text_dim, "Ajouter aux favoris")
+    };
+    if widgets::tinted_icon_button(ui, size, icon, color, tooltip).clicked() {
+        favorite_clicked = true;
+    }
+    if widgets::tinted_icon_button(ui, size, Icon::Gear, pal.accent, "Paramètres du jeu").clicked()
     {
         gear = true;
     }
-    if widgets::tinted_icon_button(ui, size, Icon::Pencil, theme::GOLD, "Personnaliser")
-        .clicked()
-    {
+    if widgets::tinted_icon_button(ui, size, Icon::Pencil, theme::GOLD, "Personnaliser").clicked() {
         customize = true;
     }
     if widgets::tinted_icon_button(ui, size, Icon::Log, theme::SUCCESS, "Journal de la session")
@@ -2541,12 +2329,18 @@ fn hero_action_buttons(
     {
         log = true;
     }
-    if widgets::tinted_icon_button(ui, size, Icon::Trash, pal.danger, "Retirer de la bibliothèque")
-        .clicked()
+    if widgets::tinted_icon_button(
+        ui,
+        size,
+        Icon::Trash,
+        pal.danger,
+        "Retirer de la bibliothèque",
+    )
+    .clicked()
     {
         remove = true;
     }
-    (gear, customize, log, remove)
+    (favorite_clicked, gear, customize, log, remove)
 }
 
 /// Voile vertical noir, utilisé pour garder le logo et les actions lisibles
@@ -2569,7 +2363,12 @@ fn vertical_veil(painter: &egui::Painter, rect: Rect, top: u8, bottom: u8) {
 ///
 /// Le menu ne touche à `self` que par la valeur renvoyée : il reste utilisable
 /// pendant que la boucle qui dessine la liste emprunte les textures.
-fn game_context_menu(response: &egui::Response, bulk: usize, pal: &Palette) -> Option<RowAction> {
+fn game_context_menu(
+    response: &egui::Response,
+    bulk: usize,
+    pal: &Palette,
+    favorite: bool,
+) -> Option<RowAction> {
     let mut action = None;
     response.context_menu(|ui| {
         ui.set_min_width(212.0);
@@ -2579,23 +2378,20 @@ fn game_context_menu(response: &egui::Response, bulk: usize, pal: &Palette) -> O
             action = Some(RowAction::Launch);
             ui.close();
         }
-        if widgets::menu_row(
-            ui,
-            pal,
-            Icon::Pencil,
-            theme::GOLD,
-            "Personnaliser…",
-        ) {
+        let (star_icon, star_label) = if favorite {
+            (Icon::StarOff, "Retirer des favoris")
+        } else {
+            (Icon::Star, "Ajouter aux favoris")
+        };
+        if widgets::menu_row(ui, pal, star_icon, theme::GOLD, star_label) {
+            action = Some(RowAction::Favorite);
+            ui.close();
+        }
+        if widgets::menu_row(ui, pal, Icon::Pencil, theme::GOLD, "Personnaliser…") {
             action = Some(RowAction::Customize);
             ui.close();
         }
-        if widgets::menu_row(
-            ui,
-            pal,
-            Icon::Gear,
-            pal.accent,
-            "Paramètres…",
-        ) {
+        if widgets::menu_row(ui, pal, Icon::Gear, pal.accent, "Paramètres…") {
             action = Some(RowAction::Settings);
             ui.close();
         }
@@ -2606,13 +2402,7 @@ fn game_context_menu(response: &egui::Response, bulk: usize, pal: &Palette) -> O
         } else {
             "Retirer de la bibliothèque".to_string()
         };
-        if widgets::menu_row(
-            ui,
-            pal,
-            Icon::Trash,
-            pal.danger,
-            &label,
-        ) {
+        if widgets::menu_row(ui, pal, Icon::Trash, pal.danger, &label) {
             action = Some(RowAction::Remove);
             ui.close();
         }
@@ -2864,7 +2654,6 @@ fn game_row(
     ui: &mut egui::Ui,
     pal: &Palette,
     game: &Game,
-    ps2_progress: Option<crate::app::Ps2Progress>,
     selected: bool,
     marked: bool,
     running: bool,
@@ -2960,23 +2749,7 @@ fn game_row(
     } else {
         0.0
     };
-    let mut title_right = rect.right() - 14.0 - indicators;
-    if let Some(progress) = ps2_progress {
-        let label = ra_progress_label(progress);
-        let color = if progress.unlocked >= progress.total {
-            pal.accent
-        } else {
-            pal.text_faint
-        };
-        let galley = painter.layout_no_wrap(label, FontId::proportional(10.0), color);
-        title_right -= galley.size().x + 8.0;
-        painter.galley(
-            Pos2::new(title_right, rect.center().y - galley.size().y / 2.0),
-            galley,
-            color,
-        );
-        title_right -= 8.0;
-    }
+    let title_right = rect.right() - 14.0 - indicators;
     let job = single_line(
         &game.name,
         13.5,
@@ -3019,33 +2792,6 @@ fn game_row(
         response
     };
     response
-}
-
-/// Libellé compact de progression RetroAchievements dans une liste.
-fn ra_progress_label(progress: crate::app::Ps2Progress) -> String {
-    format!("RA {}/{}", progress.unlocked, progress.total)
-}
-
-/// Pastille de progression RA posée sur une jaquette.
-fn draw_ra_badge(
-    painter: &egui::Painter,
-    cover: Rect,
-    pal: &Palette,
-    progress: crate::app::Ps2Progress,
-) {
-    let label = ra_progress_label(progress);
-    let galley = painter.layout_no_wrap(label, FontId::proportional(9.5), pal.text);
-    let size = Vec2::new(galley.size().x + 10.0, 16.0);
-    let badge = Rect::from_min_size(
-        Pos2::new(cover.left() + 5.0, cover.bottom() - size.y - 5.0),
-        size,
-    );
-    painter.rect_filled(badge, 3.0, Color32::from_black_alpha(180));
-    painter.galley(
-        Pos2::new(badge.left() + 5.0, badge.center().y - galley.size().y / 2.0),
-        galley,
-        pal.text,
-    );
 }
 
 /// Couleur d'une pastille de statut (`None` : pas de pastille).

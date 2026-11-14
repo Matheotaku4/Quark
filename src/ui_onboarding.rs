@@ -428,7 +428,7 @@ impl QuarkApp {
                 ui.add_space(8.0);
                 if widgets::ghost_button(ui, "Voir la release", &pal, Icon::Info).clicked() {
                     let _ = crate::news::open_in_browser(
-                        "https://github.com/Matheotaku4/Quark-Launcher/releases/latest",
+                        "https://github.com/Matheotaku4/Quark/releases/latest",
                     );
                 }
             });

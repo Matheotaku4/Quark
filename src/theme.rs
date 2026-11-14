@@ -29,18 +29,6 @@ const fn rgb(r: u8, g: u8, b: u8) -> Color32 {
     Color32::from_rgb(r, g, b)
 }
 
-impl Palette {
-    /// Même palette avec la couleur d'accent d'un jeu (bouton Jouer, liseré de
-    /// sélection, ligne sélectionnée). Le reste du thème ne bouge pas.
-    pub fn with_accent(self, accent: Color32) -> Palette {
-        let mut pal = self;
-        pal.accent = accent;
-        pal.accent_hover = lerp_color(accent, Color32::WHITE, 0.22);
-        pal.accent_pressed = lerp_color(accent, Color32::BLACK, 0.30);
-        pal.row_selected = lerp_color(self.surface, accent, 0.18);
-        pal
-    }
-}
 
 /// Couleur d'accent lisible sur le noir AMOLED à partir d'une teinte (degrés).
 pub fn accent_from_hue(hue: f32) -> Color32 {
@@ -340,7 +328,8 @@ pub fn apply(ctx: &egui::Context, mode: ThemeMode) {
     widgets.inactive.bg_fill = p.surface;
     widgets.inactive.weak_bg_fill = p.surface;
     widgets.inactive.bg_stroke = Stroke::new(1.0_f32, p.border);
-    widgets.inactive.fg_stroke = Stroke::new(1.0_f32, p.text);            widgets.inactive.expansion = 0.0;
+    widgets.inactive.fg_stroke = Stroke::new(1.0_f32, p.text);
+    widgets.inactive.expansion = 0.0;
     widgets.inactive.corner_radius = egui::CornerRadius::same(8);
 
     widgets.hovered.bg_fill = p.surface_hover;
@@ -461,16 +450,6 @@ pub fn monogram_color(seed: &str) -> Color32 {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn l_accent_d_un_jeu_ne_touche_pas_au_reste() {
-        let base = palette(ThemeMode::Amoled);
-        let jeu = base.with_accent(accent_from_hue(150.0));
-        assert_ne!(jeu.accent, base.accent);
-        assert_ne!(jeu.accent_hover, jeu.accent_pressed);
-        assert_eq!(jeu.bg, base.bg);
-        assert_eq!(jeu.text, base.text);
-    }
 
     #[test]
     fn le_texte_s_adapte_a_la_couleur_d_accent() {
