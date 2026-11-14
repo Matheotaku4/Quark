@@ -34,17 +34,18 @@ because Quark must know the process and session.
 
 ### FPS counter
 
-**Settings → In game → Show FPS in-game** installs a small `d3d11.dll` proxy
-next to the game executable. The DLL forwards Direct3D 11 to the system, hooks
-`Present` and draws a Steam-like `N FPS` counter in the top-left corner. It
-hides when the game loses focus.
+**Settings → In game → Show FPS in-game** installs `d3d11.dll` and `dxgi.dll`
+next to the game executable. The DLLs forward Direct3D 11 and DXGI to the
+system, hook `Present`/`Present1` and draw a Steam-like `N FPS` counter in the
+top-left corner. They hide when the game loses focus.
 
-- A foreign `d3d11.dll` is never overwritten: Quark refuses the installation and
-  reports it. A DLL previously installed by Quark is updated in place.
-- Quark sets `WINEDLLOVERRIDES=d3d11=n,b` for the game so Wine/Proton loads the
-  proxy instead of its own implementation.
-- DirectX 11 only. Games that import only `dxgi.dll`, and DirectX 12 or Vulkan
-  titles, are not covered.
+- A foreign `d3d11.dll` or `dxgi.dll` is never overwritten: Quark refuses the
+  installation and reports it. DLLs previously installed by Quark are updated in
+  place.
+- Quark sets `WINEDLLOVERRIDES=d3d11=n,b;dxgi=n,b` for the game so Wine/Proton
+  loads the proxies instead of its own implementations.
+- DirectX 11 and 12 are covered through DXGI. Vulkan titles and games that
+  replace both proxy DLLs are not covered.
 - The counter needs a Windows game launched by Quark with Proton, Wine or
   umu-launcher.
 

@@ -1087,7 +1087,7 @@ pub struct Settings {
     pub tray_icon: bool,
     /// Overlay en jeu : panneau au-dessus du jeu, captures et succès.
     pub overlay: bool,
-    /// Compteur FPS dans le jeu via la DLL proxy `d3d11.dll`.
+    /// Compteur FPS dans le jeu via les DLL proxy `d3d11.dll` et `dxgi.dll`.
     pub overlay_fps: bool,
     /// Touche de capture d'écran globale (F12 par défaut).
     pub screenshot_key: String,

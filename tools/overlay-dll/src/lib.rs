@@ -1,8 +1,9 @@
-//! Quark overlay DLL (Windows, Direct3D 11).
+//! Quark overlay DLL (Windows, Direct3D 11/12 through DXGI).
 //!
-//! This library is installed next to a game as `d3d11.dll`. It forwards the
-//! three D3D11 entry points to the system DLL, then patches the `Present` slot
-//! of the first swap chain it sees. A small layered GDI window draws a
+//! The same binary is installed next to a game as `d3d11.dll` and `dxgi.dll`.
+//! It forwards the D3D11 and DXGI entry points to the system DLLs, then patches
+//! the `Present`/`Present1` slots of the first swap chain it sees, including
+//! swap chains created by Direct3D 12. A small layered GDI window draws a
 //! Steam-like FPS counter in a corner of the game window.
 //!
 //! It deliberately does not depend on Quark or egui: the DLL runs inside the
@@ -13,9 +14,12 @@
 
 use std::ffi::c_void;
 use std::mem::size_of;
-use std::sync::atomic::{AtomicBool, AtomicIsize, AtomicPtr, AtomicU32, Ordering};
+use std::sync::atomic::{AtomicIsize, AtomicPtr, AtomicU32, Ordering};
 use windows::core::{w, GUID, PCWSTR};
-use windows::Win32::Foundation::{BOOL, COLORREF, HINSTANCE, HWND, LPARAM, LRESULT, RECT, WPARAM};
+use windows::Win32::Foundation::{
+    CloseHandle, GetLastError, BOOL, COLORREF, ERROR_ALREADY_EXISTS, HINSTANCE, HWND, LPARAM,
+    LRESULT, RECT, WPARAM,
+};
 use windows::Win32::Graphics::Gdi::{
     BeginPaint, CreateFontW, CreateSolidBrush, DeleteObject, EndPaint, FillRect, InvalidateRect,
     SelectObject, SetBkMode, SetTextColor, TextOutW, CLIP_DEFAULT_PRECIS, DEFAULT_CHARSET,
@@ -25,7 +29,9 @@ use windows::Win32::Graphics::Gdi::{
 use windows::Win32::System::LibraryLoader::{GetModuleHandleW, GetProcAddress, LoadLibraryW};
 use windows::Win32::System::Memory::{VirtualProtect, PAGE_PROTECTION_FLAGS, PAGE_READWRITE};
 use windows::Win32::System::SystemInformation::GetSystemDirectoryW;
-use windows::Win32::System::Threading::{CreateThread, GetCurrentProcessId, THREAD_CREATION_FLAGS};
+use windows::Win32::System::Threading::{
+    CreateMutexW, CreateThread, GetCurrentProcessId, THREAD_CREATION_FLAGS,
+};
 use windows::Win32::UI::WindowsAndMessaging::{
     CreateWindowExW, DefWindowProcW, DispatchMessageW, GetClientRect, GetForegroundWindow,
     GetMessageW, GetWindowRect, GetWindowThreadProcessId, RegisterClassW,
@@ -43,17 +49,22 @@ const OVERLAY_HEIGHT: i32 = 42;
 static FRAMES: AtomicU32 = AtomicU32::new(0);
 /// Last measured value, read by the paint handler.
 static FPS: AtomicU32 = AtomicU32::new(0);
-static HOOKED: AtomicBool = AtomicBool::new(false);
 static OVERLAY_HWND: AtomicIsize = AtomicIsize::new(0);
 static LAST_GAME_HWND: AtomicIsize = AtomicIsize::new(0);
 static ORIGINAL_PRESENT: AtomicPtr<c_void> = AtomicPtr::new(std::ptr::null_mut());
-static FACTORY_HOOKED: AtomicBool = AtomicBool::new(false);
+static ORIGINAL_PRESENT1: AtomicPtr<c_void> = AtomicPtr::new(std::ptr::null_mut());
+static OVERLAY_MUTEX: AtomicIsize = AtomicIsize::new(0);
 static ORIGINAL_CREATE_SWAPCHAIN: AtomicPtr<c_void> = AtomicPtr::new(std::ptr::null_mut());
 static ORIGINAL_CREATE_SWAPCHAIN_FOR_HWND: AtomicPtr<c_void> = AtomicPtr::new(std::ptr::null_mut());
 static ORIGINAL_CREATE_SWAPCHAIN_FOR_COMPOSITION: AtomicPtr<c_void> =
     AtomicPtr::new(std::ptr::null_mut());
 
 type PresentFn = unsafe extern "system" fn(*mut c_void, u32, u32) -> i32;
+type Present1Fn = unsafe extern "system" fn(*mut c_void, u32, u32, *const c_void) -> i32;
+type ReleaseFn = unsafe extern "system" fn(*mut c_void) -> u32;
+type CreateFactoryFn = unsafe extern "system" fn(*const GUID, *mut *mut c_void) -> i32;
+type CreateFactory2Fn = unsafe extern "system" fn(u32, *const GUID, *mut *mut c_void) -> i32;
+type GetDebugInterface1Fn = unsafe extern "system" fn(u32, *const GUID, *mut *mut c_void) -> i32;
 type QueryInterfaceFn =
     unsafe extern "system" fn(*mut c_void, *const GUID, *mut *mut c_void) -> i32;
 type GetAdapterFn = unsafe extern "system" fn(*mut c_void, *mut *mut c_void) -> i32;
@@ -106,7 +117,14 @@ type CreateDeviceAndSwapChainFn = unsafe extern "system" fn(
 /// IID_IDXGIDevice et IID_IDXGIFactory : les seules interfaces nécessaires pour
 /// remonter du device D3D11 à la fabrique DXGI. Les GUID sont stables.
 const IID_IDXGIDEVICE: GUID = GUID::from_u128(0x54ec77fa_1377_44e6_8c32_88fd5f44c84c);
-const IID_IDXGIFACTORY: GUID = GUID::from_u128(0x7b7166ec_21c7_44ae_b21a_ae5f5b1f1e7e);
+const IID_IDXGIFACTORY: GUID = GUID::from_u128(0x7b7166ec_21c7_44ae_b21a_c9ae321ae369);
+/// `CreateSwapChainForHwnd` et `CreateSwapChainForComposition` n'existent
+/// qu'à partir de `IDXGIFactory2` ; patcher ces slots sur une fabrique de base
+/// déborderait de sa vtable.
+const IID_IDXGIFACTORY2: GUID = GUID::from_u128(0x50c83a1c_e072_4c48_87b0_3630fa36a6d0);
+/// Utilisé uniquement pour savoir si `Present1` existe réellement sur le swap
+/// chain ; une vtable `IDXGISwapChain` de base s'arrête à `Present`.
+const IID_IDXGISWAPCHAIN1: GUID = GUID::from_u128(0x790a45f7_0d42_4876_983a_0a55cfe6f4aa);
 
 #[repr(C)]
 struct FactoryVtbl {
@@ -127,6 +145,13 @@ struct FactoryVtbl {
     is_windowed_stereo_enabled: *mut c_void,
     create_swap_chain_for_hwnd: CreateSwapChainForHwndFn,
     create_swap_chain_for_core_window: *mut c_void,
+    get_shared_resource_adapter_luid: *mut c_void,
+    register_stereo_status_window: *mut c_void,
+    register_stereo_status_event: *mut c_void,
+    unregister_stereo_status: *mut c_void,
+    register_occlusion_status_window: *mut c_void,
+    register_occlusion_status_event: *mut c_void,
+    unregister_occlusion_status: *mut c_void,
     create_swap_chain_for_composition: CreateSwapChainForCompositionFn,
 }
 
@@ -154,15 +179,29 @@ struct SwapChainVtbl {
     present: PresentFn,
 }
 
-/// Loads the real system `d3d11.dll`, never this proxy. `C:\Windows\System32`
-/// is also valid under Wine/Proton, where it points inside the prefix.
-unsafe fn system_module() -> Option<windows::Win32::Foundation::HMODULE> {
+// Vérifications de disposition : une méthode DXGI oubliée décale les slots
+// suivants et ferait patcher la mauvaise fonction (par exemple
+// `GetSharedResourceAdapterLuid` au lieu de `CreateSwapChainForComposition`).
+const _: () = {
+    assert!(size_of::<FactoryVtbl>() == 25 * size_of::<*mut c_void>());
+    assert!(size_of::<SwapChainVtbl>() == 18 * size_of::<*mut c_void>());
+    assert!(
+        std::mem::offset_of!(FactoryVtbl, create_swap_chain_for_composition)
+            == 24 * size_of::<*mut c_void>()
+    );
+    assert!(std::mem::offset_of!(SwapChainVtbl, present) == 17 * size_of::<*mut c_void>());
+};
+
+/// Loads a system DLL (`d3d11.dll` or `dxgi.dll`), never this proxy.
+/// `C:\Windows\System32` is also valid under Wine/Proton, where it points
+/// inside the prefix.
+unsafe fn system_module(dll: &str) -> Option<windows::Win32::Foundation::HMODULE> {
     let mut path = [0u16; 260];
     let len = GetSystemDirectoryW(Some(&mut path)) as usize;
     if len == 0 || len >= path.len() {
         return None;
     }
-    let suffix: Vec<u16> = "\\d3d11.dll"
+    let suffix: Vec<u16> = format!("\\{dll}")
         .encode_utf16()
         .chain(std::iter::once(0))
         .collect();
@@ -173,8 +212,8 @@ unsafe fn system_module() -> Option<windows::Win32::Foundation::HMODULE> {
     LoadLibraryW(PCWSTR(path.as_ptr())).ok()
 }
 
-unsafe fn real_proc(name: &[u8]) -> Option<*mut c_void> {
-    let module = system_module()?;
+unsafe fn real_proc(dll: &str, name: &[u8]) -> Option<*mut c_void> {
+    let module = system_module(dll)?;
     let address = GetProcAddress(module, windows::core::PCSTR(name.as_ptr()));
     address.map(|proc| proc as *mut c_void)
 }
@@ -193,12 +232,79 @@ unsafe fn patch<T: Copy>(slot: *mut T, replacement: T, original: &AtomicPtr<c_vo
     true
 }
 
+/// Accroche les façons de créer un swap chain sur une fabrique DXGI déjà
+/// obtenue. `CreateSwapChain` existe dès `IDXGIFactory` ; les deux variantes
+/// `ForHwnd`/`ForComposition` ne sont patchées qu'après un QueryInterface
+/// réussi vers `IDXGIFactory2`, pour ne jamais déborder d'une vtable de base.
+unsafe fn hook_factory_vtable(factory: *mut c_void) {
+    if factory.is_null() {
+        return;
+    }
+    let base_vtable = *(factory as *const *mut FactoryVtbl);
+    if base_vtable.is_null() {
+        return;
+    }
+    let query_interface: QueryInterfaceFn = std::mem::transmute((*base_vtable).query_interface);
+    let mut factory2 = std::ptr::null_mut();
+    let has_factory2 =
+        query_interface(factory, &IID_IDXGIFACTORY2, &mut factory2) >= 0 && !factory2.is_null();
+    let vtable = if has_factory2 {
+        let vtable2 = *(factory2 as *const *mut FactoryVtbl);
+        if vtable2.is_null() {
+            let release: ReleaseFn = std::mem::transmute((*base_vtable).release);
+            release(factory2);
+            return;
+        }
+        vtable2
+    } else {
+        base_vtable
+    };
+
+    // Comme pour les swap chains, on vérifie la vtable elle-même : deux
+    // fabriques de générations différentes peuvent avoir des vtables
+    // distinctes, et un drapeau global ferait manquer la seconde.
+    let create_slot = &mut (*vtable).create_swap_chain;
+    if (*create_slot as usize) != (create_swapchain_hook as CreateSwapChainFn as usize) {
+        let _ = patch(
+            create_slot,
+            create_swapchain_hook,
+            &ORIGINAL_CREATE_SWAPCHAIN,
+        );
+    }
+    if has_factory2 {
+        let hwnd_slot = &mut (*vtable).create_swap_chain_for_hwnd;
+        if (*hwnd_slot as usize)
+            != (create_swapchain_for_hwnd_hook as CreateSwapChainForHwndFn as usize)
+        {
+            let _ = patch(
+                hwnd_slot,
+                create_swapchain_for_hwnd_hook,
+                &ORIGINAL_CREATE_SWAPCHAIN_FOR_HWND,
+            );
+        }
+        let composition_slot = &mut (*vtable).create_swap_chain_for_composition;
+        if (*composition_slot as usize)
+            != (create_swapchain_for_composition_hook as CreateSwapChainForCompositionFn as usize)
+        {
+            let _ = patch(
+                composition_slot,
+                create_swapchain_for_composition_hook,
+                &ORIGINAL_CREATE_SWAPCHAIN_FOR_COMPOSITION,
+            );
+        }
+    }
+    if has_factory2 {
+        let release: ReleaseFn = std::mem::transmute((*vtable).release);
+        release(factory2);
+    }
+}
+
 /// Remonte `ID3D11Device` → `IDXGIDevice` → adapter → `IDXGIFactory`, puis
 /// accroche les trois façons de créer un swap chain. Les jeux qui appellent
 /// `D3D11CreateDevice` puis une fabrique DXGI sont ainsi couverts, pas
 /// seulement `D3D11CreateDeviceAndSwapChain`.
 unsafe fn hook_factory(device: *mut c_void) {
-    if device.is_null() || FACTORY_HOOKED.load(Ordering::SeqCst) {
+    if device.is_null() {
         return;
     }
     let device_vtable = *(device as *const *const *mut c_void);
@@ -214,41 +320,34 @@ unsafe fn hook_factory(device: *mut c_void) {
     if dxgi_vtable.is_null() {
         return;
     }
+    let release_dxgi_device: ReleaseFn = std::mem::transmute(*dxgi_vtable.add(2));
     let get_adapter: GetAdapterFn = std::mem::transmute(*dxgi_vtable.add(7));
     let mut adapter = std::ptr::null_mut();
     if get_adapter(dxgi_device, &mut adapter) < 0 || adapter.is_null() {
+        release_dxgi_device(dxgi_device);
         return;
     }
     let adapter_vtable = *(adapter as *const *const *mut c_void);
     if adapter_vtable.is_null() {
+        release_dxgi_device(dxgi_device);
         return;
     }
+    let release_adapter: ReleaseFn = std::mem::transmute(*adapter_vtable.add(2));
     let get_parent: GetParentFn = std::mem::transmute(*adapter_vtable.add(6));
     let mut factory = std::ptr::null_mut();
     if get_parent(adapter, &IID_IDXGIFACTORY, &mut factory) < 0 || factory.is_null() {
+        release_adapter(adapter);
+        release_dxgi_device(dxgi_device);
         return;
     }
-    let factory_vtable = *(factory as *const *mut FactoryVtbl);
-    if factory_vtable.is_null() {
-        return;
+    hook_factory_vtable(factory);
+    let factory_vtable = *(factory as *const *const *mut c_void);
+    if !factory_vtable.is_null() {
+        let release_factory: ReleaseFn = std::mem::transmute(*factory_vtable.add(2));
+        release_factory(factory);
     }
-    let mut patched = false;
-    patched |= patch(
-        &mut (*factory_vtable).create_swap_chain,
-        create_swapchain_hook,
-        &ORIGINAL_CREATE_SWAPCHAIN,
-    );
-    patched |= patch(
-        &mut (*factory_vtable).create_swap_chain_for_hwnd,
-        create_swapchain_for_hwnd_hook,
-        &ORIGINAL_CREATE_SWAPCHAIN_FOR_HWND,
-    );
-    patched |= patch(
-        &mut (*factory_vtable).create_swap_chain_for_composition,
-        create_swapchain_for_composition_hook,
-        &ORIGINAL_CREATE_SWAPCHAIN_FOR_COMPOSITION,
-    );
-    FACTORY_HOOKED.store(patched, Ordering::SeqCst);
+    release_adapter(adapter);
+    release_dxgi_device(dxgi_device);
 }
 
 unsafe extern "system" fn create_swapchain_hook(
@@ -317,29 +416,45 @@ unsafe extern "system" fn create_swapchain_for_composition_hook(
     result
 }
 
-/// Patches the `Present` entry of a swap-chain vtable. Vtables are shared by
-/// all swap chains of the same class in the process, so this only runs once.
+/// Patches the `Present` entry of a swap-chain vtable. `Present1` is patched
+/// too when the object really implements `IDXGISwapChain1`; reading that slot
+/// on a base `IDXGISwapChain` vtable would go past its end. Vtables are shared
+/// by swap chains of the same class, so each module only does this once.
 unsafe fn hook_swapchain(swapchain: *mut c_void) {
-    if swapchain.is_null() || HOOKED.swap(true, Ordering::SeqCst) {
+    if swapchain.is_null() {
         return;
     }
     let vtable = *(swapchain as *const *mut SwapChainVtbl);
     if vtable.is_null() {
-        HOOKED.store(false, Ordering::SeqCst);
         return;
     }
-    let present = (*vtable).present;
-    ORIGINAL_PRESENT.store(present as *mut c_void, Ordering::SeqCst);
 
-    let slot = &mut (*vtable).present as *mut PresentFn as *mut c_void;
-    let mut old = PAGE_PROTECTION_FLAGS(0);
-    if VirtualProtect(slot, size_of::<PresentFn>(), PAGE_READWRITE, &mut old).is_err() {
-        ORIGINAL_PRESENT.store(std::ptr::null_mut(), Ordering::SeqCst);
-        HOOKED.store(false, Ordering::SeqCst);
-        return;
+    // Ne pas réécrire un slot déjà remplacé par ce module. Le test est fait
+    // par vtable, pas globalement : Direct3D 11 et Direct3D 12 peuvent créer
+    // des classes de swap chain différentes dans le même processus.
+    if ((*vtable).present as usize) != (present_hook as PresentFn as usize) {
+        let _ = patch(
+            &mut (*vtable).present,
+            present_hook as PresentFn,
+            &ORIGINAL_PRESENT,
+        );
     }
-    *slot.cast::<PresentFn>() = present_hook;
-    let _ = VirtualProtect(slot, size_of::<PresentFn>(), old, &mut old);
+
+    let query_interface: QueryInterfaceFn = std::mem::transmute((*vtable).query_interface);
+    let mut swapchain1 = std::ptr::null_mut();
+    if query_interface(swapchain, &IID_IDXGISWAPCHAIN1, &mut swapchain1) >= 0
+        && !swapchain1.is_null()
+    {
+        let vtable1 = *(swapchain1 as *const *mut *mut c_void);
+        if !vtable1.is_null() {
+            let slot = &mut *vtable1.add(22).cast::<Present1Fn>();
+            if (*slot as usize) != (present1_hook as Present1Fn as usize) {
+                let _ = patch(slot, present1_hook as Present1Fn, &ORIGINAL_PRESENT1);
+            }
+        }
+        let release: ReleaseFn = std::mem::transmute(*vtable1.add(2));
+        release(swapchain1);
+    }
 }
 
 unsafe extern "system" fn present_hook(
@@ -354,6 +469,21 @@ unsafe extern "system" fn present_hook(
     }
     let original: PresentFn = std::mem::transmute(original);
     original(swapchain, sync_interval, flags)
+}
+
+unsafe extern "system" fn present1_hook(
+    swapchain: *mut c_void,
+    sync_interval: u32,
+    flags: u32,
+    parameters: *const c_void,
+) -> i32 {
+    FRAMES.fetch_add(1, Ordering::Relaxed);
+    let original = ORIGINAL_PRESENT1.load(Ordering::Relaxed);
+    if original.is_null() {
+        return 0;
+    }
+    let original: Present1Fn = std::mem::transmute(original);
+    original(swapchain, sync_interval, flags, parameters)
 }
 
 /// Forwarded proxy entry point. A game that imports `d3d11.dll` loads this
@@ -371,7 +501,7 @@ pub unsafe extern "system" fn D3D11CreateDevice(
     feature_level: *mut i32,
     context: *mut *mut c_void,
 ) -> i32 {
-    let Some(proc) = real_proc(b"D3D11CreateDevice\0") else {
+    let Some(proc) = real_proc("d3d11.dll", b"D3D11CreateDevice\0") else {
         return -2005270483; // E_FAIL
     };
     let create: CreateDeviceFn = std::mem::transmute(proc);
@@ -409,7 +539,7 @@ pub unsafe extern "system" fn D3D11CreateDeviceAndSwapChain(
     feature_level: *mut i32,
     context: *mut *mut c_void,
 ) -> i32 {
-    let Some(proc) = real_proc(b"D3D11CreateDeviceAndSwapChain\0") else {
+    let Some(proc) = real_proc("d3d11.dll", b"D3D11CreateDeviceAndSwapChain\0") else {
         return -2005270483;
     };
     let create: CreateDeviceAndSwapChainFn = std::mem::transmute(proc);
@@ -450,7 +580,7 @@ pub unsafe extern "system" fn D3D11On12CreateDevice(
     context: *mut *mut c_void,
     feature_level: *mut i32,
 ) -> i32 {
-    let Some(proc) = real_proc(b"D3D11On12CreateDevice\0") else {
+    let Some(proc) = real_proc("d3d11.dll", b"D3D11On12CreateDevice\0") else {
         return -2005270483;
     };
     let create: unsafe extern "system" fn(
@@ -465,7 +595,7 @@ pub unsafe extern "system" fn D3D11On12CreateDevice(
         *mut *mut c_void,
         *mut i32,
     ) -> i32 = std::mem::transmute(proc);
-    create(
+    let result = create(
         device,
         flags,
         feature_levels,
@@ -476,7 +606,85 @@ pub unsafe extern "system" fn D3D11On12CreateDevice(
         d3d11_device,
         context,
         feature_level,
-    )
+    );
+    if result >= 0 && !d3d11_device.is_null() {
+        hook_factory(*d3d11_device);
+    }
+    result
+}
+
+/// Proxies DXGI factory creation. The returned factory is patched before it is
+/// handed to the game, so D3D12 swap chains are covered even when the process
+/// never loads `d3d11.dll`.
+#[no_mangle]
+pub unsafe extern "system" fn CreateDXGIFactory(
+    riid: *const GUID,
+    factory: *mut *mut c_void,
+) -> i32 {
+    let Some(proc) = real_proc("dxgi.dll", b"CreateDXGIFactory\0") else {
+        return -2005270483;
+    };
+    let create: CreateFactoryFn = std::mem::transmute(proc);
+    let result = create(riid, factory);
+    if result >= 0 && !factory.is_null() {
+        hook_factory_vtable(*factory);
+    }
+    result
+}
+
+#[no_mangle]
+pub unsafe extern "system" fn CreateDXGIFactory1(
+    riid: *const GUID,
+    factory: *mut *mut c_void,
+) -> i32 {
+    let Some(proc) = real_proc("dxgi.dll", b"CreateDXGIFactory1\0") else {
+        return -2005270483;
+    };
+    let create: CreateFactoryFn = std::mem::transmute(proc);
+    let result = create(riid, factory);
+    if result >= 0 && !factory.is_null() {
+        hook_factory_vtable(*factory);
+    }
+    result
+}
+
+#[no_mangle]
+pub unsafe extern "system" fn CreateDXGIFactory2(
+    flags: u32,
+    riid: *const GUID,
+    factory: *mut *mut c_void,
+) -> i32 {
+    let Some(proc) = real_proc("dxgi.dll", b"CreateDXGIFactory2\0") else {
+        return -2005270483;
+    };
+    let create: CreateFactory2Fn = std::mem::transmute(proc);
+    let result = create(flags, riid, factory);
+    if result >= 0 && !factory.is_null() {
+        hook_factory_vtable(*factory);
+    }
+    result
+}
+
+#[no_mangle]
+pub unsafe extern "system" fn DXGIDeclareAdapterRemovalSupport() -> i32 {
+    let Some(proc) = real_proc("dxgi.dll", b"DXGIDeclareAdapterRemovalSupport\0") else {
+        return -2005270483;
+    };
+    let declare: unsafe extern "system" fn() -> i32 = std::mem::transmute(proc);
+    declare()
+}
+
+#[no_mangle]
+pub unsafe extern "system" fn DXGIGetDebugInterface1(
+    flags: u32,
+    riid: *const GUID,
+    debug: *mut *mut c_void,
+) -> i32 {
+    let Some(proc) = real_proc("dxgi.dll", b"DXGIGetDebugInterface1\0") else {
+        return -2005270483;
+    };
+    let get: GetDebugInterface1Fn = std::mem::transmute(proc);
+    get(flags, riid, debug)
 }
 
 /// True when the game requested the FPS overlay. Quark sets this variable on
@@ -641,14 +849,30 @@ unsafe fn overlay_thread() {
 }
 
 unsafe extern "system" fn init_thread(_: *mut c_void) -> u32 {
-    if fps_enabled() {
-        overlay_thread();
+    if !fps_enabled() {
+        return 0;
     }
+    // Le même binaire est chargé deux fois quand le jeu importe à la fois
+    // d3d11.dll et dxgi.dll : un mutex nommé, propre au processus, garantit une
+    // seule fenêtre. Le PID évite qu'un deuxième jeu lancé dans la même session
+    // passe pour un doublon et perde son overlay.
+    let name = format!("Local\\QuarkOverlayFps-{}", GetCurrentProcessId());
+    let name: Vec<u16> = name.encode_utf16().chain(std::iter::once(0)).collect();
+    let Ok(mutex) = CreateMutexW(None, false, PCWSTR(name.as_ptr())) else {
+        return 0;
+    };
+    if GetLastError() == ERROR_ALREADY_EXISTS {
+        let _ = CloseHandle(mutex);
+        return 0;
+    }
+    OVERLAY_MUTEX.store(mutex.0 as isize, Ordering::SeqCst);
+    overlay_thread();
     0
 }
 
 /// DLL entry point. A thread is created instead of doing work under the loader
-/// lock; the D3D11 exports still forward correctly even when FPS is disabled.
+/// lock; the D3D11 and DXGI exports still forward correctly even when FPS is
+/// disabled.
 #[no_mangle]
 pub unsafe extern "system" fn DllMain(
     instance: *mut c_void,

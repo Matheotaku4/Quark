@@ -682,6 +682,6 @@
   "Non connecté · connexion directe avec un code Epic": "No conectado · inicio de sesión directo con un código de Epic",
   "Non connecté · connexion directe possible ; Legendary reste requis pour installer": "No conectado · inicio de sesión directo disponible; Legendary sigue siendo necesario para instalar",
   "Le code est échangé directement avec Epic ; Quark écrit la session dans user.json (droits privés) et n'affiche jamais le code ni les jetons. Legendary reste utilisé pour la bibliothèque et l'installation.": "El código se intercambia directamente con Epic; Quark guarda la sesión en user.json (permisos privados) y nunca muestra el código ni los tokens. Legendary se sigue usando para la biblioteca y la instalación.",
-  "Installe une DLL d3d11.dll à côté de l'exécutable Windows et affiche un compteur façon Steam. DirectX 11 uniquement ; un d3d11.dll étranger n'est jamais remplacé.": "Instala un d3d11.dll junto al ejecutable de Windows y muestra un contador similar al de Steam. Solo DirectX 11; nunca se reemplaza un d3d11.dll de otro programa.",
-  "Compte Epic connecté.": "Cuenta de Epic conectada."
+  "Compte Epic connecté.": "Cuenta de Epic conectada.",
+  "Installe des DLL d3d11.dll et dxgi.dll à côté de l'exécutable Windows et affiche un compteur façon Steam. DirectX 11 et 12 ; une DLL étrangère n'est jamais remplacée.": "Instala d3d11.dll y dxgi.dll junto al ejecutable de Windows y muestra un contador similar al de Steam. DirectX 11 y 12; nunca se reemplaza una DLL de otro programa."
 }

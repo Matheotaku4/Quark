@@ -2655,9 +2655,9 @@ impl QuarkApp {
                         resolved.extras.push("authentification Epic".to_string());
                     }
                 }
-                // Overlay FPS : la DLL proxy est posée dans le dossier du jeu
-                // juste avant le lancement. Un d3d11.dll étranger n'est jamais
-                // écrasé ; l'overlay est alors simplement désactivé.
+                // Overlay FPS : les DLL proxy sont posées dans le dossier du jeu
+                // juste avant le lancement. Une DLL étrangère n'est jamais
+                // écrasée ; l'overlay est alors simplement désactivé.
                 if self.lib.settings.overlay_fps && crate::proton::looks_windows(&game.exe_path()) {
                     match crate::overlay_dll::install_for_game(&game) {
                         Ok(crate::overlay_dll::InstallOutcome::Conflict(path)) => {

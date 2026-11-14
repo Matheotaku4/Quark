@@ -29,7 +29,7 @@ The wiki is published from the versioned source in [`wiki/`](wiki/) by the
 
 ## What's new in 1.6.0
 
-- **FPS overlay as a DLL.** **Settings → In game → Show FPS in-game** installs a small `d3d11.dll` proxy next to a Windows executable. It forwards Direct3D 11 to the system, hooks `Present` and draws a Steam-like `N FPS` counter in the top-left corner. It hides when the game loses focus, never overwrites a foreign `d3d11.dll`, and asks Wine/Proton to load it. DirectX 11 only.
+- **FPS overlay as a DLL.** **Settings → In game → Show FPS in-game** installs small `d3d11.dll` and `dxgi.dll` proxies next to a Windows executable. They forward Direct3D 11 and DXGI to the system, hook `Present`/`Present1` and draw a Steam-like `N FPS` counter in the top-left corner. They hide when the game loses focus, never overwrite a foreign DLL, and ask Wine/Proton to load them. DirectX 11 and 12.
 - **Direct Epic sign-in.** Quark exchanges the authorization code with Epic itself, then writes the session to Legendary's `user.json` with private permissions. `legendary auth` is no longer launched to sign in; the library and installation still use Legendary.
 - **Five interface languages.** Spanish, German and Portuguese join French and English, with complete catalogues and `--lang` support.
 - **Cleaner CI.** `cargo fmt --check` and `cargo clippy --all-targets --locked -- -D warnings` now run on every push and pull request.
@@ -69,8 +69,8 @@ The wiki is published from the versioned source in [`wiki/`](wiki/) by the
   variables, BattlEye/EasyAntiCheat runtimes and umu-launcher.
 - **A real in-game overlay.** Press `Shift+Backspace` to open a Steam-like
   panel over the game and read its achievements. Enable **Show FPS in-game** to
-  install a small `d3d11.dll` proxy that draws a Steam-like counter in DirectX
-  11 games. `F12` takes a screenshot.
+  install small `d3d11.dll` and `dxgi.dll` proxies that draw a Steam-like
+  counter in DirectX 11 and 12 games. `F12` takes a screenshot.
 - **Cloud saves for Epic and GOG.** The account save is fetched after an
   installation, then synchronized again when the game exits, using the same
   upstream data as the official clients.
@@ -495,7 +495,7 @@ src/
   ui_dialogs.rs       settings, add-game, game settings and save dialogs
   ui_onboarding.rs    first-run guide and what's-new summary
   ui_providers.rs     store accounts and synchronization UI
-  overlay_dll.rs      embedded Windows d3d11.dll proxy and safe installation
+  overlay_dll.rs      embedded Windows d3d11.dll/dxgi.dll proxy and installation
   providers/          Steam, Epic (Legendary + direct sign-in), GOG (gogdl),
                       achievements, cloud_saves, artwork and managed tools
   providers/epic_account.rs  direct Epic OAuth exchange and session file
@@ -540,9 +540,9 @@ their existing GitHub releases.
   available in the development environment. The parsers, argument construction,
   migration and error paths are covered by tests; a manual account and overlay
   test is still required before claiming a complete end-to-end validation.
-- The FPS overlay is DirectX 11 only. Games that import only `dxgi.dll`, and
-  DirectX 12 or Vulkan titles, are not covered. A foreign `d3d11.dll` is never
-  replaced.
+- The FPS overlay covers DirectX 11 and 12 through DXGI. Vulkan titles and
+  games that replace `d3d11.dll` or `dxgi.dll` are not covered; a foreign DLL is
+  never overwritten.
 - Native Wayland global shortcuts depend on the compositor. The overlay and
   screenshots have an X11/XWayland path and desktop-tool fallbacks.
 - Cloud synchronization is deliberately opt-in by store capability. Quark never

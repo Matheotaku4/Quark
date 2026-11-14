@@ -1,30 +1,33 @@
 //! Overlay DLL Windows installée à côté du jeu.
 //!
-//! La DLL est un proxy `d3d11.dll` : elle relaie les points d'entrée Direct3D
-//! 11 au système, accroche `IDXGISwapChain::Present` et affiche un compteur FPS
-//! discret, à la manière de Steam. Elle est compilée séparément dans
-//! `tools/overlay-dll` (cible `x86_64-pc-windows-gnu`) puis embarquée ici.
+//! Le même binaire est un proxy `d3d11.dll` et `dxgi.dll` : il relaie Direct3D
+//! 11 et DXGI au système, accroche `Present`/`Present1` et affiche un compteur
+//! FPS discret, à la manière de Steam. La couverture DXGI inclut les swap chains
+//! Direct3D 12. Il est compilé séparément dans `tools/overlay-dll` (cible
+//! `x86_64-pc-windows-gnu`) puis embarqué ici.
 //!
-//! Quark ne remplace jamais un `d3d11.dll` étranger : beaucoup de jeux et de
-//! mods en installent un. Seule une DLL portant le marqueur de l'overlay Quark
-//! est mise à jour, pour que les mises à jour de Quark rafraîchissent leur
-//! propre proxy. En cas de conflit, le lancement continue sans overlay et
-//! l'utilisateur est prévenu.
+//! Quark ne remplace jamais une DLL étrangère : beaucoup de jeux et de mods
+//! installent leur propre `d3d11.dll` ou `dxgi.dll`. Seule une DLL portant le
+//! marqueur de l'overlay Quark est mise à jour, pour que les mises à jour de
+//! Quark rafraîchissent leur propre proxy. En cas de conflit, le lancement
+//! continue sans overlay et l'utilisateur est prévenu.
 
 use crate::config::Game;
 use std::io::Write;
 use std::path::{Path, PathBuf};
 
-/// Nom attendu par le chargeur Windows : la DLL est résolue depuis le dossier
-/// de l'exécutable avant le dossier système.
+/// Noms attendus par le chargeur Windows : les DLL sont résolues depuis le
+/// dossier de l'exécutable avant le dossier système.
 pub const DLL_NAME: &str = "d3d11.dll";
+pub const DXGI_DLL_NAME: &str = "dxgi.dll";
+const DLL_NAMES: [&str; 2] = [DLL_NAME, DXGI_DLL_NAME];
 
 /// Copie embarquée, reconstruite par `.github/workflows/release.yml`.
 const DLL_BYTES: &[u8] = include_bytes!("../assets/overlay/quark-overlay.dll");
 
 /// Nom de classe de la fenêtre de l'overlay, encodé en UTF-16LE dans la DLL.
-/// Il sert uniquement à reconnaître nos propres installations : un
-/// `d3d11.dll` système, celui d'un mod ou d'un autre outil ne le contient pas.
+/// Il sert uniquement à reconnaître nos propres installations : une DLL
+/// système, celle d'un mod ou d'un autre outil ne le contient pas.
 const OVERLAY_MARKER: &[u8] = b"Q\0u\0a\0r\0k\0O\0v\0e\0r\0l\0a\0y\0";
 
 fn is_quark_overlay(bytes: &[u8]) -> bool {
@@ -39,15 +42,16 @@ pub enum InstallOutcome {
     Installed(PathBuf),
     /// Une DLL identique était déjà en place.
     UpToDate(PathBuf),
-    /// Un autre `d3d11.dll` occupe la place : rien n'a été modifié.
+    /// Un autre `d3d11.dll` ou `dxgi.dll` occupe la place : rien n'a été
+    /// modifié.
     Conflict(PathBuf),
 }
 
-/// Installe la DLL dans le dossier de l'exécutable actif.
+/// Installe les DLL proxy dans le dossier de l'exécutable actif.
 ///
 /// Un jeu Linux natif n'a pas besoin de proxy Direct3D : l'appelant doit
-/// vérifier `looks_windows` avant de demander l'installation. Le fichier est
-/// créé avec `create_new` : un `d3d11.dll` existant n'est jamais écrasé, même
+/// vérifier `looks_windows` avant de demander l'installation. Les deux fichiers
+/// sont créés avec `create_new` : une DLL étrangère n'est jamais écrasée, même
 /// si une autre instance de Quark écrit au même moment.
 pub fn install_for_game(game: &Game) -> Result<InstallOutcome, String> {
     let exe = game.exe_path();
@@ -58,34 +62,78 @@ pub fn install_for_game(game: &Game) -> Result<InstallOutcome, String> {
     install_in(directory)
 }
 
-fn install_in(directory: &Path) -> Result<InstallOutcome, String> {
-    let target = directory.join(DLL_NAME);
-    match std::fs::symlink_metadata(&target) {
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum TargetState {
+    Missing,
+    Current,
+    Managed,
+    Foreign,
+}
+
+fn inspect_target(target: &Path) -> Result<TargetState, String> {
+    match std::fs::symlink_metadata(target) {
         Ok(metadata) => {
             if metadata.file_type().is_symlink() || !metadata.is_file() {
-                return Ok(InstallOutcome::Conflict(target));
+                return Ok(TargetState::Foreign);
             }
-            let existing = std::fs::read(&target)
+            let existing = std::fs::read(target)
                 .map_err(|error| format!("lecture de {} : {error}", target.display()))?;
             if existing == DLL_BYTES {
-                return Ok(InstallOutcome::UpToDate(target));
+                Ok(TargetState::Current)
+            } else if is_quark_overlay(&existing) {
+                Ok(TargetState::Managed)
+            } else {
+                Ok(TargetState::Foreign)
             }
-            if is_quark_overlay(&existing) {
-                replace_managed_dll(&target)?;
-                return Ok(InstallOutcome::Installed(target));
-            }
-            return Ok(InstallOutcome::Conflict(target));
         }
-        Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
-        Err(error) => {
-            return Err(format!("accès à {} : {error}", target.display()));
-        }
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(TargetState::Missing),
+        Err(error) => Err(format!("accès à {} : {error}", target.display())),
+    }
+}
+
+fn install_in(directory: &Path) -> Result<InstallOutcome, String> {
+    let targets = DLL_NAMES
+        .iter()
+        .map(|name| {
+            let path = directory.join(name);
+            inspect_target(&path).map(|state| (path, state))
+        })
+        .collect::<Result<Vec<_>, _>>()?;
+    if let Some((path, TargetState::Foreign)) = targets
+        .iter()
+        .find(|(_, state)| *state == TargetState::Foreign)
+    {
+        return Ok(InstallOutcome::Conflict(path.clone()));
     }
 
+    let mut wrote = false;
+    for (target, state) in targets {
+        match state {
+            TargetState::Current => {}
+            TargetState::Missing => {
+                write_new_dll(&target)?;
+                wrote = true;
+            }
+            TargetState::Managed => {
+                replace_managed_dll(&target)?;
+                wrote = true;
+            }
+            TargetState::Foreign => unreachable!("les conflits sont traités avant l'écriture"),
+        }
+    }
+    let path = directory.join(DLL_NAME);
+    Ok(if wrote {
+        InstallOutcome::Installed(path)
+    } else {
+        InstallOutcome::UpToDate(path)
+    })
+}
+
+fn write_new_dll(target: &Path) -> Result<(), String> {
     let mut file = std::fs::OpenOptions::new()
         .write(true)
         .create_new(true)
-        .open(&target)
+        .open(target)
         .map_err(|error| format!("création de {} : {error}", target.display()))?;
     let written = file
         .write_all(DLL_BYTES)
@@ -93,10 +141,10 @@ fn install_in(directory: &Path) -> Result<InstallOutcome, String> {
         .map_err(|error| format!("écriture de {} : {error}", target.display()));
     drop(file);
     if let Err(error) = written {
-        let _ = std::fs::remove_file(&target);
+        let _ = std::fs::remove_file(target);
         return Err(error);
     }
-    Ok(InstallOutcome::Installed(target))
+    Ok(())
 }
 
 /// Remplace une installation que Quark a lui-même créée. Le fichier temporaire
@@ -126,25 +174,55 @@ pub fn set_env(env: &mut Vec<(String, String)>, name: &str, value: &str) {
     env.push((name.to_string(), value.to_string()));
 }
 
-/// Force Wine/Proton à charger le `d3d11.dll` du dossier du jeu avant celui du
-/// préfixe. Sans cet override, le runtime peut continuer à utiliser sa propre
-/// DLL et le proxy ne serait jamais chargé.
+/// Force Wine/Proton à charger les `d3d11.dll` et `dxgi.dll` du dossier du jeu
+/// avant celles du préfixe. Sans ces overrides, le runtime peut continuer à
+/// utiliser ses propres DLL et le proxy ne serait jamais chargé.
 pub fn enable_wine_override(env: &mut Vec<(String, String)>) {
     let mut entries: Vec<String> = env
         .iter()
         .find(|(key, _)| key.eq_ignore_ascii_case("WINEDLLOVERRIDES"))
         .map(|(_, value)| {
             value
-                .split(',')
-                .map(str::trim)
-                .filter(|entry| !entry.is_empty())
-                .map(str::to_string)
+                .split(';')
+                .filter_map(without_overlay_module)
                 .collect()
         })
         .unwrap_or_default();
-    entries.retain(|entry| !entry.to_ascii_lowercase().starts_with("d3d11="));
     entries.push("d3d11=n,b".to_string());
-    set_env(env, "WINEDLLOVERRIDES", &entries.join(","));
+    entries.push("dxgi=n,b".to_string());
+    set_env(env, "WINEDLLOVERRIDES", &entries.join(";"));
+}
+
+/// Filtre une entrée `module[,module...]=ordre` de `WINEDLLOVERRIDES`.
+///
+/// Les entrées sont séparées par des points-virgules ; les virgules séparent
+/// uniquement plusieurs modules qui partagent le même ordre de chargement. Il
+/// faut donc retirer `d3d11`/`dxgi` sans confondre une liste de modules avec
+/// une nouvelle entrée.
+fn without_overlay_module(entry: &str) -> Option<String> {
+    let entry = entry.trim();
+    if entry.is_empty() {
+        return None;
+    }
+    let Some((modules, order)) = entry.split_once('=') else {
+        return Some(entry.to_string());
+    };
+    let kept: Vec<&str> = modules
+        .split(',')
+        .map(str::trim)
+        .filter(|module| !module.is_empty() && !is_overlay_module(module))
+        .collect();
+    if kept.is_empty() {
+        None
+    } else {
+        Some(format!("{}={}", kept.join(","), order.trim()))
+    }
+}
+
+fn is_overlay_module(module: &str) -> bool {
+    ["d3d11", "d3d11.dll", "dxgi", "dxgi.dll"]
+        .iter()
+        .any(|name| module.trim().eq_ignore_ascii_case(name))
 }
 
 #[cfg(test)]
@@ -171,6 +249,7 @@ mod tests {
         let first = install_in(&dir).unwrap();
         assert!(matches!(first, InstallOutcome::Installed(_)));
         assert_eq!(std::fs::read(dir.join(DLL_NAME)).unwrap(), DLL_BYTES);
+        assert_eq!(std::fs::read(dir.join(DXGI_DLL_NAME)).unwrap(), DLL_BYTES);
         let second = install_in(&dir).unwrap();
         assert!(matches!(second, InstallOutcome::UpToDate(_)));
         let _ = std::fs::remove_dir_all(dir);
@@ -186,6 +265,7 @@ mod tests {
         let outcome = install_in(&dir).unwrap();
         assert_eq!(outcome, InstallOutcome::Installed(path.clone()));
         assert_eq!(std::fs::read(&path).unwrap(), DLL_BYTES);
+        assert_eq!(std::fs::read(dir.join(DXGI_DLL_NAME)).unwrap(), DLL_BYTES);
         let _ = std::fs::remove_dir_all(dir);
     }
 
@@ -197,6 +277,19 @@ mod tests {
         let outcome = install_in(&dir).unwrap();
         assert_eq!(outcome, InstallOutcome::Conflict(path.clone()));
         assert_eq!(std::fs::read(&path).unwrap(), b"un autre proxy");
+        assert!(!dir.join(DXGI_DLL_NAME).exists());
+        let _ = std::fs::remove_dir_all(dir);
+    }
+
+    #[test]
+    fn une_dll_dxgi_etrangere_bloque_l_overlay() {
+        let dir = temp_dir("conflict-dxgi");
+        let path = dir.join(DXGI_DLL_NAME);
+        std::fs::write(&path, b"dxgi d'un autre outil").unwrap();
+        let outcome = install_in(&dir).unwrap();
+        assert_eq!(outcome, InstallOutcome::Conflict(path.clone()));
+        assert!(!dir.join(DLL_NAME).exists());
+        assert_eq!(std::fs::read(&path).unwrap(), b"dxgi d'un autre outil");
         let _ = std::fs::remove_dir_all(dir);
     }
 
@@ -204,14 +297,30 @@ mod tests {
     fn l_override_wine_preserve_les_autres_dll() {
         let mut env = vec![(
             "WINEDLLOVERRIDES".to_string(),
-            "d3d11=b,dxvk_config=n".to_string(),
+            "dxvk_config=n;d3d11=b".to_string(),
         )];
         enable_wine_override(&mut env);
         assert_eq!(
             env,
             vec![(
                 "WINEDLLOVERRIDES".to_string(),
-                "dxvk_config=n,d3d11=n,b".to_string()
+                "dxvk_config=n;d3d11=n,b;dxgi=n,b".to_string()
+            )]
+        );
+    }
+
+    #[test]
+    fn les_entrees_multiples_de_wine_sont_preservees() {
+        let mut env = vec![(
+            "WINEDLLOVERRIDES".to_string(),
+            "comdlg32,shell32=n,b;dxgi=b;foo=n".to_string(),
+        )];
+        enable_wine_override(&mut env);
+        assert_eq!(
+            env,
+            vec![(
+                "WINEDLLOVERRIDES".to_string(),
+                "comdlg32,shell32=n,b;foo=n;d3d11=n,b;dxgi=n,b".to_string()
             )]
         );
     }

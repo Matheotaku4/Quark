@@ -1183,7 +1183,7 @@ impl QuarkApp {
                                     &pal,
                                     "Afficher les FPS dans le jeu",
                                     Some(
-                                        "Installe une DLL d3d11.dll à côté de l'exécutable Windows et affiche un compteur façon Steam. DirectX 11 uniquement ; un d3d11.dll étranger n'est jamais remplacé.",
+                                        "Installe des DLL d3d11.dll et dxgi.dll à côté de l'exécutable Windows et affiche un compteur façon Steam. DirectX 11 et 12 ; une DLL étrangère n'est jamais remplacée.",
                                     ),
                                     &mut self.lib.settings.overlay_fps,
                                     "overlay_fps",
