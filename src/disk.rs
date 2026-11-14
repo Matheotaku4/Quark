@@ -192,7 +192,7 @@ pub fn scan(lib: &Library) -> DiskReport {
     }
 
     // Gros postes d'abord : la page répond d'abord à « où est passé l'espace ».
-    rows.sort_by(|a, b| b.bytes.cmp(&a.bytes));
+    rows.sort_by_key(|row| std::cmp::Reverse(row.bytes));
     let total = rows.iter().map(|row| row.bytes).sum();
     DiskReport { rows, total }
 }

@@ -33,8 +33,9 @@ Epic uses **Legendary**, an open-source command-line client.
    published SHA-256 before running the binary.
 3. **Connect Epic** opens the authorization page. Copy the displayed code into
    Quark.
-4. Legendary exchanges the code locally and writes `user.json` in its
-   configuration folder.
+4. Quark exchanges the code with Epic directly and writes `user.json` in
+   Legendary's configuration folder. Legendary is still used for the library,
+   installation and launch, but `legendary auth` is not launched.
 
 Quark never asks for the Epic password and it never passes through the
 interface. To remove the account, use Legendary's logout action in **Stores &

@@ -67,7 +67,7 @@ pub fn fetch(
             body: excerpt(&raw.contents, BODY_CHARS),
         })
         .collect();
-    items.sort_by(|a, b| b.date.cmp(&a.date));
+    items.sort_by_key(|item| std::cmp::Reverse(item.date));
     Ok(items)
 }
 
@@ -274,10 +274,10 @@ pub fn excerpt(raw: &str, max: usize) -> String {
         return text;
     }
     let mut out: String = text.chars().take(max).collect();
-    if let Some(index) = out.rfind(' ') {
-        if index > max / 2 {
-            out.truncate(index);
-        }
+    if let Some(index) = out.rfind(' ')
+        && index > max / 2
+    {
+        out.truncate(index);
     }
     out.push('…');
     out

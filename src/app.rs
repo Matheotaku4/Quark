@@ -192,6 +192,7 @@ pub struct ScanOutcome {
     pub error: Option<String>,
 }
 
+#[derive(Default)]
 pub struct ScanJob {
     pub folder: Option<PathBuf>,
     pub running: bool,
@@ -199,19 +200,6 @@ pub struct ScanJob {
     pub candidates: Vec<ScanCandidate>,
     pub search_rx: Option<(usize, Receiver<SearchOutcome>)>,
     pub error: Option<String>,
-}
-
-impl Default for ScanJob {
-    fn default() -> Self {
-        Self {
-            folder: None,
-            running: false,
-            rx: None,
-            candidates: Vec::new(),
-            search_rx: None,
-            error: None,
-        }
-    }
 }
 
 impl AddGame {
@@ -601,6 +589,32 @@ pub struct HeroFade {
     pub started: Instant,
 }
 
+type ProviderGamesResult = Result<Vec<crate::providers::ProviderGame>, String>;
+type ProviderInstallSyncResult = Result<
+    (
+        Vec<crate::providers::ProviderGame>,
+        Vec<crate::providers::ProviderGame>,
+    ),
+    String,
+>;
+type ProviderCoverMessage = (
+    crate::providers::ProviderGameKey,
+    Result<(PathBuf, Option<String>), String>,
+);
+type AdoptCoverMessage = (
+    String,
+    crate::providers::ProviderGameKey,
+    Receiver<(
+        crate::providers::covers::ProviderArt,
+        crate::providers::ProviderGameKey,
+    )>,
+);
+type GogUnlockMessage = (
+    crate::providers::ProviderGameKey,
+    String,
+    Result<Option<String>, String>,
+);
+
 pub struct QuarkApp {
     pub lib: Library,
     pub pal: Palette,
@@ -805,33 +819,18 @@ pub struct QuarkApp {
     pub steam_sync_rx: Option<Receiver<SteamSyncOutcome>>,
     pub epic_sync_loading: bool,
     pub epic_sync_error: Option<String>,
-    pub epic_sync_rx: Option<Receiver<Result<Vec<crate::providers::ProviderGame>, String>>>,
-    pub epic_install_sync_rx: Option<
-        Receiver<
-            Result<
-                (
-                    Vec<crate::providers::ProviderGame>,
-                    Vec<crate::providers::ProviderGame>,
-                ),
-                String,
-            >,
-        >,
-    >,
+    pub epic_sync_rx: Option<Receiver<ProviderGamesResult>>,
+    pub epic_install_sync_rx: Option<Receiver<ProviderInstallSyncResult>>,
     /// Synchronisation GOG : l'API GOG est interrogée avec la session gogdl.
     pub gog_sync_loading: bool,
     pub gog_sync_error: Option<String>,
-    pub gog_sync_rx: Option<Receiver<Result<Vec<crate::providers::ProviderGame>, String>>>,
+    pub gog_sync_rx: Option<Receiver<ProviderGamesResult>>,
     /// Onglet de boutique actif dans « Mes jeux » (None = toutes).
     pub my_games_store: Option<crate::providers::Provider>,
     /// Recherche libre dans les jeux possédés.
     pub my_games_query: String,
     /// Couvertures de boutiques manquantes, téléchargées une par une.
-    pub provider_cover_job: Option<
-        Receiver<(
-            crate::providers::ProviderGameKey,
-            Result<(PathBuf, Option<String>), String>,
-        )>,
-    >,
+    pub provider_cover_job: Option<Receiver<ProviderCoverMessage>>,
     pub provider_cover_queue: VecDeque<crate::providers::ProviderGameKey>,
     /// Couvertures actuellement téléchargées en parallèle (quatre au plus).
     pub provider_cover_inflight: usize,
@@ -842,14 +841,7 @@ pub struct QuarkApp {
     /// est retentée, mais pas indéfiniment.
     pub provider_cover_failures: HashMap<crate::providers::ProviderGameKey, u8>,
     /// Images demandées après l'ajout d'un jeu installé à la bibliothèque.
-    pub adopt_cover_job: Option<(
-        String,
-        crate::providers::ProviderGameKey,
-        Receiver<(
-            crate::providers::covers::ProviderArt,
-            crate::providers::ProviderGameKey,
-        )>,
-    )>,
+    pub adopt_cover_job: Option<AdoptCoverMessage>,
     /// Jeux de boutique dont la bannière a déjà été demandée : un échec réseau
     /// ne provoque pas une nouvelle requête à chaque image.
     pub provider_art_tried: std::collections::HashSet<crate::providers::ProviderGameKey>,
@@ -862,13 +854,7 @@ pub struct QuarkApp {
     pub session_unlocks:
         HashMap<crate::providers::ProviderGameKey, Vec<crate::providers::SessionUnlock>>,
     /// Écriture GOG d'un succès de session en cours.
-    pub gog_unlock_job: Option<
-        Receiver<(
-            crate::providers::ProviderGameKey,
-            String,
-            Result<Option<String>, String>,
-        )>,
-    >,
+    pub gog_unlock_job: Option<Receiver<GogUnlockMessage>>,
     /// Fenêtre d'installation ouverte depuis une carte (taille + dossier).
     pub install_request: Option<InstallRequest>,
     /// Installations fournisseur en cours : plusieurs jeux à la fois.
@@ -1341,10 +1327,11 @@ impl QuarkApp {
                 // launcher. Cacher la fenêtre n'était pas une option : `set_visible`
                 // n'existe pas sur Wayland, où la fenêtre restait ouverte.
                 // Ctrl+Q, lui, arrête tout (voir `quit`).
-                if self.lib.settings.tray_icon && !self.quitting {
-                    if let Err(err) = tray::ensure_helper() {
-                        eprintln!("[quark] {err}");
-                    }
+                if self.lib.settings.tray_icon
+                    && !self.quitting
+                    && let Err(err) = tray::ensure_helper()
+                {
+                    eprintln!("[quark] {err}");
                 }
             }
         }
@@ -1636,10 +1623,10 @@ impl QuarkApp {
     }
 
     fn poll_asset_job(&mut self, ctx: &egui::Context) {
-        let received = match self.job.as_ref() {
-            Some(job) => Some((job.game_id.clone(), job.label.clone(), job.rx.try_recv())),
-            None => None,
-        };
+        let received = self
+            .job
+            .as_ref()
+            .map(|job| (job.game_id.clone(), job.label.clone(), job.rx.try_recv()));
         let Some((id, label, result)) = received else {
             return;
         };
@@ -1723,11 +1710,11 @@ impl QuarkApp {
         }
         // Anti-rebond : egui ne redessine que sur événement, il faut donc
         // demander explicitement une frame quand le délai sera écoulé.
-        if let Some(typed) = self.add.last_typed {
-            if let Some(remaining) = Duration::from_millis(500).checked_sub(typed.elapsed()) {
-                ctx.request_repaint_after(remaining);
-                return;
-            }
+        if let Some(typed) = self.add.last_typed
+            && let Some(remaining) = Duration::from_millis(500).checked_sub(typed.elapsed())
+        {
+            ctx.request_repaint_after(remaining);
+            return;
         }
         self.start_search(ctx);
     }
@@ -1890,11 +1877,10 @@ impl QuarkApp {
                     .games
                     .iter_mut()
                     .find(|game| game.key == key)
+                    && !game.custom_save_paths.contains(&path)
                 {
-                    if !game.custom_save_paths.contains(&path) {
-                        game.custom_save_paths.push(path);
-                        self.touch();
-                    }
+                    game.custom_save_paths.push(path);
+                    self.touch();
                 }
             }
         }
@@ -1924,12 +1910,11 @@ impl QuarkApp {
     pub fn start_news(&mut self, ctx: &egui::Context, game_id: &str, app_id: u32) {
         // Un seul jeu chargé à la fois : le précédent perd sa place (mais garde
         // ce qu'il avait déjà obtenu).
-        if let Some(previous) = self.news_job.take() {
-            if previous.game_id != game_id
-                && matches!(self.news.get(&previous.game_id), Some(NewsState::Loading))
-            {
-                self.news.remove(&previous.game_id);
-            }
+        if let Some(previous) = self.news_job.take()
+            && previous.game_id != game_id
+            && matches!(self.news.get(&previous.game_id), Some(NewsState::Loading))
+        {
+            self.news.remove(&previous.game_id);
         }
         let (tx, rx) = channel();
         let repaint = ctx.clone();
@@ -2451,10 +2436,10 @@ impl QuarkApp {
                     crate::providers::covers::cached_hero(&record.key),
                 ),
             ] {
-                if let Some(path) = path {
-                    if !choices.iter().any(|(_, existing, _)| existing == &path) {
-                        choices.push((kind, path, source));
-                    }
+                if let Some(path) = path
+                    && !choices.iter().any(|(_, existing, _)| existing == &path)
+                {
+                    choices.push((kind, path, source));
                 }
             }
         }
@@ -2617,11 +2602,11 @@ impl QuarkApp {
                 for warning in &resolved.warnings {
                     self.toast_error(format!("{} : {warning}", game.name));
                 }
-                if let Some(prefix) = &resolved.prefix {
-                    if let Err(err) = std::fs::create_dir_all(prefix) {
-                        self.toast_error(format!("Préfixe Proton : {err}"));
-                        return;
-                    }
+                if let Some(prefix) = &resolved.prefix
+                    && let Err(err) = std::fs::create_dir_all(prefix)
+                {
+                    self.toast_error(format!("Préfixe Proton : {err}"));
+                    return;
                 }
                 // Pont des succès : adresse et jeton propres à ce lancement.
                 for (name, value) in self.bridge_env(ctx, id) {
@@ -2668,6 +2653,34 @@ impl QuarkApp {
                     }
                     if !store_parameters.is_empty() {
                         resolved.extras.push("authentification Epic".to_string());
+                    }
+                }
+                // Overlay FPS : la DLL proxy est posée dans le dossier du jeu
+                // juste avant le lancement. Un d3d11.dll étranger n'est jamais
+                // écrasé ; l'overlay est alors simplement désactivé.
+                if self.lib.settings.overlay_fps && crate::proton::looks_windows(&game.exe_path()) {
+                    match crate::overlay_dll::install_for_game(&game) {
+                        Ok(crate::overlay_dll::InstallOutcome::Conflict(path)) => {
+                            self.toast_error(format!(
+                                "{} : {} existe déjà, overlay FPS désactivé",
+                                game.name,
+                                path.display()
+                            ));
+                        }
+                        Ok(_) => {
+                            for (name, value) in crate::overlay_dll::launch_environment("top-left")
+                            {
+                                crate::overlay_dll::set_env(&mut resolved.spec.env, &name, &value);
+                            }
+                            crate::overlay_dll::enable_wine_override(&mut resolved.spec.env);
+                            resolved.extras.push("overlay FPS".to_string());
+                        }
+                        Err(error) => {
+                            self.toast_error(format!(
+                                "{} : overlay FPS indisponible ({error})",
+                                game.name
+                            ));
+                        }
                     }
                 }
                 // La sauvegarde « avant lancement » démarre *avant* le
@@ -3712,25 +3725,25 @@ impl QuarkApp {
         // Une capture peut arriver juste après la fermeture du jeu : elle est
         // traitée avant de masquer l'overlay, sinon elle serait perdue.
         let captures = self.game_overlay.poll_captures();
-        if self.game_overlay.open {
-            if let Some(key) = self.game_overlay.target_key() {
-                match self.achievements.get(&key).cloned() {
-                    Some(AchievementsState::Ready(mut info)) => {
-                        if let Some(unlocks) = self.session_unlocks.get(&key) {
-                            crate::providers::achievements::merge_session(&mut info, unlocks);
-                        }
-                        self.game_overlay.set_achievements(info);
+        if self.game_overlay.open
+            && let Some(key) = self.game_overlay.target_key()
+        {
+            match self.achievements.get(&key).cloned() {
+                Some(AchievementsState::Ready(mut info)) => {
+                    if let Some(unlocks) = self.session_unlocks.get(&key) {
+                        crate::providers::achievements::merge_session(&mut info, unlocks);
                     }
-                    Some(AchievementsState::Failed(error)) => {
-                        self.game_overlay.set_achievements_error(Some(error));
-                    }
-                    Some(AchievementsState::Loading) => {
-                        self.game_overlay.set_achievements_loading(true);
-                    }
-                    None => {
-                        self.game_overlay.set_achievements_loading(true);
-                        self.request_achievements(ctx, &key);
-                    }
+                    self.game_overlay.set_achievements(info);
+                }
+                Some(AchievementsState::Failed(error)) => {
+                    self.game_overlay.set_achievements_error(Some(error));
+                }
+                Some(AchievementsState::Loading) => {
+                    self.game_overlay.set_achievements_loading(true);
+                }
+                None => {
+                    self.game_overlay.set_achievements_loading(true);
+                    self.request_achievements(ctx, &key);
                 }
             }
         }
@@ -5315,7 +5328,7 @@ impl QuarkApp {
         self.provider_login = None;
     }
 
-    /// Échange le code collé contre une session, via Legendary ou gogdl.
+    /// Échange le code collé contre une session : échange direct Epic ou gogdl.
     pub fn submit_provider_login(&mut self, ctx: &egui::Context) {
         let Some(login) = self.provider_login.as_mut() else {
             return;
@@ -5340,9 +5353,16 @@ impl QuarkApp {
         std::thread::spawn(move || {
             let result = match provider {
                 crate::providers::Provider::Epic => {
-                    crate::providers::legendary::LegendaryAdapter::new()
-                        .login_with_code(&code)
-                        .map(|()| "Compte Epic connecté (Legendary)".to_string())
+                    crate::providers::epic_account::login_with_code(&code).map(|session| {
+                        if session.display_name.is_empty() {
+                            "Compte Epic connecté (connexion directe)".to_string()
+                        } else {
+                            format!(
+                                "Compte Epic connecté : {} (connexion directe)",
+                                session.display_name
+                            )
+                        }
+                    })
                 }
                 crate::providers::Provider::Gog => crate::providers::gog::GogAdapter::new(
                     crate::providers::gog::auth_config_path(),
@@ -6113,19 +6133,18 @@ impl QuarkApp {
         });
         if let Some(id) = existing {
             if let Some(game) = self.lib.get_mut(&id) {
-                if game.exe.trim().is_empty() {
-                    if let Some(exe) = &record.install_exe {
-                        game.exe = exe.display().to_string();
-                    }
+                if game.exe.trim().is_empty()
+                    && let Some(exe) = &record.install_exe
+                {
+                    game.exe = exe.display().to_string();
                 }
                 if game
                     .artwork
                     .get(AssetKind::Cover)
                     .is_none_or(|path| !path.exists())
+                    && let Some(cover) = crate::providers::covers::cached(key)
                 {
-                    if let Some(cover) = crate::providers::covers::cached(key) {
-                        game.artwork.set(AssetKind::Cover, cover);
-                    }
+                    game.artwork.set(AssetKind::Cover, cover);
                 }
             }
             if let Some(provider) = self
@@ -6271,10 +6290,10 @@ impl QuarkApp {
                 break;
             }
         }
-        if let Some(record) = candidate {
-            if let Some(id) = record.quark_game_id.clone() {
-                self.start_provider_art(ctx, &record, &id);
-            }
+        if let Some(record) = candidate
+            && let Some(id) = record.quark_game_id.clone()
+        {
+            self.start_provider_art(ctx, &record, &id);
         }
     }
 
@@ -6380,11 +6399,10 @@ impl QuarkApp {
                     .games
                     .iter_mut()
                     .find(|game| game.key == key)
+                    && game.cover_url.as_deref() != Some(url.as_str())
                 {
-                    if game.cover_url.as_deref() != Some(url.as_str()) {
-                        game.cover_url = Some(url);
-                        self.touch();
-                    }
+                    game.cover_url = Some(url);
+                    self.touch();
                 }
             }
             Ok((key, Ok((_path, None)))) => {
@@ -6800,10 +6818,10 @@ impl QuarkApp {
                     &self.lib.games,
                 );
                 self.touch();
-                if let Some(error) = outcome.local_error {
-                    if self.steam_sync_error.is_none() {
-                        self.steam_sync_error = Some(error);
-                    }
+                if let Some(error) = outcome.local_error
+                    && self.steam_sync_error.is_none()
+                {
+                    self.steam_sync_error = Some(error);
                 }
             }
             Err(TryRecvError::Disconnected) => {
@@ -6986,10 +7004,10 @@ impl QuarkApp {
                 }
             }
         }
-        if self.meta_job.is_none() {
-            if let Some((game_id, app_id)) = self.meta_queue.pop_front() {
-                self.start_metadata(ctx, game_id, app_id);
-            }
+        if self.meta_job.is_none()
+            && let Some((game_id, app_id)) = self.meta_queue.pop_front()
+        {
+            self.start_metadata(ctx, game_id, app_id);
         }
     }
 

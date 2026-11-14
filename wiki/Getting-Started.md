@@ -22,7 +22,7 @@ The guide is marked as done when it is closed or completed. To see it again:
 
 ### Language and startup page
 
-- **Interface language**: French or English. This is separate from the language
+- **Interface language**: French, English, Spanish, German or Portuguese. This is separate from the language
   requested from Steam APIs, which controls store descriptions.
 - **Startup page**: Home (default), Library, Store or My games. It is read on the
   next launch, not on every click.
@@ -35,7 +35,7 @@ concrete changes in a few sentences, not a commit log. Once closed, the version
 is stored in `last_seen_version`. To see it again: **Settings → About → Review
 what's new**.
 
-![What's new in 1.5.0](https://raw.githubusercontent.com/Matheotaku4/Quark/main/docs/images/whats-new-en.png)
+![What's new in Quark](https://raw.githubusercontent.com/Matheotaku4/Quark/main/docs/images/whats-new-en.png)
 
 ## Add a game
 

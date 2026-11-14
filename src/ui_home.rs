@@ -273,10 +273,10 @@ impl QuarkApp {
                                 linux_chip(ui, &base);
                                 ui.add_space(6.0);
                             }
-                            if let Some(app_id) = game.steam_app_id {
-                                if protondb_badge(ui, &pal, self.protondb.get(&app_id)) {
-                                    open_protondb = true;
-                                }
+                            if let Some(app_id) = game.steam_app_id
+                                && protondb_badge(ui, &pal, self.protondb.get(&app_id))
+                            {
+                                open_protondb = true;
                             }
                         },
                     );
@@ -403,12 +403,10 @@ impl QuarkApp {
                 self.home = false;
             }
         }
-        if open_protondb {
-            if let Some(app_id) = game.steam_app_id {
-                let url = crate::protondb::Tier::url(app_id);
-                if let Err(err) = crate::news::open_in_browser(&url) {
-                    self.toast_error(format!("Ouverture du lien impossible : {err}"));
-                }
+        if open_protondb && let Some(app_id) = game.steam_app_id {
+            let url = crate::protondb::Tier::url(app_id);
+            if let Err(err) = crate::news::open_in_browser(&url) {
+                self.toast_error(format!("Ouverture du lien impossible : {err}"));
             }
         }
     }
@@ -467,10 +465,8 @@ impl QuarkApp {
                         if index > 0 {
                             ui.add_space(12.0);
                         }
-                        let (tile, response) = ui.allocate_exact_size(
-                            Vec2::new(tile_w, tile_h),
-                            Sense::click(),
-                        );
+                        let (tile, response) =
+                            ui.allocate_exact_size(Vec2::new(tile_w, tile_h), Sense::click());
                         let anim = ui.ctx().animate_bool_with_time(
                             egui::Id::new(("quark_favorite_tile", game.id.as_str())),
                             response.hovered(),

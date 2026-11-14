@@ -557,10 +557,10 @@ pub fn build_plan(client: &Client, hit: &SearchHit, s: &Settings) -> AssetPlan {
     }
 
     // Dernier recours pour la couverture : la miniature de la recherche.
-    if plan.candidates(AssetKind::Cover).is_empty() {
-        if let Some(thumb) = &hit.thumb {
-            plan.add(AssetKind::Cover, thumb.clone());
-        }
+    if plan.candidates(AssetKind::Cover).is_empty()
+        && let Some(thumb) = &hit.thumb
+    {
+        plan.add(AssetKind::Cover, thumb.clone());
     }
 
     plan

@@ -58,7 +58,6 @@ impl InstallOperation {
         self.state = OperationState::Succeeded { install_path };
         Ok(())
     }
-
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

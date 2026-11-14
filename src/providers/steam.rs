@@ -70,7 +70,7 @@ pub fn installed_games(
             last_synced: Some(crate::config::now_ts()),
         });
     }
-    result.sort_by(|left, right| left.title.to_lowercase().cmp(&right.title.to_lowercase()));
+    result.sort_by_key(|left| left.title.to_lowercase());
     result
 }
 

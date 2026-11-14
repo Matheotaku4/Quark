@@ -427,26 +427,26 @@ pub fn run(opts: &SnapshotOptions) -> Result<(), String> {
     if opts.demo {
         // Temps HowLongToBeat factices : le rendu hors écran ne fait aucun
         // appel réseau, mais l'aperçu montre le bloc tel qu'en vrai.
-        if let Some(id) = app.selected.clone() {
-            if let Some(game) = app.lib.get(&id) {
-                let (main, extra, hundred) = match game.name.as_str() {
-                    "The Witcher 3: Wild Hunt" => (51.7, 103.8, 164.0),
-                    "Celeste" => (8.3, 14.6, 39.2),
-                    "Hollow Knight" => (26.5, 42.0, 64.0),
-                    "7 Days to Die" => (28.0, 63.0, 148.0),
-                    _ => (4.0, 6.5, 9.0),
-                };
-                app.hltb.insert(
-                    id,
-                    crate::app::HltbState::Ready(crate::howlongtobeat::Report {
-                        game_id: 10_270,
-                        name: game.name.clone(),
-                        main: Some(main),
-                        main_extra: Some(extra),
-                        completionist: Some(hundred),
-                    }),
-                );
-            }
+        if let Some(id) = app.selected.clone()
+            && let Some(game) = app.lib.get(&id)
+        {
+            let (main, extra, hundred) = match game.name.as_str() {
+                "The Witcher 3: Wild Hunt" => (51.7, 103.8, 164.0),
+                "Celeste" => (8.3, 14.6, 39.2),
+                "Hollow Knight" => (26.5, 42.0, 64.0),
+                "7 Days to Die" => (28.0, 63.0, 148.0),
+                _ => (4.0, 6.5, 9.0),
+            };
+            app.hltb.insert(
+                id,
+                crate::app::HltbState::Ready(crate::howlongtobeat::Report {
+                    game_id: 10_270,
+                    name: game.name.clone(),
+                    main: Some(main),
+                    main_extra: Some(extra),
+                    completionist: Some(hundred),
+                }),
+            );
         }
     }
     if opts.marked {
@@ -495,10 +495,12 @@ pub fn run(opts: &SnapshotOptions) -> Result<(), String> {
     let mut textures = Textures::default();
 
     for frame in 0..opts.frames.max(1) {
-        let mut input = egui::RawInput::default();
-        input.screen_rect = Some(Rect::from_min_size(Pos2::ZERO, size));
-        input.time = Some(frame as f64 / 60.0);
-        input.predicted_dt = 1.0 / 60.0;
+        let mut input = egui::RawInput {
+            screen_rect: Some(Rect::from_min_size(Pos2::ZERO, size)),
+            time: Some(frame as f64 / 60.0),
+            predicted_dt: 1.0 / 60.0,
+            ..egui::RawInput::default()
+        };
 
         if let Some(pointer) = opts.hover {
             input.events.push(Event::PointerMoved(pointer));
@@ -537,16 +539,16 @@ pub fn run(opts: &SnapshotOptions) -> Result<(), String> {
             }
         }
 
-        if frame == 1 {
-            if let Some(key) = opts.key.as_deref().and_then(key_from_name) {
-                input.events.push(Event::Key {
-                    key,
-                    physical_key: None,
-                    pressed: true,
-                    repeat: false,
-                    modifiers: Modifiers::NONE,
-                });
-            }
+        if frame == 1
+            && let Some(key) = opts.key.as_deref().and_then(key_from_name)
+        {
+            input.events.push(Event::Key {
+                key,
+                physical_key: None,
+                pressed: true,
+                repeat: false,
+                modifiers: Modifiers::NONE,
+            });
         }
 
         let output = ctx.run(input, |ctx| app.ui(ctx));
@@ -562,7 +564,7 @@ pub fn run(opts: &SnapshotOptions) -> Result<(), String> {
         );
     }
 
-    for (_, game) in app.running.iter_mut() {
+    for game in app.running.values_mut() {
         let _ = game.child.kill();
     }
 
@@ -1501,21 +1503,23 @@ fn demo_library() -> Result<Library, String> {
                 let _ = std::fs::create_dir_all(dir);
             }
             let _ = std::fs::write(&path, b"demo");
-            if game.name == "The Witcher 3: Wild Hunt" {
-                if let Some(dir) = path.parent() {
-                    for dll in ["steam_api64.dll", "dxgi.dll", "d3d11.dll", "winmm.dll"] {
-                        let _ = std::fs::write(dir.join(dll), b"demo");
-                    }
+            if game.name == "The Witcher 3: Wild Hunt"
+                && let Some(dir) = path.parent()
+            {
+                for dll in ["steam_api64.dll", "dxgi.dll", "d3d11.dll", "winmm.dll"] {
+                    let _ = std::fs::write(dir.join(dll), b"demo");
                 }
             }
         }
         game.exe = path.display().to_string();
     }
 
-    let mut settings = crate::config::Settings::default();
-    settings.default_args = "-windowed -novid".to_string();
-    settings.default_prefix = Some("~/Games/prefixes".to_string());
-    settings.default_anticheat = crate::config::AnticheatMode::EasyAntiCheat;
+    let mut settings = crate::config::Settings {
+        default_args: "-windowed -novid".to_string(),
+        default_prefix: Some("~/Games/prefixes".to_string()),
+        default_anticheat: crate::config::AnticheatMode::EasyAntiCheat,
+        ..crate::config::Settings::default()
+    };
     settings.default_launch = crate::config::LaunchOptions {
         gamemode: true,
         mangohud: true,
@@ -1611,7 +1615,7 @@ fn demo_disk_report() -> crate::disk::DiskReport {
             },
         },
     ];
-    rows.sort_by(|a, b| b.bytes.cmp(&a.bytes));
+    rows.sort_by_key(|row| std::cmp::Reverse(row.bytes));
     let total = rows.iter().map(|row| row.bytes).sum();
     crate::disk::DiskReport { rows, total }
 }
@@ -1732,9 +1736,7 @@ struct Textures(HashMap<egui::TextureId, Texture>);
 impl Textures {
     fn apply(&mut self, delta: &TexturesDelta) {
         for (id, update) in &delta.set {
-            let image = match &update.image {
-                ImageData::Color(image) => image,
-            };
+            let ImageData::Color(image) = &update.image;
             match update.pos {
                 None => {
                     self.0.insert(
@@ -1803,7 +1805,7 @@ fn rasterize(
             continue;
         }
 
-        for triangle in mesh.indices.chunks_exact(3) {
+        for triangle in mesh.indices.as_chunks::<3>().0 {
             let vertices = [
                 mesh.vertices[triangle[0] as usize],
                 mesh.vertices[triangle[1] as usize],

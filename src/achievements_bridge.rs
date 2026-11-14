@@ -136,7 +136,7 @@ fn authorized(head: &str, token: &str) -> bool {
     let Some(candidate) = value.strip_prefix("Bearer ") else {
         return false;
     };
-    candidate.as_bytes().len() == token.as_bytes().len()
+    candidate.len() == token.len()
         && candidate
             .as_bytes()
             .iter()

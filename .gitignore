@@ -9,3 +9,6 @@ __pycache__/
 
 # Configuration locale de test
 .quark-home/
+
+# Sortie de compilation de la DLL overlay Windows
+tools/overlay-dll/target

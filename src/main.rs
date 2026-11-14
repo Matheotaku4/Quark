@@ -18,6 +18,7 @@ mod images;
 mod net;
 mod news;
 mod overlay;
+mod overlay_dll;
 mod process;
 mod proton;
 mod protondb;
@@ -325,8 +326,17 @@ fn cli(args: &[String]) -> Option<i32> {
                             Some("en") | Some("english") | Some("anglais") => {
                                 Some(config::UiLanguage::English)
                             }
+                            Some("es") | Some("spanish") | Some("espagnol") => {
+                                Some(config::UiLanguage::Spanish)
+                            }
+                            Some("de") | Some("german") | Some("allemand") => {
+                                Some(config::UiLanguage::German)
+                            }
+                            Some("pt") | Some("portuguese") | Some("portugais") => {
+                                Some(config::UiLanguage::Portuguese)
+                            }
                             _ => {
-                                eprintln!("--lang attend fr ou en");
+                                eprintln!("--lang attend fr, en, es, de ou pt");
                                 return Some(2);
                             }
                         }
@@ -652,7 +662,7 @@ fn launch_from_cli(query: &str) -> Result<(), String> {
 
 /// « 1360x860 » -> taille.
 fn parse_size(text: &str) -> Option<eframe::egui::Vec2> {
-    let (width, height) = text.split_once(|c| c == 'x' || c == 'X')?;
+    let (width, height) = text.split_once(['x', 'X'])?;
     Some(eframe::egui::Vec2::new(
         width.trim().parse().ok()?,
         height.trim().parse().ok()?,
@@ -673,9 +683,10 @@ mod tests {
     use super::*;
 
     fn game(name: &str) -> config::Game {
-        let mut game = config::Game::default();
-        game.name = name.to_string();
-        game
+        config::Game {
+            name: name.to_string(),
+            ..config::Game::default()
+        }
     }
 
     #[test]

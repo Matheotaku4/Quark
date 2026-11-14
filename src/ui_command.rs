@@ -295,10 +295,11 @@ impl QuarkApp {
                 .filter_map(|entry| entry.score(query).map(|score| (score, entry.clone())))
                 .collect();
             if group == "JEUX" {
-                matches.sort_by(|a, b| b.0.cmp(&a.0).then_with(|| a.1.label.cmp(&b.1.label)));
+                matches
+                    .sort_by_key(|(score, entry)| (std::cmp::Reverse(*score), entry.label.clone()));
                 matches.truncate(12);
             } else {
-                matches.sort_by(|a, b| b.0.cmp(&a.0));
+                matches.sort_by_key(|(score, _)| std::cmp::Reverse(*score));
             }
             filtered.extend(matches.into_iter().map(|(_, entry)| entry));
         }

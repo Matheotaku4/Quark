@@ -12,22 +12,33 @@ use std::sync::LazyLock;
 use std::sync::atomic::{AtomicU8, Ordering};
 
 const EN: &str = include_str!("../assets/i18n/en.json");
+const ES: &str = include_str!("../assets/i18n/es.json");
+const DE: &str = include_str!("../assets/i18n/de.json");
+const PT: &str = include_str!("../assets/i18n/pt.json");
 
 static LANGUAGE: AtomicU8 = AtomicU8::new(0);
 
-static CATALOG: LazyLock<HashMap<String, String>> = LazyLock::new(|| {
-    let pairs: HashMap<String, String> = serde_json::from_str(EN).unwrap_or_default();
+fn catalog(text: &str) -> HashMap<String, String> {
+    let pairs: HashMap<String, String> = serde_json::from_str(text).unwrap_or_default();
     pairs
         .into_iter()
         .map(|(key, value)| (normalize_key(&key), value))
         .collect()
-});
+}
+
+static CATALOG_EN: LazyLock<HashMap<String, String>> = LazyLock::new(|| catalog(EN));
+static CATALOG_ES: LazyLock<HashMap<String, String>> = LazyLock::new(|| catalog(ES));
+static CATALOG_DE: LazyLock<HashMap<String, String>> = LazyLock::new(|| catalog(DE));
+static CATALOG_PT: LazyLock<HashMap<String, String>> = LazyLock::new(|| catalog(PT));
 
 pub fn set_language(language: UiLanguage) {
     LANGUAGE.store(
         match language {
             UiLanguage::French => 0,
             UiLanguage::English => 1,
+            UiLanguage::Spanish => 2,
+            UiLanguage::German => 3,
+            UiLanguage::Portuguese => 4,
         },
         Ordering::Relaxed,
     );
@@ -36,12 +47,25 @@ pub fn set_language(language: UiLanguage) {
 pub fn language() -> UiLanguage {
     match LANGUAGE.load(Ordering::Relaxed) {
         1 => UiLanguage::English,
+        2 => UiLanguage::Spanish,
+        3 => UiLanguage::German,
+        4 => UiLanguage::Portuguese,
         _ => UiLanguage::French,
     }
 }
 
 pub fn is_english() -> bool {
     language() == UiLanguage::English
+}
+
+fn current_catalog() -> Option<&'static HashMap<String, String>> {
+    match language() {
+        UiLanguage::French => None,
+        UiLanguage::English => Some(&CATALOG_EN),
+        UiLanguage::Spanish => Some(&CATALOG_ES),
+        UiLanguage::German => Some(&CATALOG_DE),
+        UiLanguage::Portuguese => Some(&CATALOG_PT),
+    }
 }
 
 /// Normalise les espaces (les chaînes Rust multilignes sont repliées par le
@@ -54,14 +78,25 @@ fn normalize_key(text: &str) -> String {
 /// inchangée ; en anglais, le catalogue est consulté puis quelques formes
 /// dynamiques courantes sont adaptées.
 pub fn tr(text: &str) -> String {
-    if !is_english() || text.is_empty() {
+    if text.is_empty() {
         return text.to_string();
     }
+    let Some(catalog) = current_catalog() else {
+        return text.to_string();
+    };
     let key = normalize_key(text);
-    if let Some(value) = CATALOG.get(&key) {
+    if let Some(value) = catalog.get(&key) {
         return value.clone();
     }
-    dynamic_english(&key)
+    // Une clé absente d'une traduction secondaire retombe sur l'anglais, puis
+    // sur le français : aucun libellé ne disparaît.
+    if let Some(value) = CATALOG_EN.get(&key) {
+        return value.clone();
+    }
+    if language() != UiLanguage::French {
+        return dynamic_english(&key);
+    }
+    text.to_string()
 }
 
 /// Raccourci pour les textes construits dans l'interface.
@@ -191,32 +226,32 @@ fn dynamic_english(text: &str) -> String {
 /// Résumé concret de la version courante, affiché une fois après une mise à
 /// jour. Il est volontairement court : quelques phrases, pas un journal de commit.
 pub fn release_summary() -> [&'static str; 6] {
-    if is_english() {
+    if !matches!(language(), UiLanguage::French) {
         [
-            "Games can be starred as favorites; they appear in a Favorites strip on Home and first with the \"Favorites first\" sort.",
-            "Desktop notifications report the end of an installation, a backup or a game session, with three independent settings.",
-            "quark launch <game> starts a game from the terminal and quark list prints the library, without opening the UI.",
-            "PlayStation 2 and PCSX2 support has been removed; existing configurations still load and every other game is kept.",
-            "Update checks now query the current Quark repository, and the README and wiki links are up to date.",
-            "cargo check no longer reports any warning, and the documentation describes version 1.5.0.",
+            "The FPS counter is now a Windows DLL dropped next to the game: it hooks Direct3D 11 and draws a Steam-like overlay that hides when the game loses focus.",
+            "The in-game settings install the d3d11.dll proxy and enable the counter for Windows games launched with Proton or Wine, without overwriting a foreign DLL.",
+            "Epic sign-in is direct: Quark exchanges the authorization code itself and writes the Legendary session, without running legendary auth.",
+            "Spanish, German and Portuguese join French and English, with complete interface catalogues and a --lang option.",
+            "cargo fmt --check and clippy -D warnings now guard every change, and the overlay DLL is rebuilt in the release workflow.",
+            "The existing Quark panel, screenshots, achievements and cloud saves are unchanged; the DLL only adds the FPS counter.",
         ]
     } else {
         [
-            "Les jeux peuvent être marqués comme favoris ; ils apparaissent dans un bandeau Favoris sur l'accueil et en tête avec le tri « Favoris d'abord ».",
-            "Les notifications bureau signalent la fin d'une installation, d'une sauvegarde ou d'une session, avec trois réglages indépendants.",
-            "quark launch <jeu> lance un jeu depuis le terminal et quark list affiche la bibliothèque, sans ouvrir l'interface.",
-            "Le support PlayStation 2 et PCSX2 a été retiré ; les configurations existantes restent lisibles et les autres jeux sont conservés.",
-            "La vérification des mises à jour interroge le dépôt Quark actuel, et les liens du README et du wiki sont à jour.",
-            "cargo check ne produit plus aucun avertissement, et la documentation décrit la version 1.5.0.",
+            "Le compteur FPS est désormais une DLL Windows posée à côté du jeu : elle accroche Direct3D 11 et affiche un overlay façon Steam qui se cache quand le jeu perd le focus.",
+            "Les réglages « En jeu » installent le proxy d3d11.dll et activent le compteur pour les jeux Windows lancés avec Proton ou Wine, sans écraser une DLL étrangère.",
+            "La connexion Epic est directe : Quark échange lui-même le code d'autorisation et écrit la session Legendary, sans lancer legendary auth.",
+            "L'espagnol, l'allemand et le portugais rejoignent le français et l'anglais, avec des catalogues complets et l'option --lang.",
+            "cargo fmt --check et clippy -D warnings protègent désormais chaque changement, et la DLL de l'overlay est reconstruite dans le workflow de release.",
+            "Le panneau Quark existant, les captures, les succès et les sauvegardes cloud ne changent pas ; la DLL ajoute seulement le compteur FPS.",
         ]
     }
 }
 
 pub fn release_title() -> String {
     if is_english() {
-        format!("What's new in {}", env!("CARGO_PKG_VERSION"))
+        format!("What's new in Quark {}", env!("CARGO_PKG_VERSION"))
     } else {
-        format!("Nouveautés de la {}", env!("CARGO_PKG_VERSION"))
+        format!("Nouveautés de Quark {}", env!("CARGO_PKG_VERSION"))
     }
 }
 
@@ -238,6 +273,33 @@ mod tests {
     // s'exécuter l'un après l'autre, sinon l'un lit la langue posée par l'autre.
     fn language_lock() -> MutexGuard<'static, ()> {
         language_test_lock()
+    }
+
+    #[test]
+    fn les_catalogues_secondaires_sont_complets() {
+        let _guard = language_lock();
+        let english: HashMap<String, String> = serde_json::from_str(EN).expect("catalogue anglais");
+        for (nom, texte) in [("espagnol", ES), ("allemand", DE), ("portugais", PT)] {
+            let catalogue: HashMap<String, String> = serde_json::from_str(texte)
+                .unwrap_or_else(|error| panic!("catalogue {nom} : {error}"));
+            assert_eq!(
+                catalogue.keys().collect::<std::collections::BTreeSet<_>>(),
+                english.keys().collect::<std::collections::BTreeSet<_>>(),
+                "le catalogue {nom} n'a pas les mêmes clés que l'anglais"
+            );
+        }
+    }
+
+    #[test]
+    fn les_nouvelles_langues_sont_traduites() {
+        let _guard = language_lock();
+        set_language(UiLanguage::Spanish);
+        assert_eq!(tr("Ajouter un jeu"), "Añadir un juego");
+        set_language(UiLanguage::German);
+        assert_eq!(tr("Ajouter un jeu"), "Spiel hinzufügen");
+        set_language(UiLanguage::Portuguese);
+        assert_eq!(tr("Ajouter un jeu"), "Adicionar um jogo");
+        set_language(UiLanguage::French);
     }
 
     #[test]
@@ -266,11 +328,11 @@ mod tests {
     fn le_resume_de_version_suit_la_langue() {
         let _guard = language_lock();
         set_language(UiLanguage::French);
-        assert!(release_summary()[0].starts_with("Les jeux peuvent être marqués comme favoris"));
-        assert!(release_summary()[1].starts_with("Les notifications bureau"));
+        assert!(release_summary()[0].starts_with("Le compteur FPS"));
+        assert!(release_summary()[1].starts_with("Les réglages « En jeu »"));
         set_language(UiLanguage::English);
-        assert!(release_summary()[0].starts_with("Games can be starred as favorites"));
-        assert!(release_summary()[1].starts_with("Desktop notifications"));
+        assert!(release_summary()[0].starts_with("The FPS counter"));
+        assert!(release_summary()[1].starts_with("The in-game settings"));
         assert!(release_title().starts_with("What's new"));
         set_language(UiLanguage::French);
     }

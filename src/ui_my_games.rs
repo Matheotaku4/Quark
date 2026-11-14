@@ -1065,7 +1065,7 @@ fn provider_card(
     }
     if (response.clicked() || response.secondary_clicked()) && direct_install {
         if game.key.provider == Provider::Steam {
-            if let Some(app_id) = game.key.product_id.parse::<u32>().ok() {
+            if let Ok(app_id) = game.key.product_id.parse::<u32>() {
                 *install = Some(app_id);
             }
         } else {
@@ -1081,7 +1081,7 @@ fn provider_card(
             ui.ctx()
                 .request_repaint_after(std::time::Duration::from_millis(400));
         } else if game.owned && game.key.provider == Provider::Steam {
-            if let Some(app_id) = game.key.product_id.parse::<u32>().ok() {
+            if let Ok(app_id) = game.key.product_id.parse::<u32>() {
                 *install = Some(app_id);
             }
         } else if game.owned {

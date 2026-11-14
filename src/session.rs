@@ -218,10 +218,7 @@ fn copy_log(
     std::thread::spawn(move || {
         let mut buffer = [0u8; 8192];
         let mut truncated = false;
-        loop {
-            let Ok(read) = source.read(&mut buffer) else {
-                break;
-            };
+        while let Ok(read) = source.read(&mut buffer) {
             if read == 0 {
                 break;
             }
@@ -303,15 +300,12 @@ pub fn stop(session: &mut Session) {
             .stdin(Stdio::null())
             .stdout(Stdio::null())
             .stderr(Stdio::null());
-        match cmd.spawn() {
-            Ok(mut child) => {
-                // Court : `wineserver -k` rend la main très vite, et on ne
-                // bloque pas l'interface pour l'attendre.
-                std::thread::spawn(move || {
-                    let _ = child.wait();
-                });
-            }
-            Err(_) => {}
+        if let Ok(mut child) = cmd.spawn() {
+            // Court : `wineserver -k` rend la main très vite, et on ne
+            // bloque pas l'interface pour l'attendre.
+            std::thread::spawn(move || {
+                let _ = child.wait();
+            });
         }
     }
 
@@ -399,7 +393,7 @@ pub fn timestamp(epoch: i64) -> String {
 pub(crate) fn civil_from_days(days: i64) -> (i64, u32, u32) {
     let z = days + 719_468;
     let era = if z >= 0 { z } else { z - 146_096 } / 146_097;
-    let doe = (z - era * 146_097) as i64;
+    let doe = z - era * 146_097;
     let yoe = (doe - doe / 1_460 + doe / 36_524 - doe / 146_096) / 365;
     let year = yoe + era * 400;
     let doy = doe - (365 * yoe + yoe / 4 - yoe / 100);

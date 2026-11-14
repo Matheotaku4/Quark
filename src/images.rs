@@ -529,7 +529,6 @@ pub fn accent_from_path(path: &Path) -> Option<egui::Color32> {
 /// Sert à poser des icônes sombres sur une bannière claire : une icône blanche
 /// sur une image bleu ciel devient invisible. Le calcul échantillonne l'image
 /// (32 × 32 points au plus) et n'a lieu qu'une fois par fichier côté appelant.
-
 /// Teinte en degrés d'une couleur RVB (0-360).
 fn hue_degrees(r: f32, g: f32, b: f32) -> f32 {
     let max = r.max(g).max(b);

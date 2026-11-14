@@ -226,8 +226,7 @@ pub fn suggested_default(runtimes: &[ProtonRuntime]) -> Option<&ProtonRuntime> {
             protons
                 .iter()
                 .copied()
-                .filter(|r| r.name.to_lowercase().starts_with("proton "))
-                .last()
+                .rfind(|r| r.name.to_lowercase().starts_with("proton "))
         })
         .or_else(|| protons.last().copied())
 }
@@ -256,7 +255,6 @@ pub struct LaunchSpec {
     pub args: Vec<OsString>,
     pub env: Vec<(String, String)>,
 }
-
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum LaunchKind {
@@ -1014,7 +1012,7 @@ mod tests {
         let resolu = resolve_with(
             &game,
             &Settings::default(),
-            &[runtime.clone()],
+            std::slice::from_ref(&runtime),
             outils(false, false, true),
         )
         .unwrap();
@@ -1041,7 +1039,7 @@ mod tests {
         let resolu = resolve_with(
             &game,
             &Settings::default(),
-            &[runtime.clone()],
+            std::slice::from_ref(&runtime),
             outils(false, false, true),
         )
         .unwrap();

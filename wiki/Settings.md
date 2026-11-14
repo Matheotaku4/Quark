@@ -11,7 +11,7 @@ button.
 
 ## Appearance
 
-- **Interface language**: French or English, applied immediately.
+- **Interface language**: French, English, Spanish, German or Portuguese, applied immediately.
 - **Theme**: thirteen palettes, applied immediately.
 - **Random hero background** and **Blur**: a blurred banner behind Home and
   Library, picked once per session.

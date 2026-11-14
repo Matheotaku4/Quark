@@ -731,9 +731,11 @@ impl QuarkApp {
             ui,
             &row_pal,
             &game,
-            selected,
-            marked,
-            running,
+            GameRowState {
+                selected,
+                marked,
+                running,
+            },
             &mut self.thumbnails,
             row_height,
         );
@@ -894,12 +896,10 @@ impl QuarkApp {
         let store_playtime_record = store_record
             .as_ref()
             .filter(|record| record.key.provider != crate::providers::Provider::Steam);
-        let store_label = store_playtime_record.and_then(|record| {
-            Some(match record.key.provider {
-                crate::providers::Provider::Epic => "Epic Games",
-                crate::providers::Provider::Gog => "GOG",
-                crate::providers::Provider::Steam => "Steam",
-            })
+        let store_label = store_playtime_record.map(|record| match record.key.provider {
+            crate::providers::Provider::Epic => "Epic Games",
+            crate::providers::Provider::Gog => "GOG",
+            crate::providers::Provider::Steam => "Steam",
         });
         let store_playtime = store_playtime_record
             .and_then(|record| self.provider_playtime.get(&record.key))
@@ -956,43 +956,38 @@ impl QuarkApp {
             .get(AssetKind::Hero)
             .filter(|path| path.exists())
             .cloned()
-        {
-            if let Some(texture) =
+            && let Some(texture) =
                 self.blurred_texture(ui.ctx(), &hero, self.lib.settings.hero_background_blur)
+        {
+            // Toute la zone du panneau, jusqu'en bas : sinon le fond flouté
+            // s'arrêtait avant le bord et laissait une bande noire franche
+            // sous les actualités. `max_rect` couvre le panneau entier (ou
+            // la fiche en surimpression), le painter rogne le reste.
+            // À partir du curseur : en surimpression, la barre de titre et
+            // sa croix restent visibles au-dessus du fond flouté.
+            let area = Rect::from_min_max(ui.cursor().min, ui.max_rect().max);
+            let painter = ui.painter_at(area);
+            draw_cover(&painter, &texture, area);
+            if let Some(previous) = &previous_hero
+                && let Some(old) =
+                    self.blurred_texture(ui.ctx(), previous, self.lib.settings.hero_background_blur)
             {
-                // Toute la zone du panneau, jusqu'en bas : sinon le fond flouté
-                // s'arrêtait avant le bord et laissait une bande noire franche
-                // sous les actualités. `max_rect` couvre le panneau entier (ou
-                // la fiche en surimpression), le painter rogne le reste.
-                // À partir du curseur : en surimpression, la barre de titre et
-                // sa croix restent visibles au-dessus du fond flouté.
-                let area = Rect::from_min_max(ui.cursor().min, ui.max_rect().max);
-                let painter = ui.painter_at(area);
-                draw_cover(&painter, &texture, area);
-                if let Some(previous) = &previous_hero {
-                    if let Some(old) = self.blurred_texture(
-                        ui.ctx(),
-                        previous,
-                        self.lib.settings.hero_background_blur,
-                    ) {
-                        let mut painter = ui.painter_at(area);
-                        painter.set_opacity(1.0 - fade_eased);
-                        draw_cover(&painter, &old, area);
-                    }
-                }
-                // Voile dégradé (maillage à quatre sommets, donc dégradé lisse
-                // sans bandes) : léger derrière la bannière, dense vers le bas
-                // pour que les actualités se détachent. La bannière elle-même
-                // n'est pas assombrie : elle est peinte par-dessus, sans fondu.
-                let mut veil = egui::Mesh::default();
-                veil.colored_vertex(area.left_top(), Color32::from_black_alpha(120));
-                veil.colored_vertex(area.right_top(), Color32::from_black_alpha(120));
-                veil.colored_vertex(area.left_bottom(), Color32::from_black_alpha(238));
-                veil.colored_vertex(area.right_bottom(), Color32::from_black_alpha(238));
-                veil.add_triangle(0, 1, 2);
-                veil.add_triangle(1, 2, 3);
-                painter.add(egui::Shape::mesh(veil));
+                let mut painter = ui.painter_at(area);
+                painter.set_opacity(1.0 - fade_eased);
+                draw_cover(&painter, &old, area);
             }
+            // Voile dégradé (maillage à quatre sommets, donc dégradé lisse
+            // sans bandes) : léger derrière la bannière, dense vers le bas
+            // pour que les actualités se détachent. La bannière elle-même
+            // n'est pas assombrie : elle est peinte par-dessus, sans fondu.
+            let mut veil = egui::Mesh::default();
+            veil.colored_vertex(area.left_top(), Color32::from_black_alpha(120));
+            veil.colored_vertex(area.right_top(), Color32::from_black_alpha(120));
+            veil.colored_vertex(area.left_bottom(), Color32::from_black_alpha(238));
+            veil.colored_vertex(area.right_bottom(), Color32::from_black_alpha(238));
+            veil.add_triangle(0, 1, 2);
+            veil.add_triangle(1, 2, 3);
+            painter.add(egui::Shape::mesh(veil));
         }
 
         egui::ScrollArea::vertical()
@@ -1036,15 +1031,14 @@ impl QuarkApp {
                             // Bannière nette en haut de la fiche. Le bas se fond
                             // dans la version floutée qui couvre toute la page.
                             draw_cover(&painter, texture, hero);
-                            if let Some(previous) = &previous_hero {
-                                if let Some(old) = self.texture(ui.ctx(), previous) {
+                            if let Some(previous) = &previous_hero
+                                && let Some(old) = self.texture(ui.ctx(), previous) {
                                     let mut old_painter = ui.painter_at(hero);
                                     old_painter.set_opacity(1.0 - fade_eased);
                                     draw_cover(&old_painter, &old, hero);
                                 }
-                            }
-                            if let Some(path) = hero_path.as_ref() {
-                                if let Some(blurred) = self.blurred_texture(
+                            if let Some(path) = hero_path.as_ref()
+                                && let Some(blurred) = self.blurred_texture(
                                     ui.ctx(),
                                     path,
                                     self.lib.settings.hero_background_blur,
@@ -1056,7 +1050,6 @@ impl QuarkApp {
                                         (hero.height() * 0.38).clamp(70.0, 190.0),
                                     );
                                 }
-                            }
                         } else {
                             painter.rect_filled(hero, 0.0, pal.surface);
                             hero_placeholder(
@@ -1248,11 +1241,10 @@ impl QuarkApp {
                 if remove_clicked {
                     self.request_remove(&id);
                 }
-                if open_protondb {
-                    if let Some(app_id) = game.steam_app_id {
+                if open_protondb
+                    && let Some(app_id) = game.steam_app_id {
                         open_url = Some(crate::protondb::Tier::url(app_id));
                     }
-                }
                 if play_clicked {
                     if is_running {
                         self.stop(&id);
@@ -1634,8 +1626,8 @@ impl QuarkApp {
                         if widgets::ghost_button(ui, "Paramètres", &pal, Icon::None).clicked() {
                             self.editing = Some(game.clone());
                         }
-                        if game.steam_app_id.is_some() || game.sgdb_id.is_some() {
-                            if widgets::ghost_button(
+                        if (game.steam_app_id.is_some() || game.sgdb_id.is_some())
+                            && widgets::ghost_button(
                                 ui,
                                 "Rafraîchir les artworks",
                                 &pal,
@@ -1646,7 +1638,6 @@ impl QuarkApp {
                                 let hit = crate::artwork::SearchHit::from_game(&game);
                                 self.start_asset_job(ui.ctx(), &id, hit);
                             }
-                        }
                     });
                 }
 
@@ -1662,10 +1653,10 @@ impl QuarkApp {
                 ui.add_space(40.0);
             });
 
-        if let Some(url) = open_url {
-            if let Err(err) = news::open_in_browser(&url) {
-                self.toast_error(format!("Ouverture du lien impossible : {err}"));
-            }
+        if let Some(url) = open_url
+            && let Err(err) = news::open_in_browser(&url)
+        {
+            self.toast_error(format!("Ouverture du lien impossible : {err}"));
         }
     }
 
@@ -2277,10 +2268,10 @@ impl QuarkApp {
         if reload {
             self.reload_news(ui.ctx());
         }
-        if let Some(url) = open {
-            if let Err(err) = news::open_in_browser(&url) {
-                self.toast_error(format!("Ouverture du lien impossible : {err}"));
-            }
+        if let Some(url) = open
+            && let Err(err) = news::open_in_browser(&url)
+        {
+            self.toast_error(format!("Ouverture du lien impossible : {err}"));
         }
     }
 }
@@ -2548,19 +2539,17 @@ fn overview_card(
                         .strong()
                         .color(pal.accent),
                 );
-                if let Some(crate::app::HltbState::Ready(report)) = hltb {
-                    if let Some(headline) = report.headline() {
-                        ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-                            ui.label(
-                                crate::i18n::rich(crate::howlongtobeat::Report::hours_label(
-                                    headline,
-                                ))
+                if let Some(crate::app::HltbState::Ready(report)) = hltb
+                    && let Some(headline) = report.headline()
+                {
+                    ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
+                        ui.label(
+                            crate::i18n::rich(crate::howlongtobeat::Report::hours_label(headline))
                                 .size(12.5)
                                 .strong()
                                 .color(pal.text),
-                            );
-                        });
-                    }
+                        );
+                    });
                 }
             });
             ui.add_space(5.0);
@@ -2649,17 +2638,27 @@ fn overview_line(ui: &mut egui::Ui, pal: &Palette, label: &str, value: &str) {
     ui.add_space(4.0);
 }
 
+#[derive(Debug, Clone, Copy, Default)]
+pub struct GameRowState {
+    pub selected: bool,
+    pub marked: bool,
+    pub running: bool,
+}
+
 /// Ligne de la vue liste : vignette à gauche, titre à côté (comme Steam).
 fn game_row(
     ui: &mut egui::Ui,
     pal: &Palette,
     game: &Game,
-    selected: bool,
-    marked: bool,
-    running: bool,
+    state: GameRowState,
     textures: &mut crate::images::ThumbnailCache,
     row_height: f32,
 ) -> egui::Response {
+    let GameRowState {
+        selected,
+        marked,
+        running,
+    } = state;
     let (rect, response) = ui.allocate_exact_size(
         Vec2::new(ui.available_width(), row_height.max(42.0)),
         Sense::click(),
@@ -2778,7 +2777,7 @@ fn game_row(
         );
     }
 
-    let response = if missing {
+    if missing {
         response.on_hover_text(format!(
             "{} · exécutable introuvable : {}",
             game.name,
@@ -2790,8 +2789,7 @@ fn game_row(
         ))
     } else {
         response
-    };
-    response
+    }
 }
 
 /// Couleur d'une pastille de statut (`None` : pas de pastille).

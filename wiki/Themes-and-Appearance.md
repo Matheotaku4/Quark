@@ -18,9 +18,10 @@ The pages are: **Appearance**, **In game**, **New games**, **Artwork**,
 
 ## Interface language
 
-**Appearance → Interface language** offers **Français** and **English**. The
-change is immediate: the whole interface is rebuilt with the new catalogue,
-without restarting Quark. The choice is stored in `settings.ui_language`.
+**Appearance → Interface language** offers **Français**, **English**,
+**Español**, **Deutsch** and **Português**. The change is immediate: the whole
+interface is rebuilt with the new catalogue, without restarting Quark. The
+choice is stored in `settings.ui_language`.
 
 This language is **separate** from `settings.language`, which asks the Steam API
 for descriptions in a given language. You can keep the interface in French and

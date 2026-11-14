@@ -19,17 +19,13 @@ pub struct ProviderGameKey {
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case", tag = "state", content = "reason")]
+#[derive(Default)]
 pub enum CapabilityState {
     Supported,
     Unsupported(String),
+    #[default]
     Unknown,
     RequiresSetup(String),
-}
-
-impl Default for CapabilityState {
-    fn default() -> Self {
-        Self::Unknown
-    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]

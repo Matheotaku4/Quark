@@ -83,10 +83,9 @@ fn parse_cover(body: &str) -> Result<String, String> {
         .get("boxArtImage")
         .and_then(|image| image.get("href"))
         .and_then(Value::as_str)
+        && let Some(url) = cover_from_boxart(href)
     {
-        if let Some(url) = cover_from_boxart(href) {
-            return Ok(url);
-        }
+        return Ok(url);
     }
     // Repli : l'illustration large reste la bonne œuvre, contrairement à une
     // jaquette devinée à partir d'un autre identifiant.
@@ -377,22 +376,22 @@ pub fn clean_gog_title(title: &str) -> String {
     let trimmed = title.trim();
     let lower = trimmed.to_lowercase();
     for suffix in SUFFIXES {
-        if lower.ends_with(suffix) {
-            if let Some(stripped) = trimmed.get(..trimmed.len() - suffix.len()) {
-                let cleaned = stripped.trim();
-                if !cleaned.is_empty() {
-                    return cleaned.to_string();
-                }
-            }
-        }
-    }
-    // Dernière forme observée : « Nom du jeu Amazon Prime » sans séparateur.
-    if lower.ends_with(" amazon prime") {
-        if let Some(stripped) = trimmed.get(..trimmed.len() - " amazon prime".len()) {
+        if lower.ends_with(suffix)
+            && let Some(stripped) = trimmed.get(..trimmed.len() - suffix.len())
+        {
             let cleaned = stripped.trim();
             if !cleaned.is_empty() {
                 return cleaned.to_string();
             }
+        }
+    }
+    // Dernière forme observée : « Nom du jeu Amazon Prime » sans séparateur.
+    if lower.ends_with(" amazon prime")
+        && let Some(stripped) = trimmed.get(..trimmed.len() - " amazon prime".len())
+    {
+        let cleaned = stripped.trim();
+        if !cleaned.is_empty() {
+            return cleaned.to_string();
         }
     }
     trimmed.to_string()
@@ -495,7 +494,7 @@ pub fn parse_products(body: &str) -> Result<Vec<OwnedGame>, String> {
             cover_url: None,
         });
     }
-    games.sort_by(|left, right| left.title.to_lowercase().cmp(&right.title.to_lowercase()));
+    games.sort_by_key(|left| left.title.to_lowercase());
     games.dedup_by(|left, right| left.id == right.id);
     dedupe_gog_titles(&mut games);
     Ok(games)
@@ -581,7 +580,7 @@ fn filtered_products(token: &str) -> Result<Vec<OwnedGame>, String> {
         }
         page += 1;
     }
-    games.sort_by(|left, right| left.title.to_lowercase().cmp(&right.title.to_lowercase()));
+    games.sort_by_key(|left| left.title.to_lowercase());
     games.dedup_by(|left, right| left.id == right.id);
     dedupe_gog_titles(&mut games);
     Ok(games)
@@ -622,7 +621,7 @@ pub fn library(token: &str) -> Result<Vec<OwnedGame>, String> {
             .map_err(|_| "fiches GOG illisibles".to_string())?;
         games.extend(parse_products(&body)?);
     }
-    games.sort_by(|left, right| left.title.to_lowercase().cmp(&right.title.to_lowercase()));
+    games.sort_by_key(|left| left.title.to_lowercase());
     games.dedup_by(|left, right| left.id == right.id);
     dedupe_gog_titles(&mut games);
     if games.is_empty() {

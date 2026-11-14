@@ -387,11 +387,9 @@ impl QuarkApp {
                         (AssetKind::Hero, art.hero.as_ref()),
                     ] {
                         let missing = game.artwork.get(kind).is_none_or(|path| !path.exists());
-                        if missing {
-                            if let Some((path, _)) = image {
-                                game.artwork.set(kind, path.clone());
-                                changed = true;
-                            }
+                        if missing && let Some((path, _)) = image {
+                            game.artwork.set(kind, path.clone());
+                            changed = true;
                         }
                     }
                 }
@@ -401,13 +399,12 @@ impl QuarkApp {
                     .games
                     .iter_mut()
                     .find(|game| game.key == key)
+                    && let Some((_, url)) = art.cover.as_ref()
+                    && url.is_some()
+                    && record.cover_url != *url
                 {
-                    if let Some((_, url)) = art.cover.as_ref() {
-                        if url.is_some() && record.cover_url != *url {
-                            record.cover_url = url.clone();
-                            changed = true;
-                        }
-                    }
+                    record.cover_url = url.clone();
+                    changed = true;
                 }
                 if changed {
                     self.touch();

@@ -74,13 +74,12 @@ pub fn vdf_paths(text: &str) -> Vec<String> {
         let mut index = tokens(text).into_iter().peekable();
         while let Some(token) = index.next() {
             let numeric_key = token.len() <= 3 && token.chars().all(|c| c.is_ascii_digit());
-            if numeric_key {
-                if let Some(next) = index.peek() {
-                    if next.starts_with('/') {
-                        paths.push(next.clone());
-                        index.next();
-                    }
-                }
+            if numeric_key
+                && let Some(next) = index.peek()
+                && next.starts_with('/')
+            {
+                paths.push(next.clone());
+                index.next();
             }
         }
     }
@@ -130,7 +129,7 @@ pub fn installed() -> Result<Vec<SteamGame>, String> {
             });
         }
     }
-    games.sort_by(|a, b| a.name.to_lowercase().cmp(&b.name.to_lowercase()));
+    games.sort_by_key(|a| a.name.to_lowercase());
     if games.is_empty() {
         return Err("Steam ne signale aucun jeu installé".to_string());
     }
@@ -301,7 +300,7 @@ fn walk(dir: &Path, depth: usize, wanted: &[String], out: &mut Vec<(u64, u8, Pat
                 .file_name()
                 .map(|name| crate::scan::normalize(&name.to_string_lossy()))
                 .unwrap_or_default();
-            let score = if !stem.is_empty() && wanted.iter().any(|name| *name == stem) {
+            let score = if !stem.is_empty() && wanted.contains(&stem) {
                 2
             } else if !stem.is_empty()
                 && wanted.iter().any(|name| {

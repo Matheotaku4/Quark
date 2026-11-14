@@ -12,12 +12,42 @@ permissions:
   contents: write
 
 jobs:
+  overlay-dll:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-pc-windows-gnu
+      - name: Chaîne MinGW
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends gcc-mingw-w64-x86-64
+      - name: Compilation de la DLL overlay
+        run: |
+          cargo build --locked --release \
+            --manifest-path tools/overlay-dll/Cargo.toml \
+            --target x86_64-pc-windows-gnu
+          mkdir -p dist/overlay
+          cp tools/overlay-dll/target/x86_64-pc-windows-gnu/release/quark_overlay.dll \
+            dist/overlay/quark-overlay.dll
+      - uses: actions/upload-artifact@v4
+        with:
+          name: quark-overlay-dll
+          path: dist/overlay/quark-overlay.dll
+          if-no-files-found: error
+
   build:
+    needs: overlay-dll
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
 
       - uses: dtolnay/rust-toolchain@stable
+
+      - name: DLL overlay compilée
+        uses: actions/download-artifact@v4
+        with:
+          name: quark-overlay-dll
+          path: assets/overlay
 
       - uses: Swatinem/rust-cache@v2
 

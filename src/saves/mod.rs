@@ -251,7 +251,6 @@ impl SaveManager {
         ))
     }
 
-
     fn confirmed_restore_command(
         &self,
         identity: &SaveIdentity,
@@ -708,10 +707,10 @@ pub fn validate_restore_preview_paths(
             .components()
         {
             cursor.push(component);
-            if let Ok(metadata) = std::fs::symlink_metadata(&cursor) {
-                if metadata.file_type().is_symlink() {
-                    return Err("destination de restauration passant par un lien symbolique".into());
-                }
+            if let Ok(metadata) = std::fs::symlink_metadata(&cursor)
+                && metadata.file_type().is_symlink()
+            {
+                return Err("destination de restauration passant par un lien symbolique".into());
             }
         }
     }
@@ -840,10 +839,10 @@ pub fn parse_preview(json: &str, title: &str) -> Result<BackupPreview, String> {
     }
     let error_object = root.get("errors").and_then(serde_json::Value::as_object);
     let mut errors = Vec::new();
-    if let Some(value) = error_object.and_then(|entries| entries.get("someGamesFailed")) {
-        if value.as_bool() == Some(true) {
-            errors.push("someGamesFailed".to_string());
-        }
+    if let Some(value) = error_object.and_then(|entries| entries.get("someGamesFailed"))
+        && value.as_bool() == Some(true)
+    {
+        errors.push("someGamesFailed".to_string());
     }
     if let Some(unknown) = error_object
         .and_then(|entries| entries.get("unknownGames"))
@@ -856,18 +855,17 @@ pub fn parse_preview(json: &str, title: &str) -> Result<BackupPreview, String> {
                 .map(|title| format!("jeu inconnu : {title}")),
         );
     }
-    if let Some(overall) = root.get("overall").filter(|value| !value.is_null()) {
-        if let Some(failed) = overall
+    if let Some(overall) = root.get("overall").filter(|value| !value.is_null())
+        && let Some(failed) = overall
             .get("gamesFailed")
             .and_then(serde_json::Value::as_array)
-        {
-            errors.extend(
-                failed
-                    .iter()
-                    .filter_map(serde_json::Value::as_str)
-                    .map(|title| format!("échec : {title}")),
-            );
-        }
+    {
+        errors.extend(
+            failed
+                .iter()
+                .filter_map(serde_json::Value::as_str)
+                .map(|title| format!("échec : {title}")),
+        );
     }
     let changed_games = root
         .get("overall")

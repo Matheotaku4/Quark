@@ -534,10 +534,10 @@ impl QuarkApp {
                 });
             (modal.should_close() || close, open_url)
         };
-        if let Some(url) = open_url {
-            if let Err(error) = crate::news::open_in_browser(&url) {
-                self.toast_error(format!("Ouverture du lien impossible : {error}"));
-            }
+        if let Some(url) = open_url
+            && let Err(error) = crate::news::open_in_browser(&url)
+        {
+            self.toast_error(format!("Ouverture du lien impossible : {error}"));
         }
         if close {
             self.site_search = None;
@@ -704,10 +704,10 @@ fn top_played(sections: &[StoreSection], count: usize) -> Vec<StoreItem> {
     let mut seen = std::collections::HashSet::new();
     items.retain(|item| seen.insert(item.app_id));
     items.truncate(count);
-    if items.is_empty() {
-        if let Some(section) = sections.first() {
-            items = section.items.iter().take(count).cloned().collect();
-        }
+    if items.is_empty()
+        && let Some(section) = sections.first()
+    {
+        items = section.items.iter().take(count).cloned().collect();
     }
     items
 }
@@ -1212,7 +1212,7 @@ fn thousands(value: u32) -> String {
     let digits = value.to_string();
     let mut with_spaces = String::with_capacity(digits.len() + digits.len() / 3);
     for (index, character) in digits.chars().enumerate() {
-        if index > 0 && (digits.len() - index) % 3 == 0 {
+        if index > 0 && (digits.len() - index).is_multiple_of(3) {
             with_spaces.push('\u{202f}');
         }
         with_spaces.push(character);

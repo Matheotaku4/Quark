@@ -7,6 +7,7 @@ pub mod achievements;
 pub mod cloud_saves;
 pub mod covers;
 pub mod credentials;
+pub mod epic_account;
 pub mod gog;
 pub mod gog_library;
 pub mod legendary;
@@ -55,10 +56,9 @@ pub fn install_size_from_json(text: &str) -> Option<u64> {
                         serde_json::Value::Number(number) => number.as_u64(),
                         serde_json::Value::String(text) => text.trim().parse::<u64>().ok(),
                         _ => None,
-                    }) {
-                        if size > 0 {
-                            return Some(size);
-                        }
+                    }) && size > 0
+                    {
+                        return Some(size);
                     }
                 }
                 map.values().find_map(|value| find(value, depth + 1))

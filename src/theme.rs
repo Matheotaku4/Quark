@@ -29,7 +29,6 @@ const fn rgb(r: u8, g: u8, b: u8) -> Color32 {
     Color32::from_rgb(r, g, b)
 }
 
-
 /// Couleur d'accent lisible sur le noir AMOLED à partir d'une teinte (degrés).
 pub fn accent_from_hue(hue: f32) -> Color32 {
     hsv(hue, 0.78, 0.90)
@@ -447,6 +446,19 @@ pub fn monogram_color(seed: &str) -> Color32 {
     MONOGRAM_COLORS[(hash % MONOGRAM_COLORS.len() as u64) as usize]
 }
 
+/// Mélange linéaire de deux couleurs, pour les transitions (survol, sélection).
+pub fn lerp_color(from: Color32, to: Color32, t: f32) -> Color32 {
+    let t = t.clamp(0.0, 1.0);
+    let mix = |a: u8, b: u8| {
+        (a as f32 + (b as f32 - a as f32) * t)
+            .round()
+            .clamp(0.0, 255.0) as u8
+    };
+    let [r1, g1, b1, a1] = from.to_array();
+    let [r2, g2, b2, a2] = to.to_array();
+    Color32::from_rgba_premultiplied(mix(r1, r2), mix(g1, g2), mix(b1, b2), mix(a1, a2))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -540,17 +552,4 @@ mod tests {
         assert!(color.g() > color.r(), "{color:?}");
         assert!(color.g() > color.b(), "{color:?}");
     }
-}
-
-/// Mélange linéaire de deux couleurs, pour les transitions (survol, sélection).
-pub fn lerp_color(from: Color32, to: Color32, t: f32) -> Color32 {
-    let t = t.clamp(0.0, 1.0);
-    let mix = |a: u8, b: u8| {
-        (a as f32 + (b as f32 - a as f32) * t)
-            .round()
-            .clamp(0.0, 255.0) as u8
-    };
-    let [r1, g1, b1, a1] = from.to_array();
-    let [r2, g2, b2, a2] = to.to_array();
-    Color32::from_rgba_premultiplied(mix(r1, r2), mix(g1, g2), mix(b1, b2), mix(a1, a2))
 }

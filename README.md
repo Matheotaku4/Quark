@@ -6,7 +6,7 @@ own, launches Windows games through Proton (or umu-launcher), and stays out of
 the way with an AMOLED interface, a store page, save snapshots and an in-game
 overlay.
 
-This is the **1.5.0** documentation. Older release notes are kept on the GitHub
+This is the **1.6.0** documentation. Older release notes are kept on the GitHub
 releases page; `docs/release-notes.md` only describes the release currently
 being published.
 
@@ -27,18 +27,17 @@ The wiki is published from the versioned source in [`wiki/`](wiki/) by the
 | --- | --- |
 | ![Onboarding](docs/images/onboarding-fr.png) | ![What's new](docs/images/whats-new-fr.png) |
 
-## What's new in 1.5.0
+## What's new in 1.6.0
 
-- **Favorites.** A star on the game page and in the right-click menu pins a game to a new **Favorites** strip on Home; **Favorites first** sorts it above the rest in both Home and Library.
-- **Desktop notifications.** **Settings → In game** can notify when an installation, a Ludusavi backup or a game session finishes. Nothing is sent while the Quark window is focused.
-- **Launch from the terminal.** `quark launch <game>` starts a game without opening the UI; `quark list` prints the library for scripts. Exact titles win, then a case-insensitive substring, and an ambiguous or unknown title exits with code 1.
-- **PlayStation 2 support removed.** PCSX2, PS2 covers and RetroAchievements are gone. Existing configurations still load: the old fields are ignored and every other game is kept.
-- **Update checks fixed.** The updater now queries `Matheotaku4/Quark` instead of the old `Quark-Launcher` repository.
-- **Cleaner code and docs.** `cargo check` has no warnings, the wiki and README describe 1.5.0, and the test workflow uses `--locked`.
+- **FPS overlay as a DLL.** **Settings → In game → Show FPS in-game** installs a small `d3d11.dll` proxy next to a Windows executable. It forwards Direct3D 11 to the system, hooks `Present` and draws a Steam-like `N FPS` counter in the top-left corner. It hides when the game loses focus, never overwrites a foreign `d3d11.dll`, and asks Wine/Proton to load it. DirectX 11 only.
+- **Direct Epic sign-in.** Quark exchanges the authorization code with Epic itself, then writes the session to Legendary's `user.json` with private permissions. `legendary auth` is no longer launched to sign in; the library and installation still use Legendary.
+- **Five interface languages.** Spanish, German and Portuguese join French and English, with complete catalogues and `--lang` support.
+- **Cleaner CI.** `cargo fmt --check` and `cargo clippy --all-targets --locked -- -D warnings` now run on every push and pull request.
+- **Reproducible overlay build.** The release workflow rebuilds the Windows DLL with MinGW before compiling and embedding it in the Linux binary.
 
 ## Table of contents
 
-1. [What's new in 1.5.0](#whats-new-in-150)
+1. [What's new in 1.6.0](#whats-new-in-160)
 2. [What Quark does](#what-quark-does)
 3. [Installation](#installation)
 4. [First launch](#first-launch)
@@ -62,20 +61,24 @@ The wiki is published from the versioned source in [`wiki/`](wiki/) by the
   tags, playtime and statistics. A game can have several installed editions
   without becoming two library entries.
 - **Steam, Epic Games and GOG.** Steam is read from the local Steam libraries.
-  Epic is managed with Legendary and GOG with gogdl. Accounts are connected
-  from the settings; passwords never pass through Quark.
+  Epic sign-in is direct; Legendary handles its library and installation, and
+  GOG uses gogdl. Accounts are connected from the settings; passwords never
+  pass through Quark.
 - **Proton without command lines.** Per-game runtime, prefix, GameMode,
   MangoHud, gamescope, PRIME offload, a free wrapper command, environment
   variables, BattlEye/EasyAntiCheat runtimes and umu-launcher.
 - **A real in-game overlay.** Press `Shift+Backspace` to open a Steam-like
-  panel over the game and read its achievements. `F12` takes a screenshot.
+  panel over the game and read its achievements. Enable **Show FPS in-game** to
+  install a small `d3d11.dll` proxy that draws a Steam-like counter in DirectX
+  11 games. `F12` takes a screenshot.
 - **Cloud saves for Epic and GOG.** The account save is fetched after an
   installation, then synchronized again when the game exits, using the same
   upstream data as the official clients.
 - **Local save snapshots.** Ludusavi creates verified snapshots before a launch
   and after a session, with preview, inventory and restore.
-- **A sober, configurable interface.** Thirteen dark themes, French or English,
-  compact spacing and adjustable panel sizes, list or grid, a home carousel, a
+- **A sober, configurable interface.** Thirteen dark themes, five interface
+  languages (French, English, Spanish, German and Portuguese), compact spacing
+  and adjustable panel sizes, list or grid, a home carousel, a
   random blurred hero background, HowLongToBeat times in the game overview,
   status columns, tags, filters, a Ctrl+K command palette and an embedded
   Archivo font with Lucide icons.
@@ -93,8 +96,8 @@ Download `quark-<version>-linux-x86_64.tar.gz` and its `.sha256` file from the
 then verify and unpack it:
 
 ```bash
-sha256sum -c quark-1.5.0-linux-x86_64.tar.gz.sha256
-tar -xzf quark-1.5.0-linux-x86_64.tar.gz
+sha256sum -c quark-1.6.0-linux-x86_64.tar.gz.sha256
+tar -xzf quark-1.6.0-linux-x86_64.tar.gz
 ./quark/quark
 ```
 
@@ -136,14 +139,14 @@ A new configuration opens a three-step welcome guide. It is not blocking:
 **Skip** closes it. The guide changes the interface language, startup page,
 theme and hero background live, then offers to add a first game. Existing
 configurations are marked as already welcomed, so updating from 1.1.4 never
-shows it unexpectedly; they still see the 1.5.0 summary once.
+shows it unexpectedly; they still see the 1.6.0 summary once.
 
 1. Open **Settings → Stores & tools** and install Legendary and/or gogdl with
    **Install / update**. Quark verifies the SHA-256 digest published by GitHub
    before running a downloaded tool.
-2. Connect Epic or GOG with the code copied from the browser page. The
-   credentials are stored locally in a private file, never sent to a Quark
-   server.
+2. Connect Epic or GOG with the code copied from the browser page. For Epic,
+   Quark exchanges the code itself; the credentials are stored locally in a
+   private file and never sent to a Quark server.
 3. Add a game with the **+** button, import the installed Steam library, or open
    **Stores** to browse what you own.
 4. Pick a Proton runtime in **Settings → New games** if the automatic choice is
@@ -271,8 +274,9 @@ installation is the source of truth when it is selected.
 - **Steam** is read locally from `libraryfolders.vdf` and
   `appmanifest_*.acf`. A personal Steam Web API key and SteamID64 are optional
   and only improve recommendations.
-- **Epic Games** uses Legendary. The authorization code is exchanged locally
-  and the resulting `user.json` stays in Legendary's configuration directory.
+- **Epic Games** signs in directly: Quark exchanges the authorization code and
+  writes the resulting `user.json` to Legendary's configuration directory.
+  Legendary still reads that session for the library, installation and launch.
 - **GOG** uses gogdl. Its token file is separate from Quark's
   `credentials.json` and is written with private permissions.
 
@@ -344,7 +348,8 @@ Display options live in **Settings → In game**:
 - show or hide locked achievements;
 - compact rows without descriptions;
 - show or hide progress and rarity;
-- choose the overlay shortcut and the screenshot key.
+- choose the overlay shortcut and the screenshot key;
+- show or hide the in-game FPS counter.
 
 The X11 global shortcut covers Proton games through XWayland. On native Wayland,
 the desktop's global-shortcut policy may prevent a global key; the overlay still
@@ -394,8 +399,8 @@ accented headings. The content scrolls independently and `Esc` or the top-right
 - **Appearance:** interface language, 13 themes, interface size (compact mode,
   sidebar, rows, covers, banner and overview widths), random hero background,
   startup page, list/grid, carousel, notification icon.
-- **In game:** overlay shortcut, screenshot key, achievement display and
-  cloud-save toggle.
+- **In game:** overlay shortcut, screenshot key, FPS counter, achievement
+  display and cloud-save toggle.
 - **New games:** defaults copied into each newly added game.
 - **Artworks:** image sources, SteamGridDB key and cache.
 - **Stores & tools:** sync, accounts, managed tools and the EOS overlay.
@@ -481,7 +486,7 @@ does not send telemetry.
 src/
   app.rs              application state, jobs and background workers
   config.rs           library, settings, Game and Installation models
-  i18n.rs             French/English catalogue and dynamic labels
+  i18n.rs             multilingual catalogues and dynamic labels
   theme.rs            the 13 palettes
   ui_command.rs       Ctrl+K command palette
   ui_home.rs          home carousel and random hero background
@@ -490,14 +495,17 @@ src/
   ui_dialogs.rs       settings, add-game, game settings and save dialogs
   ui_onboarding.rs    first-run guide and what's-new summary
   ui_providers.rs     store accounts and synchronization UI
-  providers/          Steam, Epic (Legendary), GOG (gogdl), achievements,
-                      cloud_saves, artwork and managed tools
+  overlay_dll.rs      embedded Windows d3d11.dll proxy and safe installation
+  providers/          Steam, Epic (Legendary + direct sign-in), GOG (gogdl),
+                      achievements, cloud_saves, artwork and managed tools
+  providers/epic_account.rs  direct Epic OAuth exchange and session file
   proton.rs           runtime detection, prefix resolution and launch options
   session.rs          process groups, logs and screenshots
   saves/              Ludusavi integration and snapshot validation
-  overlay.rs          in-game overlay, global shortcuts and X11 capture
+  overlay.rs          in-game panel, global shortcuts and X11 capture
   snapshot.rs         off-screen PNG renderer for the CI previews
-assets/i18n/en.json  English interface catalogue (French is the source)
+assets/i18n/         French source plus English, Spanish, German and Portuguese
+assets/overlay/       prebuilt Windows FPS overlay embedded in Quark
 docs/images/          README and wiki screenshots
 docs/
   release-notes.md    notes for the current release only
@@ -528,10 +536,13 @@ their existing GitHub releases.
   Steam Cloud is left to the Steam client.
 - GOG cloud saves need an explicit save folder; gogdl cannot infer it from the
   installation path. Epic can compute its path with Legendary.
-- Real Epic/GOG accounts and a graphical X11 session are not available in the
-  development environment. The parsers, argument construction, migration and
-  error paths are covered by tests; a manual account and overlay test is still
-  required before claiming a complete end-to-end validation.
+- Real Epic/GOG accounts, a Windows GPU and a graphical X11 session are not
+  available in the development environment. The parsers, argument construction,
+  migration and error paths are covered by tests; a manual account and overlay
+  test is still required before claiming a complete end-to-end validation.
+- The FPS overlay is DirectX 11 only. Games that import only `dxgi.dll`, and
+  DirectX 12 or Vulkan titles, are not covered. A foreign `d3d11.dll` is never
+  replaced.
 - Native Wayland global shortcuts depend on the compositor. The overlay and
   screenshots have an X11/XWayland path and desktop-tool fallbacks.
 - Cloud synchronization is deliberately opt-in by store capability. Quark never

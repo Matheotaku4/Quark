@@ -25,7 +25,9 @@ impl QuarkApp {
     /// contente d'afficher le résultat, et le démarrage lance tout seul les
     /// boutiques connectées.
     pub(crate) fn sync_section(&mut self, ui: &mut egui::Ui, ctx: &egui::Context, pal: &Palette) {
-        let epic_logged_in = crate::providers::legendary::LegendaryAdapter::is_logged_in();
+        let epic_account = crate::providers::epic_account::connected_account();
+        let epic_logged_in =
+            epic_account.is_some() || crate::providers::legendary::LegendaryAdapter::is_logged_in();
         let gog_logged_in = crate::providers::gog::GogAdapter::is_logged_in();
         let legendary_ready = ManagedToolId::Legendary.installed_path().is_file();
         let steam_owned =
@@ -59,7 +61,7 @@ impl QuarkApp {
         );
         ui.horizontal(|ui| {
             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                if widgets::ghost_button(ui, "Tout synchroniser", &pal, Icon::Refresh).clicked() {
+                if widgets::ghost_button(ui, "Tout synchroniser", pal, Icon::Refresh).clicked() {
                     self.start_steam_sync(ctx);
                     if legendary_ready && epic_logged_in {
                         self.start_epic_sync(ctx);
@@ -98,7 +100,7 @@ impl QuarkApp {
                 if !legendary_ready {
                     "Legendary n'est pas installé : installe-le dans « Outils gérés par Quark »."
                 } else if epic_logged_in {
-                    "Compte Legendary connecté."
+                    "Compte Epic connecté."
                 } else {
                     "Compte Epic non connecté."
                 },
@@ -148,7 +150,7 @@ impl QuarkApp {
                     }
                     ui.add_enabled_ui(enabled, |ui| {
                         let text = if busy { "En cours…" } else { "Synchroniser" };
-                        if widgets::ghost_button(ui, text, &pal, Icon::Refresh).clicked() {
+                        if widgets::ghost_button(ui, text, pal, Icon::Refresh).clicked() {
                             match provider {
                                 Provider::Steam => self.start_steam_sync(ctx),
                                 Provider::Epic => self.start_epic_sync(ctx),
@@ -183,7 +185,9 @@ impl QuarkApp {
         ctx: &egui::Context,
         pal: &Palette,
     ) {
-        let epic_logged_in = crate::providers::legendary::LegendaryAdapter::is_logged_in();
+        let epic_account = crate::providers::epic_account::connected_account();
+        let epic_logged_in =
+            epic_account.is_some() || crate::providers::legendary::LegendaryAdapter::is_logged_in();
         let gog_logged_in = crate::providers::gog::GogAdapter::is_logged_in();
         let legendary_ready = ManagedToolId::Legendary.installed_path().is_file();
         let gogdl_ready = ManagedToolId::Gogdl.installed_path().is_file();
@@ -205,22 +209,26 @@ impl QuarkApp {
             ui,
             pal,
             "Epic Games",
-            epic_status(epic_logged_in, legendary_ready),
-            (!epic_active && !epic_logged_in && legendary_ready).then_some("Se connecter"),
+            &match (&epic_account, epic_logged_in) {
+                (Some((_, name)), _) if !name.is_empty() => {
+                    format!("Connecté · {name} · session directe")
+                }
+                _ => epic_status(epic_logged_in, legendary_ready).to_string(),
+            },
+            (!epic_active && !epic_logged_in).then_some("Se connecter"),
         ) {
             open_login = Some(Provider::Epic);
         }
-        if epic_active {
-            if let Some(login) = self.provider_login.as_mut() {
-                action = login_form(
-                    ui,
-                    pal,
-                    login,
-                    "Ouvre la page de connexion Epic, connecte-toi, puis copie la valeur \
-                     « authorizationCode » de la réponse JSON affichée par la page.",
-                    crate::providers::legendary::LOGIN_URL,
-                );
-            }
+        if epic_active && let Some(login) = self.provider_login.as_mut() {
+            action = login_form(
+                ui,
+                pal,
+                login,
+                "Ouvre la page de connexion Epic, connecte-toi, puis copie la valeur \
+                     « authorizationCode » de la réponse JSON. Quark échange ce code \
+                     directement avec Epic : aucun outil externe n'est lancé.",
+                crate::providers::legendary::LOGIN_URL,
+            );
         }
 
         let gog_active = self
@@ -236,17 +244,15 @@ impl QuarkApp {
         ) {
             open_login = Some(Provider::Gog);
         }
-        if gog_active {
-            if let Some(login) = self.provider_login.as_mut() {
-                action = login_form(
-                    ui,
-                    pal,
-                    login,
-                    "Ouvre la page de connexion GOG, connecte-toi, puis copie le paramètre \
+        if gog_active && let Some(login) = self.provider_login.as_mut() {
+            action = login_form(
+                ui,
+                pal,
+                login,
+                "Ouvre la page de connexion GOG, connecte-toi, puis copie le paramètre \
                      « code » de l'adresse de retour (embed.gog.com/on_login_success?code=…).",
-                    crate::providers::gog::LOGIN_URL,
-                );
-            }
+                crate::providers::gog::LOGIN_URL,
+            );
         }
 
         if let Some(provider) = open_login {
@@ -277,10 +283,10 @@ fn account_row(
     ui.horizontal_wrapped(|ui| {
         ui.label(crate::i18n::rich(provider).size(12.0).color(pal.text));
         ui.label(crate::i18n::rich(status).size(11.0).color(pal.text_dim));
-        if let Some(label) = action {
-            if crate::widgets::ghost_button(ui, label, pal, crate::widgets::Icon::Plus).clicked() {
-                clicked = true;
-            }
+        if let Some(label) = action
+            && crate::widgets::ghost_button(ui, label, pal, crate::widgets::Icon::Plus).clicked()
+        {
+            clicked = true;
         }
     });
     clicked
@@ -288,11 +294,11 @@ fn account_row(
 
 fn epic_status(logged_in: bool, tool_ready: bool) -> &'static str {
     if logged_in {
-        "Connecté · session Legendary enregistrée"
+        "Connecté · session Epic directe enregistrée"
     } else if tool_ready {
-        "Non connecté · connexion avec un code Epic"
+        "Non connecté · connexion directe avec un code Epic"
     } else {
-        "Non connecté · installe Legendary dans « Outils gérés »"
+        "Non connecté · connexion directe possible ; Legendary reste requis pour installer"
     }
 }
 
@@ -375,8 +381,9 @@ fn login_form(
             }
             ui.label(
                 crate::i18n::rich(
-                    "Le code est échangé par l'outil officiel ; Quark ne conserve que la session \
-                     écrite par cet outil, et n'affiche jamais le code ni les jetons.",
+                    "Le code est échangé directement avec Epic ; Quark écrit la session dans \
+                     user.json (droits privés) et n'affiche jamais le code ni les jetons. \
+                     Legendary reste utilisé pour la bibliothèque et l'installation.",
                 )
                 .size(10.5)
                 .color(pal.text_faint),

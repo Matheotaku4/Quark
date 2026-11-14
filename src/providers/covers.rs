@@ -211,12 +211,12 @@ pub fn ensure(game: &ProviderGame) -> Result<(PathBuf, Option<String>), String> 
     // Repli Steam : la jaquette verticale de la fiche du même titre. Elle est
     // préférée à un monogramme, sans jamais remplacer une image de la boutique
     // quand celle-ci existe.
-    if game.key.provider != Provider::Steam {
-        if let Some((url, _app_id)) = steam_fallback(&game.title) {
-            match download(&url, &game.key) {
-                Ok(path) => return Ok((path, Some(url))),
-                Err(error) => errors.push(error),
-            }
+    if game.key.provider != Provider::Steam
+        && let Some((url, _app_id)) = steam_fallback(&game.title)
+    {
+        match download(&url, &game.key) {
+            Ok(path) => return Ok((path, Some(url))),
+            Err(error) => errors.push(error),
         }
     }
     Err(errors
@@ -255,14 +255,13 @@ pub fn ensure_hero(game: &ProviderGame) -> Result<(PathBuf, Option<String>), Str
             Err(error) => errors.push(error),
         }
     }
-    if game.key.provider != Provider::Steam {
-        if let Some((_url, app_id)) = steam_fallback(&game.title) {
-            if let Some(url) = steam_hero_url(&app_id.to_string()) {
-                match download_hero(&url, &game.key) {
-                    Ok(path) => return Ok((path, Some(url))),
-                    Err(error) => errors.push(error),
-                }
-            }
+    if game.key.provider != Provider::Steam
+        && let Some((_url, app_id)) = steam_fallback(&game.title)
+        && let Some(url) = steam_hero_url(&app_id.to_string())
+    {
+        match download_hero(&url, &game.key) {
+            Ok(path) => return Ok((path, Some(url))),
+            Err(error) => errors.push(error),
         }
     }
     Err(errors

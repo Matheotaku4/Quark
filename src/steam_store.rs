@@ -37,18 +37,10 @@ pub struct StoreSection {
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(default)]
+#[derive(Default)]
 pub struct StoreSnapshot {
     pub fetched_at: i64,
     pub sections: Vec<StoreSection>,
-}
-
-impl Default for StoreSnapshot {
-    fn default() -> Self {
-        Self {
-            fetched_at: 0,
-            sections: Vec::new(),
-        }
-    }
 }
 
 impl StoreSnapshot {
@@ -605,7 +597,7 @@ pub fn parse_search(json: &str) -> Result<Vec<StoreItem>, String> {
                 .price
                 .filter(|price| !price.currency.is_empty())
                 .map(|price| {
-                    let discount = price.initial.checked_sub(price.final_price).unwrap_or(0);
+                    let discount = price.initial.saturating_sub(price.final_price);
                     let discount_percent = (price.initial > 0 && discount > 0)
                         .then(|| ((discount.saturating_mul(100) / price.initial).min(100)) as u8);
                     StorePrice {

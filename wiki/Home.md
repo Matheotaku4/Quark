@@ -5,13 +5,16 @@ games and your Steam, Epic Games and GOG libraries together, launches Windows
 games through Proton or umu-launcher, and adds an in-game overlay, screenshots,
 achievements and verified local saves.
 
-This documentation describes **Quark 1.5.0**. It is also versioned in the
+This documentation describes **Quark 1.6.0**. It is also versioned in the
 repository under [`wiki/`](https://github.com/Matheotaku4/Quark/tree/main/wiki).
 
 ![Quark home](https://raw.githubusercontent.com/Matheotaku4/Quark/main/docs/images/home-en.png)
 
-## What's new in 1.5
+## What's new in 1.6
 
+- **1.6.0** adds a DirectX 11 FPS overlay installed as a `d3d11.dll` proxy next
+  to the game, direct Epic sign-in, and Spanish, German and Portuguese
+  interface languages. It also adds `cargo fmt` and Clippy checks to CI.
 - **1.5.0** adds game favorites and a Favorites strip on Home, desktop
   notifications, `quark launch`/`quark list`, and removes the PlayStation 2,
   PCSX2 and RetroAchievements support. Update checks now use the Quark
@@ -55,7 +58,7 @@ repository under [`wiki/`](https://github.com/Matheotaku4/Quark/tree/main/wiki).
   takes a screenshot. Epic and GOG achievements share the same view.
 - **Saves.** Epic/GOG cloud synchronization and Ludusavi snapshots verified
   before and after a session.
-- **A configurable interface.** Thirteen dark themes, French or English, list or
+- **A configurable interface.** Thirteen dark themes, five interface languages, list or
   grid, a customizable home page, a random blurred hero and a `Ctrl+K` command
   palette.
 - **A launcher, not a store.** Quark never buys anything and never downloads a

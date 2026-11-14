@@ -460,7 +460,6 @@
   "Non connecté · installe gogdl dans « Outils gérés »": "Not connected · install gogdl in “Managed tools”",
   "Connecté · session Legendary enregistrée": "Connected · Legendary session saved",
   "Connecté · session gogdl enregistrée": "Connected · gogdl session saved",
-  "Compte Legendary connecté.": "Legendary account connected.",
   "Compte Epic non connecté.": "Epic account not connected.",
   "Compte GOG connecté (bibliothèque lue via l'API GOG).": "GOG account connected (library read via the GOG API).",
   "Compte GOG non connecté.": "GOG account not connected.",
@@ -674,5 +673,15 @@
   "Favoris": "Favorites",
   "Favoris d'abord": "Favorites first",
   "Ajouter aux favoris": "Add to favorites",
-  "Retirer des favoris": "Remove from favorites"
+  "Retirer des favoris": "Remove from favorites",
+  "Le panneau Quark reste fermé par défaut : Maj+Retour arrière l'ouvre et le referme. La DLL FPS, elle, s'affiche directement dans le jeu, comme le compteur de Steam.": "The Quark panel stays closed by default: Shift+Backspace opens and closes it. The FPS DLL displays directly in the game, like Steam's counter.",
+  "Afficher les FPS dans le jeu": "Show FPS in-game",
+  "Treize thèmes, page d'ouverture, fond flouté, interface en cinq langues.": "Thirteen themes, start page, blurred background, interface in five languages.",
+  "Ouvre la page de connexion Epic, connecte-toi, puis copie la valeur « authorizationCode » de la réponse JSON. Quark échange ce code directement avec Epic : aucun outil externe n'est lancé.": "Open the Epic login page, sign in, then copy the “authorizationCode” value from the JSON response. Quark exchanges this code directly with Epic: no external tool is launched.",
+  "Connecté · session Epic directe enregistrée": "Connected · direct Epic session saved",
+  "Non connecté · connexion directe avec un code Epic": "Not connected · direct sign-in with an Epic code",
+  "Non connecté · connexion directe possible ; Legendary reste requis pour installer": "Not connected · direct sign-in available; Legendary is still required to install",
+  "Le code est échangé directement avec Epic ; Quark écrit la session dans user.json (droits privés) et n'affiche jamais le code ni les jetons. Legendary reste utilisé pour la bibliothèque et l'installation.": "The code is exchanged directly with Epic; Quark writes the session to user.json (private permissions) and never displays the code or tokens. Legendary is still used for the library and installation.",
+  "Installe une DLL d3d11.dll à côté de l'exécutable Windows et affiche un compteur façon Steam. DirectX 11 uniquement ; un d3d11.dll étranger n'est jamais remplacé.": "Installs a d3d11.dll next to the Windows executable and shows a Steam-like counter. DirectX 11 only; a foreign d3d11.dll is never replaced.",
+  "Compte Epic connecté.": "Epic account connected."
 }

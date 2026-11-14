@@ -98,7 +98,7 @@ fn sync_gog(
             runner::failure_hint(&output)
         ));
     }
-    let new_timestamp = parse_gog_timestamp(&output.stdout).or_else(|| {
+    let new_timestamp = parse_gog_timestamp(&output.stdout).or({
         // gogdl peut ne rien imprimer quand rien n'a changé : on garde alors
         // l'ancien horodatage plutôt que de le remettre à zéro.
         timestamp

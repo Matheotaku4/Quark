@@ -421,7 +421,7 @@ impl QuarkApp {
             close = true;
         }
 
-        if ctx.input(|i| i.raw.dropped_files.len() > 0) && self.add.step == AddStep::Exe {
+        if ctx.input(|i| !i.raw.dropped_files.is_empty()) && self.add.step == AddStep::Exe {
             let dropped = ctx.input(|i| i.raw.dropped_files.clone());
             if let Some(path) = dropped.iter().find_map(|f| f.path.clone()) {
                 self.add.exe = path.display().to_string();
@@ -429,11 +429,11 @@ impl QuarkApp {
         }
 
         if let Some(index) = pick_hit {
-            if let SearchState::Done(hits, _) = &self.add.state {
-                if let Some(hit) = hits.get(index).cloned() {
-                    self.add.name = hit.title.clone();
-                    self.add.hit = Some(hit);
-                }
+            if let SearchState::Done(hits, _) = &self.add.state
+                && let Some(hit) = hits.get(index).cloned()
+            {
+                self.add.name = hit.title.clone();
+                self.add.hit = Some(hit);
             }
             self.add.error = None;
             // Un jeu reconnu a des artworks à proposer : on les montre avant
@@ -1163,7 +1163,7 @@ impl QuarkApp {
                             &pal,
                             "Overlay",
                             Some(
-                                "L'overlay est une fenêtre au-dessus du jeu. Il reste fermé par défaut : Maj+Retour arrière l'ouvre et le referme, sans quitter la partie.",
+                                "Le panneau Quark reste fermé par défaut : Maj+Retour arrière l'ouvre et le referme. La DLL FPS, elle, s'affiche directement dans le jeu, comme le compteur de Steam.",
                             ),
                             |ui| {
                                 if widgets::option_row(
@@ -1173,6 +1173,20 @@ impl QuarkApp {
                                     Some("Captures d'écran, succès et notifications en jeu."),
                                     &mut self.lib.settings.overlay,
                                     "overlay_enabled",
+                                )
+                                .changed()
+                                {
+                                    self.touch();
+                                }
+                                if widgets::option_row(
+                                    ui,
+                                    &pal,
+                                    "Afficher les FPS dans le jeu",
+                                    Some(
+                                        "Installe une DLL d3d11.dll à côté de l'exécutable Windows et affiche un compteur façon Steam. DirectX 11 uniquement ; un d3d11.dll étranger n'est jamais remplacé.",
+                                    ),
+                                    &mut self.lib.settings.overlay_fps,
+                                    "overlay_fps",
                                 )
                                 .changed()
                                 {
@@ -2377,10 +2391,10 @@ impl QuarkApp {
         if download_update {
             self.install_update(ctx);
         }
-        if let Some(url) = open_url {
-            if let Err(err) = crate::news::open_in_browser(&url) {
-                self.toast_error(format!("Ouverture du lien impossible : {err}"));
-            }
+        if let Some(url) = open_url
+            && let Err(err) = crate::news::open_in_browser(&url)
+        {
+            self.toast_error(format!("Ouverture du lien impossible : {err}"));
         }
         if open_steam_import {
             self.open_steam_import(ctx);
@@ -2647,10 +2661,10 @@ impl QuarkApp {
         if recalc {
             self.start_disk_scan(ctx);
         }
-        if let Some(path) = open {
-            if let Err(err) = crate::session::open_folder(&path) {
-                self.toast_error(format!("Ouverture impossible : {err}"));
-            }
+        if let Some(path) = open
+            && let Err(err) = crate::session::open_folder(&path)
+        {
+            self.toast_error(format!("Ouverture impossible : {err}"));
         }
     }
 
@@ -3283,10 +3297,9 @@ impl QuarkApp {
                                                             .color(pal.text_faint),
                                                         );
                                                     }
-                                                    if game.steam_app_id.is_some()
-                                                        || game.sgdb_id.is_some()
-                                                    {
-                                                        if widgets::ghost_button(
+                                                    if (game.steam_app_id.is_some()
+                                                        || game.sgdb_id.is_some())
+                                                        && widgets::ghost_button(
                                                             ui,
                                                             "Dissocier cette page",
                                                             &pal,
@@ -3296,7 +3309,6 @@ impl QuarkApp {
                                                         {
                                                             unlink = true;
                                                         }
-                                                    }
                                                     if !game.developer.is_empty() {
                                                         info_line(
                                                             ui,
@@ -3390,8 +3402,7 @@ impl QuarkApp {
                                                 config::prefix_root().join(&game.id);
                                             if legacy.join("drive_c").is_dir()
                                                 && legacy != effective
-                                            {
-                                                if widgets::ghost_button(
+                                                && widgets::ghost_button(
                                                     ui,
                                                     "Utiliser l'ancien préfixe",
                                                     &pal,
@@ -3406,7 +3417,6 @@ impl QuarkApp {
                                                         legacy.display().to_string(),
                                                     );
                                                 }
-                                            }
                                         },
                                     );
                                     ui.add_space(16.0);
@@ -3479,8 +3489,10 @@ impl QuarkApp {
                                                     &pal,
                                                     label,
                                                     &status,
-                                                    found,
-                                                    Some(&detail),
+                                                    widgets::OptionRowStatus {
+                                                        found,
+                                                        detail: Some(&detail),
+                                                    },
                                                     value,
                                                     salt,
                                                 )
@@ -4238,13 +4250,13 @@ fn env_editor(ui: &mut egui::Ui, pal: &Palette, vars: &mut Vec<EnvVar>) -> bool 
         ui.add_space(6.0);
     }
 
-    for index in 0..vars.len() {
+    for (index, var) in vars.iter_mut().enumerate() {
         ui.horizontal(|ui| {
             let width = ui.available_width();
             let name_width = 220.0_f32.min((width - 96.0).max(120.0));
             let name = ui.add_sized(
                 Vec2::new(name_width, 32.0),
-                egui::TextEdit::singleline(&mut vars[index].name)
+                egui::TextEdit::singleline(&mut var.name)
                     .hint_text(crate::i18n::tr("NOM"))
                     .font(egui::FontId::monospace(12.0)),
             );
@@ -4253,17 +4265,18 @@ fn env_editor(ui: &mut egui::Ui, pal: &Palette, vars: &mut Vec<EnvVar>) -> bool 
             }
             // « NOM=valeur » collé d'un bloc : la séparation se fait quand le
             // champ est validé, jamais pendant la frappe.
-            if name.lost_focus() && vars[index].value.trim().is_empty() {
-                if let Some(var) = EnvVar::parse(&vars[index].name.clone()) {
-                    vars[index] = var;
-                    changed = true;
-                }
+            if name.lost_focus()
+                && var.value.trim().is_empty()
+                && let Some(parsed) = EnvVar::parse(&var.name.clone())
+            {
+                *var = parsed;
+                changed = true;
             }
             ui.label(crate::i18n::rich("=").size(12.0).color(pal.text_faint));
             let value_width = (width - name_width - 70.0).max(150.0);
             let value = ui.add_sized(
                 Vec2::new(value_width, 32.0),
-                egui::TextEdit::singleline(&mut vars[index].value)
+                egui::TextEdit::singleline(&mut var.value)
                     .hint_text(crate::i18n::tr("valeur"))
                     .font(egui::FontId::monospace(12.0)),
             );
@@ -4687,19 +4700,19 @@ fn dll_overrides_editor(
         );
     } else {
         let mut remove = None;
-        for index in 0..rows.len() {
+        for (index, row) in rows.iter_mut().enumerate() {
             ui.horizontal(|ui| {
                 let width = (ui.available_width() - 250.0).max(150.0);
                 let response = ui.add_sized(
                     Vec2::new(width, 26.0),
-                    egui::TextEdit::singleline(&mut rows[index].name)
+                    egui::TextEdit::singleline(&mut row.name)
                         .hint_text(crate::i18n::tr("Nom de la DLL")),
                 );
                 if response.changed() {
                     changed = true;
                 }
-                let mut native = rows[index].native;
-                let mut builtin = rows[index].builtin;
+                let mut native = row.native;
+                let mut builtin = row.builtin;
                 if widgets::chip(ui, "n", native, pal) && (builtin || !native) {
                     native = !native;
                     changed = true;
@@ -4708,8 +4721,8 @@ fn dll_overrides_editor(
                     builtin = !builtin;
                     changed = true;
                 }
-                rows[index].native = native;
-                rows[index].builtin = builtin;
+                row.native = native;
+                row.builtin = builtin;
                 if widgets::icon_button(ui, 24.0, Icon::Trash, pal, "Retirer cet override")
                     .clicked()
                 {
@@ -4762,10 +4775,10 @@ fn dll_files(dir: &Path) -> Result<Vec<String>, String> {
     let cache = CACHE.get_or_init(|| Mutex::new(HashMap::new()));
     let now = Instant::now();
     if let Ok(mut cache) = cache.lock() {
-        if let Some((scanned, files)) = cache.get(dir) {
-            if now.duration_since(*scanned) < Duration::from_secs(2) {
-                return files.clone();
-            }
+        if let Some((scanned, files)) = cache.get(dir)
+            && now.duration_since(*scanned) < Duration::from_secs(2)
+        {
+            return files.clone();
         }
         let files = dll_files_uncached(dir);
         cache.retain(|_, (scanned, _)| now.duration_since(*scanned) < Duration::from_secs(30));
@@ -5260,10 +5273,10 @@ impl QuarkApp {
                 .auto_shrink([false, false])
                 .show(ui, |ui| {
                     for index in 0..count {
-                        if let Some(candidate) = self.add.scan.candidates.get_mut(index) {
-                            if scan_row(ui, pal, candidate) {
-                                action.research = Some(index);
-                            }
+                        if let Some(candidate) = self.add.scan.candidates.get_mut(index)
+                            && scan_row(ui, pal, candidate)
+                        {
+                            action.research = Some(index);
                         }
                     }
                 });
@@ -5740,10 +5753,10 @@ impl QuarkApp {
         }
         if open_folder {
             let dir = path.parent().map(|parent| parent.to_path_buf());
-            if let Some(dir) = dir {
-                if let Err(err) = crate::session::open_folder(&dir) {
-                    self.toast_error(format!("Ouverture du dossier impossible : {err}"));
-                }
+            if let Some(dir) = dir
+                && let Err(err) = crate::session::open_folder(&dir)
+            {
+                self.toast_error(format!("Ouverture du dossier impossible : {err}"));
             }
         }
         if close {
@@ -5818,24 +5831,22 @@ fn launch_options_editor(
         .changed();
     });
 
-    if *umu {
-        if let Some(id) = umu_game_id.as_deref_mut() {
-            ui.add_space(8.0);
-            widgets::field(ui, pal, "GAMEID", |ui| {
-                let response = ui.add_sized(
-                    Vec2::new(120.0, 34.0),
-                    egui::TextEdit::singleline(id).hint_text(crate::i18n::tr("0")),
-                );
-                if response.changed() {
-                    changed = true;
-                }
-                ui.label(
-                    crate::i18n::rich("AppID ProtonDB · « 0 » pour un jeu inconnu")
-                        .size(10.5)
-                        .color(pal.text_faint),
-                );
-            });
-        }
+    if *umu && let Some(id) = umu_game_id.as_deref_mut() {
+        ui.add_space(8.0);
+        widgets::field(ui, pal, "GAMEID", |ui| {
+            let response = ui.add_sized(
+                Vec2::new(120.0, 34.0),
+                egui::TextEdit::singleline(id).hint_text(crate::i18n::tr("0")),
+            );
+            if response.changed() {
+                changed = true;
+            }
+            ui.label(
+                crate::i18n::rich("AppID ProtonDB · « 0 » pour un jeu inconnu")
+                    .size(10.5)
+                    .color(pal.text_faint),
+            );
+        });
     }
 
     ui.add_space(10.0);
@@ -5952,7 +5963,7 @@ fn launch_options_editor(
             *launch = config::LaunchOptions::default();
             *proton_log = false;
             *umu = false;
-            if let Some(id) = umu_game_id.as_deref_mut() {
+            if let Some(id) = umu_game_id {
                 id.clear();
             }
             changed = true;

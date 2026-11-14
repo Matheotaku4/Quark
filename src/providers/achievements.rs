@@ -55,6 +55,7 @@ impl AchievementInfo {
 /// Succès envoyé par un jeu en cours d'exécution, via le pont local.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(default)]
+#[derive(Default)]
 pub struct SessionUnlock {
     pub key: String,
     pub name: String,
@@ -63,18 +64,6 @@ pub struct SessionUnlock {
     pub at: i64,
     /// Vrai quand la boutique a confirmé l'écriture (GOG seulement).
     pub synced: bool,
-}
-
-impl Default for SessionUnlock {
-    fn default() -> Self {
-        Self {
-            key: String::new(),
-            name: String::new(),
-            description: String::new(),
-            at: 0,
-            synced: false,
-        }
-    }
 }
 
 /// Lit un pourcentage d'obtention depuis un champ JSON de boutique. GOG

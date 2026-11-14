@@ -707,10 +707,10 @@ fn start_hotkey(
     let thread = std::thread::Builder::new()
         .name("quark-hotkey".into())
         .spawn(move || {
-            if let Err(error) = hotkey_loop(&screenshot_key, &overlay_key, shared, tx, stop_rx) {
-                if std::env::var_os("QUARK_DEBUG_HOTKEY").is_some() {
-                    eprintln!("[quark] overlay : {error}");
-                }
+            if let Err(error) = hotkey_loop(&screenshot_key, &overlay_key, shared, tx, stop_rx)
+                && std::env::var_os("QUARK_DEBUG_HOTKEY").is_some()
+            {
+                eprintln!("[quark] overlay : {error}");
             }
         })
         .ok()?;

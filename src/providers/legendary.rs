@@ -83,30 +83,6 @@ impl LegendaryAdapter {
         self.installed_json(&output, fetched_at)
     }
 
-    /// Connecte le compte Epic à partir de l'`authorizationCode` copié depuis
-    /// la réponse JSON de [`LOGIN_URL`]. La sortie est jetée : elle peut
-    /// contenir des jetons de session.
-    ///
-    /// Legendary sort avec le code 0 même quand Epic refuse le code : le seul
-    /// témoin fiable est l'écriture (ou la mise à jour) de `user.json`.
-    pub fn login_with_code(&self, code: &str) -> Result<(), String> {
-        let path = Self::user_config_path();
-        let before = std::fs::read(&path).ok();
-        let mut command = self.command(Self::login_args(code));
-        command.discard_output = true;
-        command.secrets = vec![code.to_string()];
-        let output = super::runner::run(command, self.timeout, None)?;
-        if output.exit_code != Some(0) {
-            return Err("Legendary a échoué pendant la connexion Epic".to_string());
-        }
-        let after = std::fs::read(&path).ok();
-        if super::session_written(before.as_deref(), after.as_deref()) {
-            Ok(())
-        } else {
-            Err("Legendary a refusé l'autorisation Epic (code expiré ou invalide)".to_string())
-        }
-    }
-
     /// Fichier d'état écrit par Legendary après une connexion réussie.
     pub fn user_config_path() -> PathBuf {
         config_dir().join("user.json")
@@ -116,9 +92,6 @@ impl LegendaryAdapter {
         Self::user_config_path().is_file()
     }
 
-    pub fn login_args(code: &str) -> Vec<String> {
-        vec!["auth".into(), "--code".into(), code.into()]
-    }
     /// `--json` sérialise les métadonnées, les assets et chaque succès de chaque
     /// jeu : sur une grosse bibliothèque, la sortie dépasse plusieurs mégaoctets
     /// et se fait refuser par le plafond de lecture. Le CSV ne garde que
@@ -294,7 +267,6 @@ impl LegendaryAdapter {
         ensure_success(output)?;
         parse_installed_json(&output.stdout, fetched_at)
     }
-
 }
 
 impl Default for LegendaryAdapter {
@@ -346,7 +318,6 @@ pub fn parse_launch_parameters(stdout: &str) -> Result<EpicLaunchParameters, Str
         egl_parameters: raw.egl_parameters,
     })
 }
-
 
 /// Lit la sortie de `legendary list` : CSV depuis la 1.0.2, JSON accepté pour
 /// les versions précédentes et les sorties déjà enregistrées.
@@ -736,10 +707,10 @@ fn epic_asset_url(
     label: &str,
 ) -> Result<String, String> {
     let cache = metadata_path(app_name);
-    if let Ok(text) = std::fs::read_to_string(&cache) {
-        if let Ok(url) = from_metadata(&text) {
-            return Ok(url);
-        }
+    if let Ok(text) = std::fs::read_to_string(&cache)
+        && let Ok(url) = from_metadata(&text)
+    {
+        return Ok(url);
     }
     let adapter = LegendaryAdapter::new();
     if !adapter.executable.is_file() {
@@ -753,10 +724,10 @@ fn epic_asset_url(
         None,
     )?;
     ensure_success(&output)?;
-    if let Ok(text) = std::fs::read_to_string(&cache) {
-        if let Ok(url) = from_metadata(&text) {
-            return Ok(url);
-        }
+    if let Ok(text) = std::fs::read_to_string(&cache)
+        && let Ok(url) = from_metadata(&text)
+    {
+        return Ok(url);
     }
     // Anciennes versions de Legendary : la fiche peut arriver sur stdout.
     from_info(&output.stdout)
@@ -1193,65 +1164,6 @@ fn ensure_success(output: &CommandOutput) -> Result<(), String> {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn la_connexion_transmet_le_code_comme_un_seul_argument() {
-        assert_eq!(
-            LegendaryAdapter::login_args("abc; $(touch x)"),
-            vec!["auth", "--code", "abc; $(touch x)"]
-        );
-        assert!(LOGIN_URL.starts_with("https://legendary.gl/"));
-    }
-
-    #[cfg(unix)]
-    #[test]
-    fn la_connexion_exige_une_session_ecrite_meme_avec_un_code_de_sortie_nul() {
-        use std::os::unix::fs::PermissionsExt;
-        let root = std::env::temp_dir().join(format!(
-            "quark-legendary-login-{}-{}",
-            std::process::id(),
-            crate::config::now_ts()
-        ));
-        let _ = std::fs::remove_dir_all(&root);
-        let config = root.join("config");
-        std::fs::create_dir_all(config.join("legendary")).unwrap();
-        let previous = std::env::var_os("XDG_CONFIG_HOME");
-        // Variable lue par Legendary ; aucun autre test ne la consulte.
-        unsafe { std::env::set_var("XDG_CONFIG_HOME", &config) };
-        let adapter = LegendaryAdapter {
-            executable: root.join("legendary"),
-            timeout: Duration::from_secs(5),
-        };
-
-        // Refus silencieux : exit 0, mais aucune session écrite.
-        std::fs::write(&adapter.executable, "#!/bin/sh\nexit 0\n").unwrap();
-        std::fs::set_permissions(&adapter.executable, std::fs::Permissions::from_mode(0o700))
-            .unwrap();
-        assert!(adapter.login_with_code("code").is_err());
-
-        // Succès : l'outil écrit la session.
-        let session = config.join("legendary").join("user.json");
-        std::fs::write(
-            &adapter.executable,
-            format!(
-                "#!/bin/sh\nprintf '{{\"account\":\"demo\"}}' > '{}'\n",
-                session.display()
-            ),
-        )
-        .unwrap();
-        std::fs::set_permissions(&adapter.executable, std::fs::Permissions::from_mode(0o700))
-            .unwrap();
-        assert!(adapter.login_with_code("code").is_ok());
-        assert!(LegendaryAdapter::is_logged_in());
-
-        unsafe {
-            match previous {
-                Some(value) => std::env::set_var("XDG_CONFIG_HOME", value),
-                None => std::env::remove_var("XDG_CONFIG_HOME"),
-            }
-        }
-        let _ = std::fs::remove_dir_all(&root);
-    }
 
     #[test]
     fn le_temps_de_jeu_epic_est_lu_dans_la_session_et_la_reponse_de_bibliotheque() {

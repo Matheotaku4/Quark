@@ -11,6 +11,12 @@ use std::path::Path;
 pub struct ProviderTokens {
     pub access_token: String,
     pub refresh_token: String,
+    /// Expiration en secondes epoch (0 = inconnue).
+    pub expires_at: i64,
+    /// Identifiant de compte publié par la boutique.
+    pub account_id: String,
+    /// Nom affiché, jamais utilisé pour l'authentification.
+    pub display_name: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
@@ -96,10 +102,10 @@ fn write_temp_and_replace(temp: &Path, destination: &Path, bytes: &[u8]) -> Resu
         .map_err(|_| "impossible de remplacer atomiquement les identifiants".to_string())?;
 
     #[cfg(unix)]
-    if let Some(parent) = destination.parent() {
-        if let Ok(directory) = std::fs::File::open(parent) {
-            let _ = directory.sync_all();
-        }
+    if let Some(parent) = destination.parent()
+        && let Ok(directory) = std::fs::File::open(parent)
+    {
+        let _ = directory.sync_all();
     }
     Ok(())
 }
@@ -153,6 +159,9 @@ mod tests {
             epic: Some(ProviderTokens {
                 access_token: "epic-access".to_string(),
                 refresh_token: "epic-refresh".to_string(),
+                expires_at: 42,
+                account_id: "epic-account".to_string(),
+                display_name: "Joueur".to_string(),
             }),
             gog: None,
         };

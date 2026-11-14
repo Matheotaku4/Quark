@@ -1234,16 +1234,21 @@ pub fn option_row(
 /// Variante « statut » de `option_row` : une ligne verte « Trouvé · … » (ou
 /// grise « Introuvable ») remplace la description. Le chemin complet reste
 /// dans l'infobulle.
+pub struct OptionRowStatus<'a> {
+    pub found: bool,
+    pub detail: Option<&'a str>,
+}
+
 pub fn option_row_status(
     ui: &mut egui::Ui,
     pal: &Palette,
     title: &str,
     status: &str,
-    found: bool,
-    detail: Option<&str>,
+    state: OptionRowStatus<'_>,
     value: &mut bool,
     id_salt: impl std::hash::Hash,
 ) -> Response {
+    let OptionRowStatus { found, detail } = state;
     let id = ui.id().with(("quark_option_status", &id_salt));
     let (rect, mut response) =
         ui.allocate_exact_size(Vec2::new(ui.available_width(), 64.0), Sense::click());

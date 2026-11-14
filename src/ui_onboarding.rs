@@ -197,7 +197,7 @@ impl QuarkApp {
                 &pal,
                 Icon::Info,
                 "Personnalisation",
-                "Treize thèmes, page d'ouverture, fond flouté, langue française ou anglaise.",
+                "Treize thèmes, page d'ouverture, fond flouté, interface en cinq langues.",
             );
         });
     }

@@ -87,9 +87,9 @@ rather than failing. A missing Proton runtime, however, prevents the launch.
   language**.
 - The Steam page language is a separate setting in **Stores & tools**.
 - Game names, tags and personal genres are not translated.
-- If a text stays in French after switching to English, it is probably user data
-  or a newly added string without a catalogue entry. Note the page and exact text
-  to report it.
+- If a text stays in the source language after switching, it is probably user
+  data or a newly added string without a catalogue entry. Note the page and exact
+  text to report it.
 
 ## The random hero background does not appear
 
@@ -110,7 +110,7 @@ the layout is responsive but some blocks need a minimum width.
 - **Legendary not found**: check `python3`, then reinstall the tool in **Stores &
   tools**. Quark verifies the SHA-256 before running it.
 - **Epic login refused**: the authorization code is time-limited; start the
-  connection again.
+  connection again. Quark exchanges it directly with Epic.
 - **GOG session expired**: reconnect GOG; the token is in a separate file with
   private permissions.
 - **A store game does not appear**: run a synchronization and check that the

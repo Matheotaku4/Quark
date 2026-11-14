@@ -29,7 +29,24 @@ because Quark must know the process and session.
 - choose the global shortcut;
 - show or hide locked achievements;
 - use compact rows without descriptions;
-- show or hide progress and rarity.
+- show or hide progress and rarity;
+- install the optional FPS counter in Windows games.
+
+### FPS counter
+
+**Settings → In game → Show FPS in-game** installs a small `d3d11.dll` proxy
+next to the game executable. The DLL forwards Direct3D 11 to the system, hooks
+`Present` and draws a Steam-like `N FPS` counter in the top-left corner. It
+hides when the game loses focus.
+
+- A foreign `d3d11.dll` is never overwritten: Quark refuses the installation and
+  reports it. A DLL previously installed by Quark is updated in place.
+- Quark sets `WINEDLLOVERRIDES=d3d11=n,b` for the game so Wine/Proton loads the
+  proxy instead of its own implementation.
+- DirectX 11 only. Games that import only `dxgi.dll`, and DirectX 12 or Vulkan
+  titles, are not covered.
+- The counter needs a Windows game launched by Quark with Proton, Wine or
+  umu-launcher.
 
 A global X11 helper intercepts the shortcut. Proton games run through XWayland
 and use the same path. On native Wayland, the compositor may forbid global

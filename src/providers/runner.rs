@@ -41,15 +41,14 @@ pub fn failure_hint(output: &CommandOutput) -> String {
         .chain(output.stdout.lines())
         .map(str::trim)
         .filter(|line| !line.is_empty())
-        .filter(|line| !line.contains('@'))
-        .next_back();
+        .rfind(|line| !line.contains('@'));
     let Some(line) = line else {
         return match output.exit_code {
             Some(code) => format!("code de sortie {code}"),
             None => "aucune sortie".to_string(),
         };
     };
-    let line = line.trim_start_matches(|c: char| c == '[' || c == ' ');
+    let line = line.trim_start_matches(['[', ' ']);
     let mut hint: String = line.chars().take(160).collect();
     if line.chars().count() > 160 {
         hint.push('\u{2026}');
@@ -131,7 +130,9 @@ fn gigabytes(bytes: u64, english: bool) -> String {
 /// écrit `Progress: 42.41% (5.42/12.78 GiB)` ; gogdl écrit
 /// `Progress: 42.41 4472934400/10536185856, … ETA: 00:02:11`. Les deux formes
 /// passent par ici.
-fn progress_sample(line: &str) -> Option<(Option<f32>, Option<u64>, Option<u64>, Option<String>)> {
+type ProgressSample = (Option<f32>, Option<u64>, Option<u64>, Option<String>);
+
+fn progress_sample(line: &str) -> Option<ProgressSample> {
     let lower = line.to_ascii_lowercase();
     if !lower.contains("progress") && !lower.contains("%") {
         return None;
@@ -145,10 +146,10 @@ fn progress_sample(line: &str) -> Option<(Option<f32>, Option<u64>, Option<u64>,
         let rest = rest.trim();
         let token = rest.split_whitespace().next().unwrap_or_default();
         let number = token.trim_end_matches('%').replace(',', ".");
-        if let Ok(value) = number.parse::<f32>() {
-            if (0.0..=100.0).contains(&value) {
-                percent = Some(value);
-            }
+        if let Ok(value) = number.parse::<f32>()
+            && (0.0..=100.0).contains(&value)
+        {
+            percent = Some(value);
         }
         // `(5.42/12.78 GiB)` : la taille est en GiB, séparée par des espaces.
         if let Some(start) = rest.find('(') {
@@ -201,19 +202,19 @@ fn progress_sample(line: &str) -> Option<(Option<f32>, Option<u64>, Option<u64>,
             .filter(|value| value.chars().any(|c| c.is_ascii_digit()));
         eta = value.map(str::to_string);
     }
-    if let Some(index) = line.find('%') {
-        if percent.is_none() {
-            let before = &line[..index];
-            let token = before
-                .split_whitespace()
-                .next_back()
-                .unwrap_or_default()
-                .trim_end_matches(|c: char| !c.is_ascii_digit() && c != '.');
-            if let Ok(value) = token.replace(',', ".").parse::<f32>() {
-                if (0.0..=100.0).contains(&value) {
-                    percent = Some(value);
-                }
-            }
+    if let Some(index) = line.find('%')
+        && percent.is_none()
+    {
+        let before = &line[..index];
+        let token = before
+            .split_whitespace()
+            .next_back()
+            .unwrap_or_default()
+            .trim_end_matches(|c: char| !c.is_ascii_digit() && c != '.');
+        if let Ok(value) = token.replace(',', ".").parse::<f32>()
+            && (0.0..=100.0).contains(&value)
+        {
+            percent = Some(value);
         }
     }
     (percent.is_some() || written.is_some() || eta.is_some())
@@ -258,16 +259,16 @@ pub fn apply_progress(progress: &mut InstallProgress, line: &str) {
             progress.eta = eta;
         }
     }
-    if lower.contains("mib/s") {
-        if let Some(index) = lower.find("mib/s") {
-            let before = &line[..index];
-            let value = before
-                .split_whitespace()
-                .next_back()
-                .filter(|value| value.chars().any(|c| c.is_ascii_digit()));
-            if let Some(value) = value {
-                progress.speed = Some(format!("{value} MB/s"));
-            }
+    if lower.contains("mib/s")
+        && let Some(index) = lower.find("mib/s")
+    {
+        let before = &line[..index];
+        let value = before
+            .split_whitespace()
+            .next_back()
+            .filter(|value| value.chars().any(|c| c.is_ascii_digit()));
+        if let Some(value) = value {
+            progress.speed = Some(format!("{value} MB/s"));
         }
     }
 }
@@ -456,12 +457,12 @@ fn read_stream(
             }
         }
     }
-    if !line.is_empty() {
-        if let Some(progress) = progress {
-            let text = String::from_utf8_lossy(&line);
-            if let Ok(mut state) = progress.lock() {
-                apply_progress(&mut state, &text);
-            }
+    if !line.is_empty()
+        && let Some(progress) = progress
+    {
+        let text = String::from_utf8_lossy(&line);
+        if let Ok(mut state) = progress.lock() {
+            apply_progress(&mut state, &text);
         }
     }
     if too_large {

@@ -407,15 +407,11 @@ pub fn set_dll_overrides(env: &mut Vec<EnvVar>, overrides: &[DllOverride]) {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
+#[derive(Default)]
 pub enum ViewMode {
+    #[default]
     List,
     Grid,
-}
-
-impl Default for ViewMode {
-    fn default() -> Self {
-        ViewMode::List
-    }
 }
 
 impl ViewMode {
@@ -482,7 +478,6 @@ impl ThemeMode {
             ThemeMode::Kanagawa => "Kanagawa",
         })
     }
-
 }
 
 fn deserialize_theme<'de, D>(deserializer: D) -> Result<ThemeMode, D::Error>
@@ -517,22 +512,39 @@ pub enum UiLanguage {
     #[default]
     French,
     English,
+    Spanish,
+    German,
+    Portuguese,
 }
 
 impl UiLanguage {
-    pub const ALL: [UiLanguage; 2] = [UiLanguage::French, UiLanguage::English];
+    pub const ALL: [UiLanguage; 5] = [
+        UiLanguage::French,
+        UiLanguage::English,
+        UiLanguage::Spanish,
+        UiLanguage::German,
+        UiLanguage::Portuguese,
+    ];
 
+    /// Nom affiché dans le sélecteur, dans sa propre langue.
     pub fn label(self) -> String {
-        crate::i18n::tr(match self {
+        match self {
             UiLanguage::French => "Français",
             UiLanguage::English => "English",
-        })
+            UiLanguage::Spanish => "Español",
+            UiLanguage::German => "Deutsch",
+            UiLanguage::Portuguese => "Português",
+        }
+        .to_string()
     }
 
     pub fn short(self) -> &'static str {
         match self {
             UiLanguage::French => "FR",
             UiLanguage::English => "EN",
+            UiLanguage::Spanish => "ES",
+            UiLanguage::German => "DE",
+            UiLanguage::Portuguese => "PT",
         }
     }
 }
@@ -1075,6 +1087,8 @@ pub struct Settings {
     pub tray_icon: bool,
     /// Overlay en jeu : panneau au-dessus du jeu, captures et succès.
     pub overlay: bool,
+    /// Compteur FPS dans le jeu via la DLL proxy `d3d11.dll`.
+    pub overlay_fps: bool,
     /// Touche de capture d'écran globale (F12 par défaut).
     pub screenshot_key: String,
     /// Raccourci global qui ouvre ou ferme l'overlay (Maj+Retour arrière).
@@ -1156,6 +1170,7 @@ impl Default for Settings {
             auto_update: true,
             tray_icon: true,
             overlay: true,
+            overlay_fps: false,
             screenshot_key: "F12".to_string(),
             overlay_hotkey: "Shift+BackSpace".to_string(),
             overlay_show_locked: true,
@@ -2036,7 +2051,7 @@ impl Library {
                 if installation
                     .prefix
                     .as_deref()
-                    .is_some_and(|prefix| PathBuf::from(prefix) == auto)
+                    .is_some_and(|prefix| *prefix == auto)
                     && !auto.join("drive_c").is_dir()
                 {
                     installation.prefix = None;
@@ -2044,10 +2059,7 @@ impl Library {
             }
             if let Some(active) = game.active_installation().cloned() {
                 let auto = prefix_root().join(format!("{}-{}", game.id, active.slug()));
-                if game
-                    .prefix
-                    .as_deref()
-                    .is_some_and(|prefix| PathBuf::from(prefix) == auto)
+                if game.prefix.as_deref().is_some_and(|prefix| *prefix == auto)
                     && !auto.join("drive_c").is_dir()
                 {
                     game.prefix = None;
@@ -2182,19 +2194,18 @@ impl Library {
         let mut games: Vec<&Game> = self.games.iter().collect();
         match sort {
             LibrarySort::Name => games.sort_by_key(|game| game.name.to_lowercase()),
-            LibrarySort::Recent => games.sort_by(|a, b| {
-                b.last_played
-                    .unwrap_or(0)
-                    .cmp(&a.last_played.unwrap_or(0))
-                    .then_with(|| b.added_at.cmp(&a.added_at))
+            LibrarySort::Recent => games.sort_by_key(|game| {
+                (
+                    std::cmp::Reverse(game.last_played.unwrap_or(0)),
+                    std::cmp::Reverse(game.added_at),
+                )
             }),
-            LibrarySort::Added => games.sort_by(|a, b| b.added_at.cmp(&a.added_at)),
-            LibrarySort::Playtime => games.sort_by(|a, b| b.playtime_secs.cmp(&a.playtime_secs)),
-            LibrarySort::Favorites => games.sort_by(|a, b| {
-                b.favorite
-                    .cmp(&a.favorite)
-                    .then_with(|| a.name.to_lowercase().cmp(&b.name.to_lowercase()))
-            }),
+            LibrarySort::Added => games.sort_by_key(|game| std::cmp::Reverse(game.added_at)),
+            LibrarySort::Playtime => {
+                games.sort_by_key(|game| std::cmp::Reverse(game.playtime_secs))
+            }
+            LibrarySort::Favorites => games
+                .sort_by_key(|game| (std::cmp::Reverse(game.favorite), game.name.to_lowercase())),
         }
         games.into_iter().map(|game| game.id.clone()).collect()
     }
@@ -2389,7 +2400,7 @@ impl Library {
                 }
             }
         }
-        tags.sort_by(|a, b| a.0.to_lowercase().cmp(&b.0.to_lowercase()));
+        tags.sort_by_key(|a| a.0.to_lowercase());
         tags
     }
 
@@ -2411,7 +2422,7 @@ impl Library {
                 }
             }
         }
-        genres.sort_by(|a, b| a.0.to_lowercase().cmp(&b.0.to_lowercase()));
+        genres.sort_by_key(|a| a.0.to_lowercase());
         genres
     }
 
@@ -2435,21 +2446,20 @@ impl Library {
     pub fn home_ids(&self, sort: HomeSort) -> Vec<String> {
         let mut games: Vec<&Game> = self.games.iter().collect();
         match sort {
-            HomeSort::Recent => games.sort_by(|a, b| {
-                b.last_played
-                    .unwrap_or(0)
-                    .cmp(&a.last_played.unwrap_or(0))
-                    .then_with(|| b.added_at.cmp(&a.added_at))
+            HomeSort::Recent => games.sort_by_key(|game| {
+                (
+                    std::cmp::Reverse(game.last_played.unwrap_or(0)),
+                    std::cmp::Reverse(game.added_at),
+                )
             }),
-            HomeSort::Added => games.sort_by(|a, b| b.added_at.cmp(&a.added_at)),
-            HomeSort::Playtime => games.sort_by(|a, b| b.playtime_secs.cmp(&a.playtime_secs)),
-            HomeSort::Favorites => games.sort_by(|a, b| {
-                b.favorite.cmp(&a.favorite).then_with(|| {
-                    b.last_played
-                        .unwrap_or(0)
-                        .cmp(&a.last_played.unwrap_or(0))
-                        .then_with(|| b.added_at.cmp(&a.added_at))
-                })
+            HomeSort::Added => games.sort_by_key(|game| std::cmp::Reverse(game.added_at)),
+            HomeSort::Playtime => games.sort_by_key(|game| std::cmp::Reverse(game.playtime_secs)),
+            HomeSort::Favorites => games.sort_by_key(|game| {
+                (
+                    std::cmp::Reverse(game.favorite),
+                    std::cmp::Reverse(game.last_played.unwrap_or(0)),
+                    std::cmp::Reverse(game.added_at),
+                )
             }),
         }
         games.into_iter().map(|g| g.id.clone()).collect()
@@ -2639,8 +2649,10 @@ mod tests {
 
     #[test]
     fn prefix_sans_reglage_est_propre_au_jeu() {
-        let mut settings = Settings::default();
-        settings.default_prefix = None;
+        let settings = Settings {
+            default_prefix: None,
+            ..Settings::default()
+        };
         assert_eq!(
             game("abc").prefix_path(&settings),
             prefix_root().join("abc")
@@ -2660,8 +2672,10 @@ mod tests {
 
     #[test]
     fn un_prefixe_par_defaut_n_est_pas_relu_a_la_volee() {
-        let mut settings = Settings::default();
-        settings.default_prefix = Some("/tmp/quark-tests/prefixes".to_string());
+        let settings = Settings {
+            default_prefix: Some("/tmp/quark-tests/prefixes".to_string()),
+            ..Settings::default()
+        };
         // Le défaut est recopié à l'ajout (ou par la migration) ; un jeu sans
         // préfixe garde son dossier automatique et ne suit pas les changements.
         assert_eq!(
@@ -2772,9 +2786,11 @@ mod tests {
 
     #[test]
     fn gamescope_borne_la_resolution() {
-        let mut opts = LaunchOptions::default();
-        opts.gamescope_width = 0;
-        opts.gamescope_height = 99_999;
+        let opts = LaunchOptions {
+            gamescope_width: 0,
+            gamescope_height: 99_999,
+            ..LaunchOptions::default()
+        };
         assert_eq!(opts.gamescope_size(), (320, 4320));
     }
 
@@ -2834,10 +2850,7 @@ mod tests {
             lib.home_ids(HomeSort::Favorites),
             vec!["c".to_string(), "b".to_string(), "a".to_string()]
         );
-        assert_eq!(
-            lib.favorite_ids(),
-            vec!["c".to_string(), "b".to_string()]
-        );
+        assert_eq!(lib.favorite_ids(), vec!["c".to_string(), "b".to_string()]);
         assert_eq!(
             lib.sorted_ids_by(LibrarySort::Favorites),
             vec!["b".to_string(), "c".to_string(), "a".to_string()]
@@ -2963,8 +2976,10 @@ mod tests {
 
     #[test]
     fn prefix_du_jeu_ecrase_le_prefixe_par_defaut() {
-        let mut settings = Settings::default();
-        settings.default_prefix = Some("/tmp/quark-tests/defaut".to_string());
+        let settings = Settings {
+            default_prefix: Some("/tmp/quark-tests/defaut".to_string()),
+            ..Settings::default()
+        };
         let mut g = game("abc");
         g.prefix = Some("/tmp/quark-tests/mon-jeu".to_string());
         assert_eq!(
@@ -3093,8 +3108,10 @@ mod tests {
 
     #[test]
     fn une_bibliotheque_illisible_ne_peut_pas_etre_sauvegardee() {
-        let mut library = Library::default();
-        library.load_error = Some("config.json illisible".to_string());
+        let mut library = Library {
+            load_error: Some("config.json illisible".to_string()),
+            ..Library::default()
+        };
         assert!(library.save().is_err());
     }
 
@@ -3139,13 +3156,15 @@ mod tests {
 
     #[test]
     fn une_vue_garde_les_filtres_le_tri_et_le_regroupement() {
-        let mut settings = Settings::default();
-        settings.home_status = GameStatus::Playing;
-        settings.home_tag = "Coop".to_string();
-        settings.home_genre = "RPG".to_string();
-        settings.group_by = GroupBy::Genre;
-        settings.view = ViewMode::Grid;
-        settings.library_sort = LibrarySort::Recent;
+        let settings = Settings {
+            home_status: GameStatus::Playing,
+            home_tag: "Coop".to_string(),
+            home_genre: "RPG".to_string(),
+            group_by: GroupBy::Genre,
+            view: ViewMode::Grid,
+            library_sort: LibrarySort::Recent,
+            ..Settings::default()
+        };
 
         let view = SavedView::capture("  Soir  ", &settings, "  zelda ");
         assert_eq!(view.name, "Soir");
