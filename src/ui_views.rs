@@ -440,7 +440,7 @@ impl QuarkApp {
                                     ui.horizontal(|ui| {
                                         ui.vertical(|ui| {
                                             ui.label(
-                                                crate::i18n::rich(&view.name)
+                                                crate::i18n::raw(&view.name)
                                                     .size(12.5)
                                                     .color(pal.text),
                                             );

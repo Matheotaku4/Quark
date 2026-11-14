@@ -95,27 +95,64 @@ pub fn latest(client: &Client) -> Result<Release, String> {
 }
 
 /// `true` si `candidate` est plus récente que `current` (« v0.4.0 » ou « 0.4.0 »).
+///
+/// La comparaison suit SemVer : les composantes numériques d'abord, puis le
+/// suffixe pré-release. Une version sans suffixe est donc plus récente que la
+/// même version suffixée (`1.0.0` > `1.0.0-rc.2` > `1.0.0-rc.1`).
 pub fn is_newer(candidate: &str, current: &str) -> bool {
-    fn parts(version: &str) -> Vec<u64> {
-        version
-            .trim()
-            .trim_start_matches(['v', 'V'])
-            .split(|c: char| !c.is_ascii_digit())
-            .filter(|part| !part.is_empty())
-            .map(|part| part.parse().unwrap_or(0))
-            .collect()
-    }
+    compare_versions(candidate, current) == std::cmp::Ordering::Greater
+}
 
-    let newer = parts(candidate);
-    let installed = parts(current);
-    for index in 0..newer.len().max(installed.len()) {
-        let left = newer.get(index).copied().unwrap_or(0);
-        let right = installed.get(index).copied().unwrap_or(0);
-        if left != right {
-            return left > right;
+/// Identifiant d'un suffixe pré-release : les numériques précèdent les
+/// alphanumériques, comme dans la spécification SemVer.
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
+enum PreId {
+    Numeric(u64),
+    Text(String),
+}
+
+/// Découpe « v1.2.3-rc.1+build » en composantes numériques et identifiants
+/// pré-release. Les métadonnées de build (`+…`) n'entrent pas en compte.
+fn parse_version(version: &str) -> (Vec<u64>, Vec<PreId>) {
+    let version = version.trim().trim_start_matches(['v', 'V']);
+    let version = version.split('+').next().unwrap_or_default();
+    let (core, pre) = match version.split_once('-') {
+        Some((core, pre)) => (core, pre),
+        None => (version, ""),
+    };
+    let numbers = core
+        .split(|c: char| !c.is_ascii_digit())
+        .filter(|part| !part.is_empty())
+        .map(|part| part.parse().unwrap_or(0))
+        .collect();
+    let pre = pre
+        .split(|c: char| !c.is_ascii_alphanumeric())
+        .filter(|part| !part.is_empty())
+        .map(|part| match part.parse::<u64>() {
+            Ok(number) => PreId::Numeric(number),
+            Err(_) => PreId::Text(part.to_ascii_lowercase()),
+        })
+        .collect();
+    (numbers, pre)
+}
+
+fn compare_versions(left: &str, right: &str) -> std::cmp::Ordering {
+    let (left_numbers, left_pre) = parse_version(left);
+    let (right_numbers, right_pre) = parse_version(right);
+    for index in 0..left_numbers.len().max(right_numbers.len()) {
+        let a = left_numbers.get(index).copied().unwrap_or(0);
+        let b = right_numbers.get(index).copied().unwrap_or(0);
+        if a != b {
+            return a.cmp(&b);
         }
     }
-    false
+    // Mêmes numéros : une version sans suffixe l'emporte sur une pré-release.
+    match (left_pre.is_empty(), right_pre.is_empty()) {
+        (true, true) => std::cmp::Ordering::Equal,
+        (true, false) => std::cmp::Ordering::Greater,
+        (false, true) => std::cmp::Ordering::Less,
+        (false, false) => left_pre.cmp(&right_pre),
+    }
 }
 
 /// Télécharge une archive de release dans `dir`, vérifie sa taille et sa somme
@@ -490,6 +527,18 @@ mod tests {
         assert!(!is_newer("v0.3.0", "0.3.0"));
         assert!(!is_newer("v0.2.3", "0.3.0"));
         assert!(!is_newer("pas-une-version", "0.3.0"));
+        // Une version finale est proposée à qui tourne une version candidate.
+        assert!(is_newer("1.0.0", "1.0.0-rc.1"));
+        assert!(is_newer("v1.0.0", "1.0.0-rc.2"));
+        assert!(!is_newer("1.0.0-rc.1", "1.0.0"));
+        assert!(!is_newer("1.0.0", "1.0.0"));
+        assert!(is_newer("1.0.0-rc.2", "1.0.0-rc.1"));
+        assert!(!is_newer("1.0.0-rc.1", "1.0.0-rc.2"));
+        assert!(is_newer("1.0.0-rc.10", "1.0.0-rc.2"));
+        assert!(is_newer("1.0.0-rc.1", "1.0.0-beta.4"));
+        assert!(is_newer("1.0.1", "1.0.0-rc.1"));
+        assert!(!is_newer("1.0.0-rc.1", "1.0.1"));
+        assert!(!is_newer("1.0.0+build.5", "1.0.0"));
     }
 
     #[test]

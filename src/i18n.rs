@@ -104,6 +104,42 @@ pub fn rich(text: impl Into<String>) -> RichText {
     RichText::new(tr(&text.into()))
 }
 
+/// Texte issu de données (nom de jeu, de succès, de vue enregistrée…) : il est
+/// affiché tel quel, sans passer par le catalogue ni par les règles dynamiques,
+/// pour qu'un titre ne soit jamais réécrit (« Tout seul » ne devient pas
+/// « All seul »).
+pub fn raw(text: impl Into<String>) -> RichText {
+    RichText::new(text.into())
+}
+
+/// Traduit un modèle d'interface dont les `{}` sont remplis ensuite par des
+/// données. Seul le modèle est traduit : les valeurs (noms de jeux, chemins)
+/// sont insérées après coup, donc jamais altérées. Les `{}` sont remplacés dans
+/// l'ordre ; une valeur en trop est ignorée, un `{}` sans valeur est conservé.
+pub fn tr_with(template: &str, values: &[&str]) -> String {
+    let translated = tr(template);
+    let mut out =
+        String::with_capacity(translated.len() + values.iter().map(|v| v.len()).sum::<usize>());
+    let mut rest = translated.as_str();
+    for value in values {
+        match rest.split_once("{}") {
+            Some((before, after)) => {
+                out.push_str(before);
+                out.push_str(value);
+                rest = after;
+            }
+            None => break,
+        }
+    }
+    out.push_str(rest);
+    out
+}
+
+/// Variante de [`tr_with`] qui renvoie un `RichText`.
+pub fn rich_with(template: &str, values: &[&str]) -> RichText {
+    RichText::new(tr_with(template, values))
+}
+
 /// Quelques formes produites par `format!` ne peuvent pas figurer telles
 /// quelles dans le catalogue. Ces règles restent volontairement conservatrices :
 /// elles ne touchent qu'aux mots français isolés, jamais aux noms de jeux.
@@ -288,6 +324,62 @@ mod tests {
                 "le catalogue {nom} n'a pas les mêmes clés que l'anglais"
             );
         }
+    }
+
+    #[test]
+    fn les_titres_de_jeux_ne_sont_jamais_reecrits() {
+        let _guard = language_lock();
+        let titres = [
+            "Tout seul",
+            "Aucun regret",
+            "Dernière session de nuit",
+            "Temps mort",
+            "Les jeux",
+            "Mon jeu",
+            "Un jeu de rôle",
+            "7 jeux",
+        ];
+        for langue in [
+            UiLanguage::English,
+            UiLanguage::Spanish,
+            UiLanguage::German,
+            UiLanguage::Portuguese,
+        ] {
+            set_language(langue);
+            for titre in titres {
+                // Les données passent par `raw` / `tr_with` : aucune règle dynamique.
+                assert_eq!(raw(titre).text(), titre, "raw {langue:?}");
+                assert_eq!(tr_with("{}", &[titre]), titre, "tr_with {langue:?}");
+                assert_eq!(
+                    tr_with("Journal · {}", &[titre])
+                        .split_once(" · ")
+                        .map(|(_, nom)| nom),
+                    Some(titre),
+                    "tr_with {langue:?}"
+                );
+            }
+        }
+        set_language(UiLanguage::French);
+    }
+
+    #[test]
+    fn tr_with_traduit_le_modele_et_garde_les_valeurs() {
+        let _guard = language_lock();
+        set_language(UiLanguage::English);
+        // Le modèle est traduit par les règles dynamiques, la valeur reste intacte.
+        assert_eq!(
+            tr_with("Aucun résultat pour {}", &["Tout seul"]),
+            "No results pour Tout seul"
+        );
+        // Plusieurs valeurs, dans l'ordre ; un `{}` sans valeur est conservé.
+        assert_eq!(tr_with("{} puis {}", &["A", "B"]), "A puis B");
+        assert_eq!(tr_with("{} puis {}", &["A"]), "A puis {}");
+        // En français, le modèle est rempli tel quel.
+        set_language(UiLanguage::French);
+        assert_eq!(
+            tr_with("Journal · {}", &["Tout seul"]),
+            "Journal · Tout seul"
+        );
     }
 
     #[test]

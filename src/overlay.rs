@@ -575,7 +575,7 @@ fn achievement_row(
                     ui.set_max_width((ui.available_width() - 150.0).max(160.0));
                     ui.horizontal(|ui| {
                         ui.label(
-                            crate::i18n::rich(&row.name)
+                            crate::i18n::raw(&row.name)
                                 .size(12.5)
                                 .color(if row.unlocked { pal.text } else { pal.text_dim })
                                 .strong(),

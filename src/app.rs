@@ -5002,7 +5002,7 @@ impl QuarkApp {
             let mut close = false;
             egui::Modal::new(egui::Id::new("quark_save_backup_preview")).show(ctx, |ui| {
                 ui.set_min_width(460.0);
-                ui.label(crate::i18n::rich(format!("Aperçu de sauvegarde · {title}")).size(17.0).color(pal.text));
+                ui.label(crate::i18n::rich_with("Aperçu de sauvegarde · {}", &[&title]).size(17.0).color(pal.text));
                 ui.add_space(8.0);
                 let changed = preview.changed_games.map_or_else(|| "—".to_string(), |value| value.to_string());
                 let processed = preview.processed_games.map_or_else(|| "—".to_string(), |value| value.to_string());
@@ -5040,7 +5040,7 @@ impl QuarkApp {
             ui.set_min_width(440.0);
             ui.label(crate::i18n::rich("Confirmer la sauvegarde locale ?").size(17.0).color(pal.text));
             ui.add_space(8.0);
-            ui.label(crate::i18n::rich(format!("Ludusavi va écrire les données de {confirm_title} dans le coffre local de cette installation. Les sauvegardes sont limitées à 10 versions complètes sans différentielles; les anciennes sauvegardes au-delà de la limite peuvent être supprimées par Ludusavi.")).size(12.0).color(pal.text_dim));
+            ui.label(crate::i18n::rich_with("Ludusavi va écrire les données de {} dans le coffre local de cette installation. Les sauvegardes sont limitées à 10 versions complètes sans différentielles; les anciennes sauvegardes au-delà de la limite peuvent être supprimées par Ludusavi.", &[&confirm_title]).size(12.0).color(pal.text_dim));
             ui.add_space(12.0);
             ui.horizontal(|ui| {
                 if ui.button(crate::i18n::tr("Créer la sauvegarde")).clicked() { confirm = true; }
@@ -5059,7 +5059,7 @@ impl QuarkApp {
             egui::Modal::new(egui::Id::new("quark_save_inventory")).show(ctx, |ui| {
                 ui.set_min_width(500.0);
                 ui.label(
-                    crate::i18n::rich(format!("Sauvegardes locales · {title}"))
+                    crate::i18n::rich_with("Sauvegardes locales · {}", &[&title])
                         .size(17.0)
                         .color(pal.text),
                 );
@@ -5102,7 +5102,7 @@ impl QuarkApp {
             egui::Modal::new(egui::Id::new("quark_restore_preview")).show(ctx, |ui| {
                 ui.set_min_width(560.0);
                 ui.label(
-                    crate::i18n::rich(format!("Aperçu de restauration · {title}"))
+                    crate::i18n::rich_with("Aperçu de restauration · {}", &[&title])
                         .size(17.0)
                         .color(pal.text),
                 );
@@ -5167,7 +5167,7 @@ impl QuarkApp {
             egui::Modal::new(egui::Id::new("quark_restore_confirmation")).show(ctx, |ui| {
                 ui.set_min_width(440.0);
                 ui.label(crate::i18n::rich("Confirmer le remplacement des sauvegardes ?").size(17.0).color(pal.danger));
-                ui.label(crate::i18n::rich(format!("Les fichiers de {title} seront restaurés depuis le snapshot {backup_id}. Les fichiers présents aux destinations pourront être écrasés.")).size(12.0).color(pal.text_dim));
+                ui.label(crate::i18n::rich_with("Les fichiers de {} seront restaurés depuis le snapshot {}. Les fichiers présents aux destinations pourront être écrasés.", &[&title, &backup_id]).size(12.0).color(pal.text_dim));
                 ui.add_space(8.0);
                 ui.horizontal(|ui| {
                     if ui.button(crate::i18n::tr("Confirmer la restauration")).clicked() { confirm = true; }
@@ -5549,7 +5549,7 @@ impl QuarkApp {
             };
             ui.set_width(560.0);
             ui.label(
-                crate::i18n::rich(format!("Installer « {} »", request.title))
+                crate::i18n::rich_with("Installer « {} »", &[&request.title])
                     .size(17.0)
                     .color(pal.text),
             );

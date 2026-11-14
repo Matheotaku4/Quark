@@ -1012,7 +1012,7 @@ fn provider_card(
     footer_ui.spacing_mut().item_spacing.y = 1.0;
     footer_ui.add(
         egui::Label::new(
-            crate::i18n::rich(&game.title)
+            crate::i18n::raw(&game.title)
                 .size(12.0)
                 .strong()
                 .color(pal.text),
@@ -1215,7 +1215,7 @@ fn provider_row(
     text_ui.spacing_mut().item_spacing.y = 3.0;
     text_ui.add(
         egui::Label::new(
-            crate::i18n::rich(&game.title)
+            crate::i18n::raw(&game.title)
                 .size(14.0)
                 .strong()
                 .color(pal.text),
