@@ -53,6 +53,11 @@ static OVERLAY_HWND: AtomicIsize = AtomicIsize::new(0);
 static LAST_GAME_HWND: AtomicIsize = AtomicIsize::new(0);
 static ORIGINAL_PRESENT: AtomicPtr<c_void> = AtomicPtr::new(std::ptr::null_mut());
 static ORIGINAL_PRESENT1: AtomicPtr<c_void> = AtomicPtr::new(std::ptr::null_mut());
+/// Une seule vtable est accrochée par module : `ORIGINAL_PRESENT` et
+/// `ORIGINAL_PRESENT1` ne peuvent stocker qu'un pointeur d'origine. Accrocher
+/// deux classes de swap chain différentes ferait appeler la mauvaise fonction.
+static HOOKED_SWAPCHAIN_VTABLE: AtomicPtr<c_void> = AtomicPtr::new(std::ptr::null_mut());
+static HOOKED_FACTORY_VTABLE: AtomicPtr<c_void> = AtomicPtr::new(std::ptr::null_mut());
 static OVERLAY_MUTEX: AtomicIsize = AtomicIsize::new(0);
 static ORIGINAL_CREATE_SWAPCHAIN: AtomicPtr<c_void> = AtomicPtr::new(std::ptr::null_mut());
 static ORIGINAL_CREATE_SWAPCHAIN_FOR_HWND: AtomicPtr<c_void> = AtomicPtr::new(std::ptr::null_mut());
@@ -165,17 +170,9 @@ struct SwapChainVtbl {
     set_private_data_interface: *mut c_void,
     get_private_data: *mut c_void,
     get_parent: *mut c_void,
-    // IDXGISwapChain : Present est le 18e pointeur de la vtable.
+    // IDXGIDeviceSubObject
     get_device: *mut c_void,
-    get_buffer: *mut c_void,
-    set_fullscreen_state: *mut c_void,
-    get_fullscreen_state: *mut c_void,
-    get_desc: *mut c_void,
-    resize_buffers: *mut c_void,
-    resize_target: *mut c_void,
-    get_containing_output: *mut c_void,
-    get_frame_statistics: *mut c_void,
-    get_last_present_count: *mut c_void,
+    // IDXGISwapChain : Present suit directement GetDevice (slot 8).
     present: PresentFn,
 }
 
@@ -184,12 +181,14 @@ struct SwapChainVtbl {
 // `GetSharedResourceAdapterLuid` au lieu de `CreateSwapChainForComposition`).
 const _: () = {
     assert!(size_of::<FactoryVtbl>() == 25 * size_of::<*mut c_void>());
-    assert!(size_of::<SwapChainVtbl>() == 18 * size_of::<*mut c_void>());
+    assert!(size_of::<SwapChainVtbl>() == 9 * size_of::<*mut c_void>());
     assert!(
         std::mem::offset_of!(FactoryVtbl, create_swap_chain_for_composition)
             == 24 * size_of::<*mut c_void>()
     );
-    assert!(std::mem::offset_of!(SwapChainVtbl, present) == 17 * size_of::<*mut c_void>());
+    // IDXGISwapChain hérite de IDXGIDeviceSubObject : Present est le 9e
+    // pointeur (index 8), pas le dernier de la vtable complète.
+    assert!(std::mem::offset_of!(SwapChainVtbl, present) == 8 * size_of::<*mut c_void>());
 };
 
 /// Loads a system DLL (`d3d11.dll` or `dxgi.dll`), never this proxy.
@@ -248,22 +247,34 @@ unsafe fn hook_factory_vtable(factory: *mut c_void) {
     let mut factory2 = std::ptr::null_mut();
     let has_factory2 =
         query_interface(factory, &IID_IDXGIFACTORY2, &mut factory2) >= 0 && !factory2.is_null();
-    let vtable = if has_factory2 {
-        let vtable2 = *(factory2 as *const *mut FactoryVtbl);
-        if vtable2.is_null() {
+    let factory2_vtable = if has_factory2 {
+        let vtable = *(factory2 as *const *mut FactoryVtbl);
+        if vtable.is_null() {
             let release: ReleaseFn = std::mem::transmute((*base_vtable).release);
             release(factory2);
             return;
         }
-        vtable2
+        vtable
     } else {
-        base_vtable
+        std::ptr::null_mut()
     };
 
-    // Comme pour les swap chains, on vérifie la vtable elle-même : deux
-    // fabriques de générations différentes peuvent avoir des vtables
-    // distinctes, et un drapeau global ferait manquer la seconde.
-    let create_slot = &mut (*vtable).create_swap_chain;
+    // Une seule fabrique est accrochée par module : les pointeurs d'origine
+    // sont globaux et une seconde vtable les écraserait.
+    if !HOOKED_FACTORY_VTABLE
+        .swap(base_vtable as *mut c_void, Ordering::SeqCst)
+        .is_null()
+    {
+        if has_factory2 {
+            let release: ReleaseFn = std::mem::transmute((*factory2_vtable).release);
+            release(factory2);
+        }
+        return;
+    }
+    // `CreateSwapChain` existe aussi sur la vtable de base : c'est le chemin
+    // utilisé par D3D11 après `D3D11CreateDevice`, même quand l'objet fabrique
+    // implémente aussi IDXGIFactory2.
+    let create_slot = &mut (*base_vtable).create_swap_chain;
     if (*create_slot as usize) != (create_swapchain_hook as CreateSwapChainFn as usize) {
         let _ = patch(
             create_slot,
@@ -272,7 +283,7 @@ unsafe fn hook_factory_vtable(factory: *mut c_void) {
         );
     }
     if has_factory2 {
-        let hwnd_slot = &mut (*vtable).create_swap_chain_for_hwnd;
+        let hwnd_slot = &mut (*factory2_vtable).create_swap_chain_for_hwnd;
         if (*hwnd_slot as usize)
             != (create_swapchain_for_hwnd_hook as CreateSwapChainForHwndFn as usize)
         {
@@ -282,7 +293,7 @@ unsafe fn hook_factory_vtable(factory: *mut c_void) {
                 &ORIGINAL_CREATE_SWAPCHAIN_FOR_HWND,
             );
         }
-        let composition_slot = &mut (*vtable).create_swap_chain_for_composition;
+        let composition_slot = &mut (*factory2_vtable).create_swap_chain_for_composition;
         if (*composition_slot as usize)
             != (create_swapchain_for_composition_hook as CreateSwapChainForCompositionFn as usize)
         {
@@ -292,9 +303,7 @@ unsafe fn hook_factory_vtable(factory: *mut c_void) {
                 &ORIGINAL_CREATE_SWAPCHAIN_FOR_COMPOSITION,
             );
         }
-    }
-    if has_factory2 {
-        let release: ReleaseFn = std::mem::transmute((*vtable).release);
+        let release: ReleaseFn = std::mem::transmute((*factory2_vtable).release);
         release(factory2);
     }
 }
@@ -429,9 +438,15 @@ unsafe fn hook_swapchain(swapchain: *mut c_void) {
         return;
     }
 
-    // Ne pas réécrire un slot déjà remplacé par ce module. Le test est fait
-    // par vtable, pas globalement : Direct3D 11 et Direct3D 12 peuvent créer
-    // des classes de swap chain différentes dans le même processus.
+    // Une seule classe de swap chain est accrochée par module : le pointeur
+    // d'origine est global. Si le jeu crée une seconde classe, elle reste sans
+    // compteur plutôt que d'appeler la mauvaise fonction Present.
+    if !HOOKED_SWAPCHAIN_VTABLE
+        .swap(vtable as *mut c_void, Ordering::SeqCst)
+        .is_null()
+    {
+        return;
+    }
     if ((*vtable).present as usize) != (present_hook as PresentFn as usize) {
         let _ = patch(
             &mut (*vtable).present,
@@ -451,9 +466,9 @@ unsafe fn hook_swapchain(swapchain: *mut c_void) {
             if (*slot as usize) != (present1_hook as Present1Fn as usize) {
                 let _ = patch(slot, present1_hook as Present1Fn, &ORIGINAL_PRESENT1);
             }
+            let release: ReleaseFn = std::mem::transmute(*vtable1.add(2));
+            release(swapchain1);
         }
-        let release: ReleaseFn = std::mem::transmute(*vtable1.add(2));
-        release(swapchain1);
     }
 }
 
