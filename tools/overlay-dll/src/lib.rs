@@ -19,7 +19,7 @@ use std::sync::OnceLock;
 use windows::core::{w, GUID, PCWSTR};
 use windows::Win32::Foundation::{
     CloseHandle, GetLastError, BOOL, COLORREF, ERROR_ALREADY_EXISTS, HANDLE, HINSTANCE, HWND,
-    INVALID_HANDLE_VALUE, LPARAM, LRESULT, RECT, WPARAM,
+    INVALID_HANDLE_VALUE, LPARAM, LRESULT, RECT, WAIT_FAILED, WPARAM,
 };
 use windows::Win32::Graphics::Gdi::{
     BeginPaint, CreateFontW, CreateSolidBrush, DeleteObject, EndPaint, FillRect, InvalidateRect,
@@ -325,34 +325,29 @@ impl Drop for NamedMutexGuard {
     }
 }
 
+fn wait_for_mutex(handle: HANDLE) -> Option<NamedMutexGuard> {
+    let result = unsafe { WaitForSingleObject(handle, INFINITE) };
+    if result == WAIT_FAILED {
+        return None;
+    }
+    Some(NamedMutexGuard(handle))
+}
+
 fn named_mutex(prefix: &str, slot: &'static AtomicIsize) -> Option<NamedMutexGuard> {
     let existing = slot.load(Ordering::Acquire);
     if existing != 0 {
-        let handle = HANDLE(existing as *mut c_void);
-        unsafe {
-            let _ = WaitForSingleObject(handle, INFINITE);
-        }
-        return Some(NamedMutexGuard(handle));
+        return wait_for_mutex(HANDLE(existing as *mut c_void));
     }
     let name = format!("Local\\{prefix}{}", unsafe { GetCurrentProcessId() });
     let name: Vec<u16> = name.encode_utf16().chain(std::iter::once(0)).collect();
     let handle = unsafe { CreateMutexW(None, false, PCWSTR(name.as_ptr())) }.ok()?;
     match slot.compare_exchange(0, handle.0 as isize, Ordering::AcqRel, Ordering::Acquire) {
-        Ok(_) => {
-            unsafe {
-                let _ = WaitForSingleObject(handle, INFINITE);
-            }
-            Some(NamedMutexGuard(handle))
-        }
+        Ok(_) => wait_for_mutex(handle),
         Err(existing) => {
             unsafe {
                 let _ = CloseHandle(handle);
             }
-            let handle = HANDLE(existing as *mut c_void);
-            unsafe {
-                let _ = WaitForSingleObject(handle, INFINITE);
-            }
-            Some(NamedMutexGuard(handle))
+            wait_for_mutex(HANDLE(existing as *mut c_void))
         }
     }
 }
