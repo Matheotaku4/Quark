@@ -694,5 +694,6 @@
   "réponse Steam Web API sans contenu": "Steam Web API response has no content",
   "profil Steam privé ou clé Web API refusée : aucune liste de jeux renvoyée": "private Steam profile or rejected Web API key: no game list returned",
   "réponse Steam Store trop volumineuse": "Steam Store response is too large",
-  "{} · les dernières offres en cache restent affichées.": "{} · the latest cached offers are still shown."
+  "{} · les dernières offres en cache restent affichées.": "{} · the latest cached offers are still shown.",
+  "chargement des offres interrompu": "store offers loading interrupted"
 }

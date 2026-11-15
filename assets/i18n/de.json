@@ -694,5 +694,6 @@
   "réponse Steam Web API sans contenu": "Antwort der Steam Web API enthält keinen Inhalt",
   "profil Steam privé ou clé Web API refusée : aucune liste de jeux renvoyée": "privates Steam-Profil oder abgelehnter Web-API-Schlüssel: keine Spieleliste zurückgegeben",
   "réponse Steam Store trop volumineuse": "Antwort des Steam Store ist zu groß",
-  "{} · les dernières offres en cache restent affichées.": "{} · die zuletzt zwischengespeicherten Angebote werden weiterhin angezeigt."
+  "{} · les dernières offres en cache restent affichées.": "{} · die zuletzt zwischengespeicherten Angebote werden weiterhin angezeigt.",
+  "chargement des offres interrompu": "Laden der Angebote unterbrochen"
 }
