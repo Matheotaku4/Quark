@@ -1,16 +1,16 @@
 <!doctype html>
-<html lang="fr">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Quark — Le lanceur de jeux discret pour Linux</title>
-<meta name="description" content="Quark réunit vos jeux locaux, Steam, Epic Games et GOG dans une seule bibliothèque, avec Proton, sauvegardes et overlay. Gratuit, open source, écrit en Rust.">
+<title>Quark — A quiet game launcher for Linux</title>
+<meta name="description" content="Quark gathers local games, Steam, Epic Games and GOG in one library, with Proton, save snapshots and an in-game overlay. Free, open source, written in Rust.">
 <meta name="theme-color" content="#000000">
 <link rel="canonical" href="https://matheotaku4.github.io/Quark/">
-<meta property="og:title" content="Quark — Le lanceur de jeux discret pour Linux">
-<meta property="og:description" content="Une bibliothèque pour vos jeux locaux, Steam, Epic et GOG. Rust + egui.">
+<meta property="og:title" content="Quark — A quiet game launcher for Linux">
+<meta property="og:description" content="One library for your local, Steam, Epic and GOG games. Rust + egui.">
 <meta property="og:type" content="website">
-<meta property="og:image" content="https://matheotaku4.github.io/Quark/assets/home-fr.png">
+<meta property="og:image" content="https://matheotaku4.github.io/Quark/assets/home-en.png">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="icon" href="assets/quark.png">
 <script type="application/ld+json">{"@context":"https://schema.org","@type":"SoftwareApplication","name":"Quark","applicationCategory":"GameApplication","operatingSystem":"Linux","license":"https://opensource.org/licenses/MIT","offers":{"@type":"Offer","price":"0","priceCurrency":"EUR"},"url":"https://matheotaku4.github.io/Quark/"}</script>
@@ -71,11 +71,37 @@ pre{margin:0;padding:1.2rem;overflow-x:auto;font-size:.88rem;line-height:1.8}.c{
 details{border-bottom:1px solid var(--line);padding:1.1rem 0}summary{cursor:pointer;font-weight:600;font-size:1.05rem}details p{color:var(--muted);margin:.6rem 0 0}
 footer{border-top:1px solid var(--line);padding:2rem 0;color:var(--muted);font-size:.9rem}footer .wrap{display:flex;flex-wrap:wrap;justify-content:space-between;gap:1rem}footer nav{gap:1rem}
 .rv{opacity:0;transform:translateY(16px);transition:.6s}.rv.in{opacity:1;transform:none}
+.aurora{position:fixed;inset:0;z-index:-1;overflow:hidden;pointer-events:none}
+.aurora i{position:absolute;width:42rem;height:42rem;border-radius:50%;filter:blur(110px);opacity:.26;background:var(--accent);left:-12rem;top:-14rem;animation:drift 22s ease-in-out infinite alternate}
+.aurora i+i{background:#7c4dff;left:auto;right:-10rem;top:35vh;animation-duration:28s;animation-direction:alternate-reverse}
+@keyframes drift{to{transform:translate(8rem,6rem) scale(1.25)}}
+#bar{position:fixed;top:0;left:0;height:3px;width:100%;transform-origin:0 50%;transform:scaleX(0);background:linear-gradient(90deg,var(--accent),#b388ff);z-index:60}
+h1 span{background:linear-gradient(100deg,var(--accent),#b388ff,var(--accent));background-size:200% auto;-webkit-background-clip:text;background-clip:text;color:transparent;animation:shine 6s linear infinite}
+@keyframes shine{to{background-position:200% center}}
+@keyframes up{from{opacity:0;transform:translateY(28px)}}
+.hero>*{animation:up .8s cubic-bezier(.2,.7,.2,1) backwards}
+.hero>:nth-child(2){animation-delay:.1s}.hero>:nth-child(3){animation-delay:.2s}.hero>:nth-child(4){animation-delay:.3s}.hero>:nth-child(5){animation-delay:.4s}.hero>:nth-child(6){animation-delay:.55s;animation-duration:1.1s}
+.hero .frame{transition:transform .25s ease-out}
+.btn.p{position:relative;overflow:hidden}
+.btn.p::after{content:"";position:absolute;inset:0;background:linear-gradient(110deg,transparent 30%,rgba(255,255,255,.45) 50%,transparent 70%);transform:translateX(-100%);animation:sh 3.5s 1.5s infinite}
+@keyframes sh{to{transform:translateX(100%)}}
+.marquee{overflow:hidden;margin-top:3rem;border-block:1px solid var(--line);padding:1rem 0;-webkit-mask-image:linear-gradient(90deg,transparent,#000 12%,#000 88%,transparent);mask-image:linear-gradient(90deg,transparent,#000 12%,#000 88%,transparent)}
+.marquee div{display:flex;gap:3rem;width:max-content;animation:mq 34s linear infinite;color:var(--muted);font-weight:600;letter-spacing:.1em;text-transform:uppercase;font-size:.8rem}
+.marquee span::before{content:"◆";color:var(--accent);margin-right:3rem}
+.marquee:hover div{animation-play-state:paused}
+@keyframes mq{to{transform:translateX(-50%)}}
+.card{position:relative;overflow:hidden}.card>*{position:relative}
+.card::before{content:"";position:absolute;inset:0;background:radial-gradient(320px circle at var(--mx,50%) var(--my,50%),color-mix(in srgb,var(--accent) 20%,transparent),transparent 70%);opacity:0;transition:opacity .3s}
+.card:hover::before{opacity:1}
+.grid>.rv:nth-child(3n+2){transition-delay:.1s}.grid>.rv:nth-child(3n){transition-delay:.2s}
+#shot{transition:opacity .35s}
+.keys div{transition:transform .2s,border-color .2s}.keys div:hover{transform:translateX(6px);border-color:var(--accent)}
 @media(max-width:860px){nav .hide{display:none}.grid,.split{grid-template-columns:1fr}.facts{grid-template-columns:1fr 1fr}.facts div:nth-child(2){border-right:0}.facts div:nth-child(-n+2){border-bottom:1px solid var(--line)}}
-@media(prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto!important}.rv{opacity:1;transform:none}}
+@media(prefers-reduced-motion:reduce){*,::before,::after{transition:none!important;animation:none!important;scroll-behavior:auto!important}.rv{opacity:1;transform:none}}
 </style>
 </head>
 <body>
+<div id="bar"></div><div class="aurora" aria-hidden="true"><i></i><i></i></div>
 <a class="skip" href="#main" data-i="skip"></a>
 <header><div class="wrap">
   <a class="brand" href="#top"><img src="assets/quark.png" alt="" width="30" height="30">Quark</a>
@@ -99,9 +125,10 @@ footer{border-top:1px solid var(--line);padding:2rem 0;color:var(--muted);font-s
     </div>
     <p class="small" data-i="fine"></p>
     <div class="frame"><div class="dots" aria-hidden="true"><i></i><i></i><i></i></div>
-      <img id="hero-img" src="assets/home-fr.png" alt="" width="1360" height="860"></div>
+      <img id="hero-img" src="assets/home-en.png" alt="" width="1360" height="860"></div>
   </div>
 
+  <div class="marquee" aria-hidden="true"><div id="mq"></div></div>
   <div class="facts rv">
     <div><b>3</b><span data-i="f1"></span></div><div><b>13</b><span data-i="f2"></span></div>
     <div><b>5</b><span data-i="f3"></span></div><div><b>0</b><span data-i="f4"></span></div>
@@ -125,7 +152,7 @@ footer{border-top:1px solid var(--line);padding:2rem 0;color:var(--muted);font-s
 
   <section id="themes" class="split">
     <div class="rv"><p class="eyebrow" data-i="e3"></p><h2 data-i="t3"></h2><p style="color:var(--muted)" data-i="n3"></p>
-      <div class="swatches" id="sw" role="group" aria-label="Thèmes / Themes"></div></div>
+      </div>
     <div class="keys rv" aria-label="Raccourcis / Shortcuts">
       <div><span data-i="k1"></span><span><kbd>Ctrl</kbd> + <kbd>K</kbd></span></div>
       <div><span data-i="k2"></span><span><kbd>Shift</kbd> + <kbd>Backspace</kbd></span></div>
@@ -165,7 +192,7 @@ c5t:"Sauvegardes fiables",c5:"Instantanés Ludusavi avant et après chaque sessi
 c6t:"Fait pour vos yeux",c6:"Treize thèmes AMOLED, liste ou grille, carrousel d’accueil, palette Ctrl+K et cinq langues.",
 e2:"Un aperçu",t2:"Conçu pour qu’on y vive.",n2:"Captures réelles de l’interface actuelle, pas des maquettes.",
 tab:{home:"Accueil",library:"Bibliothèque",store:"Boutique",settings:"Réglages",onboarding:"Premier lancement"},
-e3:"Personnalisation",t3:"Choisissez votre couleur.",n3:"Essayez les accents de Quark : le site change en direct. Dans l’appli, ils vivent dans Réglages → Apparence.",
+e3:"Clavier d’abord",t3:"Rapide par défaut.",n3:"Tout est à un raccourci : cherchez dans votre bibliothèque, ouvrez l’overlay ou prenez une capture sans quitter le jeu.",
 k1:"Palette de commandes",k2:"Overlay en jeu",k3:"Capture d’écran",k4:"Rechercher",
 e4:"Démarrer",t4:"Une archive. Pas d’installeur.",n4:"Téléchargez, vérifiez, décompressez, lancez.",copy:"Copier",copied:"Copié ✓",
 t5:"Les petites lignes",
@@ -186,7 +213,7 @@ c5t:"Saves you can trust",c5:"Ludusavi snapshots before and after each session, 
 c6t:"Easy on the eyes",c6:"Thirteen AMOLED themes, list or grid, home carousel, Ctrl+K palette and five languages.",
 e2:"A closer look",t2:"Built to be lived in.",n2:"Real screenshots of the current interface, not mockups.",
 tab:{home:"Home",library:"Library",store:"Store",settings:"Settings",onboarding:"First launch"},
-e3:"Make it yours",t3:"Pick your colour.",n3:"Try Quark’s accents: this page updates live. In the app, they live in Settings → Appearance.",
+e3:"Keyboard first",t3:"Fast by default.",n3:"Everything is a shortcut away: search your library, open the overlay or take a screenshot without leaving the game.",
 k1:"Command palette",k2:"In-game overlay",k3:"Screenshot",k4:"Search",
 e4:"Get started",t4:"One archive. No installer.",n4:"Download, verify, unpack, run.",copy:"Copy",copied:"Copied ✓",
 t5:"Small print, plainly",
@@ -194,10 +221,9 @@ q1:"Does Quark sell games?",a1:"No. It opens store pages in your browser and nev
 q2:"Does it send telemetry?",a2:"None. Store sessions and library data stay on your machine.",
 q3:"What about Windows games?",a3:"They run through Proton or umu-launcher with the prefix you choose.",
 q4:"Can I build it?",a4:"Yes: clone the repository and run <code>cargo build --release --locked</code>."}};
-const ACC=["#2e9bff","#89b4fa","#bd93f9","#88c0d0","#fabd2f","#7aa2f7","#c4a7e7","#a7c080","#f38ba8","#fab387","#94e2d5","#ff6b6b","#f5c542"];
 const TABS=["home","library","store","settings","onboarding"];
 const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
-let lang=(()=>{try{const s=localStorage.getItem("q-lang");if(s)return s}catch(e){}return (navigator.language||"fr").startsWith("fr")?"fr":"en"})();
+let lang=(()=>{try{const s=localStorage.getItem("q-lang");if(s)return s}catch(e){}return "en"})();
 let tab="library",ver="",dlUrl="";
 const img=t=>`assets/${t}-${t==="library"?"fr":lang}.png`;
 function cmd(){const v=ver||"<version>";return `<span class="c"># ${lang==="fr"?"après téléchargement de l’archive":"after downloading the archive"}</span>
@@ -215,13 +241,8 @@ function render(){
 }
 document.addEventListener("click",e=>{
   const l=e.target.closest("[data-l]");if(l){lang=l.dataset.l;try{localStorage.setItem("q-lang",lang)}catch(x){}render()}
-  const t=e.target.closest("[data-t]");if(t){tab=t.dataset.t;render()}
+  const t=e.target.closest("[data-t]");if(t&&t.dataset.t!==tab){tab=t.dataset.t;$("#shot").style.opacity=0;setTimeout(render,180)}
 });
-$("#sw").innerHTML=ACC.map((c,i)=>`<button style="background:${c}" aria-label="${c}" aria-pressed="${i===0}" data-c="${c}"></button>`).join("");
-$("#sw").addEventListener("click",e=>{const b=e.target.closest("[data-c]");if(!b)return;
-  const c=b.dataset.c,r=document.documentElement.style;r.setProperty("--accent",c);
-  const n=parseInt(c.slice(1),16),y=((n>>16)*299+((n>>8)&255)*587+(n&255)*114)/1000;
-  r.setProperty("--on",y>140?"#000":"#fff");$$("#sw button").forEach(x=>x.setAttribute("aria-pressed",x===b))});
 $("#copy").addEventListener("click",async()=>{try{await navigator.clipboard.writeText($("#cmd").innerText.replace(/^#.*\n/,""));
   const b=$("#copy");b.textContent=D[lang].copied;setTimeout(()=>b.textContent=D[lang].copy,1600)}catch(e){}});
 fetch("https://api.github.com/repos/Matheotaku4/Quark/releases/latest").then(r=>r.ok?r.json():Promise.reject()).then(j=>{
@@ -229,6 +250,15 @@ fetch("https://api.github.com/repos/Matheotaku4/Quark/releases/latest").then(r=>
   if(a)$("#dl").href=a.browser_download_url;$("#ver").textContent=ver?"v"+ver:"";$("#cmd").innerHTML=cmd()}).catch(()=>{});
 const io=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){e.target.classList.add("in");io.unobserve(e.target)}}),{threshold:.12});
 $$(".rv").forEach(e=>io.observe(e));
+$("#shot").onload=e=>e.target.style.opacity=1;
+const M=["Steam","Epic Games","GOG","Proton","umu-launcher","MangoHud","gamescope","GameMode","Ludusavi","Legendary","gogdl","DirectX 11/12"];
+$("#mq").innerHTML=[...M,...M].map(x=>`<span>${x}</span>`).join("");
+const bar=$("#bar");addEventListener("scroll",()=>bar.style.transform=`scaleX(${scrollY/(document.documentElement.scrollHeight-innerHeight||1)})`,{passive:true});
+const hf=$(".hero .frame"),hp=hf.parentElement;
+hp.addEventListener("mousemove",e=>{const r=hf.getBoundingClientRect(),x=(e.clientX-r.left)/r.width-.5,y=(e.clientY-r.top)/r.height-.5;hf.style.transform=`perspective(1200px) rotateY(${x*6}deg) rotateX(${-y*5}deg)`});
+hp.addEventListener("mouseleave",()=>hf.style.transform="");
+$$(".card").forEach(c=>c.addEventListener("mousemove",e=>{const r=c.getBoundingClientRect();c.style.setProperty("--mx",e.clientX-r.left+"px");c.style.setProperty("--my",e.clientY-r.top+"px")}));
+new IntersectionObserver((es,o)=>es.forEach(e=>{if(!e.isIntersecting)return;o.unobserve(e.target);$$(".facts b").forEach(b=>{const n=+b.textContent;let t0;const f=t=>{t0??=t;const p=Math.min((t-t0)/1200,1);b.textContent=Math.round(n*(1-Math.pow(1-p,3)));if(p<1)requestAnimationFrame(f)};b.textContent=0;requestAnimationFrame(f)})}),{threshold:.5}).observe($(".facts"));
 render();
 </script>
 </body>
