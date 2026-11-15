@@ -1,36 +1,40 @@
+language: fr
 reviews:
   profile: assertive
   collapse_walkthrough: false
   review_details: true
   enable_prompt_for_ai_agents: true
-  instructions: |
-    Tu t'adresses à l'agent de codage qui va appliquer le correctif, pas à un
-    développeur humain. Écris en français et rends chaque remarque directement
-    actionnable.
-
-    Pour chaque problème encore présent dans la diff :
-    1. donne le fichier et la ligne exacte ;
-    2. décris le comportement observé et le risque concret ;
-    3. indique la correction minimale attendue, en nommant la fonction ou le
-       symbole à modifier ;
-    4. donne la commande de vérification à lancer.
-
-    Règles de fond :
-    - Ne signale que les problèmes introduits ou aggravés par la diff. Si un
-      problème est préexistant, écris « préexistant » et ne le bloque pas.
-    - Ne présente pas une hypothèse comme un bug : si tu n'as pas de preuve,
-      dis-le clairement.
-    - Ne propose pas de refactor, de renommage, de nouvelle fonctionnalité, de
-      nouvelle dépendance ou de test supplémentaire hors du périmètre demandé.
-    - Ne demande un test que si la logique change. Pour une modification de
-      copie, de CSS, de YAML ou de documentation, une vérification ciblée suffit.
-    - Respecte les conventions déjà présentes dans le dépôt et les dépendances
-      verrouillées ; ne demande pas une modernisation gratuite.
-    - Regroupe les remarques qui ont la même cause racine au lieu de répéter le
-      même conseil sur chaque ligne.
-    - Si une remarque est déjà corrigée dans la diff, ne la reposte pas.
-
   path_instructions:
+    - path: "**"
+      instructions: |
+        Tu t'adresses à l'agent de codage qui va appliquer le correctif, pas à
+        un développeur humain. Écris en français et rends chaque remarque
+        directement actionnable.
+
+        Pour chaque problème encore présent dans la diff :
+        1. donne le fichier et la ligne exacte ;
+        2. décris le comportement observé et le risque concret ;
+        3. indique la correction minimale attendue, en nommant la fonction ou le
+           symbole à modifier ;
+        4. donne la commande de vérification à lancer.
+
+        Règles de fond :
+        - Ne signale que les problèmes introduits ou aggravés par la diff. Si un
+          problème est préexistant, écris « préexistant » et ne le bloque pas.
+        - Ne présente pas une hypothèse comme un bug : si tu n'as pas de preuve,
+          dis-le clairement.
+        - Ne propose pas de refactor, de renommage, de nouvelle fonctionnalité,
+          de nouvelle dépendance ou de test supplémentaire hors du périmètre
+          demandé.
+        - Ne demande un test que si la logique change. Pour une modification de
+          copie, de CSS, de YAML ou de documentation, une vérification ciblée
+          suffit.
+        - Respecte les conventions déjà présentes dans le dépôt et les
+          dépendances verrouillées ; ne demande pas une modernisation gratuite.
+        - Regroupe les remarques qui ont la même cause racine au lieu de
+          répéter le même conseil sur chaque ligne.
+        - Si une remarque est déjà corrigée dans la diff, ne la reposte pas.
+
     - path: "src/**/*.rs"
       instructions: |
         Priorise la logique, les cas d'erreur et les invariants avant le style.

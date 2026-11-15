@@ -145,7 +145,9 @@ pub fn rich_with(template: &str, values: &[&str]) -> RichText {
 /// elles ne touchent qu'aux mots français isolés, jamais aux noms de jeux.
 fn dynamic_english(text: &str) -> String {
     let mut out = text.to_string();
-    let rules: [(&str, &str); 63] = [
+    let rules: [(&str, &str); 65] = [
+        ("Steam Web API a répondu ", "Steam Web API returned "),
+        ("Steam Store a répondu ", "Steam Store returned "),
         ("Aucun jeu sélectionné", "No game selected"),
         ("Aucun jeu ne correspond", "No game matches"),
         ("Aucun résultat", "No results"),

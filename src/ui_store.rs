@@ -178,7 +178,7 @@ impl QuarkApp {
                                 }
                                 if let Some(notice) = &self.store_notice {
                                     ui.label(
-                                        crate::i18n::raw(notice)
+                                        crate::i18n::rich(notice)
                                             .size(12.0)
                                             .color(pal.text_faint),
                                     );
