@@ -22,7 +22,7 @@
 - `cargo test --locked` : 300 tests réussis.
 - `cargo build --locked` : réussi ; rendus de l'interface vérifiés à 1x.
 - `cargo check --locked --manifest-path tools/overlay-dll/Cargo.toml --target x86_64-pc-windows-gnu` : OK (la liaison MinGW complète reste faite par le workflow de release).
-- Site : vérification locale des pages et des assets, puis publication GitHub Pages.
+- Site : vérification locale des pages et des assets ; publication GitHub Pages à vérifier après le merge.
 
 ### Limites connues
 

@@ -83,6 +83,7 @@ static ORIGINAL_PRESENT1: AtomicPtr<c_void> = AtomicPtr::new(std::ptr::null_mut(
 static FIRST_PRESENT: AtomicU32 = AtomicU32::new(0);
 static FIRST_PRESENT1: AtomicU32 = AtomicU32::new(0);
 static OVERLAY_VISIBLE: AtomicU32 = AtomicU32::new(0);
+static OVERLAY_VISIBILITY_KNOWN: AtomicU32 = AtomicU32::new(0);
 /// Une seule vtable est accrochée par module : `ORIGINAL_PRESENT` et
 /// `ORIGINAL_PRESENT1` ne peuvent stocker qu'un pointeur d'origine. Accrocher
 /// deux classes de swap chain différentes ferait appeler la mauvaise fonction.
@@ -578,6 +579,7 @@ unsafe extern "system" fn create_swapchain_hook(
     }
     let original: CreateSwapChainFn = std::mem::transmute(original);
     let result = original(factory, device, desc, swapchain);
+    overlay_log(&format!("CreateSwapChain result=0x{result:08X}"));
     if result >= 0 && !swapchain.is_null() {
         hook_swapchain(*swapchain);
     }
@@ -607,6 +609,7 @@ unsafe extern "system" fn create_swapchain_for_hwnd_hook(
         restrict_to_output,
         swapchain,
     );
+    overlay_log(&format!("CreateSwapChainForHwnd result=0x{result:08X}"));
     if result >= 0 && !swapchain.is_null() {
         hook_swapchain(*swapchain);
     }
@@ -626,6 +629,9 @@ unsafe extern "system" fn create_swapchain_for_composition_hook(
     }
     let original: CreateSwapChainForCompositionFn = std::mem::transmute(original);
     let result = original(factory, device, desc, restrict_to_output, swapchain);
+    overlay_log(&format!(
+        "CreateSwapChainForComposition result=0x{result:08X}"
+    ));
     if result >= 0 && !swapchain.is_null() {
         hook_swapchain(*swapchain);
     }
@@ -656,6 +662,9 @@ unsafe extern "system" fn create_swapchain_for_core_window_hook(
         restrict_to_output,
         swapchain,
     );
+    overlay_log(&format!(
+        "CreateSwapChainForCoreWindow result=0x{result:08X}"
+    ));
     if result >= 0 && !swapchain.is_null() {
         hook_swapchain(*swapchain);
     }
@@ -1008,7 +1017,8 @@ fn fps_enabled() -> bool {
 
 unsafe fn set_overlay_visible(hwnd: HWND, visible: bool, reason: &str) {
     let was_visible = OVERLAY_VISIBLE.swap(u32::from(visible), Ordering::Relaxed) != 0;
-    if was_visible != visible {
+    let first_decision = OVERLAY_VISIBILITY_KNOWN.swap(1, Ordering::Relaxed) == 0;
+    if first_decision || was_visible != visible {
         overlay_log(&format!("overlay visible={visible} ({reason})"));
     }
     let command = if visible { SW_SHOWNOACTIVATE } else { SW_HIDE };

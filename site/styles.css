@@ -37,6 +37,8 @@
 
 html {
   scroll-behavior: smooth;
+  /* Le header reste collant : les ancres ne doivent pas passer dessous. */
+  scroll-padding-top: 5rem;
 }
 
 body {
@@ -596,6 +598,10 @@ footer nav {
 }
 
 @media (max-width: 680px) {
+  html {
+    scroll-padding-top: 8.5rem;
+  }
+
   .site-header {
     align-items: flex-start;
     flex-direction: column;

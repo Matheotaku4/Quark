@@ -171,11 +171,46 @@ pub fn launch_environment(corner: &str) -> Vec<(String, String)> {
 /// Chemin du journal de diagnostic de la DLL, dans le dossier de logs du jeu.
 ///
 /// Wine expose la racine Linux sous `Z:` ; la DLL Windows ne peut pas ouvrir un
-/// chemin POSIX. Le chemin reste dans le dossier privé de Quark (`0600`).
+/// chemin POSIX. Le fichier est créé par Quark en `0600` avant le lancement,
+/// pour ne pas dépendre des permissions par défaut de Wine.
 pub fn overlay_log_path(game_id: &str) -> String {
     let path = crate::config::log_dir(game_id).join("overlay.log");
     let path = path.to_string_lossy();
     format!("Z:{}", path.replace('/', "\\"))
+}
+
+/// Crée (ou vide) le journal avec des droits propriétaire uniquement. Le jeu
+/// Windows n'a alors qu'à l'ouvrir en ajout ; s'il ne peut pas, aucune variable
+/// de journal n'est transmise.
+fn prepare_overlay_log(game_id: &str) -> bool {
+    let path = crate::config::log_dir(game_id).join("overlay.log");
+    let Some(directory) = path.parent() else {
+        return false;
+    };
+    if std::fs::create_dir_all(directory).is_err() {
+        return false;
+    }
+    let mut options = std::fs::OpenOptions::new();
+    options.create(true).write(true).truncate(true);
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::OpenOptionsExt as _;
+        options.mode(0o600);
+    }
+    let Ok(file) = options.open(&path) else {
+        return false;
+    };
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt as _;
+        if file
+            .set_permissions(std::fs::Permissions::from_mode(0o600))
+            .is_err()
+        {
+            return false;
+        }
+    }
+    true
 }
 
 /// Variables de lancement, journal compris. Le journal permet de distinguer
@@ -183,7 +218,9 @@ pub fn overlay_log_path(game_id: &str) -> String {
 /// sans demander au joueur de lancer un débogueur Windows.
 pub fn launch_environment_for(game: &Game, corner: &str) -> Vec<(String, String)> {
     let mut env = launch_environment(corner);
-    env.push(("QUARK_OVERLAY_LOG".to_string(), overlay_log_path(&game.id)));
+    if prepare_overlay_log(&game.id) {
+        env.push(("QUARK_OVERLAY_LOG".to_string(), overlay_log_path(&game.id)));
+    }
     env
 }
 
