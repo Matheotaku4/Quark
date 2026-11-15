@@ -683,5 +683,17 @@
   "Non connecté · connexion directe possible ; Legendary reste requis pour installer": "Nicht verbunden · direkte Anmeldung möglich; Legendary wird weiterhin zum Installieren benötigt",
   "Le code est échangé directement avec Epic ; Quark écrit la session dans user.json (droits privés) et n'affiche jamais le code ni les jetons. Legendary reste utilisé pour la bibliothèque et l'installation.": "Der Code wird direkt mit Epic ausgetauscht; Quark schreibt die Sitzung in user.json (private Rechte) und zeigt niemals den Code oder Tokens an. Legendary wird weiterhin für Bibliothek und Installation verwendet.",
   "Compte Epic connecté.": "Epic-Konto verbunden.",
-  "Installe des DLL d3d11.dll et dxgi.dll à côté de l'exécutable Windows et affiche un compteur façon Steam. DirectX 11 et 12 ; une DLL étrangère n'est jamais remplacée.": "Installiert d3d11.dll und dxgi.dll neben der Windows-EXE und zeigt einen Steam-ähnlichen Zähler. DirectX 11 und 12; eine fremde DLL wird nie ersetzt."
+  "Installe des DLL d3d11.dll et dxgi.dll à côté de l'exécutable Windows et affiche un compteur façon Steam. DirectX 11 et 12 ; une DLL étrangère n'est jamais remplacée.": "Installiert d3d11.dll und dxgi.dll neben der Windows-EXE und zeigt einen Steam-ähnlichen Zähler. DirectX 11 und 12; eine fremde DLL wird nie ersetzt.",
+  "classement Steam vide": "Steam-Rangliste ist leer",
+  "aucune fiche Steam n'a pu être lue pour les jeux les plus joués": "für die meistgespielten Spiele konnte keine Steam-Seite gelesen werden",
+  "connexion au classement Steam impossible": "Verbindung zur Steam-Rangliste nicht möglich",
+  "connexion à la bibliothèque Steam impossible": "Verbindung zur Steam-Bibliothek nicht möglich",
+  "réponse Steam non UTF-8": "Steam-Antwort ist nicht UTF-8",
+  "réponse de bibliothèque Steam trop volumineuse": "Antwort der Steam-Bibliothek ist zu groß",
+  "réponse Steam Web API invalide": "ungültige Antwort der Steam Web API",
+  "réponse Steam Web API sans contenu": "Antwort der Steam Web API enthält keinen Inhalt",
+  "profil Steam privé ou clé Web API refusée : aucune liste de jeux renvoyée": "privates Steam-Profil oder abgelehnter Web-API-Schlüssel: keine Spieleliste zurückgegeben",
+  "réponse Steam Store trop volumineuse": "Antwort des Steam Store ist zu groß",
+  "{} · les dernières offres en cache restent affichées.": "{} · die zuletzt zwischengespeicherten Angebote werden weiterhin angezeigt.",
+  "chargement des offres interrompu": "Laden der Angebote unterbrochen"
 }

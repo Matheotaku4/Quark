@@ -683,5 +683,17 @@
   "Non connecté · connexion directe possible ; Legendary reste requis pour installer": "Not connected · direct sign-in available; Legendary is still required to install",
   "Le code est échangé directement avec Epic ; Quark écrit la session dans user.json (droits privés) et n'affiche jamais le code ni les jetons. Legendary reste utilisé pour la bibliothèque et l'installation.": "The code is exchanged directly with Epic; Quark writes the session to user.json (private permissions) and never displays the code or tokens. Legendary is still used for the library and installation.",
   "Compte Epic connecté.": "Epic account connected.",
-  "Installe des DLL d3d11.dll et dxgi.dll à côté de l'exécutable Windows et affiche un compteur façon Steam. DirectX 11 et 12 ; une DLL étrangère n'est jamais remplacée.": "Installs d3d11.dll and dxgi.dll next to the Windows executable and shows a Steam-like counter. DirectX 11 and 12; a foreign DLL is never replaced."
+  "Installe des DLL d3d11.dll et dxgi.dll à côté de l'exécutable Windows et affiche un compteur façon Steam. DirectX 11 et 12 ; une DLL étrangère n'est jamais remplacée.": "Installs d3d11.dll and dxgi.dll next to the Windows executable and shows a Steam-like counter. DirectX 11 and 12; a foreign DLL is never replaced.",
+  "classement Steam vide": "Steam ranking is empty",
+  "aucune fiche Steam n'a pu être lue pour les jeux les plus joués": "no Steam page could be read for the most played games",
+  "connexion au classement Steam impossible": "could not connect to the Steam ranking",
+  "connexion à la bibliothèque Steam impossible": "could not connect to the Steam library",
+  "réponse Steam non UTF-8": "Steam response is not UTF-8",
+  "réponse de bibliothèque Steam trop volumineuse": "Steam library response is too large",
+  "réponse Steam Web API invalide": "invalid Steam Web API response",
+  "réponse Steam Web API sans contenu": "Steam Web API response has no content",
+  "profil Steam privé ou clé Web API refusée : aucune liste de jeux renvoyée": "private Steam profile or rejected Web API key: no game list returned",
+  "réponse Steam Store trop volumineuse": "Steam Store response is too large",
+  "{} · les dernières offres en cache restent affichées.": "{} · the latest cached offers are still shown.",
+  "chargement des offres interrompu": "store offers loading interrupted"
 }

@@ -4412,7 +4412,7 @@ impl QuarkApp {
                     self.store_featured_rx = None;
                 }
                 Err(TryRecvError::Disconnected) => {
-                    self.store_error = Some("chargement des offres interrompu".to_string());
+                    self.store_error = Some(crate::i18n::tr("chargement des offres interrompu"));
                     self.store_loading = false;
                     self.store_stale = self
                         .store_snapshot

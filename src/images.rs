@@ -309,6 +309,13 @@ pub fn draw_cover(painter: &egui::Painter, texture: &TextureHandle, rect: egui::
     );
 }
 
+/// Hauteur sûre de la bande de fondu. Un rectangle sub-pixel (fenêtre
+/// momentanément compressée) doit être ignoré : `f32::clamp(1.0, 0.5)` panique
+/// avec « min > max ».
+fn blend_strip_height(rect_height: f32, strip_height: f32) -> Option<f32> {
+    (rect_height >= 1.0).then(|| strip_height.clamp(1.0, rect_height))
+}
+
 /// Dessine la moitié basse d'une bannière en la fondant dans la texture floutée
 /// du même jeu : le hero ne s'arrête plus sur une arête nette au-dessus du
 /// fond, il s'y dissout. Le dégradé est un maillage à quatre sommets, donc
@@ -320,10 +327,12 @@ pub fn draw_cover_blend_to_background(
     strip_height: f32,
 ) {
     let size = texture.size_vec2();
-    if size.x <= 0.0 || size.y <= 0.0 || rect.width() <= 0.0 || rect.height() <= 0.0 {
+    if size.x <= 0.0 || size.y <= 0.0 || rect.width() <= 0.0 {
         return;
     }
-    let strip_height = strip_height.clamp(1.0, rect.height());
+    let Some(strip_height) = blend_strip_height(rect.height(), strip_height) else {
+        return;
+    };
     let scale = (rect.width() / size.x).max(rect.height() / size.y);
     let fitted = egui::Rect::from_center_size(rect.center(), size * scale);
     let strip = egui::Rect::from_min_max(
@@ -642,5 +651,13 @@ mod tests {
         assert_eq!(fitted, egui::Vec2::new(200.0, 100.0));
         assert_eq!(fitted.x / fitted.y, source.x / source.y);
         assert!(fitted.x > rect.width() && fitted.y >= rect.height());
+    }
+
+    #[test]
+    fn une_bande_de_fondu_subpixel_est_ignoree() {
+        assert_eq!(blend_strip_height(0.0, 100.0), None);
+        assert_eq!(blend_strip_height(0.5, 100.0), None);
+        assert_eq!(blend_strip_height(10.0, 100.0), Some(10.0));
+        assert_eq!(blend_strip_height(10.0, 0.5), Some(1.0));
     }
 }

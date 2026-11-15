@@ -95,9 +95,13 @@ impl Default for SnapshotOptions {
     }
 }
 
+/// Limite dure d'un côté du PNG : 8192×8192 représente déjà ~256 Mio de
+/// framebuffer, largement au-dessus de tous les rendus utiles.
+pub const MAX_RENDER_SIDE: f32 = 8192.0;
+
 pub const HELP: &str = "\
   quark --ui <fichier.png>  Rend l'interface hors écran dans un PNG (sans écran)\n\
-      [--size 1360x860] [--scale 1.5] [--frames 16]\n\
+      [--size 1360x860 (max 8192x8192)] [--scale 1.5 (0.5-4)] [--frames 16]\n\
       [--view list|grid] [--group status|store|genre|year|none]\n\
       [--tab library|store] [--theme amoled|graphite|catppuccin-mocha|...]\n\
       [--lang fr|en]\n\
@@ -133,8 +137,24 @@ pub fn run(opts: &SnapshotOptions) -> Result<(), String> {
             std::env::set_var("QUARK_DATA_DIR", root.join("data"));
         }
     }
+    if !opts.size.x.is_finite()
+        || !opts.size.y.is_finite()
+        || opts.size.x <= 0.0
+        || opts.size.y <= 0.0
+        || !opts.scale.is_finite()
+        || opts.scale <= 0.0
+    {
+        return Err("taille ou échelle de rendu invalide".to_string());
+    }
     let size = Vec2::new(opts.size.x.max(320.0), opts.size.y.max(240.0));
     let scale = opts.scale.clamp(0.5, 4.0);
+    let pixel_width = (size.x * scale).round();
+    let pixel_height = (size.y * scale).round();
+    if pixel_width > MAX_RENDER_SIDE || pixel_height > MAX_RENDER_SIDE {
+        return Err(format!(
+            "rendu trop grand : {pixel_width:.0}×{pixel_height:.0}, maximum {MAX_RENDER_SIDE:.0}×{MAX_RENDER_SIDE:.0}"
+        ));
+    }
     let ctx = egui::Context::default();
     ctx.set_pixels_per_point(scale);
     // Sans ces chargeurs, toute image distante ou `file://` (miniatures de la
@@ -489,8 +509,8 @@ pub fn run(opts: &SnapshotOptions) -> Result<(), String> {
         app.page_at = std::time::Instant::now() - std::time::Duration::from_secs(3);
     }
 
-    let width = (size.x * scale).round() as usize;
-    let height = (size.y * scale).round() as usize;
+    let width = pixel_width as usize;
+    let height = pixel_height as usize;
     let mut framebuffer = vec![Color32::BLACK; width * height];
     let mut textures = Textures::default();
 

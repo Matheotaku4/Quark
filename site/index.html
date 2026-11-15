@@ -147,7 +147,7 @@ h1 span{background:linear-gradient(100deg,var(--accent),#b388ff,var(--accent));b
 
   <section id="showcase"><div class="head rv"><p class="eyebrow" data-i="e2"></p><h2 data-i="t2"></h2><p data-i="n2"></p></div>
     <div class="tabs" role="tablist" id="tabs"></div>
-    <div class="frame" style="margin-top:0"><img id="shot" src="assets/library-fr.png" alt="" width="1360" height="860" loading="lazy"></div>
+    <div class="frame" style="margin-top:0"><img id="shot" src="assets/library-en.png" alt="" width="1360" height="860" loading="lazy"></div>
   </section>
 
   <section id="themes" class="split">
@@ -225,7 +225,7 @@ const TABS=["home","library","store","settings","onboarding"];
 const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
 let lang=(()=>{try{const s=localStorage.getItem("q-lang");if(s)return s}catch(e){}return "en"})();
 let tab="library",ver="",dlUrl="";
-const img=t=>`assets/${t}-${t==="library"?"fr":lang}.png`;
+const img=t=>`assets/${t}-${lang}.png`;
 function cmd(){const v=ver||"<version>";return `<span class="c"># ${lang==="fr"?"après téléchargement de l’archive":"after downloading the archive"}</span>
 sha256sum -c quark-${v}-linux-x86_64.tar.gz.sha256
 tar -xzf quark-${v}-linux-x86_64.tar.gz
