@@ -57,6 +57,10 @@ const OVERLAY_HEIGHT: i32 = 42;
 struct SharedStats {
     frames: AtomicU32,
     fps: AtomicU32,
+    /// Vaut 1 dès qu'un module a installé le hook `Present`. Le second module
+    /// ne doit pas réinstaller le sien, sinon une présentation serait comptée
+    /// deux fois dans le compteur partagé.
+    present_hooked: AtomicU32,
 }
 
 static SHARED_STATS: OnceLock<Option<&'static SharedStats>> = OnceLock::new();
@@ -317,7 +321,9 @@ fn patch_mutex() -> Option<PatchGuard> {
 /// Patch une entrée de vtable en restaurant la protection d'origine ensuite.
 /// Le mutex nommé couvre aussi la lecture et l'écriture du slot.
 unsafe fn patch<T: Copy>(slot: *mut T, replacement: T, original: &AtomicPtr<c_void>) -> bool {
-    let _guard = patch_mutex();
+    let Some(_guard) = patch_mutex() else {
+        return false;
+    };
     let address = slot as *mut c_void;
     let mut old = PAGE_PROTECTION_FLAGS(0);
     if VirtualProtect(address, size_of::<T>(), PAGE_READWRITE, &mut old).is_err() {
@@ -537,6 +543,16 @@ unsafe fn hook_swapchain(swapchain: *mut c_void) {
         return;
     }
 
+    // Un seul module installe le hook `Present` pour le processus. Le second
+    // proxy ne doit pas réinstaller le sien : les deux hooks se chaîneraient et
+    // une présentation serait comptée deux fois.
+    let shared = shared_stats();
+    if let Some(stats) = shared {
+        if stats.present_hooked.swap(1, Ordering::SeqCst) != 0 {
+            return;
+        }
+    }
+
     // Une seule classe de swap chain est accrochée par module : le pointeur
     // d'origine est global. Si le jeu crée une seconde classe, elle reste sans
     // compteur plutôt que d'appeler la mauvaise fonction Present.
@@ -546,12 +562,17 @@ unsafe fn hook_swapchain(swapchain: *mut c_void) {
     {
         return;
     }
-    if ((*vtable).present as usize) != (present_hook as PresentFn as usize) {
-        let _ = patch(
+    let patched = ((*vtable).present as usize) == (present_hook as PresentFn as usize)
+        || patch(
             &mut (*vtable).present,
             present_hook as PresentFn,
             &ORIGINAL_PRESENT,
         );
+    if !patched {
+        if let Some(stats) = shared {
+            stats.present_hooked.store(0, Ordering::SeqCst);
+        }
+        return;
     }
 
     let query_interface: QueryInterfaceFn = std::mem::transmute((*vtable).query_interface);
