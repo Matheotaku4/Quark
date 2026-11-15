@@ -6,10 +6,11 @@ own, launches Windows games through Proton (or umu-launcher), and stays out of
 the way with an AMOLED interface, a store page, save snapshots and an in-game
 overlay.
 
-This is the **1.6.1** documentation. Older release notes are kept on the GitHub
+This is the **1.6.2** documentation. Older release notes are kept on the GitHub
 releases page; `docs/release-notes.md` only describes the release currently
 being published.
 
+**Website:** [matheotaku4.github.io/Quark](https://matheotaku4.github.io/Quark/) ·
 **Documentation:** [GitHub Wiki](https://github.com/Matheotaku4/Quark/wiki) ·
 [Getting started](https://github.com/Matheotaku4/Quark/wiki/Getting-Started) ·
 [Proton and Wine options](https://github.com/Matheotaku4/Quark/wiki/Proton-Wine-and-Launch-Options) ·
@@ -27,18 +28,17 @@ The wiki is published from the versioned source in [`wiki/`](wiki/) by the
 | --- | --- |
 | ![Onboarding](docs/images/onboarding-fr.png) | ![What's new](docs/images/whats-new-fr.png) |
 
-## What's new in 1.6.1
+## What's new in 1.6.2
 
-- **Overlay reliability.** The DXGI and D3D11 proxies now share one FPS counter and register their `Present`/`Present1` hooks per swap-chain vtable, so loading both DLLs no longer yields a zero or double-counted counter.
-- **FPS overlay as a DLL.** **Settings → In game → Show FPS in-game** installs small `d3d11.dll` and `dxgi.dll` proxies next to a Windows executable. They forward Direct3D 11 and DXGI to the system, hook `Present`/`Present1` and draw a Steam-like `N FPS` counter in the top-left corner. They hide when the game loses focus, never overwrite a foreign DLL, and ask Wine/Proton to load them. DirectX 11 and 12.
-- **Direct Epic sign-in.** Quark exchanges the authorization code with Epic itself, then writes the session to Legendary's `user.json` with private permissions. `legendary auth` is no longer launched to sign in; the library and installation still use Legendary.
-- **Five interface languages.** Spanish, German and Portuguese join French and English, with complete catalogues and `--lang` support.
-- **Cleaner CI.** `cargo fmt --check` and `cargo clippy --all-targets --locked -- -D warnings` now run on every push and pull request.
-- **Reproducible overlay build.** The release workflow rebuilds the Windows DLL with MinGW before compiling and embedding it in the Linux binary.
+- **A project website.** A small static site in [`site/`](site/) is published to GitHub Pages at [matheotaku4.github.io/Quark](https://matheotaku4.github.io/Quark/). It presents the library, stores, Proton options, overlay and installation steps without exposing the internal `docs/` folder.
+- **“To Play” stays “To Play”.** Launching or playing a game no longer changes its status automatically. `Backlog` remains `Backlog` until you choose another status; checkpoints and the final session write still update playtime and history.
+- **Crisper typography.** The interface now uses Archivo Medium for body text, with integer font sizes instead of fractional 9–13.5 px labels. Small captions are one step larger, so they stay readable on the AMOLED themes without changing the layout density.
+- **Overlay diagnostics.** When the FPS overlay is enabled, Quark writes `overlay.log` in the game's log folder. It records whether the proxies loaded, which swap-chain creation path was seen, whether `Present`/`Present1` was hooked, and why the counter is hidden. This turns a silent “no FPS” into an actionable log.
+- **CoreWindow and DXGI coverage.** The Windows proxy now also hooks `CreateSwapChainForCoreWindow`, used by UWP/Game Pass games, while keeping the existing D3D11/D3D12 `Present` and `Present1` paths.
 
 ## Table of contents
 
-1. [What's new in 1.6.1](#whats-new-in-161)
+1. [What's new in 1.6.2](#whats-new-in-162)
 2. [What Quark does](#what-quark-does)
 3. [Installation](#installation)
 4. [First launch](#first-launch)
@@ -97,8 +97,8 @@ Download `quark-<version>-linux-x86_64.tar.gz` and its `.sha256` file from the
 then verify and unpack it:
 
 ```bash
-sha256sum -c quark-1.6.1-linux-x86_64.tar.gz.sha256
-tar -xzf quark-1.6.1-linux-x86_64.tar.gz
+sha256sum -c quark-1.6.2-linux-x86_64.tar.gz.sha256
+tar -xzf quark-1.6.2-linux-x86_64.tar.gz
 ./quark/quark
 ```
 
@@ -140,7 +140,7 @@ A new configuration opens a three-step welcome guide. It is not blocking:
 **Skip** closes it. The guide changes the interface language, startup page,
 theme and hero background live, then offers to add a first game. Existing
 configurations are marked as already welcomed, so updating from 1.1.4 never
-shows it unexpectedly; they still see the 1.6.1 summary once.
+shows it unexpectedly; they still see the 1.6.2 summary once.
 
 1. Open **Settings → Stores & tools** and install Legendary and/or gogdl with
    **Install / update**. Quark verifies the SHA-256 digest published by GitHub
@@ -352,6 +352,11 @@ Display options live in **Settings → In game**:
 - choose the overlay shortcut and the screenshot key;
 - show or hide the in-game FPS counter.
 
+When the FPS counter is enabled for a Windows game, the proxy also writes
+`overlay.log` next to `session.log`: it records whether the DLLs loaded, which
+DXGI swap-chain path was seen, whether `Present` was hooked, and why the counter
+was hidden. It is the first file to check when a game shows no counter.
+
 The X11 global shortcut covers Proton games through XWayland. On native Wayland,
 the desktop's global-shortcut policy may prevent a global key; the overlay still
 works with the close button and the in-app screenshot path. The shortcut thread
@@ -510,10 +515,14 @@ assets/overlay/       prebuilt Windows FPS overlay embedded in Quark
 docs/images/          README and wiki screenshots
 docs/
   release-notes.md    notes for the current release only
+site/                 static landing page published by GitHub Pages
+  index.html          presentation, screenshots and install steps
+  assets/             site screenshots, logo and Archivo fonts
 wiki/                 GitHub Wiki source: guides, Proton variables, help
 .github/workflows/
   rust.yml            tests and checks
   release.yml         build, previews and GitHub release
+  pages.yml           publish site/ to GitHub Pages
 ```
 
 ## Development and tests
@@ -541,9 +550,11 @@ their existing GitHub releases.
   available in the development environment. The parsers, argument construction,
   migration and error paths are covered by tests; a manual account and overlay
   test is still required before claiming a complete end-to-end validation.
-- The FPS overlay covers DirectX 11 and 12 through DXGI. Vulkan titles and
-  games that replace `d3d11.dll` or `dxgi.dll` are not covered; a foreign DLL is
-  never overwritten.
+- The FPS overlay covers DirectX 11 and 12 through DXGI, including the
+  `CreateSwapChainForCoreWindow` path. Vulkan, OpenGL, Direct3D 9 and native
+  Linux titles are not covered; a foreign `d3d11.dll`/`dxgi.dll` is never
+  overwritten. When enabled, the proxy writes `overlay.log` next to the game's
+  `session.log` so an unsupported API or a hidden overlay can be diagnosed.
 - Native Wayland global shortcuts depend on the compositor. The overlay and
   screenshots have an X11/XWayland path and desktop-tool fallbacks.
 - Cloud synchronization is deliberately opt-in by store capability. Quark never

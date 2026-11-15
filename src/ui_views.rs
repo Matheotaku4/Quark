@@ -65,7 +65,7 @@ impl QuarkApp {
                 ui.horizontal(|ui| {
                     ui.label(
                         crate::i18n::rich("FILTRES")
-                            .size(10.0)
+                            .size(11.0)
                             .strong()
                             .color(pal.accent),
                     );
@@ -89,20 +89,20 @@ impl QuarkApp {
                     .show(ui, |ui| {
                         ui.label(
                             crate::i18n::rich("Affichage")
-                                .size(9.5)
+                                .size(10.5)
                                 .strong()
                                 .color(pal.text_faint),
                         );
                         ui.add_space(4.0);
                         ui.horizontal(|ui| {
                             egui::ComboBox::from_id_salt("quark_filter_views")
-                                .selected_text(crate::i18n::rich(active_view.clone()).size(11.0))
+                                .selected_text(crate::i18n::rich(active_view.clone()).size(12.0))
                                 .width(190.0)
                                 .show_ui(ui, |ui| {
                                     if views.is_empty() {
                                         ui.label(
                                             crate::i18n::rich("Aucune vue enregistrée")
-                                                .size(11.0)
+                                                .size(12.0)
                                                 .color(pal.text_faint),
                                         );
                                     }
@@ -137,7 +137,7 @@ impl QuarkApp {
                         if self.home {
                             ui.label(
                                 crate::i18n::rich("Trier")
-                                    .size(9.5)
+                                    .size(10.5)
                                     .strong()
                                     .color(pal.text_faint),
                             );
@@ -156,7 +156,7 @@ impl QuarkApp {
                                 egui::ComboBox::from_id_salt("quark_filter_sort")
                                     .selected_text(
                                         crate::i18n::rich(format!("Tri : {}", sort.label()))
-                                            .size(11.0),
+                                            .size(12.0),
                                     )
                                     .width(130.0)
                                     .show_ui(ui, |ui| {
@@ -167,7 +167,7 @@ impl QuarkApp {
                                 egui::ComboBox::from_id_salt("quark_filter_group")
                                     .selected_text(
                                         crate::i18n::rich(format!("Grouper : {}", group.label()))
-                                            .size(11.0),
+                                            .size(12.0),
                                     )
                                     .width(130.0)
                                     .show_ui(ui, |ui| {
@@ -184,7 +184,7 @@ impl QuarkApp {
                         ui.add_space(8.0);
                         ui.label(
                             crate::i18n::rich("Statut")
-                                .size(9.5)
+                                .size(10.5)
                                 .strong()
                                 .color(pal.text_faint),
                         );
@@ -218,7 +218,7 @@ impl QuarkApp {
                             ui.add_space(10.0);
                             ui.label(
                                 crate::i18n::rich("Genre")
-                                    .size(9.5)
+                                    .size(10.5)
                                     .strong()
                                     .color(pal.text_faint),
                             );
@@ -246,7 +246,7 @@ impl QuarkApp {
                             ui.add_space(10.0);
                             ui.label(
                                 crate::i18n::rich("Tags")
-                                    .size(9.5)
+                                    .size(10.5)
                                     .strong()
                                     .color(pal.text_faint),
                             );
@@ -373,7 +373,7 @@ impl QuarkApp {
                             "Une vue garde la recherche, les filtres, le tri et le regroupement \
                              de la bibliothèque.",
                         )
-                        .size(11.0)
+                        .size(12.0)
                         .color(pal.text_faint),
                     );
                 });
@@ -411,7 +411,7 @@ impl QuarkApp {
             });
             if let Some(error) = &self.saved_view_error {
                 ui.add_space(4.0);
-                ui.label(crate::i18n::rich(error).size(11.0).color(pal.danger));
+                ui.label(crate::i18n::rich(error).size(12.0).color(pal.danger));
             }
             ui.add_space(12.0);
             ui.separator();
@@ -441,7 +441,7 @@ impl QuarkApp {
                                         ui.vertical(|ui| {
                                             ui.label(
                                                 crate::i18n::raw(&view.name)
-                                                    .size(12.5)
+                                                    .size(13.0)
                                                     .color(pal.text),
                                             );
                                             let mut details = Vec::new();
@@ -465,7 +465,7 @@ impl QuarkApp {
                                             details.push(format!("Tri : {}", view.sort.label()));
                                             ui.label(
                                                 crate::i18n::rich(details.join(" · "))
-                                                    .size(10.5)
+                                                    .size(11.5)
                                                     .color(pal.text_faint),
                                             );
                                         });
@@ -509,7 +509,7 @@ impl QuarkApp {
                     "Astuce : une vue peut aussi être appliquée depuis le menu « Vues » de la \
                      bibliothèque.",
                 )
-                .size(10.5)
+                .size(11.5)
                 .color(pal.text_faint),
             );
         });

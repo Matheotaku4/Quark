@@ -127,7 +127,7 @@ impl QuarkApp {
                 ui.horizontal(|ui| {
                     ui.label(
                         crate::i18n::rich("RECHERCHER")
-                            .size(10.0)
+                            .size(11.0)
                             .strong()
                             .color(pal.accent),
                     );
@@ -236,7 +236,7 @@ impl QuarkApp {
                                     "{} · {installed_count}",
                                     crate::i18n::tr("INSTALLÉS")
                                 ))
-                                .size(9.5)
+                                .size(10.5)
                                 .strong()
                                 .color(pal.accent),
                             );
@@ -271,7 +271,7 @@ impl QuarkApp {
                                     crate::i18n::tr("ACHETÉS"),
                                     purchased.len()
                                 ))
-                                .size(9.5)
+                                .size(10.5)
                                 .strong()
                                 .color(pal.text_faint),
                             );
@@ -332,7 +332,7 @@ impl QuarkApp {
                     ids.len(),
                     if ids.len() > 1 { "x" } else { "" }
                 ))
-                .size(11.0)
+                .size(12.0)
                 .color(pal.text_faint),
             );
         });
@@ -589,7 +589,7 @@ impl QuarkApp {
                 } else {
                     format!("{} / {total} jeux", ids.len())
                 };
-                ui.label(crate::i18n::rich(count).size(11.0).color(pal.text_faint));
+                ui.label(crate::i18n::rich(count).size(12.0).color(pal.text_faint));
             });
         });
         ui.add_space(10.0);
@@ -613,7 +613,7 @@ impl QuarkApp {
                         "{marked_count} sélectionné{}",
                         if marked_count > 1 { "s" } else { "" }
                     ))
-                    .size(11.0)
+                    .size(12.0)
                     .color(pal.accent),
                 );
                 ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
@@ -645,7 +645,7 @@ impl QuarkApp {
                             } else {
                                 "Aucun jeu ne correspond au filtre."
                             })
-                            .size(12.5)
+                            .size(13.0)
                             .color(pal.text_dim),
                         );
                         ui.add_space(12.0);
@@ -708,7 +708,7 @@ impl QuarkApp {
                 ui.add_space(4.0);
                 ui.label(
                     crate::i18n::rich(format!("Artworks · {label}"))
-                        .size(11.5)
+                        .size(12.5)
                         .color(pal.text_dim),
                 );
             });
@@ -1344,7 +1344,7 @@ impl QuarkApp {
                         ui.add_space(32.0);
                         ui.label(
                             crate::i18n::rich("INFORMATIONS")
-                                .size(11.0)
+                                .size(12.0)
                                 .color(pal.text_faint),
                         );
                     });
@@ -1420,7 +1420,7 @@ impl QuarkApp {
                             ui.add_space(32.0);
                             ui.vertical(|ui| {
                                 ui.set_max_width((width - 64.0).max(200.0));
-                                ui.label(crate::i18n::rich(*label).size(11.5).color(pal.text_dim));
+                                ui.label(crate::i18n::rich(*label).size(12.5).color(pal.text_dim));
                                 ui.label(crate::i18n::rich(value).size(13.0).color(pal.text));
                                 ui.add_space(8.0);
                             });
@@ -1435,7 +1435,7 @@ impl QuarkApp {
                                 ui.set_max_width((width - 64.0).max(200.0));
                                 ui.label(
                                     crate::i18n::rich("INSTALLATIONS")
-                                        .size(11.0)
+                                        .size(12.0)
                                         .color(pal.text_faint),
                                 );
                                 for installation in &game.installations {
@@ -1478,7 +1478,7 @@ impl QuarkApp {
                                                 });
                                             ui.label(
                                                 crate::i18n::rich(label)
-                                                    .size(10.5)
+                                                    .size(11.5)
                                                     .color(pal.text_faint),
                                             );
                                         } else {
@@ -1521,7 +1521,7 @@ impl QuarkApp {
                                         for path in &record.custom_save_paths {
                                             ui.label(
                                                 crate::i18n::rich(path.display().to_string())
-                                                    .size(10.0)
+                                                    .size(11.0)
                                                     .color(pal.text_faint),
                                             );
                                         }
@@ -1538,7 +1538,7 @@ impl QuarkApp {
                                         if let Some(status) = self.cloud_sync_status.get(key) {
                                             ui.label(
                                                 crate::i18n::rich(status)
-                                                    .size(10.5)
+                                                    .size(11.5)
                                                     .color(pal.text_faint),
                                             );
                                         }
@@ -1556,7 +1556,7 @@ impl QuarkApp {
                                 ui.set_max_width((width - 64.0).max(200.0));
                                 ui.label(
                                     crate::i18n::rich(&game.description)
-                                        .size(12.5)
+                                        .size(13.0)
                                         .color(pal.text_dim),
                                 );
                                 ui.add_space(8.0);
@@ -1568,8 +1568,8 @@ impl QuarkApp {
                             ui.add_space(32.0);
                             ui.vertical(|ui| {
                                 ui.set_max_width((width - 64.0).max(200.0));
-                                ui.label(crate::i18n::rich("NOTES").size(11.0).color(pal.text_faint));
-                                ui.label(crate::i18n::rich(&game.notes).size(12.5).color(pal.text_dim));
+                                ui.label(crate::i18n::rich("NOTES").size(12.0).color(pal.text_faint));
+                                ui.label(crate::i18n::rich(&game.notes).size(13.0).color(pal.text_dim));
                                 ui.add_space(8.0);
                             });
                         });
@@ -1672,7 +1672,7 @@ impl QuarkApp {
             ui.add_space(8.0);
             ui.label(
                 crate::i18n::rich("Choisis un jeu dans la liste, ou ajoute-en un nouveau.")
-                    .size(12.5)
+                    .size(13.0)
                     .color(pal.text_faint),
             );
             ui.add_space(18.0);
@@ -1707,7 +1707,7 @@ impl QuarkApp {
                             "Aucune session enregistrée pour ce jeu. Lance-le une fois pour \
                              remplir son historique.",
                         )
-                        .size(11.5)
+                        .size(12.5)
                         .color(pal.text_dim),
                     );
                 });
@@ -1731,7 +1731,7 @@ impl QuarkApp {
                 ui.set_max_width(inner);
                 ui.label(
                     crate::i18n::rich("HISTORIQUE")
-                        .size(11.0)
+                        .size(12.0)
                         .color(pal.text_faint),
                 );
                 ui.add_space(4.0);
@@ -1765,7 +1765,7 @@ impl QuarkApp {
             ui.add_space(32.0);
             ui.label(
                 crate::i18n::rich("DOUZE DERNIÈRES SEMAINES")
-                    .size(10.5)
+                    .size(11.5)
                     .color(pal.text_faint),
             );
         });
@@ -1783,7 +1783,7 @@ impl QuarkApp {
             ui.add_space(32.0);
             ui.label(
                 crate::i18n::rich("DERNIÈRES SESSIONS")
-                    .size(10.5)
+                    .size(11.5)
                     .color(pal.text_faint),
             );
         });
@@ -1796,20 +1796,20 @@ impl QuarkApp {
                         stats::day_of(session.start),
                         crate::i18n::is_english(),
                     ))
-                    .size(11.5)
+                    .size(12.5)
                     .color(pal.text),
                 );
                 ui.add_space(10.0);
                 ui.label(
                     crate::i18n::rich(config::human_ago(session.start))
-                        .size(10.5)
+                        .size(11.5)
                         .color(pal.text_faint),
                 );
                 ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
                     ui.add_space(32.0);
                     ui.label(
                         crate::i18n::rich(stats::human(session.secs))
-                            .size(11.5)
+                            .size(12.5)
                             .color(pal.text_dim),
                     );
                 });
@@ -1839,7 +1839,7 @@ impl QuarkApp {
                             "Ce jeu n'est lié à aucune boutique : ses succès ne peuvent pas \
                              être lus. Ajoute-le depuis Mes jeux pour relier sa fiche.",
                         )
-                        .size(11.5)
+                        .size(12.5)
                         .color(pal.text_dim),
                     );
                 });
@@ -1861,7 +1861,7 @@ impl QuarkApp {
                         "Steam n'expose pas ses succès sans sa propre session : \
                          ils ne sont pas lisibles depuis Quark.",
                     )
-                    .size(11.5)
+                    .size(12.5)
                     .color(pal.text_dim),
                 );
             });
@@ -1888,7 +1888,7 @@ impl QuarkApp {
                 ui.set_max_width((width - 64.0).max(200.0));
                 ui.label(
                     crate::i18n::rich(format!("SUCCÈS {provider_label}"))
-                        .size(11.0)
+                        .size(12.0)
                         .color(pal.text_faint),
                 );
                 match &state {
@@ -1938,7 +1938,7 @@ impl QuarkApp {
                     ui.add_space(6.0);
                     ui.label(
                         crate::i18n::rich(format!("Lecture des succès {provider_label}…"))
-                            .size(11.5)
+                            .size(12.5)
                             .color(pal.text_dim),
                     );
                 });
@@ -1950,14 +1950,14 @@ impl QuarkApp {
                     ui.add_space(32.0);
                     ui.vertical(|ui| {
                         ui.set_max_width((width - 64.0).max(200.0));
-                        ui.label(crate::i18n::rich(message).size(11.5).color(pal.danger));
+                        ui.label(crate::i18n::rich(message).size(12.5).color(pal.danger));
                         ui.add_space(4.0);
                         ui.label(
                             crate::i18n::rich(
                                 "Les succès demandent une session connectée (Paramètres → \
                                  Boutiques & outils) et un jeu qui en publie.",
                             )
-                            .size(10.5)
+                            .size(11.5)
                             .color(pal.text_faint),
                         );
                     });
@@ -1968,7 +1968,7 @@ impl QuarkApp {
                     ui.add_space(32.0);
                     ui.label(
                         crate::i18n::rich("Ce jeu ne publie aucun succès.")
-                            .size(11.5)
+                            .size(12.5)
                             .color(pal.text_dim),
                     );
                 });
@@ -1979,7 +1979,7 @@ impl QuarkApp {
                         ui.add_space(32.0);
                         ui.label(
                             crate::i18n::rich("Triés du plus courant au plus rare")
-                                .size(10.0)
+                                .size(11.0)
                                 .color(pal.text_faint),
                         );
                     });
@@ -2013,14 +2013,14 @@ impl QuarkApp {
                             ui.horizontal(|ui| {
                                 ui.label(
                                     crate::i18n::raw(&row.name)
-                                        .size(12.5)
+                                        .size(13.0)
                                         .strong()
                                         .color(if row.unlocked { pal.text } else { pal.text_dim }),
                                 );
                                 if row.session {
                                     ui.label(
                                         crate::i18n::rich("session")
-                                            .size(9.0)
+                                            .size(10.0)
                                             .strong()
                                             .color(pal.accent),
                                     );
@@ -2032,7 +2032,7 @@ impl QuarkApp {
                                         format!("{rarity:.1} %").replace('.', ",")
                                     };
                                     ui.label(
-                                        crate::i18n::rich(text).size(9.5).color(pal.text_faint),
+                                        crate::i18n::rich(text).size(10.5).color(pal.text_faint),
                                     )
                                     .on_hover_text("Pourcentage de joueurs ayant obtenu ce succès");
                                 }
@@ -2042,7 +2042,7 @@ impl QuarkApp {
                                             "progression {:.0} %",
                                             row.progress * 100.0
                                         ))
-                                        .size(9.5)
+                                        .size(10.5)
                                         .color(pal.text_faint),
                                     );
                                 }
@@ -2050,7 +2050,7 @@ impl QuarkApp {
                             if !row.description.is_empty() {
                                 ui.label(
                                     crate::i18n::rich(&row.description)
-                                        .size(11.0)
+                                        .size(12.0)
                                         .color(pal.text_dim),
                                 );
                             }
@@ -2084,7 +2084,7 @@ impl QuarkApp {
             ui.add_space(32.0);
             ui.label(
                 crate::i18n::rich("ACTUALITÉS")
-                    .size(11.0)
+                    .size(12.0)
                     .color(pal.text_faint),
             );
             if linked {
@@ -2193,7 +2193,7 @@ impl QuarkApp {
                                 meta.push(config::human_ago(item.date));
                                 ui.label(
                                     crate::i18n::rich(meta.join("  ·  "))
-                                        .size(11.0)
+                                        .size(12.0)
                                         .color(pal.text_faint),
                                 );
                                 ui.add_space(4.0);
@@ -2511,7 +2511,7 @@ fn overview_card(
         .inner_margin(egui::Margin::symmetric(18, 16))
         .show(ui, |ui| {
             ui.set_width(ui.available_width());
-            ui.label(crate::i18n::rich("APERÇU").size(11.0).color(pal.text_faint));
+            ui.label(crate::i18n::rich("APERÇU").size(12.0).color(pal.text_faint));
             ui.add_space(8.0);
             overview_line(ui, pal, "Temps de jeu", playtime);
             overview_line(ui, pal, "Dernière session", &game.last_played_label());
@@ -2522,7 +2522,7 @@ fn overview_card(
                 ui.add_space(2.0);
                 ui.label(
                     crate::i18n::rich(game.genres.join(" · "))
-                        .size(12.5)
+                        .size(13.0)
                         .color(pal.text),
                 );
             }
@@ -2535,7 +2535,7 @@ fn overview_card(
             ui.horizontal(|ui| {
                 ui.label(
                     crate::i18n::rich("HOWLONGTOBEAT")
-                        .size(10.0)
+                        .size(11.0)
                         .strong()
                         .color(pal.accent),
                 );
@@ -2545,7 +2545,7 @@ fn overview_card(
                     ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
                         ui.label(
                             crate::i18n::rich(crate::howlongtobeat::Report::hours_label(headline))
-                                .size(12.5)
+                                .size(13.0)
                                 .strong()
                                 .color(pal.text),
                         );
@@ -2557,14 +2557,14 @@ fn overview_card(
                 Some(crate::app::HltbState::Loading) | None => {
                     ui.label(
                         crate::i18n::rich("Recherche des temps…")
-                            .size(11.5)
+                            .size(12.5)
                             .color(pal.text_faint),
                     );
                 }
                 Some(crate::app::HltbState::Failed(message)) => {
                     ui.label(
                         crate::i18n::rich("Temps indisponibles")
-                            .size(11.5)
+                            .size(12.5)
                             .color(pal.text_faint),
                     )
                     .on_hover_text(message);
@@ -2573,7 +2573,7 @@ fn overview_card(
                     if report.headline().is_none() {
                         ui.label(
                             crate::i18n::rich("Pas encore de temps soumis.")
-                                .size(11.5)
+                                .size(12.5)
                                 .color(pal.text_faint),
                         );
                     } else {
@@ -2603,7 +2603,7 @@ fn overview_card(
                         }
                         let link = ui.label(
                             crate::i18n::rich("Voir sur HowLongToBeat →")
-                                .size(10.5)
+                                .size(11.5)
                                 .color(pal.text_faint)
                                 .underline(),
                         );
@@ -2632,7 +2632,7 @@ fn overview_line(ui: &mut egui::Ui, pal: &Palette, label: &str, value: &str) {
     ui.horizontal(|ui| {
         ui.label(crate::i18n::rich(label).size(12.0).color(pal.text_dim));
         ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-            ui.label(crate::i18n::rich(value).size(12.5).color(pal.text));
+            ui.label(crate::i18n::rich(value).size(13.0).color(pal.text));
         });
     });
     ui.add_space(4.0);
@@ -2810,7 +2810,7 @@ pub(crate) fn status_chip(ui: &mut egui::Ui, pal: &Palette, status: GameStatus) 
     ui.add(
         egui::Button::new(
             crate::i18n::rich(status.label())
-                .size(10.5)
+                .size(11.5)
                 .strong()
                 .color(theme::on_accent(color)),
         )
@@ -2828,7 +2828,7 @@ pub(crate) fn danger_chip(ui: &mut egui::Ui, pal: &Palette, label: &str) {
     ui.add(
         egui::Button::new(
             crate::i18n::rich(label)
-                .size(10.0)
+                .size(11.0)
                 .strong()
                 .color(Color32::WHITE),
         )
@@ -2901,7 +2901,7 @@ pub(crate) fn protondb_badge(
     };
     let ink = theme::on_accent(color);
     ui.add(
-        egui::Button::new(crate::i18n::rich(label).size(10.5).strong().color(ink))
+        egui::Button::new(crate::i18n::rich(label).size(11.5).strong().color(ink))
             .fill(color)
             .stroke(egui::Stroke::NONE)
             .corner_radius(10.0)
@@ -2914,7 +2914,7 @@ pub(crate) fn protondb_badge(
 /// Chiffre compact de l'onglet Historique (libellé + valeur).
 fn history_metric(ui: &mut egui::Ui, pal: &Palette, label: &str, value: &str) {
     ui.vertical(|ui| {
-        ui.label(crate::i18n::rich(label).size(10.0).color(pal.text_faint));
+        ui.label(crate::i18n::rich(label).size(11.0).color(pal.text_faint));
         ui.label(crate::i18n::rich(value).size(15.0).strong().color(pal.text));
     });
 }

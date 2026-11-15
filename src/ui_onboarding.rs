@@ -67,7 +67,7 @@ impl QuarkApp {
                                         self.touch();
                                     }
                                 }
-                                ui.label(i18n::rich("Langue").size(10.5).color(pal.text_faint));
+                                ui.label(i18n::rich("Langue").size(11.5).color(pal.text_faint));
                             });
                         });
                         ui.add_space(10.0);
@@ -85,7 +85,7 @@ impl QuarkApp {
                                 let (dot, _) =
                                     ui.allocate_exact_size(Vec2::splat(8.0), Sense::hover());
                                 ui.painter().circle_filled(dot.center(), 4.0, color);
-                                ui.label(i18n::rich(*label).size(10.5).color(if selected {
+                                ui.label(i18n::rich(*label).size(11.5).color(if selected {
                                     pal.text
                                 } else {
                                     pal.text_faint
@@ -281,7 +281,7 @@ impl QuarkApp {
         }
         if self.lib.settings.hero_background {
             ui.horizontal(|ui| {
-                ui.label(i18n::rich("Flou").size(11.5).color(pal.text_dim));
+                ui.label(i18n::rich("Flou").size(12.5).color(pal.text_dim));
                 let mut blur = self.lib.settings.hero_background_blur;
                 if ui
                     .add(egui::Slider::new(&mut blur, 2.0..=30.0).suffix(" px"))
@@ -367,7 +367,7 @@ impl QuarkApp {
                     );
                     ui.label(
                         i18n::rich("Les changements concrets de cette version.")
-                            .size(11.5)
+                            .size(12.5)
                             .color(pal.text_faint),
                     );
                 });
@@ -402,7 +402,7 @@ impl QuarkApp {
                     ui.vertical(|ui| {
                         ui.set_width(540.0);
                         ui.add(
-                            egui::Label::new(i18n::rich(*sentence).size(12.5).color(pal.text_dim))
+                            egui::Label::new(i18n::rich(*sentence).size(13.0).color(pal.text_dim))
                                 .wrap(),
                         );
                     });
@@ -464,7 +464,7 @@ fn onboarding_card(
                 ui.label(i18n::rich(title).size(13.0).strong().color(pal.text));
             });
             ui.add_space(4.0);
-            ui.label(i18n::rich(detail).size(11.0).color(pal.text_dim));
+            ui.label(i18n::rich(detail).size(12.0).color(pal.text_dim));
         });
     ui.add_space(8.0);
 }
@@ -481,7 +481,7 @@ fn onboarding_line(ui: &mut egui::Ui, pal: &crate::theme::Palette, key: &str, de
             pal.accent,
         );
         ui.add_space(10.0);
-        ui.label(i18n::rich(detail).size(11.5).color(pal.text_dim));
+        ui.label(i18n::rich(detail).size(12.5).color(pal.text_dim));
     });
 }
 

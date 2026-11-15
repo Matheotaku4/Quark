@@ -13,6 +13,7 @@
 #![allow(clippy::missing_safety_doc)]
 
 use std::ffi::c_void;
+use std::io::Write;
 use std::mem::size_of;
 use std::sync::atomic::{AtomicIsize, AtomicPtr, AtomicU32, AtomicUsize, Ordering};
 use std::sync::OnceLock;
@@ -79,6 +80,10 @@ static OVERLAY_HWND: AtomicIsize = AtomicIsize::new(0);
 static LAST_GAME_HWND: AtomicIsize = AtomicIsize::new(0);
 static ORIGINAL_PRESENT: AtomicPtr<c_void> = AtomicPtr::new(std::ptr::null_mut());
 static ORIGINAL_PRESENT1: AtomicPtr<c_void> = AtomicPtr::new(std::ptr::null_mut());
+static FIRST_PRESENT: AtomicU32 = AtomicU32::new(0);
+static FIRST_PRESENT1: AtomicU32 = AtomicU32::new(0);
+static OVERLAY_VISIBLE: AtomicU32 = AtomicU32::new(0);
+static OVERLAY_VISIBILITY_KNOWN: AtomicU32 = AtomicU32::new(0);
 /// Une seule vtable est accrochée par module : `ORIGINAL_PRESENT` et
 /// `ORIGINAL_PRESENT1` ne peuvent stocker qu'un pointeur d'origine. Accrocher
 /// deux classes de swap chain différentes ferait appeler la mauvaise fonction.
@@ -88,6 +93,8 @@ static OVERLAY_MUTEX: AtomicIsize = AtomicIsize::new(0);
 static ORIGINAL_CREATE_SWAPCHAIN: AtomicPtr<c_void> = AtomicPtr::new(std::ptr::null_mut());
 static ORIGINAL_CREATE_SWAPCHAIN_FOR_HWND: AtomicPtr<c_void> = AtomicPtr::new(std::ptr::null_mut());
 static ORIGINAL_CREATE_SWAPCHAIN_FOR_COMPOSITION: AtomicPtr<c_void> =
+    AtomicPtr::new(std::ptr::null_mut());
+static ORIGINAL_CREATE_SWAPCHAIN_FOR_CORE_WINDOW: AtomicPtr<c_void> =
     AtomicPtr::new(std::ptr::null_mut());
 
 type PresentFn = unsafe extern "system" fn(*mut c_void, u32, u32) -> i32;
@@ -112,6 +119,14 @@ type CreateSwapChainForHwndFn = unsafe extern "system" fn(
     *mut *mut c_void,
 ) -> i32;
 type CreateSwapChainForCompositionFn = unsafe extern "system" fn(
+    *mut c_void,
+    *mut c_void,
+    *const c_void,
+    *mut c_void,
+    *mut *mut c_void,
+) -> i32;
+type CreateSwapChainForCoreWindowFn = unsafe extern "system" fn(
+    *mut c_void,
     *mut c_void,
     *mut c_void,
     *const c_void,
@@ -175,7 +190,7 @@ struct FactoryVtbl {
     is_current: *mut c_void,
     is_windowed_stereo_enabled: *mut c_void,
     create_swap_chain_for_hwnd: CreateSwapChainForHwndFn,
-    create_swap_chain_for_core_window: *mut c_void,
+    create_swap_chain_for_core_window: CreateSwapChainForCoreWindowFn,
     get_shared_resource_adapter_luid: *mut c_void,
     register_stereo_status_window: *mut c_void,
     register_stereo_status_event: *mut c_void,
@@ -241,6 +256,32 @@ unsafe fn real_proc(dll: &str, name: &[u8]) -> Option<*mut c_void> {
     let module = system_module(dll)?;
     let address = GetProcAddress(module, windows::core::PCSTR(name.as_ptr()));
     address.map(|proc| proc as *mut c_void)
+}
+
+/// Écrit une ligne dans le journal demandé par Quark. Le fichier est ouvert en
+/// ajout à chaque événement : les appels sont peu nombreux (initialisation,
+/// installation des hooks, changements de visibilité), jamais par image.
+fn overlay_log(message: &str) {
+    let Ok(path) = std::env::var("QUARK_OVERLAY_LOG") else {
+        return;
+    };
+    if path.trim().is_empty() {
+        return;
+    }
+    let Ok(mut file) = std::fs::OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(path)
+    else {
+        return;
+    };
+    unsafe {
+        let _ = writeln!(
+            file,
+            "[quark-overlay {}] {message}",
+            GetCurrentProcessId()
+        );
+    }
 }
 
 /// Ouvre la mémoire partagée nommée du processus. Les deux modules proxy
@@ -406,12 +447,18 @@ unsafe fn hook_factory_vtable(factory: *mut c_void) {
         std::ptr::null_mut()
     };
 
+    overlay_log(&format!(
+        "factory base_vtable={:p} factory2={} factory2_vtable={:p}",
+        base_vtable, has_factory2, factory2_vtable
+    ));
+
     // Une seule fabrique est accrochée par module : les pointeurs d'origine
     // sont globaux et une seconde vtable les écraserait.
     if !HOOKED_FACTORY_VTABLE
         .swap(base_vtable as *mut c_void, Ordering::SeqCst)
         .is_null()
     {
+        overlay_log("factory ignorée : ce module a déjà une fabrique accrochée");
         if has_factory2 {
             let release: ReleaseFn = std::mem::transmute((*factory2_vtable).release);
             release(factory2);
@@ -423,32 +470,46 @@ unsafe fn hook_factory_vtable(factory: *mut c_void) {
     // implémente aussi IDXGIFactory2.
     let create_slot = &mut (*base_vtable).create_swap_chain;
     if (*create_slot as usize) != (create_swapchain_hook as CreateSwapChainFn as usize) {
-        let _ = patch(
+        let patched = patch(
             create_slot,
             create_swapchain_hook,
             &ORIGINAL_CREATE_SWAPCHAIN,
         );
+        overlay_log(&format!("CreateSwapChain patch={patched}"));
     }
     if has_factory2 {
         let hwnd_slot = &mut (*factory2_vtable).create_swap_chain_for_hwnd;
         if (*hwnd_slot as usize)
             != (create_swapchain_for_hwnd_hook as CreateSwapChainForHwndFn as usize)
         {
-            let _ = patch(
+            let patched = patch(
                 hwnd_slot,
                 create_swapchain_for_hwnd_hook,
                 &ORIGINAL_CREATE_SWAPCHAIN_FOR_HWND,
             );
+            overlay_log(&format!("CreateSwapChainForHwnd patch={patched}"));
+        }
+        let core_slot = &mut (*factory2_vtable).create_swap_chain_for_core_window;
+        if (*core_slot as usize)
+            != (create_swapchain_for_core_window_hook as CreateSwapChainForCoreWindowFn as usize)
+        {
+            let patched = patch(
+                core_slot,
+                create_swapchain_for_core_window_hook,
+                &ORIGINAL_CREATE_SWAPCHAIN_FOR_CORE_WINDOW,
+            );
+            overlay_log(&format!("CreateSwapChainForCoreWindow patch={patched}"));
         }
         let composition_slot = &mut (*factory2_vtable).create_swap_chain_for_composition;
         if (*composition_slot as usize)
             != (create_swapchain_for_composition_hook as CreateSwapChainForCompositionFn as usize)
         {
-            let _ = patch(
+            let patched = patch(
                 composition_slot,
                 create_swapchain_for_composition_hook,
                 &ORIGINAL_CREATE_SWAPCHAIN_FOR_COMPOSITION,
             );
+            overlay_log(&format!("CreateSwapChainForComposition patch={patched}"));
         }
         let release: ReleaseFn = std::mem::transmute((*factory2_vtable).release);
         release(factory2);
@@ -518,6 +579,7 @@ unsafe extern "system" fn create_swapchain_hook(
     }
     let original: CreateSwapChainFn = std::mem::transmute(original);
     let result = original(factory, device, desc, swapchain);
+    overlay_log(&format!("CreateSwapChain result=0x{result:08X}"));
     if result >= 0 && !swapchain.is_null() {
         hook_swapchain(*swapchain);
     }
@@ -547,6 +609,7 @@ unsafe extern "system" fn create_swapchain_for_hwnd_hook(
         restrict_to_output,
         swapchain,
     );
+    overlay_log(&format!("CreateSwapChainForHwnd result=0x{result:08X}"));
     if result >= 0 && !swapchain.is_null() {
         hook_swapchain(*swapchain);
     }
@@ -566,6 +629,42 @@ unsafe extern "system" fn create_swapchain_for_composition_hook(
     }
     let original: CreateSwapChainForCompositionFn = std::mem::transmute(original);
     let result = original(factory, device, desc, restrict_to_output, swapchain);
+    overlay_log(&format!(
+        "CreateSwapChainForComposition result=0x{result:08X}"
+    ));
+    if result >= 0 && !swapchain.is_null() {
+        hook_swapchain(*swapchain);
+    }
+    result
+}
+
+/// UWP/Game Pass games create their swap chain from a `CoreWindow` instead of
+/// an HWND. It is the same `IDXGISwapChain` afterwards; only the creation path
+/// differs. Without this slot, those games stayed at zero FPS.
+unsafe extern "system" fn create_swapchain_for_core_window_hook(
+    factory: *mut c_void,
+    device: *mut c_void,
+    window: *mut c_void,
+    desc: *const c_void,
+    restrict_to_output: *mut c_void,
+    swapchain: *mut *mut c_void,
+) -> i32 {
+    let original = ORIGINAL_CREATE_SWAPCHAIN_FOR_CORE_WINDOW.load(Ordering::Relaxed);
+    if original.is_null() {
+        return -2005270483;
+    }
+    let original: CreateSwapChainForCoreWindowFn = std::mem::transmute(original);
+    let result = original(
+        factory,
+        device,
+        window,
+        desc,
+        restrict_to_output,
+        swapchain,
+    );
+    overlay_log(&format!(
+        "CreateSwapChainForCoreWindow result=0x{result:08X}"
+    ));
     if result >= 0 && !swapchain.is_null() {
         hook_swapchain(*swapchain);
     }
@@ -584,6 +683,7 @@ unsafe fn hook_swapchain(swapchain: *mut c_void) {
     if vtable.is_null() {
         return;
     }
+    overlay_log(&format!("swapchain {:p} vtable={:p}", swapchain, vtable));
 
     // Une seule classe de swap chain est accrochée par module : `ORIGINAL_PRESENT`
     // et `ORIGINAL_PRESENT1` ne peuvent stocker qu'un pointeur d'origine.
@@ -597,10 +697,14 @@ unsafe fn hook_swapchain(swapchain: *mut c_void) {
         )
         .is_err()
     {
+        overlay_log("swapchain ignorée : une classe est déjà accrochée par ce module");
         return;
     }
 
     let shared = shared_stats();
+    if shared.is_none() {
+        overlay_log("mémoire partagée indisponible : registre local seulement");
+    }
     let _registry_guard = match shared {
         Some(_) => match registry_mutex() {
             Some(guard) => Some(guard),
@@ -617,6 +721,7 @@ unsafe fn hook_swapchain(swapchain: *mut c_void) {
     // une autre classe plus tard.
     if let Some(stats) = shared {
         if !register_vtable(&stats.present_vtables, vtable as *mut c_void) {
+            overlay_log("swapchain déjà accrochée par l'autre proxy");
             release_swapchain_reservation(vtable as *mut c_void);
             return;
         }
@@ -628,6 +733,7 @@ unsafe fn hook_swapchain(swapchain: *mut c_void) {
             present_hook as PresentFn,
             &ORIGINAL_PRESENT,
         );
+    overlay_log(&format!("Present patch={patched} vtable={:p}", vtable));
     if !patched {
         if let Some(stats) = shared {
             unregister_vtable(&stats.present_vtables, vtable as *mut c_void);
@@ -651,6 +757,7 @@ unsafe fn hook_swapchain(swapchain: *mut c_void) {
                 let slot = &mut *vtable1.add(22).cast::<Present1Fn>();
                 if (*slot as usize) != (present1_hook as Present1Fn as usize) {
                     let patched1 = patch(slot, present1_hook as Present1Fn, &ORIGINAL_PRESENT1);
+                    overlay_log(&format!("Present1 patch={patched1} vtable={:p}", vtable1));
                     if !patched1 {
                         if let Some(stats) = shared {
                             unregister_vtable(&stats.present1_vtables, vtable1_ptr);
@@ -669,6 +776,9 @@ unsafe extern "system" fn present_hook(
     sync_interval: u32,
     flags: u32,
 ) -> i32 {
+    if FIRST_PRESENT.swap(1, Ordering::Relaxed) == 0 {
+        overlay_log(&format!("premier Present swapchain={swapchain:p}"));
+    }
     frames().fetch_add(1, Ordering::Relaxed);
     let original = ORIGINAL_PRESENT.load(Ordering::Relaxed);
     if original.is_null() {
@@ -684,6 +794,9 @@ unsafe extern "system" fn present1_hook(
     flags: u32,
     parameters: *const c_void,
 ) -> i32 {
+    if FIRST_PRESENT1.swap(1, Ordering::Relaxed) == 0 {
+        overlay_log(&format!("premier Present1 swapchain={swapchain:p}"));
+    }
     frames().fetch_add(1, Ordering::Relaxed);
     let original = ORIGINAL_PRESENT1.load(Ordering::Relaxed);
     if original.is_null() {
@@ -902,6 +1015,16 @@ fn fps_enabled() -> bool {
         .unwrap_or(false)
 }
 
+unsafe fn set_overlay_visible(hwnd: HWND, visible: bool, reason: &str) {
+    let was_visible = OVERLAY_VISIBLE.swap(u32::from(visible), Ordering::Relaxed) != 0;
+    let first_decision = OVERLAY_VISIBILITY_KNOWN.swap(1, Ordering::Relaxed) == 0;
+    if first_decision || was_visible != visible {
+        overlay_log(&format!("overlay visible={visible} ({reason})"));
+    }
+    let command = if visible { SW_SHOWNOACTIVATE } else { SW_HIDE };
+    let _: BOOL = ShowWindow(hwnd, command);
+}
+
 fn position_overlay(hwnd: HWND) {
     unsafe {
         let foreground = GetForegroundWindow();
@@ -916,16 +1039,18 @@ fn position_overlay(hwnd: HWND) {
         } else if foreground.0 != overlay.0 {
             // Quark, le bureau ou une autre application : l'overlay se cache au
             // lieu de rester au-dessus de tout l'écran.
-            let _: BOOL = ShowWindow(hwnd, SW_HIDE);
+            set_overlay_visible(hwnd, false, "jeu non au premier plan");
             return;
         }
         let game = HWND(LAST_GAME_HWND.load(Ordering::Relaxed) as *mut c_void);
         let mut rect = RECT::default();
         if game.0.is_null() || GetWindowRect(game, &mut rect).is_err() {
+            set_overlay_visible(hwnd, false, "fenêtre du jeu introuvable");
             return;
         }
         let width = rect.right - rect.left;
         if width < 320 {
+            set_overlay_visible(hwnd, false, "fenêtre du jeu trop étroite");
             return;
         }
         let right = std::env::var("QUARK_OVERLAY_CORNER")
@@ -945,7 +1070,7 @@ fn position_overlay(hwnd: HWND) {
             0,
             SWP_NOSIZE | SWP_NOACTIVATE,
         );
-        let _: BOOL = ShowWindow(hwnd, SW_SHOWNOACTIVATE);
+        set_overlay_visible(hwnd, true, "jeu au premier plan");
     }
 }
 
@@ -1056,7 +1181,13 @@ unsafe fn overlay_thread() {
 }
 
 unsafe extern "system" fn init_thread(_: *mut c_void) -> u32 {
-    if !fps_enabled() {
+    let enabled = fps_enabled();
+    overlay_log(&format!(
+        "init fps_enabled={enabled} exe={:?} log={:?}",
+        std::env::current_exe(),
+        std::env::var("QUARK_OVERLAY_LOG")
+    ));
+    if !enabled {
         return 0;
     }
     // Le même binaire est chargé deux fois quand le jeu importe à la fois
@@ -1069,10 +1200,12 @@ unsafe extern "system" fn init_thread(_: *mut c_void) -> u32 {
         return 0;
     };
     if GetLastError() == ERROR_ALREADY_EXISTS {
+        overlay_log("init ignoré : la fenêtre overlay existe déjà");
         let _ = CloseHandle(mutex);
         return 0;
     }
     OVERLAY_MUTEX.store(mutex.0 as isize, Ordering::SeqCst);
+    overlay_log("init : création de la fenêtre overlay");
     overlay_thread();
     0
 }

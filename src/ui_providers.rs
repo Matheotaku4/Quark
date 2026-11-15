@@ -56,7 +56,7 @@ impl QuarkApp {
                 "Lancée automatiquement au démarrage, boutique par boutique. \
                  Chaque synchronisation remplace seulement les jeux de sa boutique.",
             )
-            .size(11.5)
+            .size(12.5)
             .color(pal.text_dim),
         );
         ui.horizontal(|ui| {
@@ -124,7 +124,7 @@ impl QuarkApp {
         ] {
             let (count, last) = summary[index];
             ui.horizontal(|ui| {
-                ui.label(crate::i18n::rich(label).size(12.5).strong().color(pal.text));
+                ui.label(crate::i18n::rich(label).size(13.0).strong().color(pal.text));
                 ui.label(
                     crate::i18n::rich(if count > 1 {
                         format!("{count} jeux")
@@ -133,20 +133,20 @@ impl QuarkApp {
                     } else {
                         "aucun jeu".to_string()
                     })
-                    .size(11.0)
+                    .size(12.0)
                     .color(pal.text_faint),
                 );
                 if let Some(ts) = last {
                     ui.label(
                         crate::i18n::rich(crate::config::human_ago(ts))
-                            .size(11.0)
+                            .size(12.0)
                             .color(pal.text_faint),
                     );
                 }
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                     let enabled = connected && !busy;
                     if busy {
-                        ui.add(egui::Spinner::new().size(11.0));
+                        ui.add(egui::Spinner::new().size(12.0));
                     }
                     ui.add_enabled_ui(enabled, |ui| {
                         let text = if busy { "En cours…" } else { "Synchroniser" };
@@ -160,9 +160,9 @@ impl QuarkApp {
                     });
                 });
             });
-            ui.label(crate::i18n::rich(note).size(11.0).color(pal.text_dim));
+            ui.label(crate::i18n::rich(note).size(12.0).color(pal.text_dim));
             if let Some(error) = error {
-                ui.label(crate::i18n::rich(error).size(11.0).color(pal.danger));
+                ui.label(crate::i18n::rich(error).size(12.0).color(pal.danger));
             }
             ui.add_space(4.0);
         }
@@ -171,7 +171,7 @@ impl QuarkApp {
                 ui.add(egui::Spinner::new().size(12.0));
                 ui.label(
                     crate::i18n::rich("Synchronisation en cours…")
-                        .size(11.0)
+                        .size(12.0)
                         .color(pal.text_faint),
                 );
             });
@@ -282,7 +282,7 @@ fn account_row(
     let mut clicked = false;
     ui.horizontal_wrapped(|ui| {
         ui.label(crate::i18n::rich(provider).size(12.0).color(pal.text));
-        ui.label(crate::i18n::rich(status).size(11.0).color(pal.text_dim));
+        ui.label(crate::i18n::rich(status).size(12.0).color(pal.text_dim));
         if let Some(label) = action
             && crate::widgets::ghost_button(ui, label, pal, crate::widgets::Icon::Plus).clicked()
         {
@@ -330,7 +330,7 @@ fn login_form(
         .show(ui, |ui| {
             ui.label(
                 crate::i18n::rich(instructions)
-                    .size(11.5)
+                    .size(12.5)
                     .color(pal.text_dim),
             );
             ui.add_space(6.0);
@@ -375,9 +375,9 @@ fn login_form(
                 }
             });
             if let Some(error) = &login.error {
-                ui.label(crate::i18n::rich(error).size(11.5).color(pal.danger));
+                ui.label(crate::i18n::rich(error).size(12.5).color(pal.danger));
             } else if let Some(status) = &login.status {
-                ui.label(crate::i18n::rich(status).size(11.0).color(pal.accent));
+                ui.label(crate::i18n::rich(status).size(12.0).color(pal.accent));
             }
             ui.label(
                 crate::i18n::rich(
@@ -385,7 +385,7 @@ fn login_form(
                      user.json (droits privés) et n'affiche jamais le code ni les jetons. \
                      Legendary reste utilisé pour la bibliothèque et l'installation.",
                 )
-                .size(10.5)
+                .size(11.5)
                 .color(pal.text_faint),
             );
         });

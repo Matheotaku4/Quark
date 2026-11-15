@@ -168,6 +168,66 @@ pub fn launch_environment(corner: &str) -> Vec<(String, String)> {
     ]
 }
 
+/// Chemin du journal de diagnostic de la DLL, dans le dossier de logs du jeu.
+///
+/// Wine expose la racine Linux sous `Z:` ; la DLL Windows ne peut pas ouvrir un
+/// chemin POSIX. Le fichier est créé par Quark en `0600` avant le lancement,
+/// pour ne pas dépendre des permissions par défaut de Wine.
+pub fn overlay_log_path(game_id: &str) -> String {
+    let path = crate::config::log_dir(game_id).join("overlay.log");
+    let path = path.to_string_lossy();
+    format!("Z:{}", path.replace('/', "\\"))
+}
+
+/// Crée (ou vide) le journal avec des droits propriétaire uniquement. Le jeu
+/// Windows n'a alors qu'à l'ouvrir en ajout ; s'il ne peut pas, aucune variable
+/// de journal n'est transmise.
+fn prepare_overlay_log(game_id: &str) -> bool {
+    let path = crate::config::log_dir(game_id).join("overlay.log");
+    let Some(directory) = path.parent() else {
+        return false;
+    };
+    if std::fs::create_dir_all(directory).is_err() {
+        return false;
+    }
+    let mut options = std::fs::OpenOptions::new();
+    options.create(true).write(true).truncate(true);
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::OpenOptionsExt as _;
+        options.mode(0o600);
+        // Ne jamais suivre un lien symbolique planté sur overlay.log : le
+        // lancement continuerait sans journal plutôt que de tronquer un autre
+        // fichier et de changer ses permissions.
+        options.custom_flags(libc::O_NOFOLLOW);
+    }
+    let Ok(file) = options.open(&path) else {
+        return false;
+    };
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt as _;
+        if file
+            .set_permissions(std::fs::Permissions::from_mode(0o600))
+            .is_err()
+        {
+            return false;
+        }
+    }
+    true
+}
+
+/// Variables de lancement, journal compris. Le journal permet de distinguer
+/// « DLL non chargée », « API non couverte » et « swap chain non accrochée »
+/// sans demander au joueur de lancer un débogueur Windows.
+pub fn launch_environment_for(game: &Game, corner: &str) -> Vec<(String, String)> {
+    let mut env = launch_environment(corner);
+    if prepare_overlay_log(&game.id) {
+        env.push(("QUARK_OVERLAY_LOG".to_string(), overlay_log_path(&game.id)));
+    }
+    env
+}
+
 /// Remplace une variable existante au lieu d'empiler deux valeurs.
 pub fn set_env(env: &mut Vec<(String, String)>, name: &str, value: &str) {
     env.retain(|(key, _)| !key.eq_ignore_ascii_case(name));
@@ -322,6 +382,16 @@ mod tests {
                 "WINEDLLOVERRIDES".to_string(),
                 "comdlg32,shell32=n,b;foo=n;d3d11=n,b;dxgi=n,b".to_string()
             )]
+        );
+    }
+
+    #[test]
+    fn le_journal_overlay_est_dans_un_chemin_wine_absolu() {
+        let path = overlay_log_path("jeu-test");
+        assert!(path.starts_with("Z:\\"), "chemin Wine attendu : {path}");
+        assert!(
+            path.ends_with("overlay.log"),
+            "nom du journal attendu : {path}"
         );
     }
 

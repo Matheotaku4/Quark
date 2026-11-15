@@ -74,12 +74,12 @@ impl QuarkApp {
                                 ui.horizontal(|ui| {
                                     ui.label(
                                         crate::i18n::rich("MES JEUX")
-                                            .size(11.0)
+                                            .size(12.0)
                                             .strong()
                                             .color(pal.accent),
                                     );
                                     if busy {
-                                        ui.add(egui::Spinner::new().size(11.0));
+                                        ui.add(egui::Spinner::new().size(12.0));
                                     }
                                     ui.with_layout(
                                         Layout::right_to_left(Align::Center),
@@ -152,21 +152,21 @@ impl QuarkApp {
                                 if let Some(error) = &self.steam_sync_error {
                                     ui.label(
                                         crate::i18n::rich(format!("Steam : {error}"))
-                                            .size(11.5)
+                                            .size(12.5)
                                             .color(pal.danger),
                                     );
                                 }
                                 if let Some(error) = &self.epic_sync_error {
                                     ui.label(
                                         crate::i18n::rich(format!("Epic : {error}"))
-                                            .size(11.5)
+                                            .size(12.5)
                                             .color(pal.danger),
                                     );
                                 }
                                 if let Some(error) = &self.gog_sync_error {
                                     ui.label(
                                         crate::i18n::rich(format!("GOG : {error}"))
-                                            .size(11.5)
+                                            .size(12.5)
                                             .color(pal.danger),
                                     );
                                 }
@@ -179,7 +179,7 @@ impl QuarkApp {
                                              les jeux possédés demandent une clé Web API dans \
                                              Paramètres → Boutiques & outils.",
                                         )
-                                        .size(11.5)
+                                        .size(12.5)
                                         .color(pal.text_faint),
                                     );
                                 }
@@ -291,7 +291,7 @@ impl QuarkApp {
                                                 "Correspondance exacte : {}",
                                                 labels.join(" · ")
                                             ))
-                                            .size(11.0)
+                                            .size(12.0)
                                             .color(pal.text_dim),
                                         );
                                         if ui.small_button("Fusionner l’affichage").clicked() {
@@ -316,7 +316,7 @@ impl QuarkApp {
                                                 "Groupe manuel : {}",
                                                 labels.join(" · ")
                                             ))
-                                            .size(11.0)
+                                            .size(12.0)
                                             .color(pal.text_dim),
                                         );
                                         for key in &group.members {
@@ -652,7 +652,7 @@ impl QuarkApp {
                                     "Installation {} · {title}",
                                     provider_name(key.provider)
                                 ))
-                                .size(12.5)
+                                .size(13.0)
                                 .strong()
                                 .color(pal.text),
                             );
@@ -668,7 +668,7 @@ impl QuarkApp {
                             }
                             ui.label(
                                 crate::i18n::rich(detail.join(" · "))
-                                    .size(11.0)
+                                    .size(12.0)
                                     .color(pal.text_dim),
                             );
                         });
@@ -745,12 +745,12 @@ impl QuarkApp {
         if active.is_empty() {
             ui.label(
                 crate::i18n::rich("Aucun téléchargement en cours.")
-                    .size(11.5)
+                    .size(12.5)
                     .color(pal.text_dim),
             );
             ui.label(
                 crate::i18n::rich("Lance une installation depuis Mes jeux.")
-                    .size(10.5)
+                    .size(11.5)
                     .color(pal.text_faint),
             );
             return;
@@ -779,7 +779,7 @@ impl QuarkApp {
                     ui.horizontal(|ui| {
                         ui.label(
                             crate::i18n::rich(format!("{} · {title}", provider_name(key.provider)))
-                                .size(11.5)
+                                .size(12.5)
                                 .strong()
                                 .color(pal.text),
                         );
@@ -801,7 +801,7 @@ impl QuarkApp {
                     }
                     ui.label(
                         crate::i18n::rich(detail.join(" · "))
-                            .size(10.5)
+                            .size(11.5)
                             .color(pal.text_dim),
                     );
                     let (bar, _) = ui
@@ -1023,14 +1023,14 @@ fn provider_card(
         ui.spacing_mut().item_spacing.x = 5.0;
         ui.label(
             crate::i18n::rich(buffer_or(&game.key.provider))
-                .size(10.0)
+                .size(11.0)
                 .color(pal.text_faint),
         );
-        ui.label(crate::i18n::rich("·").size(10.0).color(pal.text_faint));
+        ui.label(crate::i18n::rich("·").size(11.0).color(pal.text_faint));
         if installed {
-            ui.colored_label(status_color, crate::i18n::rich(status).size(10.0));
+            ui.colored_label(status_color, crate::i18n::rich(status).size(11.0));
         } else {
-            ui.label(crate::i18n::rich(status).size(10.0).color(status_color));
+            ui.label(crate::i18n::rich(status).size(11.0).color(status_color));
         }
     });
 
@@ -1226,13 +1226,13 @@ fn provider_row(
         ui.spacing_mut().item_spacing.x = 6.0;
         ui.label(
             crate::i18n::rich(provider_name(game.key.provider))
-                .size(11.5)
+                .size(12.5)
                 .color(provider_color(game.key.provider)),
         );
-        ui.label(crate::i18n::rich("·").size(11.5).color(pal.text_faint));
+        ui.label(crate::i18n::rich("·").size(12.5).color(pal.text_faint));
         ui.label(
             crate::i18n::rich(install_label(game.install_state))
-                .size(11.5)
+                .size(12.5)
                 .color(if installed { pal.accent } else { pal.text_dim }),
         );
     });
