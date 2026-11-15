@@ -14,7 +14,7 @@
 
 use std::ffi::c_void;
 use std::mem::size_of;
-use std::sync::atomic::{AtomicIsize, AtomicPtr, AtomicU32, Ordering};
+use std::sync::atomic::{AtomicIsize, AtomicPtr, AtomicU32, AtomicUsize, Ordering};
 use std::sync::OnceLock;
 use windows::core::{w, GUID, PCWSTR};
 use windows::Win32::Foundation::{
@@ -50,17 +50,24 @@ const TIMER_ID: usize = 0x51_4B;
 const OVERLAY_WIDTH: i32 = 176;
 const OVERLAY_HEIGHT: i32 = 42;
 
-/// Compteur partagé par les deux copies du proxy (`d3d11.dll` et `dxgi.dll`)
+/// Nombre maximal de vtables suivies. Chaque module n'en accroche qu'une :
+/// deux entrées suffisent pour `d3d11.dll` et `dxgi.dll`, les deux suivantes
+/// couvrent une éventuelle création tardive.
+const MAX_HOOKED_VTABLES: usize = 4;
+
+/// État partagé par les deux copies du proxy (`d3d11.dll` et `dxgi.dll`)
 /// dans le processus du jeu. Sans cela, la fenêtre créée par un module
 /// afficherait le compteur de l'autre module, resté à zéro.
 #[repr(C)]
 struct SharedStats {
     frames: AtomicU32,
     fps: AtomicU32,
-    /// Vaut 1 dès qu'un module a installé le hook `Present`. Le second module
-    /// ne doit pas réinstaller le sien, sinon une présentation serait comptée
-    /// deux fois dans le compteur partagé.
-    present_hooked: AtomicU32,
+    /// Vtables dont le slot `Present` est déjà accroché. Le registre est
+    /// indexé par adresse de vtable : deux modules qui voient la même classe
+    /// de swap chain ne l'accrochent qu'une fois, mais deux classes distinctes
+    /// restent couvertes.
+    present_vtables: [AtomicUsize; MAX_HOOKED_VTABLES],
+    present1_vtables: [AtomicUsize; MAX_HOOKED_VTABLES],
 }
 
 static SHARED_STATS: OnceLock<Option<&'static SharedStats>> = OnceLock::new();
@@ -268,15 +275,49 @@ fn fps() -> &'static AtomicU32 {
     shared_stats().map(|stats| &stats.fps).unwrap_or(&FPS)
 }
 
-/// Mutex nommé, partagé par les deux modules proxy, qui sérialise les
-/// modifications de vtables. `VirtualProtect` agit sur toute la page : deux
-/// modules qui écrivent en même temps pourraient restaurer une protection
-/// trop tôt et faire planter le jeu.
+/// Réserve une vtable dans le registre partagé. Appelé sous `registry_mutex`,
+/// donc le scan et l'écriture ne peuvent pas être entrelacés avec l'autre
+/// module. Retourne `false` si cette vtable est déjà couverte.
+fn register_vtable(entries: &[AtomicUsize; MAX_HOOKED_VTABLES], vtable: *mut c_void) -> bool {
+    let vtable = vtable as usize;
+    if entries
+        .iter()
+        .any(|entry| entry.load(Ordering::Acquire) == vtable)
+    {
+        return false;
+    }
+    entries.iter().any(|entry| {
+        entry
+            .compare_exchange(0, vtable, Ordering::AcqRel, Ordering::Acquire)
+            .is_ok()
+    })
+}
+
+fn unregister_vtable(entries: &[AtomicUsize; MAX_HOOKED_VTABLES], vtable: *mut c_void) {
+    let vtable = vtable as usize;
+    for entry in entries {
+        let _ = entry.compare_exchange(vtable, 0, Ordering::AcqRel, Ordering::Acquire);
+    }
+}
+
+fn release_swapchain_reservation(vtable: *mut c_void) {
+    let _ = HOOKED_SWAPCHAIN_VTABLE.compare_exchange(
+        vtable,
+        std::ptr::null_mut(),
+        Ordering::SeqCst,
+        Ordering::SeqCst,
+    );
+}
+
+/// Mutex nommés, partagés par les deux modules proxy. L'un sérialise les
+/// modifications de vtables (`VirtualProtect` agit sur toute la page),
+/// l'autre protège le registre de vtables.
 static PATCH_MUTEX: AtomicIsize = AtomicIsize::new(0);
+static REGISTRY_MUTEX: AtomicIsize = AtomicIsize::new(0);
 
-struct PatchGuard(HANDLE);
+struct NamedMutexGuard(HANDLE);
 
-impl Drop for PatchGuard {
+impl Drop for NamedMutexGuard {
     fn drop(&mut self) {
         unsafe {
             let _ = ReleaseMutex(self.0);
@@ -284,26 +325,24 @@ impl Drop for PatchGuard {
     }
 }
 
-fn patch_mutex() -> Option<PatchGuard> {
-    let existing = PATCH_MUTEX.load(Ordering::Acquire);
+fn named_mutex(prefix: &str, slot: &'static AtomicIsize) -> Option<NamedMutexGuard> {
+    let existing = slot.load(Ordering::Acquire);
     if existing != 0 {
         let handle = HANDLE(existing as *mut c_void);
         unsafe {
             let _ = WaitForSingleObject(handle, INFINITE);
         }
-        return Some(PatchGuard(handle));
+        return Some(NamedMutexGuard(handle));
     }
-    let name = format!("Local\\QuarkOverlayPatch-{}", unsafe {
-        GetCurrentProcessId()
-    });
+    let name = format!("Local\\{prefix}{}", unsafe { GetCurrentProcessId() });
     let name: Vec<u16> = name.encode_utf16().chain(std::iter::once(0)).collect();
     let handle = unsafe { CreateMutexW(None, false, PCWSTR(name.as_ptr())) }.ok()?;
-    match PATCH_MUTEX.compare_exchange(0, handle.0 as isize, Ordering::AcqRel, Ordering::Acquire) {
+    match slot.compare_exchange(0, handle.0 as isize, Ordering::AcqRel, Ordering::Acquire) {
         Ok(_) => {
             unsafe {
                 let _ = WaitForSingleObject(handle, INFINITE);
             }
-            Some(PatchGuard(handle))
+            Some(NamedMutexGuard(handle))
         }
         Err(existing) => {
             unsafe {
@@ -313,9 +352,17 @@ fn patch_mutex() -> Option<PatchGuard> {
             unsafe {
                 let _ = WaitForSingleObject(handle, INFINITE);
             }
-            Some(PatchGuard(handle))
+            Some(NamedMutexGuard(handle))
         }
     }
+}
+
+fn patch_mutex() -> Option<NamedMutexGuard> {
+    named_mutex("QuarkOverlayPatch-", &PATCH_MUTEX)
+}
+
+fn registry_mutex() -> Option<NamedMutexGuard> {
+    named_mutex("QuarkOverlayRegistry-", &REGISTRY_MUTEX)
 }
 
 /// Patch une entrée de vtable en restaurant la protection d'origine ensuite.
@@ -543,25 +590,37 @@ unsafe fn hook_swapchain(swapchain: *mut c_void) {
         return;
     }
 
-    // Un seul module installe le hook `Present` pour le processus. Le second
-    // proxy ne doit pas réinstaller le sien : les deux hooks se chaîneraient et
-    // une présentation serait comptée deux fois.
-    let shared = shared_stats();
-    if let Some(stats) = shared {
-        if stats.present_hooked.swap(1, Ordering::SeqCst) != 0 {
-            return;
-        }
-    }
-
-    // Une seule classe de swap chain est accrochée par module : le pointeur
-    // d'origine est global. Si le jeu crée une seconde classe, elle reste sans
-    // compteur plutôt que d'appeler la mauvaise fonction Present.
+    // Une seule classe de swap chain est accrochée par module : `ORIGINAL_PRESENT`
+    // et `ORIGINAL_PRESENT1` ne peuvent stocker qu'un pointeur d'origine.
     if !HOOKED_SWAPCHAIN_VTABLE
         .swap(vtable as *mut c_void, Ordering::SeqCst)
         .is_null()
     {
         return;
     }
+
+    let shared = shared_stats();
+    let _registry_guard = match shared {
+        Some(_) => match registry_mutex() {
+            Some(guard) => Some(guard),
+            None => {
+                release_swapchain_reservation(vtable as *mut c_void);
+                return;
+            }
+        },
+        None => None,
+    };
+
+    // Le registre est indexé par vtable : si l'autre proxy a déjà accroché
+    // cette classe, on relâche la réservation locale pour pouvoir accrocher
+    // une autre classe plus tard.
+    if let Some(stats) = shared {
+        if !register_vtable(&stats.present_vtables, vtable as *mut c_void) {
+            release_swapchain_reservation(vtable as *mut c_void);
+            return;
+        }
+    }
+
     let patched = ((*vtable).present as usize) == (present_hook as PresentFn as usize)
         || patch(
             &mut (*vtable).present,
@@ -570,8 +629,9 @@ unsafe fn hook_swapchain(swapchain: *mut c_void) {
         );
     if !patched {
         if let Some(stats) = shared {
-            stats.present_hooked.store(0, Ordering::SeqCst);
+            unregister_vtable(&stats.present_vtables, vtable as *mut c_void);
         }
+        release_swapchain_reservation(vtable as *mut c_void);
         return;
     }
 
@@ -582,9 +642,20 @@ unsafe fn hook_swapchain(swapchain: *mut c_void) {
     {
         let vtable1 = *(swapchain1 as *const *mut *mut c_void);
         if !vtable1.is_null() {
-            let slot = &mut *vtable1.add(22).cast::<Present1Fn>();
-            if (*slot as usize) != (present1_hook as Present1Fn as usize) {
-                let _ = patch(slot, present1_hook as Present1Fn, &ORIGINAL_PRESENT1);
+            let vtable1_ptr = vtable1 as *mut c_void;
+            let owns_present1 = shared
+                .map(|stats| register_vtable(&stats.present1_vtables, vtable1_ptr))
+                .unwrap_or(true);
+            if owns_present1 {
+                let slot = &mut *vtable1.add(22).cast::<Present1Fn>();
+                if (*slot as usize) != (present1_hook as Present1Fn as usize) {
+                    let patched1 = patch(slot, present1_hook as Present1Fn, &ORIGINAL_PRESENT1);
+                    if !patched1 {
+                        if let Some(stats) = shared {
+                            unregister_vtable(&stats.present1_vtables, vtable1_ptr);
+                        }
+                    }
+                }
             }
             let release: ReleaseFn = std::mem::transmute(*vtable1.add(2));
             release(swapchain1);
