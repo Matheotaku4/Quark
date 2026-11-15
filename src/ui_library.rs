@@ -1520,7 +1520,7 @@ impl QuarkApp {
                                         }
                                         for path in &record.custom_save_paths {
                                             ui.label(
-                                                crate::i18n::rich(path.display().to_string())
+                                                crate::i18n::raw(path.display().to_string())
                                                     .size(11.0)
                                                     .color(pal.text_faint),
                                             );
@@ -1537,7 +1537,7 @@ impl QuarkApp {
                                         }
                                         if let Some(status) = self.cloud_sync_status.get(key) {
                                             ui.label(
-                                                crate::i18n::rich(status)
+                                                crate::i18n::raw(status)
                                                     .size(11.5)
                                                     .color(pal.text_faint),
                                             );
@@ -1555,7 +1555,7 @@ impl QuarkApp {
                             ui.vertical(|ui| {
                                 ui.set_max_width((width - 64.0).max(200.0));
                                 ui.label(
-                                    crate::i18n::rich(&game.description)
+                                    crate::i18n::raw(&game.description)
                                         .size(13.0)
                                         .color(pal.text_dim),
                                 );
@@ -1569,7 +1569,7 @@ impl QuarkApp {
                             ui.vertical(|ui| {
                                 ui.set_max_width((width - 64.0).max(200.0));
                                 ui.label(crate::i18n::rich("NOTES").size(12.0).color(pal.text_faint));
-                                ui.label(crate::i18n::rich(&game.notes).size(13.0).color(pal.text_dim));
+                                ui.label(crate::i18n::raw(&game.notes).size(13.0).color(pal.text_dim));
                                 ui.add_space(8.0);
                             });
                         });

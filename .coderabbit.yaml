@@ -2,6 +2,68 @@ reviews:
   profile: assertive
   collapse_walkthrough: false
   review_details: true
-  instructions: >-
-    Rédige toujours tes résumés et tes explications en français destinés a un agent IA. Explique l'impact
-    concret de chaque bug pour dit concretement ce que l'agent IA doit faire.
+  enable_prompt_for_ai_agents: true
+  instructions: |
+    Tu t'adresses à l'agent de codage qui va appliquer le correctif, pas à un
+    développeur humain. Écris en français et rends chaque remarque directement
+    actionnable.
+
+    Pour chaque problème encore présent dans la diff :
+    1. donne le fichier et la ligne exacte ;
+    2. décris le comportement observé et le risque concret ;
+    3. indique la correction minimale attendue, en nommant la fonction ou le
+       symbole à modifier ;
+    4. donne la commande de vérification à lancer.
+
+    Règles de fond :
+    - Ne signale que les problèmes introduits ou aggravés par la diff. Si un
+      problème est préexistant, écris « préexistant » et ne le bloque pas.
+    - Ne présente pas une hypothèse comme un bug : si tu n'as pas de preuve,
+      dis-le clairement.
+    - Ne propose pas de refactor, de renommage, de nouvelle fonctionnalité, de
+      nouvelle dépendance ou de test supplémentaire hors du périmètre demandé.
+    - Ne demande un test que si la logique change. Pour une modification de
+      copie, de CSS, de YAML ou de documentation, une vérification ciblée suffit.
+    - Respecte les conventions déjà présentes dans le dépôt et les dépendances
+      verrouillées ; ne demande pas une modernisation gratuite.
+    - Regroupe les remarques qui ont la même cause racine au lieu de répéter le
+      même conseil sur chaque ligne.
+    - Si une remarque est déjà corrigée dans la diff, ne la reposte pas.
+
+  path_instructions:
+    - path: "src/**/*.rs"
+      instructions: |
+        Priorise la logique, les cas d'erreur et les invariants avant le style.
+        Signale les paniques, les `unwrap`/`expect` non justifiés, les
+        allocations non bornées, les chemins non validés et les erreurs
+        silencieusement ignorées. Le code utilise Rust edition 2024 et les
+        dépendances sont verrouillées ; vérifie avec `cargo test --locked` et
+        `cargo clippy --all-targets --locked -- -D warnings`.
+    - path: "tools/overlay-dll/**/*.rs"
+      instructions: |
+        Code Windows compilé en cross-target. Vérifie les HRESULT, les pointeurs
+        nuls, la compatibilité ABI, la restauration des hooks et l'absence de
+        panique dans le processus du jeu. La vérification locale est
+        `cargo check --locked --target x86_64-pc-windows-gnu` depuis
+        `tools/overlay-dll`.
+    - path: "site/**"
+      instructions: |
+        Site statique sans étape de build. Vérifie que chaque `src`/`href` local
+        existe, que les captures FR et EN sont cohérentes entre les deux
+        langues, que la page reste lisible sans JavaScript et que les liens
+        GitHub/Pages sont valides. N'introduis ni framework ni dépendance.
+    - path: ".github/workflows/**"
+      instructions: |
+        Vérifie les permissions minimales, `persist-credentials: false` quand le
+        checkout n'a pas besoin du jeton, et la cohérence des secrets. Ne
+        bloque pas sur l'épinglage par hash si le reste du dépôt utilise des
+        tags d'action, sauf si le changement introduit un risque nouveau.
+    - path: "docs/**/*.md"
+      instructions: |
+        Vérifie la version annoncée, les liens et la cohérence entre les notes
+        de version, le README et le wiki. Ignore les préférences de style
+        mineures et les répétitions sans impact pour l'utilisateur.
+    - path: "wiki/**/*.md"
+      instructions: |
+        Vérifie les liens, les versions et la cohérence avec le comportement
+        réellement implémenté. Ne réécris pas le ton éditorial du wiki.

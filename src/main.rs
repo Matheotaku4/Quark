@@ -208,14 +208,21 @@ fn cli(args: &[String]) -> Option<i32> {
                     "--size" => match value.as_deref().and_then(parse_size) {
                         Some(size) => opts.size = size,
                         None => {
-                            eprintln!("--size attend la forme 1360x860");
+                            eprintln!(
+                                "--size attend 1360x860, avec chaque côté positif et au plus {}",
+                                snapshot::MAX_RENDER_SIDE
+                            );
                             return Some(2);
                         }
                     },
-                    "--scale" => match value.as_deref().and_then(|v| v.parse::<f32>().ok()) {
+                    "--scale" => match value
+                        .as_deref()
+                        .and_then(|v| v.parse::<f32>().ok())
+                        .filter(|v| v.is_finite() && *v > 0.0)
+                    {
                         Some(scale) => opts.scale = scale,
                         None => {
-                            eprintln!("--scale attend un nombre (ex. 1.5)");
+                            eprintln!("--scale attend un nombre strictement positif (ex. 1.5)");
                             return Some(2);
                         }
                     },
@@ -660,13 +667,17 @@ fn launch_from_cli(query: &str) -> Result<(), String> {
     Ok(())
 }
 
-/// « 1360x860 » -> taille.
+/// « 1360x860 » -> taille. La borne haute évite qu'un rendu headless
+/// demande une allocation de plusieurs gigaoctets.
 fn parse_size(text: &str) -> Option<eframe::egui::Vec2> {
     let (width, height) = text.split_once(['x', 'X'])?;
-    Some(eframe::egui::Vec2::new(
-        width.trim().parse().ok()?,
-        height.trim().parse().ok()?,
-    ))
+    let width = width.trim().parse::<f32>().ok()?;
+    let height = height.trim().parse::<f32>().ok()?;
+    let valid = |value: f32| value.is_finite() && value > 0.0 && value <= snapshot::MAX_RENDER_SIDE;
+    if !valid(width) || !valid(height) {
+        return None;
+    }
+    Some(eframe::egui::Vec2::new(width, height))
 }
 
 /// « 120,340 » -> point.
@@ -710,5 +721,19 @@ mod tests {
         let games = [game("Portal 2")];
         assert!(matching_games(&games, "  ").is_empty());
         assert!(matching_games(&games, "zzzz").is_empty());
+    }
+
+    #[test]
+    fn la_taille_du_rendu_est_bornee() {
+        assert_eq!(
+            parse_size("1360x860"),
+            Some(eframe::egui::Vec2::new(1360.0, 860.0))
+        );
+        assert!(parse_size("8192x8192").is_some());
+        assert!(parse_size("8193x860").is_none());
+        assert!(parse_size("860x8193").is_none());
+        assert!(parse_size("0x860").is_none());
+        assert!(parse_size("860x-1").is_none());
+        assert!(parse_size("NaNx860").is_none());
     }
 }

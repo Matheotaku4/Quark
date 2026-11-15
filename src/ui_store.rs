@@ -166,16 +166,19 @@ impl QuarkApp {
                                 }
                                 if let Some(error) = &self.store_error {
                                     ui.label(
-                                        crate::i18n::rich(format!(
-                                            "{error} · les dernières offres en cache restent affichées."
-                                        ))
+                                        // L'erreur est une donnée : seule la phrase
+                                        // d'interface qui l'accompagne est traduite.
+                                        crate::i18n::rich_with(
+                                            "{} · les dernières offres en cache restent affichées.",
+                                            &[error],
+                                        )
                                         .size(12.5)
                                         .color(pal.text_faint),
                                     );
                                 }
                                 if let Some(notice) = &self.store_notice {
                                     ui.label(
-                                        crate::i18n::rich(notice)
+                                        crate::i18n::raw(notice)
                                             .size(12.0)
                                             .color(pal.text_faint),
                                     );
@@ -505,7 +508,7 @@ impl QuarkApp {
                                     }
                                     SiteSearchState::Failed(error) => {
                                         ui.label(
-                                            crate::i18n::rich(error)
+                                            crate::i18n::raw(error)
                                                 .size(12.0)
                                                 .color(pal.danger),
                                         );
@@ -590,15 +593,14 @@ fn search_hit_row(ui: &mut egui::Ui, pal: &Palette, hit: &crate::game_search::Si
                 )
                 .truncate(),
             );
-            ui.label(
-                crate::i18n::rich(if hit.detail.is_empty() {
-                    "Voir la fiche du site"
-                } else {
-                    &hit.detail
-                })
-                .size(11.0)
-                .color(pal.text_dim),
-            );
+            let detail = if hit.detail.is_empty() {
+                crate::i18n::rich("Voir la fiche du site")
+            } else {
+                // `detail` vient du site scrapé, pas du catalogue : ne jamais
+                // lui appliquer les règles de traduction dynamique.
+                crate::i18n::raw(&hit.detail)
+            };
+            ui.label(detail.size(11.0).color(pal.text_dim));
         },
     );
     widgets::paint_icon(

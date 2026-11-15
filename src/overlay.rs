@@ -585,7 +585,7 @@ fn achievement_row(
                     });
                     if !compact && !row.description.is_empty() {
                         ui.label(
-                            crate::i18n::rich(&row.description)
+                            crate::i18n::raw(&row.description)
                                 .size(11.5)
                                 .color(pal.text_faint),
                         );
