@@ -587,9 +587,15 @@ unsafe fn hook_swapchain(swapchain: *mut c_void) {
 
     // Une seule classe de swap chain est accrochée par module : `ORIGINAL_PRESENT`
     // et `ORIGINAL_PRESENT1` ne peuvent stocker qu'un pointeur d'origine.
-    if !HOOKED_SWAPCHAIN_VTABLE
-        .swap(vtable as *mut c_void, Ordering::SeqCst)
-        .is_null()
+    // Le CAS évite qu'un appel concurrent écrase une réservation active.
+    if HOOKED_SWAPCHAIN_VTABLE
+        .compare_exchange(
+            std::ptr::null_mut(),
+            vtable as *mut c_void,
+            Ordering::SeqCst,
+            Ordering::SeqCst,
+        )
+        .is_err()
     {
         return;
     }
