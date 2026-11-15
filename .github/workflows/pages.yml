@@ -10,10 +10,7 @@ on:
       - ".github/workflows/pages.yml"
   workflow_dispatch:
 
-permissions:
-  contents: read
-  pages: write
-  id-token: write
+permissions: {}
 
 concurrency:
   group: pages
@@ -21,12 +18,20 @@ concurrency:
 
 jobs:
   deploy:
+    name: Deploy to GitHub Pages
     runs-on: ubuntu-latest
+    # pages:write publie l'artefact, id-token:write autorise le déploiement OIDC.
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       # Pages doit déjà être activé avec la source « GitHub Actions » dans les
       # réglages du dépôt. Le GITHUB_TOKEN peut publier, mais pas activer Pages.

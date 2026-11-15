@@ -196,6 +196,10 @@ fn prepare_overlay_log(game_id: &str) -> bool {
     {
         use std::os::unix::fs::OpenOptionsExt as _;
         options.mode(0o600);
+        // Ne jamais suivre un lien symbolique planté sur overlay.log : le
+        // lancement continuerait sans journal plutôt que de tronquer un autre
+        // fichier et de changer ses permissions.
+        options.custom_flags(libc::O_NOFOLLOW);
     }
     let Ok(file) = options.open(&path) else {
         return false;

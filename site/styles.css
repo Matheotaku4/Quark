@@ -1,5 +1,5 @@
 @font-face {
-  font-family: "Archivo";
+  font-family: Archivo;
   src: url("assets/Archivo-Regular.ttf") format("truetype");
   font-weight: 400;
   font-style: normal;
@@ -7,7 +7,7 @@
 }
 
 @font-face {
-  font-family: "Archivo";
+  font-family: Archivo;
   src: url("assets/Archivo-Medium.ttf") format("truetype");
   font-weight: 500 600;
   font-style: normal;
@@ -47,7 +47,7 @@ body {
     radial-gradient(circle at 80% -10%, rgba(46, 155, 255, 0.1), transparent 30rem),
     var(--bg);
   color: var(--text);
-  font-family: "Archivo", system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-family: Archivo, system-ui, -apple-system, "Segoe UI", sans-serif;
   font-size: 16px;
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
@@ -65,7 +65,7 @@ a {
 
 code,
 pre {
-  font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  font-family: SFMono-Regular, Consolas, "Liberation Mono", monospace;
 }
 
 .site-header {
