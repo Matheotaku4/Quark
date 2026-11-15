@@ -1,283 +1,235 @@
 <!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Quark — A quiet game launcher for Linux</title>
-    <meta
-      name="description"
-      content="Quark is a lightweight Linux game launcher for local games, Steam, Epic Games and GOG, with Proton, save snapshots and an in-game overlay."
-    />
-    <meta property="og:title" content="Quark — A quiet game launcher for Linux" />
-    <meta
-      property="og:description"
-      content="One library for your local, Steam, Epic and GOG games. Built in Rust with egui."
-    />
-    <meta property="og:type" content="website" />
-    <meta property="og:image" content="https://matheotaku4.github.io/Quark/assets/home.png" />
-    <link rel="icon" href="assets/quark.png" />
-    <link rel="stylesheet" href="styles.css" />
-  </head>
-  <body>
-    <header class="site-header">
-      <a class="brand" href="#top" aria-label="Quark home">
-        <img src="assets/quark.png" alt="" width="32" height="32" />
-        <span>Quark</span>
-      </a>
-      <nav aria-label="Main navigation">
-        <a href="#features">Features</a>
-        <a href="#screenshots">Screenshots</a>
-        <a href="#install">Install</a>
-        <a href="https://github.com/Matheotaku4/Quark/wiki">Docs</a>
-        <a class="nav-github" href="https://github.com/Matheotaku4/Quark">GitHub</a>
-      </nav>
-    </header>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Quark — Le lanceur de jeux discret pour Linux</title>
+<meta name="description" content="Quark réunit vos jeux locaux, Steam, Epic Games et GOG dans une seule bibliothèque, avec Proton, sauvegardes et overlay. Gratuit, open source, écrit en Rust.">
+<meta name="theme-color" content="#000000">
+<link rel="canonical" href="https://matheotaku4.github.io/Quark/">
+<meta property="og:title" content="Quark — Le lanceur de jeux discret pour Linux">
+<meta property="og:description" content="Une bibliothèque pour vos jeux locaux, Steam, Epic et GOG. Rust + egui.">
+<meta property="og:type" content="website">
+<meta property="og:image" content="https://matheotaku4.github.io/Quark/assets/home-fr.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="assets/quark.png">
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"SoftwareApplication","name":"Quark","applicationCategory":"GameApplication","operatingSystem":"Linux","license":"https://opensource.org/licenses/MIT","offers":{"@type":"Offer","price":"0","priceCurrency":"EUR"},"url":"https://matheotaku4.github.io/Quark/"}</script>
+<style>
+@font-face{font-family:Archivo;src:url(assets/Archivo-Regular.ttf) format("truetype");font-weight:400;font-display:swap}
+@font-face{font-family:Archivo;src:url(assets/Archivo-Medium.ttf) format("truetype");font-weight:500 600;font-display:swap}
+@font-face{font-family:Archivo;src:url(assets/Archivo-Bold.ttf) format("truetype");font-weight:700;font-display:swap}
+:root{color-scheme:dark;--bg:#000;--s1:#0b0b0b;--s2:#141414;--line:#262626;--text:#f5f5f5;--muted:#a8a8a8;--accent:#2e9bff;--on:#001a33;--r:16px;--max:1180px}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:5rem}
+body{margin:0;background:var(--bg);color:var(--text);font:16px/1.6 Archivo,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+body::before{content:"";position:fixed;inset:0;z-index:-1;background:radial-gradient(60rem 30rem at 75% -5%,color-mix(in srgb,var(--accent) 16%,transparent),transparent)}
+img{display:block;max-width:100%;height:auto}a{color:inherit}
+code,pre,kbd{font-family:ui-monospace,SFMono-Regular,Consolas,monospace}
+.wrap{max-width:var(--max);margin:0 auto;padding:0 1.5rem}
+.skip{position:absolute;left:-999px;top:.5rem;background:var(--accent);color:var(--on);padding:.5rem 1rem;border-radius:8px;z-index:50}.skip:focus{left:.5rem}
+header{position:sticky;top:0;z-index:20;background:rgba(0,0,0,.8);backdrop-filter:blur(16px);border-bottom:1px solid var(--line)}
+header .wrap{display:flex;align-items:center;justify-content:space-between;gap:1rem;padding-block:.8rem}
+.brand{display:flex;align-items:center;gap:.6rem;font-weight:700;text-decoration:none;letter-spacing:.03em}.brand img{width:30px;height:30px;border-radius:8px}
+nav{display:flex;align-items:center;gap:1.3rem;font-size:.9rem;color:var(--muted)}nav a{text-decoration:none}nav a:hover{color:var(--text)}
+.pill,.lang button{border:1px solid var(--line);border-radius:999px;padding:.35rem .8rem;color:var(--text);background:none;font:inherit;font-size:.85rem;cursor:pointer}
+.lang{display:flex}.lang button{border-radius:0;padding:.3rem .6rem}.lang button:first-child{border-radius:999px 0 0 999px}.lang button:last-child{border-radius:0 999px 999px 0;border-left:0}
+.lang button[aria-pressed=true]{background:var(--accent);color:var(--on);border-color:var(--accent);font-weight:600}
+:focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-radius:6px}
+.hero{padding:4.5rem 0 2rem;text-align:center}
+.eyebrow{color:var(--accent);font-size:.75rem;font-weight:600;letter-spacing:.16em;text-transform:uppercase;margin:0 0 1rem}
+h1{font-size:clamp(2.6rem,7vw,5.2rem);line-height:1;letter-spacing:-.035em;margin:0 auto 1.2rem;max-width:14ch}
+h1 span{color:var(--accent)}
+h2{font-size:clamp(1.8rem,4vw,2.8rem);line-height:1.1;letter-spacing:-.025em;margin:0 0 1rem}
+.lead{max-width:56ch;margin:0 auto 2rem;color:var(--muted);font-size:1.15rem}
+.cta{display:flex;flex-wrap:wrap;gap:.8rem;justify-content:center}
+.btn{display:inline-flex;align-items:center;gap:.5rem;padding:.8rem 1.4rem;border-radius:12px;border:1px solid var(--line);text-decoration:none;font-weight:600;transition:transform .15s}
+.btn:hover{transform:translateY(-2px)}.btn.p{background:var(--accent);color:var(--on);border-color:var(--accent)}
+.small{color:var(--muted);font-size:.85rem;margin-top:1rem}
+.frame{margin:3rem auto 0;max-width:1100px;border:1px solid var(--line);border-radius:var(--r);overflow:hidden;background:var(--s1);box-shadow:0 30px 120px -30px color-mix(in srgb,var(--accent) 45%,transparent)}
+.dots{display:flex;gap:6px;padding:.7rem 1rem;border-bottom:1px solid var(--line)}.dots i{width:10px;height:10px;border-radius:50%;background:#333}
+.facts{display:grid;grid-template-columns:repeat(4,1fr);margin:4rem 0;border:1px solid var(--line);border-radius:var(--r);background:var(--s1)}
+.facts div{padding:1.4rem;border-right:1px solid var(--line)}.facts div:last-child{border:0}
+.facts b{display:block;font-size:2rem;color:var(--accent)}.facts span{color:var(--muted);font-size:.9rem}
+section{padding:4rem 0}.head{max-width:44rem;margin-bottom:2.5rem}.head p{color:var(--muted)}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1rem}
+.card{background:var(--s1);border:1px solid var(--line);border-radius:var(--r);padding:1.6rem;transition:border-color .2s}.card:hover{border-color:var(--accent)}
+.card h3{margin:.4rem 0 .5rem;font-size:1.1rem}.card p{margin:0;color:var(--muted);font-size:.95rem}.card em{font-style:normal;color:var(--accent);font-size:.8rem;font-weight:600}
+.tabs{display:flex;flex-wrap:wrap;gap:.5rem;margin-bottom:1.2rem}
+.tabs button{padding:.5rem 1rem;border:1px solid var(--line);border-radius:999px;background:none;color:var(--muted);font:inherit;cursor:pointer}
+.tabs button[aria-selected=true]{background:var(--accent);color:var(--on);border-color:var(--accent);font-weight:600}
+#shot{width:100%;aspect-ratio:1360/860;object-fit:cover}
+.swatches{display:flex;flex-wrap:wrap;gap:.7rem}
+.swatches button{width:44px;height:44px;border-radius:50%;border:2px solid var(--line);cursor:pointer;transition:transform .15s}
+.swatches button:hover{transform:scale(1.12)}.swatches button[aria-pressed=true]{border-color:#fff;box-shadow:0 0 0 3px var(--bg),0 0 0 5px var(--accent)}
+.split{display:grid;grid-template-columns:1fr 1fr;gap:3rem;align-items:center}
+.keys{display:grid;gap:.6rem}.keys div{display:flex;justify-content:space-between;align-items:center;gap:1rem;background:var(--s1);border:1px solid var(--line);border-radius:12px;padding:.8rem 1rem}
+kbd{background:var(--s2);border:1px solid #333;border-bottom-width:3px;border-radius:6px;padding:.1rem .5rem;font-size:.85rem}
+.term{background:var(--s1);border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
+.term .bar{display:flex;justify-content:space-between;align-items:center;padding:.5rem 1rem;border-bottom:1px solid var(--line);color:var(--muted);font-size:.8rem}
+.term button{background:none;border:1px solid var(--line);color:var(--text);border-radius:8px;padding:.2rem .7rem;cursor:pointer;font:inherit;font-size:.8rem}
+pre{margin:0;padding:1.2rem;overflow-x:auto;font-size:.88rem;line-height:1.8}.c{color:#6b6b6b}
+details{border-bottom:1px solid var(--line);padding:1.1rem 0}summary{cursor:pointer;font-weight:600;font-size:1.05rem}details p{color:var(--muted);margin:.6rem 0 0}
+footer{border-top:1px solid var(--line);padding:2rem 0;color:var(--muted);font-size:.9rem}footer .wrap{display:flex;flex-wrap:wrap;justify-content:space-between;gap:1rem}footer nav{gap:1rem}
+.rv{opacity:0;transform:translateY(16px);transition:.6s}.rv.in{opacity:1;transform:none}
+@media(max-width:860px){nav .hide{display:none}.grid,.split{grid-template-columns:1fr}.facts{grid-template-columns:1fr 1fr}.facts div:nth-child(2){border-right:0}.facts div:nth-child(-n+2){border-bottom:1px solid var(--line)}}
+@media(prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto!important}.rv{opacity:1;transform:none}}
+</style>
+</head>
+<body>
+<a class="skip" href="#main" data-i="skip"></a>
+<header><div class="wrap">
+  <a class="brand" href="#top"><img src="assets/quark.png" alt="" width="30" height="30">Quark</a>
+  <nav aria-label="Navigation">
+    <a class="hide" href="#features" data-i="nav1"></a><a class="hide" href="#showcase" data-i="nav2"></a><a class="hide" href="#install" data-i="nav3"></a>
+    <a class="hide" href="https://github.com/Matheotaku4/Quark/wiki">Wiki</a>
+    <span class="lang" role="group" aria-label="Langue / Language"><button data-l="fr">FR</button><button data-l="en">EN</button></span>
+    <a class="pill" href="https://github.com/Matheotaku4/Quark">GitHub</a>
+  </nav>
+</div></header>
 
-    <main id="top">
-      <section class="hero">
-        <div class="hero-copy">
-          <p class="eyebrow">Linux · Rust · egui</p>
-          <h1>Your games.<br /><span>One quiet launcher.</span></h1>
-          <p class="lead">
-            Quark gathers local games, Steam, Epic Games and GOG in one fast
-            library. It handles Proton, saves and playtime, then gets out of
-            the way.
-          </p>
-          <div class="actions">
-            <a class="button primary" href="https://github.com/Matheotaku4/Quark/releases/latest">
-              Download latest
-            </a>
-            <a class="button secondary" href="https://github.com/Matheotaku4/Quark">
-              View source
-            </a>
-          </div>
-          <p class="fine-print">Free and open source · MIT licence · Linux x86_64</p>
-        </div>
-        <div class="hero-visual">
-          <div class="window-bar" aria-hidden="true">
-            <span></span><span></span><span></span>
-            <b>Quark</b>
-          </div>
-          <img
-            src="assets/home.png"
-            alt="Quark home screen with a game carousel and library covers"
-            width="1360"
-            height="860"
-          />
-        </div>
-      </section>
+<main id="main"><div id="top"></div>
+<div class="wrap">
+  <div class="hero">
+    <p class="eyebrow">Linux · Rust · egui</p>
+    <h1 data-i="h1"></h1>
+    <p class="lead" data-i="lead"></p>
+    <div class="cta">
+      <a class="btn p" id="dl" href="https://github.com/Matheotaku4/Quark/releases/latest"><span data-i="dl"></span> <span id="ver"></span></a>
+      <a class="btn" href="#install" data-i="how"></a>
+    </div>
+    <p class="small" data-i="fine"></p>
+    <div class="frame"><div class="dots" aria-hidden="true"><i></i><i></i><i></i></div>
+      <img id="hero-img" src="assets/home-fr.png" alt="" width="1360" height="860"></div>
+  </div>
 
-      <section class="facts" aria-label="Quark at a glance">
-        <div><strong>3</strong><span>stores in one library</span></div>
-        <div><strong>13</strong><span>dark themes</span></div>
-        <div><strong>5</strong><span>interface languages</span></div>
-        <div><strong>1</strong><span>small native launcher</span></div>
-      </section>
+  <div class="facts rv">
+    <div><b>3</b><span data-i="f1"></span></div><div><b>13</b><span data-i="f2"></span></div>
+    <div><b>5</b><span data-i="f3"></span></div><div><b>0</b><span data-i="f4"></span></div>
+  </div>
 
-      <section id="features" class="section">
-        <div class="section-heading">
-          <p class="eyebrow">The essentials</p>
-          <h2>Everything around the game.<br />Nothing in front of it.</h2>
-        </div>
-        <div class="feature-grid">
-          <article class="feature">
-            <span class="feature-mark">01</span>
-            <h3>One library</h3>
-            <p>
-              Local folders and store games share covers, notes, tags, status,
-              playtime and statistics. A game with several editions stays one
-              entry.
-            </p>
-          </article>
-          <article class="feature">
-            <span class="feature-mark">02</span>
-            <h3>Steam, Epic and GOG</h3>
-            <p>
-              Read your Steam libraries, sign in to Epic directly, and install
-              or update GOG titles through gogdl. Accounts stay on your machine.
-            </p>
-          </article>
-          <article class="feature">
-            <span class="feature-mark">03</span>
-            <h3>Proton without a terminal</h3>
-            <p>
-              Per-game runtimes, prefixes, GameMode, MangoHud, gamescope, PRIME
-              offload and wrapper commands, all in plain checkboxes.
-            </p>
-          </article>
-          <article class="feature">
-            <span class="feature-mark">04</span>
-            <h3>An actual overlay</h3>
-            <p>
-              Open the in-game panel with Shift+Backspace, read achievements,
-              take an F12 screenshot, or enable a small DXGI FPS counter.
-            </p>
-          </article>
-          <article class="feature">
-            <span class="feature-mark">05</span>
-            <h3>Saves you can trust</h3>
-            <p>
-              Ludusavi snapshots before and after a session, with a preview,
-              an inventory and a validated restore path.
-            </p>
-          </article>
-          <article class="feature">
-            <span class="feature-mark">06</span>
-            <h3>Yours to look at</h3>
-            <p>
-              Thirteen AMOLED-friendly themes, list or grid, a home carousel,
-              adjustable density and five interface languages.
-            </p>
-          </article>
-        </div>
-      </section>
+  <section id="features"><div class="head rv"><p class="eyebrow" data-i="e1"></p><h2 data-i="t1"></h2></div>
+    <div class="grid">
+      <article class="card rv"><em>01</em><h3 data-i="c1t"></h3><p data-i="c1"></p></article>
+      <article class="card rv"><em>02</em><h3 data-i="c2t"></h3><p data-i="c2"></p></article>
+      <article class="card rv"><em>03</em><h3 data-i="c3t"></h3><p data-i="c3"></p></article>
+      <article class="card rv"><em>04</em><h3 data-i="c4t"></h3><p data-i="c4"></p></article>
+      <article class="card rv"><em>05</em><h3 data-i="c5t"></h3><p data-i="c5"></p></article>
+      <article class="card rv"><em>06</em><h3 data-i="c6t"></h3><p data-i="c6"></p></article>
+    </div>
+  </section>
 
-      <section id="screenshots" class="section screenshots">
-        <div class="section-heading">
-          <p class="eyebrow">A closer look</p>
-          <h2>Built to be lived in.</h2>
-          <p class="section-note">
-            Real screenshots from the current interface, not mockups.
-          </p>
-        </div>
-        <div class="shot-grid">
-          <figure class="shot wide">
-            <img
-              src="assets/library.png"
-              alt="Quark library with a game page, achievements and filters"
-              loading="lazy"
-              width="1360"
-              height="860"
-            />
-            <figcaption>Library and game page</figcaption>
-          </figure>
-          <figure class="shot">
-            <img
-              src="assets/store.png"
-              alt="Quark store discovery page"
-              loading="lazy"
-              width="1360"
-              height="860"
-            />
-            <figcaption>Store discovery</figcaption>
-          </figure>
-          <figure class="shot">
-            <img
-              src="assets/settings.png"
-              alt="Quark appearance settings with theme cards"
-              loading="lazy"
-              width="1360"
-              height="860"
-            />
-            <figcaption>Appearance and themes</figcaption>
-          </figure>
-          <figure class="shot wide">
-            <img
-              src="assets/onboarding.png"
-              alt="Quark welcome guide"
-              loading="lazy"
-              width="1360"
-              height="860"
-            />
-            <figcaption>A short welcome guide, never a wall</figcaption>
-          </figure>
-        </div>
-      </section>
+  <section id="showcase"><div class="head rv"><p class="eyebrow" data-i="e2"></p><h2 data-i="t2"></h2><p data-i="n2"></p></div>
+    <div class="tabs" role="tablist" id="tabs"></div>
+    <div class="frame" style="margin-top:0"><img id="shot" src="assets/library-fr.png" alt="" width="1360" height="860" loading="lazy"></div>
+  </section>
 
-      <section class="section split" id="overlay">
-        <div>
-          <p class="eyebrow">In game</p>
-          <h2>A launcher that is there when you need it.</h2>
-          <p>
-            The overlay opens above a Proton game, stays mouse-transparent while
-            closed and hides as soon as the game loses focus. The FPS counter
-            uses small <code>d3d11.dll</code> and <code>dxgi.dll</code> proxies
-            for DirectX 11 and 12 games.
-          </p>
-          <p class="note">
-            Vulkan, OpenGL and native Linux games are outside the DXGI proxy.
-            For those, Quark exposes MangoHud in the per-game launch options.
-          </p>
-        </div>
-        <div class="overlay-card">
-          <div class="overlay-line"><span>Shift</span><span>Backspace</span><b>Overlay</b></div>
-          <div class="overlay-line"><span>F12</span><b>Screenshot</b></div>
-          <div class="overlay-line"><span>FPS</span><b>DXGI 11 / 12</b></div>
-          <div class="overlay-line"><span>Focus</span><b>Auto-hide</b></div>
-        </div>
-      </section>
+  <section id="themes" class="split">
+    <div class="rv"><p class="eyebrow" data-i="e3"></p><h2 data-i="t3"></h2><p style="color:var(--muted)" data-i="n3"></p>
+      <div class="swatches" id="sw" role="group" aria-label="Thèmes / Themes"></div></div>
+    <div class="keys rv" aria-label="Raccourcis / Shortcuts">
+      <div><span data-i="k1"></span><span><kbd>Ctrl</kbd> + <kbd>K</kbd></span></div>
+      <div><span data-i="k2"></span><span><kbd>Shift</kbd> + <kbd>Backspace</kbd></span></div>
+      <div><span data-i="k3"></span><kbd>F12</kbd></div>
+      <div><span data-i="k4"></span><span><kbd>Ctrl</kbd> + <kbd>F</kbd></span></div>
+    </div>
+  </section>
 
-      <section id="install" class="section install">
-        <div class="section-heading">
-          <p class="eyebrow">Get started</p>
-          <h2>One archive. No installer.</h2>
-          <p class="section-note">
-            Download the latest Linux archive, verify it, unpack it and run it.
-          </p>
-        </div>
-        <div class="install-grid">
-          <div class="terminal" aria-label="Installation commands">
-            <div class="terminal-top"><span></span><span></span><span></span></div>
-            <pre><code><span class="comment"># after downloading the archive</span>
-sha256sum -c quark-&lt;version&gt;-linux-x86_64.tar.gz.sha256
-tar -xzf quark-&lt;version&gt;-linux-x86_64.tar.gz
-./quark/quark</code></pre>
-          </div>
-          <div class="install-links">
-            <a class="link-card" href="https://github.com/Matheotaku4/Quark/releases/latest">
-              <span class="link-title">Latest release</span>
-              <span>Archive, checksum and notes</span>
-            </a>
-            <a class="link-card" href="https://github.com/Matheotaku4/Quark/wiki/Getting-Started">
-              <span class="link-title">Getting started</span>
-              <span>First launch, stores and Proton</span>
-            </a>
-            <a class="link-card" href="https://github.com/Matheotaku4/Quark/wiki/Troubleshooting">
-              <span class="link-title">Troubleshooting</span>
-              <span>Logs, runtimes and launch issues</span>
-            </a>
-          </div>
-        </div>
-      </section>
+  <section id="install"><div class="head rv"><p class="eyebrow" data-i="e4"></p><h2 data-i="t4"></h2><p data-i="n4"></p></div>
+    <div class="term rv"><div class="bar"><span>bash</span><button id="copy" data-i="copy"></button></div>
+<pre><code id="cmd"></code></pre></div>
+  </section>
 
-      <section class="section faq">
-        <div class="section-heading">
-          <p class="eyebrow">Good to know</p>
-          <h2>Small print, plainly.</h2>
-        </div>
-        <div class="faq-grid">
-          <div>
-            <h3>Does Quark sell games?</h3>
-            <p>No. It opens store pages in your browser and never buys anything.</p>
-          </div>
-          <div>
-            <h3>Does it phone home?</h3>
-            <p>No telemetry. Store sessions and library data stay on your machine.</p>
-          </div>
-          <div>
-            <h3>What about Windows games?</h3>
-            <p>Quark launches them through Proton or umu-launcher, with your chosen prefix.</p>
-          </div>
-          <div>
-            <h3>Can I build it?</h3>
-            <p>Yes. Clone the repository and run <code>cargo build --release --locked</code>.</p>
-          </div>
-        </div>
-      </section>
-    </main>
+  <section id="faq"><div class="head rv"><h2 data-i="t5"></h2></div>
+    <details><summary data-i="q1"></summary><p data-i="a1"></p></details>
+    <details><summary data-i="q2"></summary><p data-i="a2"></p></details>
+    <details><summary data-i="q3"></summary><p data-i="a3"></p></details>
+    <details><summary data-i="q4"></summary><p data-i="a4"></p></details>
+  </section>
+</div></main>
 
-    <footer>
-      <a class="brand" href="#top">
-        <img src="assets/quark.png" alt="" width="28" height="28" />
-        <span>Quark</span>
-      </a>
-      <p>Made for Linux. Built with Rust and egui.</p>
-      <nav aria-label="Footer navigation">
-        <a href="https://github.com/Matheotaku4/Quark">Source</a>
-        <a href="https://github.com/Matheotaku4/Quark/releases">Releases</a>
-        <a href="https://github.com/Matheotaku4/Quark/wiki">Wiki</a>
-        <a href="https://github.com/Matheotaku4/Quark/blob/main/README.md#licence">Licence</a>
-      </nav>
-    </footer>
-  </body>
+<footer><div class="wrap"><span>Quark · MIT · Rust + egui</span>
+  <nav><a href="https://github.com/Matheotaku4/Quark">Source</a><a href="https://github.com/Matheotaku4/Quark/releases">Releases</a><a href="https://github.com/Matheotaku4/Quark/wiki">Wiki</a></nav></div></footer>
+
+<script>
+const D={
+fr:{skip:"Aller au contenu",nav1:"Fonctions",nav2:"Aperçu",nav3:"Installer",
+h1:"Vos jeux. <span>Un seul lanceur.</span>",lead:"Quark réunit jeux locaux, Steam, Epic Games et GOG dans une bibliothèque rapide. Proton, sauvegardes et temps de jeu sont gérés, puis il s’efface.",
+dl:"Télécharger",how:"Installation",fine:"Gratuit et open source · licence MIT · Linux x86_64",
+f1:"boutiques, une bibliothèque",f2:"thèmes sombres",f3:"langues d’interface",f4:"télémétrie",
+e1:"L’essentiel",t1:"Tout autour du jeu. Rien devant.",
+c1t:"Une seule bibliothèque",c1:"Dossiers locaux et jeux de boutiques partagent jaquettes, notes, tags, statut et temps de jeu. Un jeu en plusieurs éditions reste une seule entrée.",
+c2t:"Steam, Epic et GOG",c2:"Lecture de vos bibliothèques Steam, connexion directe à Epic, installation GOG via gogdl. Vos comptes restent sur votre machine.",
+c3t:"Proton sans terminal",c3:"Runtime, préfixe, GameMode, MangoHud, gamescope, PRIME et commande wrapper par jeu, en simples cases à cocher.",
+c4t:"Un vrai overlay",c4:"Panneau en jeu, succès, capture F12 et compteur FPS DirectX 11/12.",
+c5t:"Sauvegardes fiables",c5:"Instantanés Ludusavi avant et après chaque session, avec aperçu et restauration validée. Cloud Epic et GOG inclus.",
+c6t:"Fait pour vos yeux",c6:"Treize thèmes AMOLED, liste ou grille, carrousel d’accueil, palette Ctrl+K et cinq langues.",
+e2:"Un aperçu",t2:"Conçu pour qu’on y vive.",n2:"Captures réelles de l’interface actuelle, pas des maquettes.",
+tab:{home:"Accueil",library:"Bibliothèque",store:"Boutique",settings:"Réglages",onboarding:"Premier lancement"},
+e3:"Personnalisation",t3:"Choisissez votre couleur.",n3:"Essayez les accents de Quark : le site change en direct. Dans l’appli, ils vivent dans Réglages → Apparence.",
+k1:"Palette de commandes",k2:"Overlay en jeu",k3:"Capture d’écran",k4:"Rechercher",
+e4:"Démarrer",t4:"Une archive. Pas d’installeur.",n4:"Téléchargez, vérifiez, décompressez, lancez.",copy:"Copier",copied:"Copié ✓",
+t5:"Les petites lignes",
+q1:"Quark vend-il des jeux ?",a1:"Non. Il ouvre les pages des boutiques dans votre navigateur et n’achète jamais rien.",
+q2:"Y a-t-il de la télémétrie ?",a2:"Aucune. Sessions de boutiques et bibliothèque restent sur votre machine.",
+q3:"Et les jeux Windows ?",a3:"Ils passent par Proton ou umu-launcher, avec le préfixe de votre choix.",
+q4:"Puis-je le compiler ?",a4:"Oui : clonez le dépôt puis lancez <code>cargo build --release --locked</code>."},
+en:{skip:"Skip to content",nav1:"Features",nav2:"Preview",nav3:"Install",
+h1:"Your games. <span>One quiet launcher.</span>",lead:"Quark gathers local games, Steam, Epic Games and GOG in one fast library. It handles Proton, saves and playtime, then gets out of the way.",
+dl:"Download",how:"Install",fine:"Free and open source · MIT licence · Linux x86_64",
+f1:"stores, one library",f2:"dark themes",f3:"interface languages",f4:"telemetry",
+e1:"The essentials",t1:"Everything around the game. Nothing in front of it.",
+c1t:"One library",c1:"Local folders and store games share covers, notes, tags, status and playtime. A game with several editions stays one entry.",
+c2t:"Steam, Epic and GOG",c2:"Reads your Steam libraries, signs in to Epic directly, installs GOG titles through gogdl. Accounts stay on your machine.",
+c3t:"Proton without a terminal",c3:"Per-game runtime, prefix, GameMode, MangoHud, gamescope, PRIME and wrapper command, all in plain checkboxes.",
+c4t:"An actual overlay",c4:"In-game panel, achievements, F12 screenshots and a DirectX 11/12 FPS counter.",
+c5t:"Saves you can trust",c5:"Ludusavi snapshots before and after each session, with preview and validated restore. Epic and GOG cloud saves included.",
+c6t:"Easy on the eyes",c6:"Thirteen AMOLED themes, list or grid, home carousel, Ctrl+K palette and five languages.",
+e2:"A closer look",t2:"Built to be lived in.",n2:"Real screenshots of the current interface, not mockups.",
+tab:{home:"Home",library:"Library",store:"Store",settings:"Settings",onboarding:"First launch"},
+e3:"Make it yours",t3:"Pick your colour.",n3:"Try Quark’s accents: this page updates live. In the app, they live in Settings → Appearance.",
+k1:"Command palette",k2:"In-game overlay",k3:"Screenshot",k4:"Search",
+e4:"Get started",t4:"One archive. No installer.",n4:"Download, verify, unpack, run.",copy:"Copy",copied:"Copied ✓",
+t5:"Small print, plainly",
+q1:"Does Quark sell games?",a1:"No. It opens store pages in your browser and never buys anything.",
+q2:"Does it send telemetry?",a2:"None. Store sessions and library data stay on your machine.",
+q3:"What about Windows games?",a3:"They run through Proton or umu-launcher with the prefix you choose.",
+q4:"Can I build it?",a4:"Yes: clone the repository and run <code>cargo build --release --locked</code>."}};
+const ACC=["#2e9bff","#89b4fa","#bd93f9","#88c0d0","#fabd2f","#7aa2f7","#c4a7e7","#a7c080","#f38ba8","#fab387","#94e2d5","#ff6b6b","#f5c542"];
+const TABS=["home","library","store","settings","onboarding"];
+const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
+let lang=(()=>{try{const s=localStorage.getItem("q-lang");if(s)return s}catch(e){}return (navigator.language||"fr").startsWith("fr")?"fr":"en"})();
+let tab="library",ver="",dlUrl="";
+const img=t=>`assets/${t}-${t==="library"?"fr":lang}.png`;
+function cmd(){const v=ver||"<version>";return `<span class="c"># ${lang==="fr"?"après téléchargement de l’archive":"after downloading the archive"}</span>
+sha256sum -c quark-${v}-linux-x86_64.tar.gz.sha256
+tar -xzf quark-${v}-linux-x86_64.tar.gz
+./quark/quark`}
+function render(){
+  const d=D[lang];document.documentElement.lang=lang;
+  $$("[data-i]").forEach(e=>e.innerHTML=d[e.dataset.i]);
+  $$(".lang button").forEach(b=>b.setAttribute("aria-pressed",b.dataset.l===lang));
+  $("#tabs").innerHTML=TABS.map(t=>`<button role="tab" aria-selected="${t===tab}" data-t="${t}">${d.tab[t]}</button>`).join("");
+  $("#shot").src=img(tab);$("#shot").alt=d.tab[tab];
+  $("#hero-img").src=img("home");$("#hero-img").alt=lang==="fr"?"Écran d’accueil de Quark":"Quark home screen";
+  $("#cmd").innerHTML=cmd();
+}
+document.addEventListener("click",e=>{
+  const l=e.target.closest("[data-l]");if(l){lang=l.dataset.l;try{localStorage.setItem("q-lang",lang)}catch(x){}render()}
+  const t=e.target.closest("[data-t]");if(t){tab=t.dataset.t;render()}
+});
+$("#sw").innerHTML=ACC.map((c,i)=>`<button style="background:${c}" aria-label="${c}" aria-pressed="${i===0}" data-c="${c}"></button>`).join("");
+$("#sw").addEventListener("click",e=>{const b=e.target.closest("[data-c]");if(!b)return;
+  const c=b.dataset.c,r=document.documentElement.style;r.setProperty("--accent",c);
+  const n=parseInt(c.slice(1),16),y=((n>>16)*299+((n>>8)&255)*587+(n&255)*114)/1000;
+  r.setProperty("--on",y>140?"#000":"#fff");$$("#sw button").forEach(x=>x.setAttribute("aria-pressed",x===b))});
+$("#copy").addEventListener("click",async()=>{try{await navigator.clipboard.writeText($("#cmd").innerText.replace(/^#.*\n/,""));
+  const b=$("#copy");b.textContent=D[lang].copied;setTimeout(()=>b.textContent=D[lang].copy,1600)}catch(e){}});
+fetch("https://api.github.com/repos/Matheotaku4/Quark/releases/latest").then(r=>r.ok?r.json():Promise.reject()).then(j=>{
+  ver=(j.tag_name||"").replace(/^v/,"");const a=(j.assets||[]).find(x=>/linux-x86_64\.tar\.gz$/.test(x.name));
+  if(a)$("#dl").href=a.browser_download_url;$("#ver").textContent=ver?"v"+ver:"";$("#cmd").innerHTML=cmd()}).catch(()=>{});
+const io=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){e.target.classList.add("in");io.unobserve(e.target)}}),{threshold:.12});
+$$(".rv").forEach(e=>io.observe(e));
+render();
+</script>
+</body>
 </html>
