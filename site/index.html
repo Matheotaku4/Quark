@@ -1,0 +1,283 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Quark — A quiet game launcher for Linux</title>
+    <meta
+      name="description"
+      content="Quark is a lightweight Linux game launcher for local games, Steam, Epic Games and GOG, with Proton, save snapshots and an in-game overlay."
+    />
+    <meta property="og:title" content="Quark — A quiet game launcher for Linux" />
+    <meta
+      property="og:description"
+      content="One library for your local, Steam, Epic and GOG games. Built in Rust with egui."
+    />
+    <meta property="og:type" content="website" />
+    <meta property="og:image" content="https://matheotaku4.github.io/Quark/assets/home.png" />
+    <link rel="icon" href="assets/quark.png" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header class="site-header">
+      <a class="brand" href="#top" aria-label="Quark home">
+        <img src="assets/quark.png" alt="" width="32" height="32" />
+        <span>Quark</span>
+      </a>
+      <nav aria-label="Main navigation">
+        <a href="#features">Features</a>
+        <a href="#screenshots">Screenshots</a>
+        <a href="#install">Install</a>
+        <a href="https://github.com/Matheotaku4/Quark/wiki">Docs</a>
+        <a class="nav-github" href="https://github.com/Matheotaku4/Quark">GitHub</a>
+      </nav>
+    </header>
+
+    <main id="top">
+      <section class="hero">
+        <div class="hero-copy">
+          <p class="eyebrow">Linux · Rust · egui</p>
+          <h1>Your games.<br /><span>One quiet launcher.</span></h1>
+          <p class="lead">
+            Quark gathers local games, Steam, Epic Games and GOG in one fast
+            library. It handles Proton, saves and playtime, then gets out of
+            the way.
+          </p>
+          <div class="actions">
+            <a class="button primary" href="https://github.com/Matheotaku4/Quark/releases/latest">
+              Download latest
+            </a>
+            <a class="button secondary" href="https://github.com/Matheotaku4/Quark">
+              View source
+            </a>
+          </div>
+          <p class="fine-print">Free and open source · MIT licence · Linux x86_64</p>
+        </div>
+        <div class="hero-visual">
+          <div class="window-bar" aria-hidden="true">
+            <span></span><span></span><span></span>
+            <b>Quark</b>
+          </div>
+          <img
+            src="assets/home.png"
+            alt="Quark home screen with a game carousel and library covers"
+            width="1360"
+            height="860"
+          />
+        </div>
+      </section>
+
+      <section class="facts" aria-label="Quark at a glance">
+        <div><strong>3</strong><span>stores in one library</span></div>
+        <div><strong>13</strong><span>dark themes</span></div>
+        <div><strong>5</strong><span>interface languages</span></div>
+        <div><strong>1</strong><span>small native launcher</span></div>
+      </section>
+
+      <section id="features" class="section">
+        <div class="section-heading">
+          <p class="eyebrow">The essentials</p>
+          <h2>Everything around the game.<br />Nothing in front of it.</h2>
+        </div>
+        <div class="feature-grid">
+          <article class="feature">
+            <span class="feature-mark">01</span>
+            <h3>One library</h3>
+            <p>
+              Local folders and store games share covers, notes, tags, status,
+              playtime and statistics. A game with several editions stays one
+              entry.
+            </p>
+          </article>
+          <article class="feature">
+            <span class="feature-mark">02</span>
+            <h3>Steam, Epic and GOG</h3>
+            <p>
+              Read your Steam libraries, sign in to Epic directly, and install
+              or update GOG titles through gogdl. Accounts stay on your machine.
+            </p>
+          </article>
+          <article class="feature">
+            <span class="feature-mark">03</span>
+            <h3>Proton without a terminal</h3>
+            <p>
+              Per-game runtimes, prefixes, GameMode, MangoHud, gamescope, PRIME
+              offload and wrapper commands, all in plain checkboxes.
+            </p>
+          </article>
+          <article class="feature">
+            <span class="feature-mark">04</span>
+            <h3>An actual overlay</h3>
+            <p>
+              Open the in-game panel with Shift+Backspace, read achievements,
+              take an F12 screenshot, or enable a small DXGI FPS counter.
+            </p>
+          </article>
+          <article class="feature">
+            <span class="feature-mark">05</span>
+            <h3>Saves you can trust</h3>
+            <p>
+              Ludusavi snapshots before and after a session, with a preview,
+              an inventory and a validated restore path.
+            </p>
+          </article>
+          <article class="feature">
+            <span class="feature-mark">06</span>
+            <h3>Yours to look at</h3>
+            <p>
+              Thirteen AMOLED-friendly themes, list or grid, a home carousel,
+              adjustable density and five interface languages.
+            </p>
+          </article>
+        </div>
+      </section>
+
+      <section id="screenshots" class="section screenshots">
+        <div class="section-heading">
+          <p class="eyebrow">A closer look</p>
+          <h2>Built to be lived in.</h2>
+          <p class="section-note">
+            Real screenshots from the current interface, not mockups.
+          </p>
+        </div>
+        <div class="shot-grid">
+          <figure class="shot wide">
+            <img
+              src="assets/library.png"
+              alt="Quark library with a game page, achievements and filters"
+              loading="lazy"
+              width="1360"
+              height="860"
+            />
+            <figcaption>Library and game page</figcaption>
+          </figure>
+          <figure class="shot">
+            <img
+              src="assets/store.png"
+              alt="Quark store discovery page"
+              loading="lazy"
+              width="1360"
+              height="860"
+            />
+            <figcaption>Store discovery</figcaption>
+          </figure>
+          <figure class="shot">
+            <img
+              src="assets/settings.png"
+              alt="Quark appearance settings with theme cards"
+              loading="lazy"
+              width="1360"
+              height="860"
+            />
+            <figcaption>Appearance and themes</figcaption>
+          </figure>
+          <figure class="shot wide">
+            <img
+              src="assets/onboarding.png"
+              alt="Quark welcome guide"
+              loading="lazy"
+              width="1360"
+              height="860"
+            />
+            <figcaption>A short welcome guide, never a wall</figcaption>
+          </figure>
+        </div>
+      </section>
+
+      <section class="section split" id="overlay">
+        <div>
+          <p class="eyebrow">In game</p>
+          <h2>A launcher that is there when you need it.</h2>
+          <p>
+            The overlay opens above a Proton game, stays mouse-transparent while
+            closed and hides as soon as the game loses focus. The FPS counter
+            uses small <code>d3d11.dll</code> and <code>dxgi.dll</code> proxies
+            for DirectX 11 and 12 games.
+          </p>
+          <p class="note">
+            Vulkan, OpenGL and native Linux games are outside the DXGI proxy.
+            For those, Quark exposes MangoHud in the per-game launch options.
+          </p>
+        </div>
+        <div class="overlay-card">
+          <div class="overlay-line"><span>Shift</span><span>Backspace</span><b>Overlay</b></div>
+          <div class="overlay-line"><span>F12</span><b>Screenshot</b></div>
+          <div class="overlay-line"><span>FPS</span><b>DXGI 11 / 12</b></div>
+          <div class="overlay-line"><span>Focus</span><b>Auto-hide</b></div>
+        </div>
+      </section>
+
+      <section id="install" class="section install">
+        <div class="section-heading">
+          <p class="eyebrow">Get started</p>
+          <h2>One archive. No installer.</h2>
+          <p class="section-note">
+            Download the latest Linux archive, verify it, unpack it and run it.
+          </p>
+        </div>
+        <div class="install-grid">
+          <div class="terminal" aria-label="Installation commands">
+            <div class="terminal-top"><span></span><span></span><span></span></div>
+            <pre><code><span class="comment"># after downloading the archive</span>
+sha256sum -c quark-&lt;version&gt;-linux-x86_64.tar.gz.sha256
+tar -xzf quark-&lt;version&gt;-linux-x86_64.tar.gz
+./quark/quark</code></pre>
+          </div>
+          <div class="install-links">
+            <a class="link-card" href="https://github.com/Matheotaku4/Quark/releases/latest">
+              <span class="link-title">Latest release</span>
+              <span>Archive, checksum and notes</span>
+            </a>
+            <a class="link-card" href="https://github.com/Matheotaku4/Quark/wiki/Getting-Started">
+              <span class="link-title">Getting started</span>
+              <span>First launch, stores and Proton</span>
+            </a>
+            <a class="link-card" href="https://github.com/Matheotaku4/Quark/wiki/Troubleshooting">
+              <span class="link-title">Troubleshooting</span>
+              <span>Logs, runtimes and launch issues</span>
+            </a>
+          </div>
+        </div>
+      </section>
+
+      <section class="section faq">
+        <div class="section-heading">
+          <p class="eyebrow">Good to know</p>
+          <h2>Small print, plainly.</h2>
+        </div>
+        <div class="faq-grid">
+          <div>
+            <h3>Does Quark sell games?</h3>
+            <p>No. It opens store pages in your browser and never buys anything.</p>
+          </div>
+          <div>
+            <h3>Does it phone home?</h3>
+            <p>No telemetry. Store sessions and library data stay on your machine.</p>
+          </div>
+          <div>
+            <h3>What about Windows games?</h3>
+            <p>Quark launches them through Proton or umu-launcher, with your chosen prefix.</p>
+          </div>
+          <div>
+            <h3>Can I build it?</h3>
+            <p>Yes. Clone the repository and run <code>cargo build --release --locked</code>.</p>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      <a class="brand" href="#top">
+        <img src="assets/quark.png" alt="" width="28" height="28" />
+        <span>Quark</span>
+      </a>
+      <p>Made for Linux. Built with Rust and egui.</p>
+      <nav aria-label="Footer navigation">
+        <a href="https://github.com/Matheotaku4/Quark">Source</a>
+        <a href="https://github.com/Matheotaku4/Quark/releases">Releases</a>
+        <a href="https://github.com/Matheotaku4/Quark/wiki">Wiki</a>
+        <a href="https://github.com/Matheotaku4/Quark/blob/main/README.md#licence">Licence</a>
+      </nav>
+    </footer>
+  </body>
+</html>

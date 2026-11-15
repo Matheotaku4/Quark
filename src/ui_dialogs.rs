@@ -103,7 +103,7 @@ impl QuarkApp {
                                 crate::i18n::rich(
                                     "Tape au moins 2 lettres, la recherche est automatique.",
                                 )
-                                .size(11.5)
+                                .size(12.5)
                                 .color(pal.text_faint),
                             );
                         }
@@ -112,7 +112,7 @@ impl QuarkApp {
                                 ui.spinner();
                                 ui.label(
                                     crate::i18n::rich("Recherche en cours…")
-                                        .size(12.5)
+                                        .size(13.0)
                                         .color(pal.text_dim),
                                 );
                             });
@@ -124,7 +124,7 @@ impl QuarkApp {
                                     crate::i18n::rich(
                                         "Aucun résultat. Tu peux continuer sans artwork.",
                                     )
-                                    .size(12.5)
+                                    .size(13.0)
                                     .color(pal.text_dim),
                                 );
                             }
@@ -144,7 +144,7 @@ impl QuarkApp {
                     }
                     for warning in warnings {
                         ui.add_space(2.0);
-                        ui.label(crate::i18n::rich(warning).size(11.0).color(pal.text_faint));
+                        ui.label(crate::i18n::rich(warning).size(12.0).color(pal.text_faint));
                     }
 
                     ui.add_space(14.0);
@@ -205,7 +205,7 @@ impl QuarkApp {
                             ui.spinner();
                             ui.label(
                                 crate::i18n::rich("Recherche des artworks\u{2026}")
-                                    .size(12.5)
+                                    .size(13.0)
                                     .color(pal.text_dim),
                             );
                         });
@@ -219,14 +219,14 @@ impl QuarkApp {
                                     let urls = plan.candidates(kind);
                                     ui.label(
                                         crate::i18n::rich(kind.label().to_uppercase())
-                                            .size(11.0)
+                                            .size(12.0)
                                             .color(pal.text_faint),
                                     );
                                     ui.add_space(3.0);
                                     if urls.is_empty() {
                                         ui.label(
                                             crate::i18n::rich("aucune proposition")
-                                                .size(11.5)
+                                                .size(12.5)
                                                 .color(pal.text_faint),
                                         );
                                     } else {
@@ -266,7 +266,7 @@ impl QuarkApp {
                     }
                     if let Some(error) = self.add.artwork.error.clone() {
                         ui.add_space(4.0);
-                        ui.label(crate::i18n::rich(error).size(11.0).color(pal.text_faint));
+                        ui.label(crate::i18n::rich(error).size(12.0).color(pal.text_faint));
                     }
 
                     ui.add_space(14.0);
@@ -327,7 +327,7 @@ impl QuarkApp {
                             (None, Some(id)) => format!("Artworks : SteamGridDB #{id}"),
                             _ => "Artworks : aucun".to_string(),
                         };
-                        ui.label(crate::i18n::rich(info).size(11.0).color(pal.text_faint));
+                        ui.label(crate::i18n::rich(info).size(12.0).color(pal.text_faint));
                     }
                     ui.add_space(12.0);
 
@@ -409,7 +409,7 @@ impl QuarkApp {
                             ui.add_space(8.0);
                             ui.label(
                                 crate::i18n::rich("indique l'exécutable pour valider")
-                                    .size(11.0)
+                                    .size(12.0)
                                     .color(pal.text_faint),
                             );
                         }
@@ -578,7 +578,7 @@ impl QuarkApp {
                             ui.vertical(|ui| {
                                 ui.label(
                                     crate::i18n::rich("QUARK")
-                                        .size(11.0)
+                                        .size(12.0)
                                         .strong()
                                         .color(pal.text_faint),
                                 );
@@ -736,7 +736,7 @@ impl QuarkApp {
                                     crate::i18n::rich(
                                         "Le thème s'applique immédiatement à toute l'interface.",
                                     )
-                                    .size(11.0)
+                                    .size(12.0)
                                     .color(pal.text_faint),
                                 );
                             },
@@ -948,7 +948,7 @@ impl QuarkApp {
                                                 crate::i18n::rich(format!(
                                                     "Bannière de cette session : {name}"
                                                 ))
-                                                .size(11.0)
+                                                .size(12.0)
                                                 .color(pal.text_faint),
                                             );
                                         }
@@ -957,7 +957,7 @@ impl QuarkApp {
                                                 crate::i18n::rich(
                                                     "Aucune bannière disponible pour le fond aléatoire.",
                                                 )
-                                                .size(11.0)
+                                                .size(12.0)
                                                 .color(pal.text_faint),
                                             );
                                         }
@@ -1128,7 +1128,7 @@ impl QuarkApp {
                                                 crate::i18n::rich(
                                                     "Icône active : la croix ferme Quark, l'icône reste et un clic la relance.",
                                                 )
-                                                .size(11.0)
+                                                .size(12.0)
                                                 .color(pal.text_faint),
                                             );
                                         }
@@ -1138,7 +1138,7 @@ impl QuarkApp {
                                                     crate::i18n::rich(
                                                         "Icône indisponible : ce bureau n'a pas de zone de notification.",
                                                     )
-                                                    .size(11.0)
+                                                    .size(12.0)
                                                     .color(pal.danger),
                                                 );
                                                 widgets::info_button(ui, &pal, err);
@@ -1147,7 +1147,7 @@ impl QuarkApp {
                                                 crate::i18n::rich(
                                                     "Le bureau doit fournir un watcher StatusNotifierItem (extension AppIndicator sous GNOME). Décoché, la croix quitte Quark.",
                                                 )
-                                                .size(10.5)
+                                                .size(11.5)
                                                 .color(pal.text_faint),
                                             );
                                         }
@@ -1264,7 +1264,7 @@ impl QuarkApp {
                                                 crate::i18n::rich(
                                                     "F1–F12, Print… · appliquée au prochain lancement",
                                                 )
-                                                .size(11.0)
+                                                .size(12.0)
                                                 .color(pal.text_faint),
                                             );
                                         },
@@ -1273,7 +1273,7 @@ impl QuarkApp {
                                         crate::i18n::rich(
                                             "Format X11 : Shift, Ctrl, Alt ou Super, puis le nom de la touche. Maj+Retour arrière s'écrit Shift+BackSpace.",
                                         )
-                                        .size(11.0)
+                                        .size(12.0)
                                         .color(pal.text_faint),
                                     );
                                 }
@@ -1400,7 +1400,7 @@ impl QuarkApp {
                                     crate::i18n::rich(
                                         "Steam Cloud reste géré par le client Steam : Quark ne l'interroge pas.",
                                     )
-                                    .size(11.0)
+                                    .size(12.0)
                                     .color(pal.text_faint),
                                 );
                             },
@@ -1620,7 +1620,7 @@ impl QuarkApp {
                                                 "{protons} runtime(s) Proton · {anticheat} runtime(s) anti-triche"
                                             )
                                         })
-                                        .size(11.0)
+                                        .size(12.0)
                                         .color(pal.text_faint),
                                     );
                                     if widgets::ghost_button(
@@ -1640,7 +1640,7 @@ impl QuarkApp {
                                             "Anti-triche : {}",
                                             proton::anticheat_summary(&self.runtimes)
                                         ))
-                                        .size(11.0)
+                                        .size(12.0)
                                         .color(pal.text_faint),
                                     );
                                     widgets::info_button(
@@ -1654,7 +1654,7 @@ impl QuarkApp {
                                         crate::i18n::rich(
                                             "Aucun runtime trouvé. Installe Proton (Steam) ou dépose un build dans ~/.steam/steam/compatibilitytools.d/.",
                                         )
-                                        .size(11.0)
+                                        .size(12.0)
                                         .color(pal.text_faint),
                                     );
                                 }
@@ -1813,7 +1813,7 @@ impl QuarkApp {
                                                 crate::i18n::rich(
                                                     "Pays utilisé par l'API Steam (ex. fr, us).",
                                                 )
-                                                .size(11.0)
+                                                .size(12.0)
                                                 .color(pal.text_faint),
                                             );
                                         });
@@ -1850,7 +1850,7 @@ impl QuarkApp {
                                 );
                                 if let Some(error) = &self.credentials_error {
                                     ui.label(
-                                        crate::i18n::rich(error).size(11.5).color(pal.danger),
+                                        crate::i18n::rich(error).size(12.5).color(pal.danger),
                                     );
                                 }
                                 ui.label(
@@ -1954,7 +1954,7 @@ impl QuarkApp {
                                     crate::i18n::rich(
                                         "Heroic sera détecté et sa configuration ne sera lue qu'après ton accord explicite.",
                                     )
-                                    .size(11.5)
+                                    .size(12.5)
                                     .color(pal.text_faint),
                                 );
                             },
@@ -1977,7 +1977,7 @@ impl QuarkApp {
                                         {
                                             ui.label(
                                                 crate::i18n::rich(state)
-                                                    .size(11.0)
+                                                    .size(12.0)
                                                     .color(pal.text_dim),
                                             );
                                         } else if tool.installed_path().is_file() {
@@ -1985,13 +1985,13 @@ impl QuarkApp {
                                                 crate::i18n::rich(
                                                     "Binaire présent · version non vérifiée à cette session",
                                                 )
-                                                .size(11.0)
+                                                .size(12.0)
                                                 .color(pal.text_faint),
                                             );
                                         } else {
                                             ui.label(
                                                 crate::i18n::rich("Non installé")
-                                                    .size(11.0)
+                                                    .size(12.0)
                                                     .color(pal.text_faint),
                                             );
                                         }
@@ -2011,7 +2011,7 @@ impl QuarkApp {
                                     crate::i18n::rich(
                                         "Téléchargements depuis les releases officielles Linux x86_64 ; le digest SHA-256 GitHub est vérifié avant exécution (il ne s'agit pas d'une signature indépendante).",
                                     )
-                                    .size(11.0)
+                                    .size(12.0)
                                     .color(pal.text_faint),
                                 );
                             },
@@ -2042,14 +2042,14 @@ impl QuarkApp {
                                             "Installé · {}",
                                             path.display()
                                         ))
-                                        .size(11.5)
+                                        .size(12.5)
                                         .color(pal.text_dim),
                                     );
                                     ui.label(
                                         crate::i18n::rich(
                                             "Activé automatiquement dans le préfixe de chaque jeu Epic au lancement.",
                                         )
-                                        .size(11.0)
+                                        .size(12.0)
                                         .color(pal.text_faint),
                                     );
                                 } else {
@@ -2057,7 +2057,7 @@ impl QuarkApp {
                                         crate::i18n::rich(
                                             "Comme Heroic : télécharge l'overlay Epic une fois, puis l'active dans le préfixe du jeu. Maj+F3 ouvre l'overlay Epic en jeu.",
                                         )
-                                        .size(11.5)
+                                        .size(12.5)
                                         .color(pal.text_dim),
                                     );
                                     if widgets::ghost_button(
@@ -2261,7 +2261,7 @@ impl QuarkApp {
                                         UpdateState::Failed(error) => {
                                             ui.label(
                                                 crate::i18n::rich(error)
-                                                    .size(11.5)
+                                                    .size(12.5)
                                                     .color(pal.danger),
                                             );
                                             if widgets::ghost_button(
@@ -2281,14 +2281,14 @@ impl QuarkApp {
                                     crate::i18n::rich(
                                         "Quark vérifie le SHA-256, l'architecture x86_64 et la version du binaire avant de remplacer l'exécutable, puis se relance. L'ancien binaire reste sauvegardé à côté jusqu'au prochain démarrage réussi.",
                                     )
-                                    .size(11.0)
+                                    .size(12.0)
                                     .color(pal.text_faint),
                                 );
                                 ui.label(
                                     crate::i18n::rich(
                                         "Clavier : flèches pour changer de jeu, Entrée pour lancer, Ctrl+F pour chercher, Échap pour vider la recherche, Ctrl+Q pour quitter complètement.",
                                     )
-                                    .size(11.0)
+                                    .size(12.0)
                                     .color(pal.text_faint),
                                 );
                             },
@@ -2314,7 +2314,7 @@ impl QuarkApp {
                                         crate::i18n::rich(format!(
                                             "Mémoire résidente : {memory}"
                                         ))
-                                        .size(11.5)
+                                        .size(12.5)
                                         .color(pal.text_dim),
                                     );
                                     ui.add_space(14.0);
@@ -2330,7 +2330,7 @@ impl QuarkApp {
                                                 self.textures.len()
                                             )
                                         })
-                                        .size(11.0)
+                                        .size(12.0)
                                         .color(pal.text_faint),
                                     );
                                     widgets::info_button(
@@ -2606,11 +2606,11 @@ impl QuarkApp {
                     ui.horizontal(|ui| {
                         ui.vertical(|ui| {
                             ui.set_width(430.0);
-                            ui.label(crate::i18n::rich(label).size(12.5).color(pal.text));
-                            ui.label(crate::i18n::rich(detail).size(10.5).color(pal.text_faint));
+                            ui.label(crate::i18n::rich(label).size(13.0).color(pal.text));
+                            ui.label(crate::i18n::rich(detail).size(11.5).color(pal.text_faint));
                             ui.label(
                                 crate::i18n::rich(path.display().to_string())
-                                    .size(10.0)
+                                    .size(11.0)
                                     .color(pal.text_faint),
                             );
                         });
@@ -2620,7 +2620,7 @@ impl QuarkApp {
                                     *bytes,
                                     crate::i18n::is_english(),
                                 ))
-                                .size(12.5)
+                                .size(13.0)
                                 .color(pal.text),
                             );
                             ui.add_space(10.0);
@@ -2686,7 +2686,7 @@ impl QuarkApp {
                 ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
                     ui.label(
                         crate::i18n::rich("appmanifest_*.acf")
-                            .size(10.5)
+                            .size(11.5)
                             .color(pal.text_faint),
                     );
                 });
@@ -2696,7 +2696,7 @@ impl QuarkApp {
                     "Jeux installés trouvés dans tes bibliothèques Steam. Les jeux déjà dans \
                      Quark ne sont pas dupliqués ; l'exécutable est cherché dans le dossier du jeu.",
                 )
-                .size(11.5)
+                .size(12.5)
                 .color(pal.text_dim),
             );
             ui.add_space(8.0);
@@ -2726,7 +2726,7 @@ impl QuarkApp {
                         let available = import.games.iter().filter(|game| !game.owned).count();
                         ui.label(
                             crate::i18n::rich(format!("{available} disponible(s)"))
-                                .size(11.0)
+                                .size(12.0)
                                 .color(pal.text_faint),
                         );
                     });
@@ -2769,7 +2769,7 @@ impl QuarkApp {
                                                 "AppID {} · {exe}",
                                                 game.app_id
                                             ))
-                                            .size(10.5)
+                                            .size(11.5)
                                             .color(pal.text_faint),
                                         );
                                     });
@@ -2777,7 +2777,7 @@ impl QuarkApp {
                                         if game.owned {
                                             ui.label(
                                                 crate::i18n::rich("déjà importé")
-                                                    .size(10.5)
+                                                    .size(11.5)
                                                     .color(pal.text_faint),
                                             );
                                         }
@@ -2905,7 +2905,7 @@ impl QuarkApp {
                     ui.set_max_width((width - 440.0).max(260.0));
                     ui.label(
                         crate::i18n::rich("Paramètres du jeu")
-                            .size(11.0)
+                            .size(12.0)
                             .strong()
                             .color(pal.text_dim),
                     );
@@ -3142,7 +3142,7 @@ impl QuarkApp {
                                                                 "Ce jeu n'est pas lié à une fiche Steam."
                                                             },
                                                         )
-                                                        .size(11.5)
+                                                        .size(12.5)
                                                         .color(pal.text_dim),
                                                     );
                                                     if game.steam_app_id.is_some()
@@ -3164,7 +3164,7 @@ impl QuarkApp {
                                                         crate::i18n::rich(
                                                             "Lie ce jeu à une fiche Steam ou SteamGridDB pour récupérer sa jaquette, sa bannière, son logo et son icône.",
                                                         )
-                                                        .size(11.0)
+                                                        .size(12.0)
                                                         .color(pal.text_faint),
                                                     );
                                                     ui.horizontal(|ui| {
@@ -3210,7 +3210,7 @@ impl QuarkApp {
                                                                 crate::i18n::rich(
                                                                     "Recherche des fiches…",
                                                                 )
-                                                                .size(11.0)
+                                                                .size(12.0)
                                                                 .color(pal.text_dim),
                                                             );
                                                         });
@@ -3249,7 +3249,7 @@ impl QuarkApp {
                                                                                         ui.horizontal(|ui| {
                                                                                             ui.label(
                                                                                                 crate::i18n::rich(hit.source.label())
-                                                                                                    .size(9.5)
+                                                                                                    .size(10.5)
                                                                                                     .strong()
                                                                                                     .color(pal.text_faint),
                                                                                             );
@@ -3265,7 +3265,7 @@ impl QuarkApp {
                                                                                         if !hit.detail.is_empty() {
                                                                                             ui.label(
                                                                                                 crate::i18n::rich(&hit.detail)
-                                                                                                    .size(9.5)
+                                                                                                    .size(10.5)
                                                                                                     .color(pal.text_faint),
                                                                                             );
                                                                                         }
@@ -3293,7 +3293,7 @@ impl QuarkApp {
                                                             crate::i18n::rich(
                                                                 link_warnings.join(" · "),
                                                             )
-                                                            .size(10.0)
+                                                            .size(11.0)
                                                             .color(pal.text_faint),
                                                         );
                                                     }
@@ -3389,7 +3389,7 @@ impl QuarkApp {
                                                     "Préfixe utilisé : {}",
                                                     effective.display()
                                                 ))
-                                                .size(11.0)
+                                                .size(12.0)
                                                 .color(pal.text_faint),
                                             );
                                             // Les sauvegardes Dying Light (et
@@ -3672,7 +3672,7 @@ impl QuarkApp {
                     crate::i18n::rich(
                         "Les fichiers du jeu et le préfixe Proton ne sont jamais supprimés.",
                     )
-                    .size(11.5)
+                    .size(12.5)
                     .color(pal.text_faint),
                 );
             });
@@ -3839,7 +3839,7 @@ impl QuarkApp {
                 ui.add_space(4.0);
                 ui.label(
                     crate::i18n::rich("Couleur du jeu, déduite de la couverture")
-                        .size(11.0)
+                        .size(12.0)
                         .color(pal.text_faint),
                 );
             });
@@ -3874,7 +3874,7 @@ impl QuarkApp {
                             ui.vertical(|ui| {
                                 ui.label(
                                     crate::i18n::rich(asset.label().to_uppercase())
-                                        .size(11.0)
+                                        .size(12.0)
                                         .color(pal.text_faint),
                                 );
                                 ui.add_space(2.0);
@@ -3915,7 +3915,7 @@ impl QuarkApp {
                                     ui.horizontal_wrapped(|ui| {
                                         ui.label(
                                             crate::i18n::rich("Depuis la boutique :")
-                                                .size(10.5)
+                                                .size(11.5)
                                                 .color(pal.text_faint),
                                         );
                                         for (kind, path, source) in shop_images {
@@ -3952,7 +3952,7 @@ impl QuarkApp {
                                 if urls.is_empty() {
                                     ui.label(
                                         crate::i18n::rich("aucune proposition trouvée")
-                                            .size(11.5)
+                                            .size(12.5)
                                             .color(pal.text_faint),
                                     );
                                 } else {
@@ -3972,7 +3972,7 @@ impl QuarkApp {
                     }
 
                     if let Some(message) = &error {
-                        ui.label(crate::i18n::rich(message).size(11.5).color(pal.danger));
+                        ui.label(crate::i18n::rich(message).size(12.5).color(pal.danger));
                     }
                 });
 
@@ -4074,7 +4074,7 @@ impl QuarkApp {
                             "Le temps de jeu et les réglages du jeu seront perdus. Les fichiers du jeu \
                              et le préfixe Proton ne sont pas touchés ; les artworks mis en cache sont supprimés.",
                         )
-                        .size(11.5)
+                        .size(12.5)
                         .color(pal.text_faint),
                     );
                 } else {
@@ -4083,7 +4083,7 @@ impl QuarkApp {
                             "Le temps de jeu et les réglages du jeu seront perdus. Le jeu est \
                              installé depuis une boutique : tu peux aussi supprimer ses fichiers.",
                         )
-                        .size(11.5)
+                        .size(12.5)
                         .color(pal.text_dim),
                     );
                     ui.add_space(8.0);
@@ -4191,11 +4191,11 @@ impl QuarkApp {
                     "Le dossier de {provider} sera supprimé du disque. Tes sauvegardes, ton \
                      préfixe Proton et la fiche Quark restent en place."
                 ))
-                .size(11.5)
+                .size(12.5)
                 .color(pal.text_faint),
             );
             ui.add_space(4.0);
-            ui.label(crate::i18n::rich(path).size(10.5).color(pal.text_dim));
+            ui.label(crate::i18n::rich(path).size(11.5).color(pal.text_dim));
             ui.add_space(14.0);
             ui.horizontal(|ui| {
                 if widgets::danger_button(
@@ -4244,7 +4244,7 @@ fn env_editor(ui: &mut egui::Ui, pal: &Palette, vars: &mut Vec<EnvVar>) -> bool 
     if vars.is_empty() {
         ui.label(
             crate::i18n::rich("Aucune variable pour l'instant.")
-                .size(11.5)
+                .size(12.5)
                 .color(pal.text_faint),
         );
         ui.add_space(6.0);
@@ -4318,7 +4318,7 @@ fn env_editor(ui: &mut egui::Ui, pal: &Palette, vars: &mut Vec<EnvVar>) -> bool 
 /// Grand chiffre du résumé (valeur + libellé).
 fn metric(ui: &mut egui::Ui, pal: &Palette, label: &str, value: &str) {
     ui.vertical(|ui| {
-        ui.label(crate::i18n::rich(label).size(10.5).color(pal.text_faint));
+        ui.label(crate::i18n::rich(label).size(11.5).color(pal.text_faint));
         ui.label(crate::i18n::rich(value).size(19.0).strong().color(pal.text));
     });
 }
@@ -4479,7 +4479,7 @@ fn game_bar(ui: &mut egui::Ui, pal: &Palette, name: &str, secs: u64, max: u64) {
         ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
             ui.label(
                 crate::i18n::rich(config::human_playtime(secs))
-                    .size(11.5)
+                    .size(12.5)
                     .color(pal.text_dim),
             );
             let width = 260.0;
@@ -4508,7 +4508,7 @@ fn tags_editor(ui: &mut egui::Ui, pal: &Palette, tags: &mut Vec<String>) {
     ui.horizontal(|ui| {
         ui.label(
             crate::i18n::rich("Tags personnels")
-                .size(12.5)
+                .size(13.0)
                 .color(pal.text_dim),
         );
         widgets::info_button(
@@ -4522,7 +4522,7 @@ fn tags_editor(ui: &mut egui::Ui, pal: &Palette, tags: &mut Vec<String>) {
     if tags.is_empty() {
         ui.label(
             crate::i18n::rich("aucun tag")
-                .size(11.0)
+                .size(12.0)
                 .color(pal.text_faint),
         );
     } else {
@@ -4574,7 +4574,7 @@ fn dll_overrides_editor(
 ) {
     ui.label(
         crate::i18n::rich("Dossier source des DLL")
-            .size(12.5)
+            .size(13.0)
             .color(pal.text_dim),
     );
     let default_source = own_dir(&game.exe);
@@ -4615,7 +4615,7 @@ fn dll_overrides_editor(
         .unwrap_or_else(|| default_source.clone());
     ui.label(
         crate::i18n::rich(format!("Dossier analysé : {}", source.display()))
-            .size(11.0)
+            .size(12.0)
             .color(pal.text_faint),
     );
     ui.add_space(8.0);
@@ -4624,7 +4624,7 @@ fn dll_overrides_editor(
     if !source.is_dir() {
         ui.label(
             crate::i18n::rich("Dossier introuvable. Choisis un dossier source existant.")
-                .size(11.5)
+                .size(12.5)
                 .color(pal.danger),
         );
     } else {
@@ -4634,14 +4634,14 @@ fn dll_overrides_editor(
                     crate::i18n::rich(
                         "Aucune DLL trouvée dans ce dossier ni dans ses sous-dossiers.",
                     )
-                    .size(11.5)
+                    .size(12.5)
                     .color(pal.text_faint),
                 );
             }
             Ok(files) => {
                 ui.label(
                     crate::i18n::rich("DLL du dossier source et de ses sous-dossiers")
-                        .size(11.5)
+                        .size(12.5)
                         .color(pal.text_dim),
                 );
                 egui::ScrollArea::vertical()
@@ -4670,7 +4670,7 @@ fn dll_overrides_editor(
             Err(error) => {
                 ui.label(
                     crate::i18n::rich(format!("Lecture du dossier impossible : {error}"))
-                        .size(11.5)
+                        .size(12.5)
                         .color(pal.danger),
                 );
             }
@@ -4695,7 +4695,7 @@ fn dll_overrides_editor(
     if rows.is_empty() {
         ui.label(
             crate::i18n::rich("Aucun override. Coche une DLL ci-dessus ou ajoute-en une.")
-                .size(11.5)
+                .size(12.5)
                 .color(pal.text_faint),
         );
     } else {
@@ -4730,7 +4730,7 @@ fn dll_overrides_editor(
                 }
                 ui.label(
                     crate::i18n::rich("n = native · b = builtin")
-                        .size(10.0)
+                        .size(11.0)
                         .color(pal.text_faint),
                 );
             });
@@ -4923,9 +4923,9 @@ fn info_line(ui: &mut egui::Ui, label: &str, value: &str, pal: &Palette) {
     ui.horizontal(|ui| {
         ui.add_sized(
             Vec2::new(120.0, 18.0),
-            egui::Label::new(crate::i18n::rich(label).size(11.5).color(pal.text_dim)),
+            egui::Label::new(crate::i18n::rich(label).size(12.5).color(pal.text_dim)),
         );
-        ui.label(crate::i18n::rich(value).size(11.5).color(pal.text));
+        ui.label(crate::i18n::rich(value).size(12.5).color(pal.text));
     });
 }
 
@@ -5005,7 +5005,7 @@ fn runtime_combo(
                 ui.separator();
                 ui.label(
                     crate::i18n::rich("ANTI-TRICHE (BattlEye / EasyAntiCheat)")
-                        .size(10.0)
+                        .size(11.0)
                         .color(pal.text_faint),
                 );
                 for runtime in &anticheat {
@@ -5177,7 +5177,7 @@ fn scan_row(ui: &mut egui::Ui, pal: &Palette, candidate: &mut crate::app::ScanCa
                     );
                     ui.label(
                         crate::i18n::rich(candidate.exe.display().to_string())
-                            .size(10.5)
+                            .size(11.5)
                             .color(pal.text_faint),
                     );
                     let detail = if candidate.searching {
@@ -5185,7 +5185,7 @@ fn scan_row(ui: &mut egui::Ui, pal: &Palette, candidate: &mut crate::app::ScanCa
                     } else {
                         candidate.detail.clone()
                     };
-                    ui.label(crate::i18n::rich(detail).size(11.0).color(
+                    ui.label(crate::i18n::rich(detail).size(12.0).color(
                         if candidate.hit.is_some() {
                             pal.text_dim
                         } else {
@@ -5242,7 +5242,7 @@ impl QuarkApp {
                 ui.spinner();
                 ui.label(
                     crate::i18n::rich("Analyse du dossier et recherche des titres…")
-                        .size(12.5)
+                        .size(13.0)
                         .color(pal.text_dim),
                 );
             });
@@ -5262,7 +5262,7 @@ impl QuarkApp {
                 crate::i18n::rich(
                     "Vérifie les titres proposés, corrige-les si besoin puis relance la recherche.",
                 )
-                .size(11.0)
+                .size(12.0)
                 .color(pal.text_faint),
             );
             ui.add_space(8.0);
@@ -5407,14 +5407,14 @@ impl QuarkApp {
                         ctx.request_repaint_after(std::time::Duration::from_millis(200));
                     }
                     Some(crate::app::AchievementsState::Failed(message)) => {
-                        ui.label(crate::i18n::rich(message).size(12.5).color(pal.text_dim));
+                        ui.label(crate::i18n::rich(message).size(13.0).color(pal.text_dim));
                         ui.add_space(6.0);
                         ui.label(
                             crate::i18n::rich(format!(
                                 "Les succès {provider_label} demandent une session connectée \
                                  (Paramètres \u{2192} Boutiques & outils) et un jeu qui en publie."
                             ))
-                            .size(11.0)
+                            .size(12.0)
                             .color(pal.text_faint),
                         );
                         if provider == crate::providers::Provider::Epic {
@@ -5423,7 +5423,7 @@ impl QuarkApp {
                                     "Un jeu peut aussi déclarer ses succès pendant la partie via \
                                      QUARK_ACHIEVEMENTS_URL : ils apparaissent marqués « session ».",
                                 )
-                                .size(11.0)
+                                .size(12.0)
                                 .color(pal.text_faint),
                             );
                         }
@@ -5432,7 +5432,7 @@ impl QuarkApp {
                         if info.total == 0 {
                             ui.label(
                                 crate::i18n::rich("Ce jeu ne publie aucun succès.")
-                                    .size(12.5)
+                                    .size(13.0)
                                     .color(pal.text_dim),
                             );
                         } else {
@@ -5443,7 +5443,7 @@ impl QuarkApp {
                                         "{} / {} succès débloqués",
                                         info.unlocked, info.total
                                     ))
-                                    .size(12.5)
+                                    .size(13.0)
                                     .color(pal.text),
                                 );
                                 ui.with_layout(
@@ -5454,7 +5454,7 @@ impl QuarkApp {
                                                 "{:.0} %",
                                                 ratio * 100.0
                                             ))
-                                            .size(11.0)
+                                            .size(12.0)
                                             .color(pal.text_faint),
                                         );
                                     },
@@ -5479,7 +5479,7 @@ impl QuarkApp {
                             if info.rows.iter().any(|row| row.rarity.is_some()) {
                                 ui.label(
                                     crate::i18n::rich("Triés du plus courant au plus rare")
-                                        .size(10.0)
+                                        .size(11.0)
                                         .color(pal.text_faint),
                                 );
                                 ui.add_space(6.0);
@@ -5527,7 +5527,7 @@ impl QuarkApp {
                                                 ui.horizontal(|ui| {
                                                     ui.label(
                                                         crate::i18n::raw(&row.name)
-                                                            .size(12.5)
+                                                            .size(13.0)
                                                             .strong()
                                                             .color(if row.unlocked {
                                                                 pal.text
@@ -5544,7 +5544,7 @@ impl QuarkApp {
                                                         };
                                                         ui.label(
                                                             crate::i18n::rich(text)
-                                                                .size(9.5)
+                                                                .size(10.5)
                                                                 .color(pal.text_faint),
                                                         )
                                                         .on_hover_text(
@@ -5555,7 +5555,7 @@ impl QuarkApp {
                                                 if !row.description.is_empty() {
                                                     ui.label(
                                                         crate::i18n::rich(&row.description)
-                                                            .size(11.0)
+                                                            .size(12.0)
                                                             .color(pal.text_dim),
                                                     );
                                                 }
@@ -5570,7 +5570,7 @@ impl QuarkApp {
                                                                     format!(" · {}", row.key)
                                                                 }
                                                             ))
-                                                            .size(9.5)
+                                                            .size(10.5)
                                                             .strong()
                                                             .color(pal.accent),
                                                         );
@@ -5581,7 +5581,7 @@ impl QuarkApp {
                                                                 "progression {:.0} %",
                                                                 row.progress * 100.0
                                                             ))
-                                                            .size(9.5)
+                                                            .size(10.5)
                                                             .color(pal.text_faint),
                                                         );
                                                     }
@@ -5657,7 +5657,7 @@ impl QuarkApp {
                         ui.spinner();
                         ui.label(
                             crate::i18n::rich("session en cours")
-                                .size(11.0)
+                                .size(12.0)
                                 .color(pal.text_dim),
                         );
                     }
@@ -5665,7 +5665,7 @@ impl QuarkApp {
                 ui.add_space(4.0);
                 ui.label(
                     crate::i18n::rich(path.display().to_string())
-                        .size(10.5)
+                        .size(11.5)
                         .color(pal.text_faint),
                 );
                 widgets::info_button(
@@ -5684,11 +5684,11 @@ impl QuarkApp {
                     .stick_to_bottom(true)
                     .show(ui, |ui| {
                         if let Some(message) = &error {
-                            ui.label(crate::i18n::rich(message).size(11.5).color(pal.danger));
+                            ui.label(crate::i18n::rich(message).size(12.5).color(pal.danger));
                             ui.add_space(6.0);
                             ui.label(
                                 crate::i18n::rich("Le journal est créé au premier lancement du jeu.")
-                                    .size(11.5)
+                                    .size(12.5)
                                     .color(pal.text_faint),
                             );
                             return;
@@ -5696,7 +5696,7 @@ impl QuarkApp {
                         if truncated {
                             ui.label(
                                 crate::i18n::rich("début du journal tronqué à l'affichage")
-                                    .size(10.5)
+                                    .size(11.5)
                                     .color(pal.text_faint),
                             );
                             ui.add_space(4.0);
@@ -5704,7 +5704,7 @@ impl QuarkApp {
                         if lines.is_empty() {
                             ui.label(
                                 crate::i18n::rich("journal vide")
-                                    .size(11.5)
+                                    .size(12.5)
                                     .color(pal.text_faint),
                             );
                         } else {
@@ -5712,7 +5712,7 @@ impl QuarkApp {
                                 egui::Label::new(
                                     crate::i18n::rich(lines.join("\n"))
                                         .monospace()
-                                        .size(11.0)
+                                        .size(12.0)
                                         .color(pal.text_dim),
                                 )
                                 .wrap_mode(egui::TextWrapMode::Extend)
@@ -5843,7 +5843,7 @@ fn launch_options_editor(
             }
             ui.label(
                 crate::i18n::rich("AppID ProtonDB · « 0 » pour un jeu inconnu")
-                    .size(10.5)
+                    .size(11.5)
                     .color(pal.text_faint),
             );
         });
@@ -5875,7 +5875,7 @@ fn launch_options_editor(
                 ui.horizontal_wrapped(|ui| {
                     ui.label(
                         crate::i18n::rich("Résolution")
-                            .size(11.5)
+                            .size(12.5)
                             .color(pal.text_dim),
                     );
                     changed |= ui
@@ -5886,7 +5886,7 @@ fn launch_options_editor(
                                 .suffix(" px"),
                         )
                         .changed();
-                    ui.label(crate::i18n::rich("×").size(11.0).color(pal.text_dim));
+                    ui.label(crate::i18n::rich("×").size(12.0).color(pal.text_dim));
                     changed |= ui
                         .add(
                             egui::DragValue::new(&mut launch.gamescope_height)
@@ -5896,7 +5896,7 @@ fn launch_options_editor(
                         )
                         .changed();
                     ui.add_space(18.0);
-                    ui.label(crate::i18n::rich("Limite").size(11.5).color(pal.text_dim));
+                    ui.label(crate::i18n::rich("Limite").size(12.5).color(pal.text_dim));
                     changed |= ui
                         .add(
                             egui::DragValue::new(&mut launch.gamescope_fps)
@@ -5947,7 +5947,7 @@ fn launch_options_editor(
             crate::i18n::rich(
                 "%command% est remplacé par la commande du jeu ; sans %command%, la commande est placée devant.",
             )
-            .size(11.0)
+            .size(12.0)
             .color(pal.text_faint),
         );
         widgets::info_button(

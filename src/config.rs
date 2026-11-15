@@ -1703,11 +1703,8 @@ impl Game {
             }
         }
         self.last_played = Some(start + secs as i64);
-        // Un jeu lancé n'est plus « à jouer » : il passe « en cours » tant que
-        // le joueur ne lui a pas donné un autre statut.
-        if self.status == GameStatus::Backlog {
-            self.status = GameStatus::Playing;
-        }
+        // Le statut reste un choix manuel : lancer ou jouer un jeu « à jouer »
+        // ne doit pas le faire passer tout seul « en cours ».
     }
 
     pub fn last_played_label(&self) -> String {
@@ -2876,8 +2873,9 @@ mod tests {
         assert_eq!(game.last_played, Some(1_600));
         assert_eq!(game.sessions.len(), 1);
         assert_eq!(game.sessions[0].secs, 600);
-        // Un jeu « à jouer » passe « en cours » au premier lancement.
-        assert_eq!(game.status, GameStatus::Playing);
+        // Le statut reste « à jouer » après une session : il n'est plus
+        // modifié automatiquement par le simple lancement du jeu.
+        assert_eq!(game.status, GameStatus::Backlog);
         // Une durée nulle ne crée jamais une session vide.
         game.record_session(2_000, 0);
         assert_eq!(game.sessions[1].secs, 1);

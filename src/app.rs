@@ -2668,7 +2668,8 @@ impl QuarkApp {
                             ));
                         }
                         Ok(_) => {
-                            for (name, value) in crate::overlay_dll::launch_environment("top-left")
+                            for (name, value) in
+                                crate::overlay_dll::launch_environment_for(&game, "top-left")
                             {
                                 crate::overlay_dll::set_env(&mut resolved.spec.env, &name, &value);
                             }
@@ -2968,7 +2969,7 @@ impl QuarkApp {
                 ui.horizontal(|ui| {
                     ui.label(
                         crate::i18n::rich(errors.join(" · "))
-                            .size(11.5)
+                            .size(12.5)
                             .color(pal.danger),
                     );
                     ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
@@ -3167,7 +3168,7 @@ impl QuarkApp {
                         } else if self.tab == Tab::Store {
                             ui.label(
                                 crate::i18n::rich("Catalogue Steam")
-                                    .size(11.5)
+                                    .size(12.5)
                                     .color(pal.text_faint),
                             );
                         }
@@ -3216,7 +3217,7 @@ impl QuarkApp {
                                 ui.set_max_width(380.0);
                                 ui.label(
                                     crate::i18n::rich(&toast.text)
-                                        .size(12.5)
+                                        .size(13.0)
                                         .color(text_color.gamma_multiply(alpha)),
                                 );
                             });
@@ -3670,7 +3671,7 @@ impl QuarkApp {
                         ui.horizontal(|ui| {
                             ui.label(
                                 crate::i18n::rich("TÉLÉCHARGEMENTS")
-                                    .size(10.0)
+                                    .size(11.0)
                                     .strong()
                                     .color(pal.accent),
                             );
@@ -5007,7 +5008,7 @@ impl QuarkApp {
                     ui.label(crate::i18n::rich("Ludusavi a signalé une erreur; aucune sauvegarde ne sera déclarée réussie.").size(12.0).color(pal.danger));
                 }
                 if preview.files.iter().any(|file| file.failed) {
-                    ui.label(crate::i18n::rich("Certains fichiers ont échoué; vérifie les détails via Ludusavi.").size(11.5).color(pal.danger));
+                    ui.label(crate::i18n::rich("Certains fichiers ont échoué; vérifie les détails via Ludusavi.").size(12.5).color(pal.danger));
                 }
                 ui.add_space(10.0);
                 ui.horizontal(|ui| {
@@ -5071,7 +5072,7 @@ impl QuarkApp {
                     ui.horizontal(|ui| {
                         ui.label(crate::i18n::rich(&backup.when).size(12.0).color(pal.text));
                         if backup.locked {
-                            ui.label(crate::i18n::rich("Protégée").size(10.0).color(pal.accent));
+                            ui.label(crate::i18n::rich("Protégée").size(11.0).color(pal.accent));
                         }
                         if ui.small_button("Aperçu restauration…").clicked() {
                             selected = Some(backup.clone());
@@ -5114,7 +5115,7 @@ impl QuarkApp {
                     .max_height(240.0)
                     .show(ui, |ui| {
                         for file in &preview.files {
-                            ui.label(crate::i18n::rich(&file.path).size(10.5).color(pal.text_dim));
+                            ui.label(crate::i18n::rich(&file.path).size(11.5).color(pal.text_dim));
                         }
                     });
                 if !preview.errors.is_empty() || preview.files.iter().any(|file| file.failed) {
@@ -5122,7 +5123,7 @@ impl QuarkApp {
                         crate::i18n::rich(
                             "L'aperçu contient des erreurs; restauration désactivée.",
                         )
-                        .size(11.5)
+                        .size(12.5)
                         .color(pal.danger),
                     );
                 }
@@ -5554,7 +5555,7 @@ impl QuarkApp {
                     crate::providers::Provider::Gog => "GOG · via gogdl",
                     crate::providers::Provider::Steam => "Steam",
                 })
-                .size(11.5)
+                .size(12.5)
                 .color(pal.text_dim),
             );
             ui.add_space(14.0);
@@ -5570,18 +5571,18 @@ impl QuarkApp {
             } else {
                 "Taille non communiquée par la boutique".to_string()
             };
-            ui.label(crate::i18n::rich(size_text).size(12.5).color(pal.text));
+            ui.label(crate::i18n::rich(size_text).size(13.0).color(pal.text));
             ui.add_space(8.0);
             ui.label(
                 crate::i18n::rich("Dossier d'installation")
-                    .size(10.5)
+                    .size(11.5)
                     .color(pal.text_faint),
             );
             ui.horizontal(|ui| {
                 ui.add(
                     egui::Label::new(
                         crate::i18n::rich(request.destination.display().to_string())
-                            .size(11.5)
+                            .size(12.5)
                             .color(pal.text_dim),
                     )
                     .truncate(),
@@ -5596,7 +5597,7 @@ impl QuarkApp {
                     "Le jeu sera créé dans ce dossier. Les sauvegardes et le préfixe Proton \
                      restent conservés en cas de désinstallation.",
                 )
-                .size(10.5)
+                .size(11.5)
                 .color(pal.text_faint),
             );
             ui.add_space(16.0);

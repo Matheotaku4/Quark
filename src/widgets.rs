@@ -795,7 +795,7 @@ pub fn more_button(ui: &mut egui::Ui, size: f32, pal: &Palette, tooltip: &str) -
 pub fn tab(ui: &mut egui::Ui, label: &str, selected: bool, pal: &Palette) -> Response {
     let label = crate::i18n::tr(label);
     let text = label.to_uppercase();
-    let font = FontId::new(12.5, crate::fonts::bold_family());
+    let font = FontId::new(13.0, crate::fonts::bold_family());
     let width = ui
         .painter()
         .layout_no_wrap(text.clone(), font.clone(), pal.text)
@@ -919,10 +919,10 @@ pub fn setting_toggle(
             .layout(egui::Layout::top_down(egui::Align::Min)),
     );
     child.spacing_mut().item_spacing.y = 1.0;
-    child.label(crate::i18n::rich(title).size(12.5).color(pal.text));
+    child.label(crate::i18n::rich(title).size(13.0).color(pal.text));
     if let Some(hint) = hint {
         child
-            .add(egui::Label::new(crate::i18n::rich(hint).size(10.5).color(pal.text_faint)).wrap());
+            .add(egui::Label::new(crate::i18n::rich(hint).size(11.5).color(pal.text_faint)).wrap());
     }
     // Interrupteur peint, sans widget interactif imbriqué : toute la ligne
     // réagit au clic, sans double bascule.

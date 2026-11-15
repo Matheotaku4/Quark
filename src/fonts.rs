@@ -8,6 +8,7 @@ use eframe::egui::{self, FontData, FontDefinitions, FontFamily};
 use std::sync::Arc;
 
 const ARCHIVO: &[u8] = include_bytes!("../assets/fonts/Archivo-Regular.ttf");
+const ARCHIVO_MEDIUM: &[u8] = include_bytes!("../assets/fonts/Archivo-Medium.ttf");
 const ARCHIVO_BOLD: &[u8] = include_bytes!("../assets/fonts/Archivo-Bold.ttf");
 const LUCIDE: &[u8] = include_bytes!("../assets/fonts/lucide.ttf");
 
@@ -32,17 +33,22 @@ pub fn install(ctx: &egui::Context) {
         Arc::new(FontData::from_static(ARCHIVO)),
     );
     fonts.font_data.insert(
+        "archivo-medium".to_owned(),
+        Arc::new(FontData::from_static(ARCHIVO_MEDIUM)),
+    );
+    fonts.font_data.insert(
         "archivo-bold".to_owned(),
         Arc::new(FontData::from_static(ARCHIVO_BOLD)),
     );
     fonts
         .font_data
         .insert("lucide".to_owned(), Arc::new(FontData::from_static(LUCIDE)));
-    fonts
-        .families
-        .entry(FontFamily::Proportional)
-        .or_default()
-        .insert(0, "archivo".to_owned());
+    // Le texte courant utilise Archivo Medium : à 11–14 px, la graisse 500
+    // garde des contours plus nets que la Regular sur les fonds sombres. La
+    // Regular reste en secours pour les glyphes absents du fichier Medium.
+    let proportional = fonts.families.entry(FontFamily::Proportional).or_default();
+    proportional.insert(0, "archivo-medium".to_owned());
+    proportional.insert(1, "archivo".to_owned());
     // La famille « bold » ne contient qu'Archivo Bold : aucun glyphe ne peut
     // retomber sur la graisse normale, et les polices egui restent en secours
     // pour les caractères absents de la version latine.

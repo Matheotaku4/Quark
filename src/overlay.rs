@@ -314,7 +314,7 @@ fn draw_toast(ui: &mut egui::Ui, pal: &crate::theme::Palette, notices: &[Notice]
             ui.horizontal(|ui| {
                 ui.label(
                     crate::i18n::rich("QUARK")
-                        .size(9.5)
+                        .size(10.5)
                         .color(pal.accent)
                         .strong(),
                 );
@@ -331,7 +331,7 @@ fn draw_toast(ui: &mut egui::Ui, pal: &crate::theme::Palette, notices: &[Notice]
             });
             ui.label(
                 crate::i18n::rich(&notice.detail)
-                    .size(11.0)
+                    .size(12.0)
                     .color(Color32::from_white_alpha(190)),
             );
         });
@@ -373,7 +373,7 @@ fn draw_overlay(
                     ui.vertical(|ui| {
                         ui.label(
                             crate::i18n::rich("EN JEU")
-                                .size(10.0)
+                                .size(11.0)
                                 .color(pal.accent)
                                 .strong(),
                         );
@@ -401,7 +401,7 @@ fn draw_overlay(
                             if let Some(provider) = provider {
                                 ui.label(
                                     crate::i18n::rich(provider_label(provider))
-                                        .size(10.0)
+                                        .size(11.0)
                                         .color(provider_color(provider)),
                                 );
                             }
@@ -414,7 +414,7 @@ fn draw_overlay(
                         "{} pour fermer · {} pour une capture",
                         settings.overlay_hotkey, settings.screenshot_key
                     ))
-                    .size(10.5)
+                    .size(11.5)
                     .color(pal.text_faint),
                 );
                 ui.add_space(16.0);
@@ -431,7 +431,7 @@ fn draw_overlay(
                     if let Some(info) = achievements {
                         ui.label(
                             crate::i18n::rich(format!("{} / {}", info.unlocked, info.total))
-                                .size(11.0)
+                                .size(12.0)
                                 .color(pal.text_dim),
                         );
                     }
@@ -470,7 +470,7 @@ fn draw_overlay(
                         crate::i18n::rich(
                             "Vérifie la connexion à la boutique dans Paramètres → Boutiques & outils.",
                         )
-                        .size(11.0)
+                        .size(12.0)
                         .color(pal.text_faint),
                     );
                 } else if let Some(info) = achievements {
@@ -513,7 +513,7 @@ fn draw_overlay(
                         for notice in notices.iter().rev() {
                             ui.label(
                                 crate::i18n::rich(format!("{} · {}", notice.title, notice.detail))
-                                    .size(10.0)
+                                    .size(11.0)
                                     .color(pal.text_faint),
                             );
                         }
@@ -575,7 +575,7 @@ fn achievement_row(
                     ui.horizontal(|ui| {
                         ui.label(
                             crate::i18n::raw(&row.name)
-                                .size(12.5)
+                                .size(13.0)
                                 .color(if row.unlocked { pal.text } else { pal.text_dim })
                                 .strong(),
                         );
@@ -586,7 +586,7 @@ fn achievement_row(
                     if !compact && !row.description.is_empty() {
                         ui.label(
                             crate::i18n::rich(&row.description)
-                                .size(10.5)
+                                .size(11.5)
                                 .color(pal.text_faint),
                         );
                     }
@@ -599,7 +599,7 @@ fn achievement_row(
                         } else if settings.overlay_show_progress && row.progress > 0.0 {
                             ui.label(
                                 crate::i18n::rich(format!("{:.0} %", row.progress * 100.0))
-                                    .size(10.5)
+                                    .size(11.5)
                                     .color(pal.text_faint),
                             );
                         }
@@ -608,7 +608,7 @@ fn achievement_row(
                         {
                             ui.label(
                                 crate::i18n::rich(format!("{rarity:.1} % des joueurs"))
-                                    .size(9.5)
+                                    .size(10.5)
                                     .color(pal.text_faint),
                             );
                         }

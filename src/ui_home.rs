@@ -129,7 +129,7 @@ impl QuarkApp {
             ui.add_space(8.0);
             ui.label(
                 crate::i18n::rich("Ajoute un jeu pour le voir apparaître ici.")
-                    .size(12.5)
+                    .size(13.0)
                     .color(pal.text_dim),
             );
             ui.add_space(18.0);
@@ -523,7 +523,7 @@ impl QuarkApp {
                             &game.name,
                             0.0,
                             egui::TextFormat {
-                                font_id: FontId::new(13.5, crate::fonts::bold_family()),
+                                font_id: FontId::new(14.0, crate::fonts::bold_family()),
                                 color: pal.text,
                                 ..Default::default()
                             },
@@ -762,7 +762,7 @@ pub(crate) fn linux_chip(ui: &mut egui::Ui, pal: &Palette) {
     ui.add(
         egui::Button::new(
             crate::i18n::rich("LINUX NATIF")
-                .size(10.0)
+                .size(11.0)
                 .strong()
                 .color(theme::on_accent(color)),
         )

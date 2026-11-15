@@ -465,7 +465,7 @@ impl QuarkApp {
                             }
                             ui.label(
                                 crate::i18n::rich("ESC")
-                                    .size(10.0)
+                                    .size(11.0)
                                     .monospace()
                                     .color(pal.text_faint),
                             );
@@ -487,7 +487,7 @@ impl QuarkApp {
                                     ui.vertical_centered(|ui| {
                                         ui.label(
                                             crate::i18n::rich("Aucun résultat")
-                                                .size(12.5)
+                                                .size(13.0)
                                                 .color(pal.text_dim),
                                         );
                                     });
@@ -503,7 +503,7 @@ impl QuarkApp {
                                             ui.add_space(18.0);
                                             ui.label(
                                                 crate::i18n::rich(entry.group)
-                                                    .size(9.5)
+                                                    .size(10.5)
                                                     .strong()
                                                     .color(pal.text_faint),
                                             );
@@ -606,7 +606,7 @@ impl QuarkApp {
                             ui.add_space(18.0);
                             ui.label(
                                 crate::i18n::rich("↑↓ naviguer   Entrée ouvrir   Échap fermer")
-                                    .size(10.0)
+                                    .size(11.0)
                                     .color(pal.text_faint),
                             );
                         });

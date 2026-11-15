@@ -133,7 +133,7 @@ impl QuarkApp {
                                 }
                                 if let Some(error) = &self.store_search_error {
                                     ui.label(
-                                        crate::i18n::rich(error).size(11.5).color(pal.danger),
+                                        crate::i18n::rich(error).size(12.5).color(pal.danger),
                                     );
                                 }
                                 if let Some(results) = self.store_search_results.clone() {
@@ -169,14 +169,14 @@ impl QuarkApp {
                                         crate::i18n::rich(format!(
                                             "{error} · les dernières offres en cache restent affichées."
                                         ))
-                                        .size(11.5)
+                                        .size(12.5)
                                         .color(pal.text_faint),
                                     );
                                 }
                                 if let Some(notice) = &self.store_notice {
                                     ui.label(
                                         crate::i18n::rich(notice)
-                                            .size(11.0)
+                                            .size(12.0)
                                             .color(pal.text_faint),
                                     );
                                 }
@@ -185,7 +185,7 @@ impl QuarkApp {
                                         crate::i18n::rich(
                                             "Cache local · données potentiellement périmées",
                                         )
-                                        .size(11.0)
+                                        .size(12.0)
                                         .color(pal.text_faint),
                                     );
                                 }
@@ -362,7 +362,7 @@ impl QuarkApp {
                         ui.vertical(|ui| {
                             ui.label(
                                 crate::i18n::rich("RECHERCHE MULTI-SITES")
-                                    .size(10.5)
+                                    .size(11.5)
                                     .strong()
                                     .color(pal.accent),
                             );
@@ -376,7 +376,7 @@ impl QuarkApp {
                                 crate::i18n::rich(
                                     "5 sites · chaque résultat s'ouvre dans le navigateur",
                                 )
-                                .size(11.0)
+                                .size(12.0)
                                 .color(pal.text_dim),
                             );
                         });
@@ -406,7 +406,7 @@ impl QuarkApp {
                                     "{} source(s) en cours…",
                                     job.pending
                                 ))
-                                .size(10.5)
+                                .size(11.5)
                                 .color(pal.text_faint),
                             );
                             ui.ctx()
@@ -414,7 +414,7 @@ impl QuarkApp {
                         } else {
                             ui.label(
                                 crate::i18n::rich("Recherche terminée")
-                                    .size(10.5)
+                                    .size(11.5)
                                     .color(pal.text_faint),
                             );
                         }
@@ -431,13 +431,13 @@ impl QuarkApp {
                                 ui.horizontal(|ui| {
                                     ui.label(
                                         crate::i18n::rich(site.label())
-                                            .size(13.5)
+                                            .size(14.0)
                                             .strong()
                                             .color(site_color(*site)),
                                     );
                                     ui.label(
                                         crate::i18n::rich(site.host())
-                                            .size(10.0)
+                                            .size(11.0)
                                             .color(pal.text_faint),
                                     );
                                     let status = match state {
@@ -456,7 +456,7 @@ impl QuarkApp {
                                         |ui| {
                                             ui.label(
                                                 crate::i18n::rich(status)
-                                                    .size(10.0)
+                                                    .size(11.0)
                                                     .color(pal.text_faint),
                                             );
                                         },
@@ -466,10 +466,10 @@ impl QuarkApp {
                                 match state {
                                     SiteSearchState::Pending => {
                                         ui.horizontal(|ui| {
-                                            ui.add(egui::Spinner::new().size(11.0));
+                                            ui.add(egui::Spinner::new().size(12.0));
                                             ui.label(
                                                 crate::i18n::rich("Interrogation du site…")
-                                                    .size(11.5)
+                                                    .size(12.5)
                                                     .color(pal.text_dim),
                                             );
                                         });
@@ -480,7 +480,7 @@ impl QuarkApp {
                                                 crate::i18n::rich(
                                                     "Aucun résultat pour ce titre.",
                                                 )
-                                                .size(11.5)
+                                                .size(12.5)
                                                 .color(pal.text_faint),
                                             );
                                             if ui
@@ -506,7 +506,7 @@ impl QuarkApp {
                                     SiteSearchState::Failed(error) => {
                                         ui.label(
                                             crate::i18n::rich(error)
-                                                .size(11.0)
+                                                .size(12.0)
                                                 .color(pal.danger),
                                         );
                                         if ui
@@ -527,7 +527,7 @@ impl QuarkApp {
                                 crate::i18n::rich(
                                     "Quark ne télécharge aucun fichier depuis ces sites : les liens sont ouverts dans ton navigateur.",
                                 )
-                                .size(10.0)
+                                .size(11.0)
                                 .color(pal.text_faint),
                             );
                         });
@@ -584,7 +584,7 @@ fn search_hit_row(ui: &mut egui::Ui, pal: &Palette, hit: &crate::game_search::Si
             ui.add(
                 egui::Label::new(
                     crate::i18n::raw(&hit.title)
-                        .size(12.5)
+                        .size(13.0)
                         .strong()
                         .color(pal.text),
                 )
@@ -596,7 +596,7 @@ fn search_hit_row(ui: &mut egui::Ui, pal: &Palette, hit: &crate::game_search::Si
                 } else {
                     &hit.detail
                 })
-                .size(10.0)
+                .size(11.0)
                 .color(pal.text_dim),
             );
         },
@@ -681,7 +681,7 @@ fn section_heading(
     ui.label(crate::i18n::rich(text).size(16.0).strong().color(pal.text));
     if let Some(caption) = caption {
         ui.add_space(2.0);
-        ui.label(crate::i18n::rich(caption).size(10.5).color(pal.text_faint));
+        ui.label(crate::i18n::rich(caption).size(11.5).color(pal.text_faint));
     }
     ui.add_space(10.0);
 }
@@ -723,7 +723,7 @@ fn top_played_card(ui: &mut egui::Ui, pal: &Palette, items: &[StoreItem]) {
             ui.set_min_height(232.0);
             ui.label(
                 crate::i18n::rich("LES PLUS JOUÉS")
-                    .size(10.5)
+                    .size(11.5)
                     .strong()
                     .color(pal.text),
             );
@@ -731,7 +731,7 @@ fn top_played_card(ui: &mut egui::Ui, pal: &Palette, items: &[StoreItem]) {
             if items.is_empty() {
                 ui.label(
                     crate::i18n::rich("Classement indisponible.")
-                        .size(11.0)
+                        .size(12.0)
                         .color(pal.text_faint),
                 );
                 return;
@@ -740,7 +740,7 @@ fn top_played_card(ui: &mut egui::Ui, pal: &Palette, items: &[StoreItem]) {
                 ui.horizontal(|ui| {
                     ui.label(
                         crate::i18n::rich(format!("{:02}", index + 1))
-                            .size(10.5)
+                            .size(11.5)
                             .color(pal.text_faint),
                     );
                     ui.add_space(4.0);
@@ -752,7 +752,7 @@ fn top_played_card(ui: &mut egui::Ui, pal: &Palette, items: &[StoreItem]) {
                         if let Some(peak) = item.players_peak {
                             ui.label(
                                 crate::i18n::rich(thousands(peak))
-                                    .size(9.5)
+                                    .size(10.5)
                                     .color(pal.text_faint),
                             );
                         }
@@ -896,7 +896,7 @@ fn hero_card(
     if item.linux_available == Some(true) {
         child.label(
             crate::i18n::rich("Linux natif")
-                .size(10.5)
+                .size(11.5)
                 .strong()
                 .color(pal.accent),
         );
@@ -904,7 +904,7 @@ fn hero_card(
     if let Some(peak) = item.players_peak {
         child.label(
             crate::i18n::rich(format!("{} joueurs simultanés au pic", thousands(peak)))
-                .size(10.5)
+                .size(11.5)
                 .color(Color32::from_white_alpha(190)),
         );
     }
@@ -916,7 +916,7 @@ fn hero_card(
             .add(
                 egui::Button::new(
                     crate::i18n::rich("Voir sur Steam")
-                        .size(12.5)
+                        .size(13.0)
                         .strong()
                         .color(crate::theme::on_accent(pal.accent)),
                 )
@@ -1029,7 +1029,7 @@ fn deal_card(
     child.add(
         egui::Label::new(
             crate::i18n::raw(&item.name)
-                .size(11.5)
+                .size(12.5)
                 .strong()
                 .color(pal.text),
         )
@@ -1154,7 +1154,7 @@ fn card(ui: &mut egui::Ui, pal: &Palette, item: &StoreItem, open_item: &mut Opti
     if let Some(peak) = item.players_peak {
         child.label(
             crate::i18n::rich(format!("{} joueurs simultanés", thousands(peak)))
-                .size(9.5)
+                .size(10.5)
                 .color(pal.text_faint),
         );
     }
@@ -1174,7 +1174,7 @@ fn price_widgets(ui: &mut egui::Ui, pal: &Palette, item: &StoreItem, large: bool
     let Some(price) = &item.price else {
         ui.label(
             crate::i18n::rich("Prix indisponible")
-                .size(11.0)
+                .size(12.0)
                 .color(pal.text_faint),
         );
         return;

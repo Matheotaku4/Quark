@@ -356,23 +356,23 @@ pub fn apply(ctx: &egui::Context, mode: ThemeMode) {
     style.text_styles = [
         (
             egui::TextStyle::Heading,
-            FontId::new(22.0, FontFamily::Proportional),
+            FontId::new(24.0, FontFamily::Proportional),
         ),
         (
             egui::TextStyle::Body,
-            FontId::new(13.5, FontFamily::Proportional),
+            FontId::new(14.0, FontFamily::Proportional),
         ),
         (
             egui::TextStyle::Monospace,
-            FontId::new(12.0, FontFamily::Monospace),
+            FontId::new(13.0, FontFamily::Monospace),
         ),
         (
             egui::TextStyle::Button,
-            FontId::new(13.5, FontFamily::Proportional),
+            FontId::new(14.0, FontFamily::Proportional),
         ),
         (
             egui::TextStyle::Small,
-            FontId::new(11.0, FontFamily::Proportional),
+            FontId::new(12.0, FontFamily::Proportional),
         ),
     ]
     .into();

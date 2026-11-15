@@ -168,6 +168,25 @@ pub fn launch_environment(corner: &str) -> Vec<(String, String)> {
     ]
 }
 
+/// Chemin du journal de diagnostic de la DLL, dans le dossier de logs du jeu.
+///
+/// Wine expose la racine Linux sous `Z:` ; la DLL Windows ne peut pas ouvrir un
+/// chemin POSIX. Le chemin reste dans le dossier privé de Quark (`0600`).
+pub fn overlay_log_path(game_id: &str) -> String {
+    let path = crate::config::log_dir(game_id).join("overlay.log");
+    let path = path.to_string_lossy();
+    format!("Z:{}", path.replace('/', "\\"))
+}
+
+/// Variables de lancement, journal compris. Le journal permet de distinguer
+/// « DLL non chargée », « API non couverte » et « swap chain non accrochée »
+/// sans demander au joueur de lancer un débogueur Windows.
+pub fn launch_environment_for(game: &Game, corner: &str) -> Vec<(String, String)> {
+    let mut env = launch_environment(corner);
+    env.push(("QUARK_OVERLAY_LOG".to_string(), overlay_log_path(&game.id)));
+    env
+}
+
 /// Remplace une variable existante au lieu d'empiler deux valeurs.
 pub fn set_env(env: &mut Vec<(String, String)>, name: &str, value: &str) {
     env.retain(|(key, _)| !key.eq_ignore_ascii_case(name));
@@ -322,6 +341,16 @@ mod tests {
                 "WINEDLLOVERRIDES".to_string(),
                 "comdlg32,shell32=n,b;foo=n;d3d11=n,b;dxgi=n,b".to_string()
             )]
+        );
+    }
+
+    #[test]
+    fn le_journal_overlay_est_dans_un_chemin_wine_absolu() {
+        let path = overlay_log_path("jeu-test");
+        assert!(path.starts_with("Z:\\"), "chemin Wine attendu : {path}");
+        assert!(
+            path.ends_with("overlay.log"),
+            "nom du journal attendu : {path}"
         );
     }
 
