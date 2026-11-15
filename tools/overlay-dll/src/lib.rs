@@ -15,11 +15,10 @@
 use std::ffi::c_void;
 use std::mem::size_of;
 use std::sync::atomic::{AtomicIsize, AtomicPtr, AtomicU32, Ordering};
-use std::sync::OnceLock;
 use windows::core::{w, GUID, PCWSTR};
 use windows::Win32::Foundation::{
-    CloseHandle, GetLastError, BOOL, COLORREF, ERROR_ALREADY_EXISTS, HANDLE, HINSTANCE, HWND,
-    INVALID_HANDLE_VALUE, LPARAM, LRESULT, RECT, WPARAM,
+    CloseHandle, GetLastError, BOOL, COLORREF, ERROR_ALREADY_EXISTS, HINSTANCE, HWND, LPARAM,
+    LRESULT, RECT, WPARAM,
 };
 use windows::Win32::Graphics::Gdi::{
     BeginPaint, CreateFontW, CreateSolidBrush, DeleteObject, EndPaint, FillRect, InvalidateRect,
@@ -28,14 +27,10 @@ use windows::Win32::Graphics::Gdi::{
     TRANSPARENT,
 };
 use windows::Win32::System::LibraryLoader::{GetModuleHandleW, GetProcAddress, LoadLibraryW};
-use windows::Win32::System::Memory::{
-    CreateFileMappingW, MapViewOfFile, VirtualProtect, FILE_MAP_ALL_ACCESS, PAGE_PROTECTION_FLAGS,
-    PAGE_READWRITE,
-};
+use windows::Win32::System::Memory::{VirtualProtect, PAGE_PROTECTION_FLAGS, PAGE_READWRITE};
 use windows::Win32::System::SystemInformation::GetSystemDirectoryW;
 use windows::Win32::System::Threading::{
-    CreateMutexW, CreateThread, GetCurrentProcessId, ReleaseMutex, WaitForSingleObject, INFINITE,
-    THREAD_CREATION_FLAGS,
+    CreateMutexW, CreateThread, GetCurrentProcessId, THREAD_CREATION_FLAGS,
 };
 use windows::Win32::UI::WindowsAndMessaging::{
     CreateWindowExW, DefWindowProcW, DispatchMessageW, GetClientRect, GetForegroundWindow,
@@ -50,19 +45,9 @@ const TIMER_ID: usize = 0x51_4B;
 const OVERLAY_WIDTH: i32 = 176;
 const OVERLAY_HEIGHT: i32 = 42;
 
-/// Compteur partagé par les deux copies du proxy (`d3d11.dll` et `dxgi.dll`)
-/// dans le processus du jeu. Sans cela, la fenêtre créée par un module
-/// afficherait le compteur de l'autre module, resté à zéro.
-#[repr(C)]
-struct SharedStats {
-    frames: AtomicU32,
-    fps: AtomicU32,
-}
-
-static SHARED_STATS: OnceLock<Option<&'static SharedStats>> = OnceLock::new();
-/// Repli local si la mémoire partagée nommée est indisponible.
+/// Number of `Present` calls since the last timer tick.
 static FRAMES: AtomicU32 = AtomicU32::new(0);
-/// Dernière valeur mesurée, lue par le gestionnaire de peinture.
+/// Last measured value, read by the paint handler.
 static FPS: AtomicU32 = AtomicU32::new(0);
 static OVERLAY_HWND: AtomicIsize = AtomicIsize::new(0);
 static LAST_GAME_HWND: AtomicIsize = AtomicIsize::new(0);
@@ -232,92 +217,8 @@ unsafe fn real_proc(dll: &str, name: &[u8]) -> Option<*mut c_void> {
     address.map(|proc| proc as *mut c_void)
 }
 
-/// Ouvre la mémoire partagée nommée du processus. Les deux modules proxy
-/// obtiennent ainsi la même zone, quel que soit celui qui crée la fenêtre.
-fn shared_stats() -> Option<&'static SharedStats> {
-    *SHARED_STATS.get_or_init(|| unsafe {
-        let name = format!("Local\\QuarkOverlayStats-{}", GetCurrentProcessId());
-        let name: Vec<u16> = name.encode_utf16().chain(std::iter::once(0)).collect();
-        let mapping = CreateFileMappingW(
-            INVALID_HANDLE_VALUE,
-            None,
-            PAGE_READWRITE,
-            0,
-            size_of::<SharedStats>() as u32,
-            PCWSTR(name.as_ptr()),
-        )
-        .ok()?;
-        let view = MapViewOfFile(mapping, FILE_MAP_ALL_ACCESS, 0, 0, size_of::<SharedStats>());
-        let _ = CloseHandle(mapping);
-        if view.Value.is_null() {
-            return None;
-        }
-        Some(&*(view.Value as *const SharedStats))
-    })
-}
-
-fn frames() -> &'static AtomicU32 {
-    shared_stats().map(|stats| &stats.frames).unwrap_or(&FRAMES)
-}
-
-fn fps() -> &'static AtomicU32 {
-    shared_stats().map(|stats| &stats.fps).unwrap_or(&FPS)
-}
-
-/// Mutex nommé, partagé par les deux modules proxy, qui sérialise les
-/// modifications de vtables. `VirtualProtect` agit sur toute la page : deux
-/// modules qui écrivent en même temps pourraient restaurer une protection
-/// trop tôt et faire planter le jeu.
-static PATCH_MUTEX: AtomicIsize = AtomicIsize::new(0);
-
-struct PatchGuard(HANDLE);
-
-impl Drop for PatchGuard {
-    fn drop(&mut self) {
-        unsafe {
-            let _ = ReleaseMutex(self.0);
-        }
-    }
-}
-
-fn patch_mutex() -> Option<PatchGuard> {
-    let existing = PATCH_MUTEX.load(Ordering::Acquire);
-    if existing != 0 {
-        let handle = HANDLE(existing as *mut c_void);
-        unsafe {
-            let _ = WaitForSingleObject(handle, INFINITE);
-        }
-        return Some(PatchGuard(handle));
-    }
-    let name = format!("Local\\QuarkOverlayPatch-{}", unsafe {
-        GetCurrentProcessId()
-    });
-    let name: Vec<u16> = name.encode_utf16().chain(std::iter::once(0)).collect();
-    let handle = unsafe { CreateMutexW(None, false, PCWSTR(name.as_ptr())) }.ok()?;
-    match PATCH_MUTEX.compare_exchange(0, handle.0 as isize, Ordering::AcqRel, Ordering::Acquire) {
-        Ok(_) => {
-            unsafe {
-                let _ = WaitForSingleObject(handle, INFINITE);
-            }
-            Some(PatchGuard(handle))
-        }
-        Err(existing) => {
-            unsafe {
-                let _ = CloseHandle(handle);
-            }
-            let handle = HANDLE(existing as *mut c_void);
-            unsafe {
-                let _ = WaitForSingleObject(handle, INFINITE);
-            }
-            Some(PatchGuard(handle))
-        }
-    }
-}
-
 /// Patch une entrée de vtable en restaurant la protection d'origine ensuite.
-/// Le mutex nommé couvre aussi la lecture et l'écriture du slot.
 unsafe fn patch<T: Copy>(slot: *mut T, replacement: T, original: &AtomicPtr<c_void>) -> bool {
-    let _guard = patch_mutex();
     let address = slot as *mut c_void;
     let mut old = PAGE_PROTECTION_FLAGS(0);
     if VirtualProtect(address, size_of::<T>(), PAGE_READWRITE, &mut old).is_err() {
@@ -576,7 +477,7 @@ unsafe extern "system" fn present_hook(
     sync_interval: u32,
     flags: u32,
 ) -> i32 {
-    frames().fetch_add(1, Ordering::Relaxed);
+    FRAMES.fetch_add(1, Ordering::Relaxed);
     let original = ORIGINAL_PRESENT.load(Ordering::Relaxed);
     if original.is_null() {
         return 0;
@@ -591,7 +492,7 @@ unsafe extern "system" fn present1_hook(
     flags: u32,
     parameters: *const c_void,
 ) -> i32 {
-    frames().fetch_add(1, Ordering::Relaxed);
+    FRAMES.fetch_add(1, Ordering::Relaxed);
     let original = ORIGINAL_PRESENT1.load(Ordering::Relaxed);
     if original.is_null() {
         return 0;
@@ -864,8 +765,8 @@ unsafe extern "system" fn wndproc(
 ) -> LRESULT {
     match message {
         WM_TIMER if wparam.0 == TIMER_ID => {
-            let frames = frames().swap(0, Ordering::Relaxed);
-            fps().store(frames.saturating_mul(4), Ordering::Relaxed);
+            let frames = FRAMES.swap(0, Ordering::Relaxed);
+            FPS.store(frames.saturating_mul(4), Ordering::Relaxed);
             position_overlay(hwnd);
             let _ = InvalidateRect(Some(hwnd), None, false);
             LRESULT(0)
@@ -898,7 +799,7 @@ unsafe extern "system" fn wndproc(
             let old_font = SelectObject(hdc, HGDIOBJ(font.0));
             SetBkMode(hdc, TRANSPARENT);
             SetTextColor(hdc, COLORREF(0x0078_FF78));
-            let text = format!("{} FPS", fps().load(Ordering::Relaxed));
+            let text = format!("{} FPS", FPS.load(Ordering::Relaxed));
             let utf16: Vec<u16> = text.encode_utf16().collect();
             let _ = TextOutW(hdc, 14, 10, &utf16);
             SelectObject(hdc, old_font);
