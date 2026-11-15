@@ -14,11 +14,12 @@
 
 use std::ffi::c_void;
 use std::mem::size_of;
-use std::sync::atomic::{AtomicIsize, AtomicPtr, AtomicU32, Ordering};
+use std::sync::atomic::{AtomicIsize, AtomicPtr, AtomicU32, AtomicUsize, Ordering};
+use std::sync::OnceLock;
 use windows::core::{w, GUID, PCWSTR};
 use windows::Win32::Foundation::{
-    CloseHandle, GetLastError, BOOL, COLORREF, ERROR_ALREADY_EXISTS, HINSTANCE, HWND, LPARAM,
-    LRESULT, RECT, WPARAM,
+    CloseHandle, GetLastError, BOOL, COLORREF, ERROR_ALREADY_EXISTS, HANDLE, HINSTANCE, HWND,
+    INVALID_HANDLE_VALUE, LPARAM, LRESULT, RECT, WAIT_FAILED, WPARAM,
 };
 use windows::Win32::Graphics::Gdi::{
     BeginPaint, CreateFontW, CreateSolidBrush, DeleteObject, EndPaint, FillRect, InvalidateRect,
@@ -27,10 +28,14 @@ use windows::Win32::Graphics::Gdi::{
     TRANSPARENT,
 };
 use windows::Win32::System::LibraryLoader::{GetModuleHandleW, GetProcAddress, LoadLibraryW};
-use windows::Win32::System::Memory::{VirtualProtect, PAGE_PROTECTION_FLAGS, PAGE_READWRITE};
+use windows::Win32::System::Memory::{
+    CreateFileMappingW, MapViewOfFile, VirtualProtect, FILE_MAP_ALL_ACCESS, PAGE_PROTECTION_FLAGS,
+    PAGE_READWRITE,
+};
 use windows::Win32::System::SystemInformation::GetSystemDirectoryW;
 use windows::Win32::System::Threading::{
-    CreateMutexW, CreateThread, GetCurrentProcessId, THREAD_CREATION_FLAGS,
+    CreateMutexW, CreateThread, GetCurrentProcessId, ReleaseMutex, WaitForSingleObject, INFINITE,
+    THREAD_CREATION_FLAGS,
 };
 use windows::Win32::UI::WindowsAndMessaging::{
     CreateWindowExW, DefWindowProcW, DispatchMessageW, GetClientRect, GetForegroundWindow,
@@ -45,9 +50,30 @@ const TIMER_ID: usize = 0x51_4B;
 const OVERLAY_WIDTH: i32 = 176;
 const OVERLAY_HEIGHT: i32 = 42;
 
-/// Number of `Present` calls since the last timer tick.
+/// Nombre maximal de vtables suivies. Chaque module n'en accroche qu'une :
+/// deux entrées suffisent pour `d3d11.dll` et `dxgi.dll`, les deux suivantes
+/// couvrent une éventuelle création tardive.
+const MAX_HOOKED_VTABLES: usize = 4;
+
+/// État partagé par les deux copies du proxy (`d3d11.dll` et `dxgi.dll`)
+/// dans le processus du jeu. Sans cela, la fenêtre créée par un module
+/// afficherait le compteur de l'autre module, resté à zéro.
+#[repr(C)]
+struct SharedStats {
+    frames: AtomicU32,
+    fps: AtomicU32,
+    /// Vtables dont le slot `Present` est déjà accroché. Le registre est
+    /// indexé par adresse de vtable : deux modules qui voient la même classe
+    /// de swap chain ne l'accrochent qu'une fois, mais deux classes distinctes
+    /// restent couvertes.
+    present_vtables: [AtomicUsize; MAX_HOOKED_VTABLES],
+    present1_vtables: [AtomicUsize; MAX_HOOKED_VTABLES],
+}
+
+static SHARED_STATS: OnceLock<Option<&'static SharedStats>> = OnceLock::new();
+/// Repli local si la mémoire partagée nommée est indisponible.
 static FRAMES: AtomicU32 = AtomicU32::new(0);
-/// Last measured value, read by the paint handler.
+/// Dernière valeur mesurée, lue par le gestionnaire de peinture.
 static FPS: AtomicU32 = AtomicU32::new(0);
 static OVERLAY_HWND: AtomicIsize = AtomicIsize::new(0);
 static LAST_GAME_HWND: AtomicIsize = AtomicIsize::new(0);
@@ -217,8 +243,129 @@ unsafe fn real_proc(dll: &str, name: &[u8]) -> Option<*mut c_void> {
     address.map(|proc| proc as *mut c_void)
 }
 
+/// Ouvre la mémoire partagée nommée du processus. Les deux modules proxy
+/// obtiennent ainsi la même zone, quel que soit celui qui crée la fenêtre.
+fn shared_stats() -> Option<&'static SharedStats> {
+    *SHARED_STATS.get_or_init(|| unsafe {
+        let name = format!("Local\\QuarkOverlayStats-{}", GetCurrentProcessId());
+        let name: Vec<u16> = name.encode_utf16().chain(std::iter::once(0)).collect();
+        let mapping = CreateFileMappingW(
+            INVALID_HANDLE_VALUE,
+            None,
+            PAGE_READWRITE,
+            0,
+            size_of::<SharedStats>() as u32,
+            PCWSTR(name.as_ptr()),
+        )
+        .ok()?;
+        let view = MapViewOfFile(mapping, FILE_MAP_ALL_ACCESS, 0, 0, size_of::<SharedStats>());
+        let _ = CloseHandle(mapping);
+        if view.Value.is_null() {
+            return None;
+        }
+        Some(&*(view.Value as *const SharedStats))
+    })
+}
+
+fn frames() -> &'static AtomicU32 {
+    shared_stats().map(|stats| &stats.frames).unwrap_or(&FRAMES)
+}
+
+fn fps() -> &'static AtomicU32 {
+    shared_stats().map(|stats| &stats.fps).unwrap_or(&FPS)
+}
+
+/// Réserve une vtable dans le registre partagé. Appelé sous `registry_mutex`,
+/// donc le scan et l'écriture ne peuvent pas être entrelacés avec l'autre
+/// module. Retourne `false` si cette vtable est déjà couverte.
+fn register_vtable(entries: &[AtomicUsize; MAX_HOOKED_VTABLES], vtable: *mut c_void) -> bool {
+    let vtable = vtable as usize;
+    if entries
+        .iter()
+        .any(|entry| entry.load(Ordering::Acquire) == vtable)
+    {
+        return false;
+    }
+    entries.iter().any(|entry| {
+        entry
+            .compare_exchange(0, vtable, Ordering::AcqRel, Ordering::Acquire)
+            .is_ok()
+    })
+}
+
+fn unregister_vtable(entries: &[AtomicUsize; MAX_HOOKED_VTABLES], vtable: *mut c_void) {
+    let vtable = vtable as usize;
+    for entry in entries {
+        let _ = entry.compare_exchange(vtable, 0, Ordering::AcqRel, Ordering::Acquire);
+    }
+}
+
+fn release_swapchain_reservation(vtable: *mut c_void) {
+    let _ = HOOKED_SWAPCHAIN_VTABLE.compare_exchange(
+        vtable,
+        std::ptr::null_mut(),
+        Ordering::SeqCst,
+        Ordering::SeqCst,
+    );
+}
+
+/// Mutex nommés, partagés par les deux modules proxy. L'un sérialise les
+/// modifications de vtables (`VirtualProtect` agit sur toute la page),
+/// l'autre protège le registre de vtables.
+static PATCH_MUTEX: AtomicIsize = AtomicIsize::new(0);
+static REGISTRY_MUTEX: AtomicIsize = AtomicIsize::new(0);
+
+struct NamedMutexGuard(HANDLE);
+
+impl Drop for NamedMutexGuard {
+    fn drop(&mut self) {
+        unsafe {
+            let _ = ReleaseMutex(self.0);
+        }
+    }
+}
+
+fn wait_for_mutex(handle: HANDLE) -> Option<NamedMutexGuard> {
+    let result = unsafe { WaitForSingleObject(handle, INFINITE) };
+    if result == WAIT_FAILED {
+        return None;
+    }
+    Some(NamedMutexGuard(handle))
+}
+
+fn named_mutex(prefix: &str, slot: &'static AtomicIsize) -> Option<NamedMutexGuard> {
+    let existing = slot.load(Ordering::Acquire);
+    if existing != 0 {
+        return wait_for_mutex(HANDLE(existing as *mut c_void));
+    }
+    let name = format!("Local\\{prefix}{}", unsafe { GetCurrentProcessId() });
+    let name: Vec<u16> = name.encode_utf16().chain(std::iter::once(0)).collect();
+    let handle = unsafe { CreateMutexW(None, false, PCWSTR(name.as_ptr())) }.ok()?;
+    match slot.compare_exchange(0, handle.0 as isize, Ordering::AcqRel, Ordering::Acquire) {
+        Ok(_) => wait_for_mutex(handle),
+        Err(existing) => {
+            unsafe {
+                let _ = CloseHandle(handle);
+            }
+            wait_for_mutex(HANDLE(existing as *mut c_void))
+        }
+    }
+}
+
+fn patch_mutex() -> Option<NamedMutexGuard> {
+    named_mutex("QuarkOverlayPatch-", &PATCH_MUTEX)
+}
+
+fn registry_mutex() -> Option<NamedMutexGuard> {
+    named_mutex("QuarkOverlayRegistry-", &REGISTRY_MUTEX)
+}
+
 /// Patch une entrée de vtable en restaurant la protection d'origine ensuite.
+/// Le mutex nommé couvre aussi la lecture et l'écriture du slot.
 unsafe fn patch<T: Copy>(slot: *mut T, replacement: T, original: &AtomicPtr<c_void>) -> bool {
+    let Some(_guard) = patch_mutex() else {
+        return false;
+    };
     let address = slot as *mut c_void;
     let mut old = PAGE_PROTECTION_FLAGS(0);
     if VirtualProtect(address, size_of::<T>(), PAGE_READWRITE, &mut old).is_err() {
@@ -438,21 +585,55 @@ unsafe fn hook_swapchain(swapchain: *mut c_void) {
         return;
     }
 
-    // Une seule classe de swap chain est accrochée par module : le pointeur
-    // d'origine est global. Si le jeu crée une seconde classe, elle reste sans
-    // compteur plutôt que d'appeler la mauvaise fonction Present.
-    if !HOOKED_SWAPCHAIN_VTABLE
-        .swap(vtable as *mut c_void, Ordering::SeqCst)
-        .is_null()
+    // Une seule classe de swap chain est accrochée par module : `ORIGINAL_PRESENT`
+    // et `ORIGINAL_PRESENT1` ne peuvent stocker qu'un pointeur d'origine.
+    // Le CAS évite qu'un appel concurrent écrase une réservation active.
+    if HOOKED_SWAPCHAIN_VTABLE
+        .compare_exchange(
+            std::ptr::null_mut(),
+            vtable as *mut c_void,
+            Ordering::SeqCst,
+            Ordering::SeqCst,
+        )
+        .is_err()
     {
         return;
     }
-    if ((*vtable).present as usize) != (present_hook as PresentFn as usize) {
-        let _ = patch(
+
+    let shared = shared_stats();
+    let _registry_guard = match shared {
+        Some(_) => match registry_mutex() {
+            Some(guard) => Some(guard),
+            None => {
+                release_swapchain_reservation(vtable as *mut c_void);
+                return;
+            }
+        },
+        None => None,
+    };
+
+    // Le registre est indexé par vtable : si l'autre proxy a déjà accroché
+    // cette classe, on relâche la réservation locale pour pouvoir accrocher
+    // une autre classe plus tard.
+    if let Some(stats) = shared {
+        if !register_vtable(&stats.present_vtables, vtable as *mut c_void) {
+            release_swapchain_reservation(vtable as *mut c_void);
+            return;
+        }
+    }
+
+    let patched = ((*vtable).present as usize) == (present_hook as PresentFn as usize)
+        || patch(
             &mut (*vtable).present,
             present_hook as PresentFn,
             &ORIGINAL_PRESENT,
         );
+    if !patched {
+        if let Some(stats) = shared {
+            unregister_vtable(&stats.present_vtables, vtable as *mut c_void);
+        }
+        release_swapchain_reservation(vtable as *mut c_void);
+        return;
     }
 
     let query_interface: QueryInterfaceFn = std::mem::transmute((*vtable).query_interface);
@@ -462,9 +643,20 @@ unsafe fn hook_swapchain(swapchain: *mut c_void) {
     {
         let vtable1 = *(swapchain1 as *const *mut *mut c_void);
         if !vtable1.is_null() {
-            let slot = &mut *vtable1.add(22).cast::<Present1Fn>();
-            if (*slot as usize) != (present1_hook as Present1Fn as usize) {
-                let _ = patch(slot, present1_hook as Present1Fn, &ORIGINAL_PRESENT1);
+            let vtable1_ptr = vtable1 as *mut c_void;
+            let owns_present1 = shared
+                .map(|stats| register_vtable(&stats.present1_vtables, vtable1_ptr))
+                .unwrap_or(true);
+            if owns_present1 {
+                let slot = &mut *vtable1.add(22).cast::<Present1Fn>();
+                if (*slot as usize) != (present1_hook as Present1Fn as usize) {
+                    let patched1 = patch(slot, present1_hook as Present1Fn, &ORIGINAL_PRESENT1);
+                    if !patched1 {
+                        if let Some(stats) = shared {
+                            unregister_vtable(&stats.present1_vtables, vtable1_ptr);
+                        }
+                    }
+                }
             }
             let release: ReleaseFn = std::mem::transmute(*vtable1.add(2));
             release(swapchain1);
@@ -477,7 +669,7 @@ unsafe extern "system" fn present_hook(
     sync_interval: u32,
     flags: u32,
 ) -> i32 {
-    FRAMES.fetch_add(1, Ordering::Relaxed);
+    frames().fetch_add(1, Ordering::Relaxed);
     let original = ORIGINAL_PRESENT.load(Ordering::Relaxed);
     if original.is_null() {
         return 0;
@@ -492,7 +684,7 @@ unsafe extern "system" fn present1_hook(
     flags: u32,
     parameters: *const c_void,
 ) -> i32 {
-    FRAMES.fetch_add(1, Ordering::Relaxed);
+    frames().fetch_add(1, Ordering::Relaxed);
     let original = ORIGINAL_PRESENT1.load(Ordering::Relaxed);
     if original.is_null() {
         return 0;
@@ -765,8 +957,8 @@ unsafe extern "system" fn wndproc(
 ) -> LRESULT {
     match message {
         WM_TIMER if wparam.0 == TIMER_ID => {
-            let frames = FRAMES.swap(0, Ordering::Relaxed);
-            FPS.store(frames.saturating_mul(4), Ordering::Relaxed);
+            let frames = frames().swap(0, Ordering::Relaxed);
+            fps().store(frames.saturating_mul(4), Ordering::Relaxed);
             position_overlay(hwnd);
             let _ = InvalidateRect(Some(hwnd), None, false);
             LRESULT(0)
@@ -799,7 +991,7 @@ unsafe extern "system" fn wndproc(
             let old_font = SelectObject(hdc, HGDIOBJ(font.0));
             SetBkMode(hdc, TRANSPARENT);
             SetTextColor(hdc, COLORREF(0x0078_FF78));
-            let text = format!("{} FPS", FPS.load(Ordering::Relaxed));
+            let text = format!("{} FPS", fps().load(Ordering::Relaxed));
             let utf16: Vec<u16> = text.encode_utf16().collect();
             let _ = TextOutW(hdc, 14, 10, &utf16);
             SelectObject(hdc, old_font);

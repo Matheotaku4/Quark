@@ -5,13 +5,15 @@ games and your Steam, Epic Games and GOG libraries together, launches Windows
 games through Proton or umu-launcher, and adds an in-game overlay, screenshots,
 achievements and verified local saves.
 
-This documentation describes **Quark 1.6.0**. It is also versioned in the
+This documentation describes **Quark 1.6.1**. It is also versioned in the
 repository under [`wiki/`](https://github.com/Matheotaku4/Quark/tree/main/wiki).
 
 ![Quark home](https://raw.githubusercontent.com/Matheotaku4/Quark/main/docs/images/home-en.png)
 
 ## What's new in 1.6
 
+- **1.6.1** adds the DXGI proxy for DirectX 12, shares the FPS counter between
+  the DXGI and Direct3D 11 proxies, and plays the `F12` chime for every store.
 - **1.6.0** adds a DirectX 11 FPS overlay installed as a `d3d11.dll` proxy next
   to the game, direct Epic sign-in, and Spanish, German and Portuguese
   interface languages. It also adds `cargo fmt` and Clippy checks to CI.

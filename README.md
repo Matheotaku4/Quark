@@ -6,7 +6,7 @@ own, launches Windows games through Proton (or umu-launcher), and stays out of
 the way with an AMOLED interface, a store page, save snapshots and an in-game
 overlay.
 
-This is the **1.6.0** documentation. Older release notes are kept on the GitHub
+This is the **1.6.1** documentation. Older release notes are kept on the GitHub
 releases page; `docs/release-notes.md` only describes the release currently
 being published.
 
@@ -27,8 +27,9 @@ The wiki is published from the versioned source in [`wiki/`](wiki/) by the
 | --- | --- |
 | ![Onboarding](docs/images/onboarding-fr.png) | ![What's new](docs/images/whats-new-fr.png) |
 
-## What's new in 1.6.0
+## What's new in 1.6.1
 
+- **Overlay reliability.** The DXGI and D3D11 proxies now share one FPS counter and register their `Present`/`Present1` hooks per swap-chain vtable, so loading both DLLs no longer yields a zero or double-counted counter.
 - **FPS overlay as a DLL.** **Settings → In game → Show FPS in-game** installs small `d3d11.dll` and `dxgi.dll` proxies next to a Windows executable. They forward Direct3D 11 and DXGI to the system, hook `Present`/`Present1` and draw a Steam-like `N FPS` counter in the top-left corner. They hide when the game loses focus, never overwrite a foreign DLL, and ask Wine/Proton to load them. DirectX 11 and 12.
 - **Direct Epic sign-in.** Quark exchanges the authorization code with Epic itself, then writes the session to Legendary's `user.json` with private permissions. `legendary auth` is no longer launched to sign in; the library and installation still use Legendary.
 - **Five interface languages.** Spanish, German and Portuguese join French and English, with complete catalogues and `--lang` support.
@@ -37,7 +38,7 @@ The wiki is published from the versioned source in [`wiki/`](wiki/) by the
 
 ## Table of contents
 
-1. [What's new in 1.6.0](#whats-new-in-160)
+1. [What's new in 1.6.1](#whats-new-in-161)
 2. [What Quark does](#what-quark-does)
 3. [Installation](#installation)
 4. [First launch](#first-launch)
@@ -96,8 +97,8 @@ Download `quark-<version>-linux-x86_64.tar.gz` and its `.sha256` file from the
 then verify and unpack it:
 
 ```bash
-sha256sum -c quark-1.6.0-linux-x86_64.tar.gz.sha256
-tar -xzf quark-1.6.0-linux-x86_64.tar.gz
+sha256sum -c quark-1.6.1-linux-x86_64.tar.gz.sha256
+tar -xzf quark-1.6.1-linux-x86_64.tar.gz
 ./quark/quark
 ```
 
@@ -139,7 +140,7 @@ A new configuration opens a three-step welcome guide. It is not blocking:
 **Skip** closes it. The guide changes the interface language, startup page,
 theme and hero background live, then offers to add a first game. Existing
 configurations are marked as already welcomed, so updating from 1.1.4 never
-shows it unexpectedly; they still see the 1.6.0 summary once.
+shows it unexpectedly; they still see the 1.6.1 summary once.
 
 1. Open **Settings → Stores & tools** and install Legendary and/or gogdl with
    **Install / update**. Quark verifies the SHA-256 digest published by GitHub
