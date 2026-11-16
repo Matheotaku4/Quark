@@ -1,3 +1,16 @@
+## Quark 1.7.2 — Les installations itch.io en cours restent visibles
+
+### Correctifs
+
+- Une synchronisation de bibliothèque itch.io ne remplace plus une entrée `Installing` ou `Queued` par `NotInstalled` : l'installation en cours reste visible avec son état et son éventuel dossier.
+
+### Vérifications
+
+- `cargo fmt --all --check` : OK.
+- `cargo test --locked` : 316 tests réussis.
+- `cargo clippy --all-targets --locked -- -D warnings` : OK.
+- Test dédié : un rafraîchissement ne perd ni une installation terminée ni une installation en cours.
+
 ## Quark 1.7.1 — Correctifs itch.io et identifiants
 
 ### Correctifs

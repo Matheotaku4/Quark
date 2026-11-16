@@ -697,6 +697,14 @@ pub fn merge_itch(existing: &[ProviderGame], refreshed: &[ProviderGame]) -> Vec<
             {
                 game.install_state = InstallState::Installed;
                 game.install_path = previous.install_path.clone();
+            } else if matches!(
+                previous.install_state,
+                InstallState::Installing | InstallState::Queued
+            ) {
+                // Une synchronisation ne doit pas faire disparaître une
+                // installation en cours de la bibliothèque des fournisseurs.
+                game.install_state = previous.install_state;
+                game.install_path = previous.install_path.clone();
             }
         }
         merged.push(game);
@@ -797,6 +805,14 @@ mod tests {
             install_state,
             ..Default::default()
         }
+    }
+
+    #[test]
+    fn un_rafraichissement_ne_perd_pas_une_installation_en_cours() {
+        let existing = vec![provider_game("42", InstallState::Installing, None)];
+        let refreshed = vec![provider_game("42", InstallState::NotInstalled, None)];
+        let merged = merge_itch(&existing, &refreshed);
+        assert_eq!(merged[0].install_state, InstallState::Installing);
     }
 
     #[test]
