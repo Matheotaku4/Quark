@@ -161,17 +161,15 @@ fn write_private_atomic(path: &Path, bytes: &[u8]) -> Result<(), String> {
 /// fait pas échouer la connexion : `user.json` a déjà été écrit.
 fn remember_in_credentials(session: &Session) {
     let path = crate::config::credentials_path();
-    let Ok(mut credentials) = credentials::load(&path) else {
-        return;
-    };
-    credentials.epic = Some(ProviderTokens {
-        access_token: session.access_token.clone(),
-        refresh_token: session.refresh_token.clone(),
-        expires_at: session.expires_at,
-        account_id: session.account_id.clone(),
-        display_name: session.display_name.clone(),
+    let _ = credentials::update(&path, |credentials| {
+        credentials.epic = Some(ProviderTokens {
+            access_token: session.access_token.clone(),
+            refresh_token: session.refresh_token.clone(),
+            expires_at: session.expires_at,
+            account_id: session.account_id.clone(),
+            display_name: session.display_name.clone(),
+        });
     });
-    let _ = credentials::save_atomic(&path, &credentials);
 }
 
 /// Session encore valide, ou renouvelée avec le refresh token et réécrite
@@ -179,7 +177,7 @@ fn remember_in_credentials(session: &Session) {
 /// besoin de Legendary.
 pub fn usable_tokens(now: i64) -> Result<ProviderTokens, String> {
     let path = crate::config::credentials_path();
-    let mut credentials = credentials::load(&path)?;
+    let credentials = credentials::load(&path)?;
     let tokens = credentials.epic.clone().ok_or_else(|| {
         "compte Epic non connecté : connecte-le dans Paramètres → Boutiques & outils".to_string()
     })?;
@@ -208,8 +206,9 @@ pub fn usable_tokens(now: i64) -> Result<ProviderTokens, String> {
             refreshed.display_name
         },
     };
-    credentials.epic = Some(updated.clone());
-    credentials::save_atomic(&path, &credentials)?;
+    credentials::update(&path, |credentials| {
+        credentials.epic = Some(updated.clone())
+    })?;
     Ok(updated)
 }
 

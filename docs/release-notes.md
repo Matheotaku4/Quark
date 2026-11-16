@@ -1,3 +1,24 @@
+## Quark 1.7.1 — Correctifs itch.io et identifiants
+
+### Correctifs
+
+- **Extraction itch.io** : le format est lu dans le nom d'upload publié (`jeu.zip`, `jeu.tar.gz`) et non dans le fichier temporaire `.part`. Les installations d'archives ne sont plus refusées juste après le téléchargement.
+- **Titres UTF-8** : le dossier d'installation est tronqué par caractères et non par octets ; un titre long avec des accents ne fait plus paniquer le fil d'installation.
+- **Identifiants** : les mises à jour de `credentials.json` passent par un verrou et relisent le fichier avant écriture. Un rafraîchissement de jeton Epic et l'enregistrement d'une clé Steam ou itch.io ne s'écrasent plus mutuellement.
+- **Dossier d'installation** : une installation itch.io réussie conserve aussi sa racine, utilisée par les rafraîchissements de bibliothèque.
+
+### Vérifications
+
+- `cargo fmt --all --check` : OK.
+- `cargo test --locked` : 315 tests réussis.
+- `cargo clippy --all-targets --locked -- -D warnings` : OK.
+- Tests dédiés : extraction ZIP sous nom temporaire, extraction par nom d'upload, titre UTF-8 long, fusion d'une installation locale, mise à jour des identifiants sans perte de champs.
+
+### Limites connues
+
+- L'API itch.io n'a pas été appelée avec une vraie clé dans cet environnement ; les analyseurs, la sélection d'upload et l'extraction sont couverts par des tests.
+- Les installateurs `.exe`, `.dmg` et `.apk` restent manuels.
+
 ## Quark 1.7.0 — Icône qui bascule, itch.io et bibliothèque Epic directe
 
 ### Nouveautés

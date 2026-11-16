@@ -5890,6 +5890,7 @@ impl QuarkApp {
                 record.install_state = crate::providers::InstallState::Installed;
                 record.install_path = installed.install_path.clone();
                 record.install_exe = installed.install_exe.clone();
+                record.install_root = installed.install_root.clone();
             }
         }
         self.touch();
@@ -6882,14 +6883,15 @@ impl QuarkApp {
             self.itch_sync_error = Some("clé API itch.io invalide".to_string());
             return;
         }
-        self.credentials.itch_api_key = Some(key);
-        if let Err(error) = crate::providers::credentials::save_atomic(
+        match crate::providers::credentials::update(
             &crate::config::credentials_path(),
-            &self.credentials,
+            |credentials| credentials.itch_api_key = Some(key),
         ) {
-            self.credentials.itch_api_key = None;
-            self.itch_sync_error = Some(error);
-            return;
+            Ok(credentials) => self.credentials = credentials,
+            Err(error) => {
+                self.itch_sync_error = Some(error);
+                return;
+            }
         }
         self.itch_api_key_draft.clear();
         self.itch_sync_error = None;
@@ -6898,11 +6900,16 @@ impl QuarkApp {
     }
 
     pub fn disconnect_itch(&mut self) {
-        self.credentials.itch_api_key = None;
-        let _ = crate::providers::credentials::save_atomic(
+        match crate::providers::credentials::update(
             &crate::config::credentials_path(),
-            &self.credentials,
-        );
+            |credentials| credentials.itch_api_key = None,
+        ) {
+            Ok(credentials) => self.credentials = credentials,
+            Err(error) => {
+                self.itch_sync_error = Some(error);
+                return;
+            }
+        }
         self.itch_sync_error = None;
         self.itch_sync_loading = false;
         self.itch_sync_rx = None;
@@ -7142,18 +7149,18 @@ impl QuarkApp {
             );
             return;
         }
-        let mut updated = self.credentials.clone();
-        if !key.is_empty() {
-            updated.steam_web_api_key = Some(key);
-        }
-        if !steam_id.is_empty() {
-            updated.steam_id = Some(steam_id);
-        }
-        match crate::providers::credentials::save_atomic(
+        match crate::providers::credentials::update(
             &crate::config::credentials_path(),
-            &updated,
+            |credentials| {
+                if !key.is_empty() {
+                    credentials.steam_web_api_key = Some(key);
+                }
+                if !steam_id.is_empty() {
+                    credentials.steam_id = Some(steam_id);
+                }
+            },
         ) {
-            Ok(()) => {
+            Ok(updated) => {
                 self.credentials = updated;
                 self.steam_key_draft.clear();
                 self.steam_id_draft.clear();

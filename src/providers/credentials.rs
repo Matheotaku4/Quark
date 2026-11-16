@@ -5,6 +5,12 @@
 
 use serde::{Deserialize, Serialize};
 use std::path::Path;
+use std::sync::Mutex;
+
+/// Sérialise les mises à jour du fichier : une synchronisation Epic qui
+/// rafraîchit son jeton et l'enregistrement d'une clé itch.io ne doivent pas
+/// remplacer la modification de l'autre avec un instantané périmé.
+static UPDATE_LOCK: Mutex<()> = Mutex::new(());
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
 #[serde(default)]
@@ -48,6 +54,22 @@ pub fn load(path: &Path) -> Result<Credentials, String> {
     };
     serde_json::from_str(&text)
         .map_err(|_| "le fichier local des identifiants est invalide".to_string())
+}
+
+/// Modifie le fichier sous un verrou puis l'écrit atomiquement. Le chargement
+/// est fait à l'intérieur du verrou : une mise à jour ne peut pas écraser un
+/// champ écrit par un autre fil depuis un instantané plus ancien.
+pub fn update<F>(path: &Path, mutate: F) -> Result<Credentials, String>
+where
+    F: FnOnce(&mut Credentials),
+{
+    let _guard = UPDATE_LOCK
+        .lock()
+        .map_err(|_| "verrou des identifiants empoisonné".to_string())?;
+    let mut credentials = load(path)?;
+    mutate(&mut credentials);
+    save_atomic(path, &credentials)?;
+    Ok(credentials)
 }
 
 /// Écrit de façon atomique et avec les droits utilisateur uniquement.
@@ -179,6 +201,33 @@ mod tests {
                 0o600
             );
         }
+        let _ = std::fs::remove_file(path);
+    }
+
+    #[test]
+    fn une_mise_a_jour_ne_perd_pas_les_autres_champs_du_fichier() {
+        let path = temp_path("update");
+        let initial = Credentials {
+            steam_web_api_key: Some("steam-secret".to_string()),
+            epic: Some(ProviderTokens {
+                access_token: "epic-access".to_string(),
+                refresh_token: "epic-refresh".to_string(),
+                expires_at: 42,
+                account_id: "epic-account".to_string(),
+                display_name: "Joueur".to_string(),
+            }),
+            ..Default::default()
+        };
+        save_atomic(&path, &initial).unwrap();
+
+        let updated = update(&path, |credentials| {
+            credentials.itch_api_key = Some("itch-secret".to_string());
+        })
+        .unwrap();
+        assert_eq!(updated.steam_web_api_key.as_deref(), Some("steam-secret"));
+        assert_eq!(updated.epic, initial.epic);
+        assert_eq!(updated.itch_api_key.as_deref(), Some("itch-secret"));
+        assert_eq!(load(&path).unwrap(), updated);
         let _ = std::fs::remove_file(path);
     }
 

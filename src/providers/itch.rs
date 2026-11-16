@@ -305,12 +305,30 @@ pub fn parse_uploads(body: &str) -> Result<Vec<Upload>, String> {
     Ok(parsed)
 }
 
-fn is_archive(filename: &str) -> bool {
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum ArchiveFormat {
+    Zip,
+    Tar,
+    TarGz,
+}
+
+/// Détecte le format à partir du nom publié par itch.io, jamais du fichier
+/// temporaire : celui-ci porte un suffixe `.part` pendant le téléchargement.
+fn archive_format(filename: &str) -> Option<ArchiveFormat> {
     let lower = filename.to_ascii_lowercase();
-    lower.ends_with(".zip")
-        || lower.ends_with(".tar.gz")
-        || lower.ends_with(".tgz")
-        || lower.ends_with(".tar")
+    if lower.ends_with(".zip") {
+        Some(ArchiveFormat::Zip)
+    } else if lower.ends_with(".tar.gz") || lower.ends_with(".tgz") {
+        Some(ArchiveFormat::TarGz)
+    } else if lower.ends_with(".tar") {
+        Some(ArchiveFormat::Tar)
+    } else {
+        None
+    }
+}
+
+fn is_archive(filename: &str) -> bool {
+    archive_format(filename).is_some()
 }
 
 /// Choisit l'archive Windows la plus récente. Un upload `.exe` n'est jamais
@@ -483,20 +501,12 @@ fn extract_tar(archive: &Path, destination: &Path, gzip: bool) -> Result<(), Str
     Ok(())
 }
 
-fn extract(archive: &Path, destination: &Path) -> Result<(), String> {
-    let name = archive
-        .file_name()
-        .and_then(|name| name.to_str())
-        .unwrap_or_default()
-        .to_ascii_lowercase();
-    if name.ends_with(".zip") {
-        extract_zip(archive, destination)
-    } else if name.ends_with(".tar.gz") || name.ends_with(".tgz") {
-        extract_tar(archive, destination, true)
-    } else if name.ends_with(".tar") {
-        extract_tar(archive, destination, false)
-    } else {
-        Err("format d'archive itch.io non pris en charge".to_string())
+fn extract(archive: &Path, destination: &Path, original_name: &str) -> Result<(), String> {
+    match archive_format(original_name) {
+        Some(ArchiveFormat::Zip) => extract_zip(archive, destination),
+        Some(ArchiveFormat::TarGz) => extract_tar(archive, destination, true),
+        Some(ArchiveFormat::Tar) => extract_tar(archive, destination, false),
+        None => Err("format d'archive itch.io non pris en charge".to_string()),
     }
 }
 
@@ -516,7 +526,9 @@ fn safe_folder(name: &str, game_id: &str) -> String {
     if folder.is_empty() {
         folder = format!("itch-{game_id}");
     }
-    folder.truncate(80);
+    // `String::truncate(80)` coupe des octets et panique au milieu d'un
+    // caractère UTF-8. On borne par caractères pour les titres accentués.
+    folder = folder.chars().take(80).collect();
     folder
 }
 
@@ -621,7 +633,7 @@ pub fn install(
         }
     };
     set_progress(&progress, "Extraction", None, None, None);
-    let result = extract(&archive, &install_path);
+    let result = extract(&archive, &install_path, &upload.filename);
     let _ = std::fs::remove_file(&archive);
     if let Err(error) = result {
         let _ = std::fs::remove_dir_all(&install_path);
@@ -753,6 +765,90 @@ mod tests {
         assert_eq!(safe_folder("../Mon Jeu", "42"), "_Mon Jeu");
         assert_eq!(safe_folder("", "42"), "itch-42");
         assert!(unique_folder(Path::new("/tmp"), "quark-itch-test").is_absolute());
+    }
+
+    #[test]
+    fn un_titre_utf8_long_ne_panique_pas_au_milieu_d_un_caractere() {
+        let folder = safe_folder(&"é".repeat(200), "42");
+        assert!(folder.chars().count() <= 80);
+        assert!(folder.is_char_boundary(folder.len()));
+    }
+
+    #[test]
+    fn le_format_est_lu_dans_le_nom_itch_et_pas_dans_le_fichier_temporaire() {
+        assert_eq!(archive_format("jeu-windows.zip"), Some(ArchiveFormat::Zip));
+        assert_eq!(archive_format("jeu.tar.gz"), Some(ArchiveFormat::TarGz));
+        assert_eq!(archive_format("jeu.tgz"), Some(ArchiveFormat::TarGz));
+        assert_eq!(archive_format("jeu.tar"), Some(ArchiveFormat::Tar));
+        assert_eq!(archive_format(".quark-itch-12-jeu.zip.part"), None);
+        assert_eq!(archive_format("jeu.exe"), None);
+    }
+
+    fn provider_game(id: &str, install_state: InstallState, path: Option<&str>) -> ProviderGame {
+        ProviderGame {
+            key: ProviderGameKey {
+                provider: Provider::Itch,
+                product_id: id.to_string(),
+            },
+            title: "Jeu itch".to_string(),
+            owned: true,
+            install_path: path.map(PathBuf::from),
+            install_root: Some(PathBuf::from("/games")),
+            install_state,
+            ..Default::default()
+        }
+    }
+
+    #[test]
+    fn une_archive_zip_sous_un_nom_temporaire_reste_extractible() {
+        use std::io::Write as _;
+        let root = std::env::temp_dir().join(format!(
+            "quark-itch-extract-{}-{}",
+            std::process::id(),
+            crate::config::now_ts()
+        ));
+        std::fs::create_dir_all(&root).unwrap();
+        let archive = root.join(".quark-itch-42-jeu.zip.part");
+        {
+            let file = File::create(&archive).unwrap();
+            let mut writer = zip::ZipWriter::new(file);
+            writer
+                .start_file("jeu.txt", zip::write::SimpleFileOptions::default())
+                .unwrap();
+            writer.write_all(b"bonjour").unwrap();
+            writer.finish().unwrap();
+        }
+        let destination = root.join("sortie");
+        std::fs::create_dir_all(&destination).unwrap();
+        extract(&archive, &destination, "jeu-windows.zip").unwrap();
+        assert_eq!(
+            std::fs::read_to_string(destination.join("jeu.txt")).unwrap(),
+            "bonjour"
+        );
+        let _ = std::fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn un_rafraichissement_ne_perd_pas_une_installation_locale() {
+        let root = std::env::temp_dir().join(format!(
+            "quark-itch-merge-{}-{}",
+            std::process::id(),
+            crate::config::now_ts()
+        ));
+        let install = root.join("jeu");
+        std::fs::create_dir_all(&install).unwrap();
+        let existing = vec![provider_game(
+            "42",
+            InstallState::Installed,
+            Some(install.to_str().unwrap()),
+        )];
+        let refreshed = vec![provider_game("42", InstallState::NotInstalled, None)];
+        let merged = merge_itch(&existing, &refreshed);
+        assert_eq!(merged.len(), 1);
+        assert_eq!(merged[0].install_state, InstallState::Installed);
+        assert_eq!(merged[0].install_path.as_deref(), Some(install.as_path()));
+        assert_eq!(merged[0].install_root.as_deref(), Some(Path::new("/games")));
+        let _ = std::fs::remove_dir_all(root);
     }
 
     #[test]
