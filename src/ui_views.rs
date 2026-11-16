@@ -42,8 +42,10 @@ impl QuarkApp {
         let active_view = views
             .iter()
             .find(|view| view.matches(&self.lib.settings, &self.filter))
-            .map(|view| view.name.clone())
-            .unwrap_or_else(|| "Choisir une vue…".to_string());
+            .map(|view| view.name.clone());
+        let selected_view = active_view
+            .clone()
+            .unwrap_or_else(|| crate::i18n::tr("Choisir une vue…"));
         let mut apply_view: Option<usize> = None;
         let mut sort = self.lib.settings.library_sort;
         let mut home_sort = self.lib.settings.home_sort;
@@ -96,7 +98,7 @@ impl QuarkApp {
                         ui.add_space(4.0);
                         ui.horizontal(|ui| {
                             egui::ComboBox::from_id_salt("quark_filter_views")
-                                .selected_text(crate::i18n::rich(active_view.clone()).size(12.0))
+                                .selected_text(crate::i18n::raw(selected_view).size(12.0))
                                 .width(190.0)
                                 .show_ui(ui, |ui| {
                                     if views.is_empty() {
@@ -444,27 +446,8 @@ impl QuarkApp {
                                                     .size(13.0)
                                                     .color(pal.text),
                                             );
-                                            let mut details = Vec::new();
-                                            if view.status != GameStatus::None {
-                                                details.push(view.status.label().to_string());
-                                            }
-                                            if !view.tag.is_empty() {
-                                                details.push(format!("#{}", view.tag));
-                                            }
-                                            if !view.genre.is_empty() {
-                                                details.push(view.genre.clone());
-                                            }
-                                            if !view.query.is_empty() {
-                                                details.push(format!("« {} »", view.query));
-                                            }
-                                            details.push(format!(
-                                                "Groupe : {}",
-                                                view.group_by.label()
-                                            ));
-                                            details.push(view.view.label().to_string());
-                                            details.push(format!("Tri : {}", view.sort.label()));
                                             ui.label(
-                                                crate::i18n::rich(details.join(" · "))
+                                                egui::RichText::new(saved_view_details(view))
                                                     .size(11.5)
                                                     .color(pal.text_faint),
                                             );
@@ -528,5 +511,55 @@ impl QuarkApp {
             self.apply_saved_view(index);
             self.saved_views_open = false;
         }
+    }
+}
+
+/// Détails d'une vue enregistrée : seuls les libellés sont traduits, les
+/// valeurs saisies par l'utilisateur (tag, genre, recherche) restent brutes.
+fn saved_view_details(view: &SavedView) -> String {
+    let mut details = Vec::new();
+    if view.status != GameStatus::None {
+        details.push(view.status.label());
+    }
+    if !view.tag.is_empty() {
+        details.push(format!("#{}", view.tag));
+    }
+    if !view.genre.is_empty() {
+        details.push(view.genre.clone());
+    }
+    if !view.query.is_empty() {
+        details.push(format!("« {} »", view.query));
+    }
+    details.push(format!(
+        "{} : {}",
+        crate::i18n::tr("Grouper"),
+        view.group_by.label()
+    ));
+    details.push(view.view.label());
+    details.push(format!(
+        "{} : {}",
+        crate::i18n::tr("Tri"),
+        view.sort.label()
+    ));
+    details.join(" · ")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn les_details_de_vue_gardent_les_valeurs_saisies_telles_quelles() {
+        let view = SavedView {
+            name: "Tout seul".to_string(),
+            tag: "Tout seul".to_string(),
+            genre: "Aventure".to_string(),
+            query: "Tout seul".to_string(),
+            ..SavedView::default()
+        };
+        let details = saved_view_details(&view);
+        assert!(details.contains("#Tout seul"));
+        assert!(details.contains("Aventure"));
+        assert!(details.contains("« Tout seul »"));
     }
 }
