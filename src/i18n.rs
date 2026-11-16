@@ -58,6 +58,22 @@ pub fn is_english() -> bool {
     language() == UiLanguage::English
 }
 
+/// Le français, l'espagnol, l'allemand et le portugais utilisent la virgule
+/// décimale ; l'anglais garde le point.
+pub fn decimal_comma() -> bool {
+    language() != UiLanguage::English
+}
+
+/// Formate un nombre avec un séparateur décimal adapté à la langue.
+pub fn format_decimal(value: f64, decimals: usize) -> String {
+    let formatted = format!("{value:.precision$}", precision = decimals);
+    if decimal_comma() {
+        formatted.replace('.', ",")
+    } else {
+        formatted
+    }
+}
+
 fn current_catalog() -> Option<&'static HashMap<String, String>> {
     match language() {
         UiLanguage::French => None,
@@ -311,6 +327,23 @@ mod tests {
     // s'exécuter l'un après l'autre, sinon l'un lit la langue posée par l'autre.
     fn language_lock() -> MutexGuard<'static, ()> {
         language_test_lock()
+    }
+
+    #[test]
+    fn le_catalogue_francais_reste_complet_et_identique_a_la_source() {
+        let _guard = language_lock();
+        let english: HashMap<String, String> = serde_json::from_str(EN).expect("catalogue anglais");
+        let french: HashMap<String, String> =
+            serde_json::from_str(include_str!("../assets/i18n/fr.json"))
+                .expect("catalogue français");
+        assert_eq!(
+            french.keys().collect::<std::collections::BTreeSet<_>>(),
+            english.keys().collect::<std::collections::BTreeSet<_>>(),
+            "fr.json n'a pas les mêmes clés que l'anglais"
+        );
+        for (key, value) in &french {
+            assert_eq!(key, value, "le français doit garder la chaîne source");
+        }
     }
 
     #[test]

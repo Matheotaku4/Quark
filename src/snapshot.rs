@@ -1571,14 +1571,7 @@ fn demo_library() -> Result<Library, String> {
 /// Mesure d'espace disque factice, pour le rendu de la page correspondante.
 fn demo_disk_report() -> crate::disk::DiskReport {
     let root = crate::config::data_dir();
-    let english = crate::i18n::is_english();
-    let prefix_detail = |game: &str| {
-        if english {
-            format!("{game} · Proton prefix")
-        } else {
-            format!("{game} · préfixe Proton")
-        }
-    };
+    let prefix_detail = |game: &str| format!("{game} · {}", crate::i18n::tr("préfixe Proton"));
     let mut rows = vec![
         crate::disk::DiskRow {
             label: crate::i18n::tr("Jeu"),
@@ -1608,31 +1601,19 @@ fn demo_disk_report() -> crate::disk::DiskReport {
             label: crate::i18n::tr("Cache d'artworks"),
             path: crate::config::artwork_root(),
             bytes: 244_000_000,
-            detail: if english {
-                "5 games with images".to_string()
-            } else {
-                "5 jeux avec des images".to_string()
-            },
+            detail: crate::i18n::tr_with("{} jeux avec des images", &["5"]),
         },
         crate::disk::DiskRow {
             label: crate::i18n::tr("Journaux de session"),
             path: crate::config::data_dir().join("logs"),
             bytes: 18_400_000,
-            detail: if english {
-                "one session.log per game, rewritten on each launch".to_string()
-            } else {
-                "un fichier session.log par jeu, réécrit à chaque lancement".to_string()
-            },
+            detail: crate::i18n::tr("un fichier session.log par jeu, réécrit à chaque lancement"),
         },
         crate::disk::DiskRow {
             label: crate::i18n::tr("Archives de mise à jour"),
             path: crate::config::data_dir().join("updates"),
             bytes: 9_200_000,
-            detail: if english {
-                "downloaded from GitHub releases".to_string()
-            } else {
-                "téléchargées depuis les releases GitHub".to_string()
-            },
+            detail: crate::i18n::tr("téléchargées depuis les releases GitHub"),
         },
     ];
     rows.sort_by_key(|row| std::cmp::Reverse(row.bytes));

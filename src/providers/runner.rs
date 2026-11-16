@@ -86,12 +86,16 @@ impl Default for InstallProgress {
 
 impl InstallProgress {
     pub fn label(&self) -> String {
+        let stage = crate::i18n::tr(&self.stage);
         match self.percent {
             Some(percent) => {
-                let percent = format!("{percent:.1}").replace('.', ",");
-                format!("{} · {percent} %", self.stage)
+                format!(
+                    "{} · {} %",
+                    stage,
+                    crate::i18n::format_decimal(percent as f64, 1)
+                )
             }
-            None => self.stage.clone(),
+            None => stage,
         }
     }
 
@@ -101,28 +105,13 @@ impl InstallProgress {
         if total == 0 {
             return None;
         }
-        Some(if crate::i18n::is_english() {
-            format!(
-                "{} GB / {} GB total",
-                gigabytes(written, true),
-                gigabytes(total, true)
-            )
-        } else {
-            format!(
-                "{} Go / {} Go au total",
-                gigabytes(written, false),
-                gigabytes(total, false)
-            )
-        })
-    }
-}
-
-fn gigabytes(bytes: u64, english: bool) -> String {
-    let value = format!("{:.1}", bytes as f64 / 1_073_741_824.0);
-    if english {
-        value
-    } else {
-        value.replace('.', ",")
+        Some(crate::i18n::tr_with(
+            "{} / {} au total",
+            &[
+                &crate::disk::format_bytes(written),
+                &crate::disk::format_bytes(total),
+            ],
+        ))
     }
 }
 

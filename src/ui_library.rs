@@ -541,7 +541,7 @@ impl QuarkApp {
                 ui.set_max_size(size);
                 ui.horizontal(|ui| {
                     ui.add_space(16.0);
-                    ui.label(crate::i18n::rich(&name).size(13.0).color(pal.text_dim));
+                    ui.label(crate::i18n::raw(&name).size(13.0).color(pal.text_dim));
                     ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
                         ui.add_space(10.0);
                         if widgets::icon_button(ui, 30.0, Icon::Close, &pal, "Fermer (Échap)")
@@ -909,43 +909,21 @@ impl QuarkApp {
         let store_playtime = store_playtime_record
             .and_then(|record| self.provider_playtime.get(&record.key))
             .cloned();
+        let store_name = store_label
+            .map(str::to_string)
+            .unwrap_or_else(|| crate::i18n::tr("boutique"));
         let playtime_text = match (&store_playtime_record, store_playtime) {
             (Some(_), Some(crate::providers::PlaytimeState::Ready(seconds))) => {
-                if crate::i18n::is_english() {
-                    format!(
-                        "{} played · {}",
-                        crate::config::human_playtime(seconds),
-                        store_label.unwrap_or("store")
-                    )
-                } else {
-                    format!(
-                        "{} de jeu · {}",
-                        crate::config::human_playtime(seconds),
-                        store_label.unwrap_or("boutique")
-                    )
-                }
+                crate::i18n::tr_with(
+                    "{} de jeu · {}",
+                    &[&crate::config::human_playtime(seconds), &store_name],
+                )
             }
             (Some(_), Some(crate::providers::PlaytimeState::Failed)) => {
-                if crate::i18n::is_english() {
-                    format!("{} time unavailable", store_label.unwrap_or("store"))
-                } else {
-                    format!("Temps {} indisponible", store_label.unwrap_or("boutique"))
-                }
+                crate::i18n::tr_with("Temps {} indisponible", &[&store_name])
             }
-            (Some(_), _) => {
-                if crate::i18n::is_english() {
-                    format!("{} time…", store_label.unwrap_or("store"))
-                } else {
-                    format!("Temps {}…", store_label.unwrap_or("boutique"))
-                }
-            }
-            (None, _) => {
-                if crate::i18n::is_english() {
-                    format!("{} played", game.playtime_label())
-                } else {
-                    format!("{} de jeu", game.playtime_label())
-                }
-            }
+            (Some(_), _) => crate::i18n::tr_with("Temps {}…", &[&store_name]),
+            (None, _) => crate::i18n::tr_with("{} de jeu", &[&game.playtime_label()]),
         };
         // Temps HowLongToBeat : lus une fois par jeu, affichés dans l'aperçu.
         let hltb_state = self.hltb.get(&id).cloned();
@@ -1797,12 +1775,9 @@ impl QuarkApp {
             ui.horizontal(|ui| {
                 ui.add_space(32.0);
                 ui.label(
-                    crate::i18n::rich(stats::date_label(
-                        stats::day_of(session.start),
-                        crate::i18n::is_english(),
-                    ))
-                    .size(12.5)
-                    .color(pal.text),
+                    crate::i18n::rich(stats::date_label(stats::day_of(session.start)))
+                        .size(12.5)
+                        .color(pal.text),
                 );
                 ui.add_space(10.0);
                 ui.label(
@@ -2041,7 +2016,7 @@ impl QuarkApp {
                             });
                             if !row.description.is_empty() {
                                 ui.label(
-                                    crate::i18n::rich(&row.description)
+                                    crate::i18n::raw(&row.description)
                                         .size(12.0)
                                         .color(pal.text_dim),
                                 );

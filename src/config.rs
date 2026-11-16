@@ -1771,54 +1771,31 @@ pub fn human_playtime(secs: u64) -> String {
         "< 1 min".to_string()
     } else if secs < 3600 {
         format!("{} min", secs / 60)
-    } else if crate::i18n::is_english() {
-        format!("{:.1} h", secs as f64 / 3600.0)
     } else {
-        format!("{:.1} h", secs as f64 / 3600.0).replace('.', ",")
+        format!("{} h", crate::i18n::format_decimal(secs as f64 / 3600.0, 1))
     }
 }
 
 pub fn human_ago(ts: i64) -> String {
     let delta = (now_ts() - ts).max(0) as u64;
-    let english = crate::i18n::is_english();
     match delta {
         0..=59 => crate::i18n::tr("à l'instant"),
-        60..=3599 => {
-            if english {
-                format!("{} min ago", delta / 60)
-            } else {
-                format!("il y a {} min", delta / 60)
-            }
-        }
-        3600..=86_399 => {
-            if english {
-                format!("{} h ago", delta / 3600)
-            } else {
-                format!("il y a {} h", delta / 3600)
-            }
-        }
+        60..=3599 => crate::i18n::tr_with("il y a {} min", &[&(delta / 60).to_string()]),
+        3600..=86_399 => crate::i18n::tr_with("il y a {} h", &[&(delta / 3600).to_string()]),
         86_400..=2_591_999 => {
             let d = delta / 86_400;
             if d == 1 {
                 crate::i18n::tr("hier")
-            } else if english {
-                format!("{d} days ago")
             } else {
-                format!("il y a {d} jours")
+                crate::i18n::tr_with("il y a {} jours", &[&d.to_string()])
             }
         }
         _ => {
             let m = delta / 2_592_000;
             if m == 1 {
-                if english {
-                    "1 month ago".to_string()
-                } else {
-                    "il y a 1 mois".to_string()
-                }
-            } else if english {
-                format!("{m} months ago")
+                crate::i18n::tr("il y a 1 mois")
             } else {
-                format!("il y a {m} mois")
+                crate::i18n::tr_with("il y a {} mois", &[&m.to_string()])
             }
         }
     }

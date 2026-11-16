@@ -3266,7 +3266,7 @@ impl QuarkApp {
                             .show(ui, |ui| {
                                 ui.set_max_width(380.0);
                                 ui.label(
-                                    crate::i18n::rich(&toast.text)
+                                    crate::i18n::raw(&toast.text)
                                         .size(13.0)
                                         .color(text_color.gamma_multiply(alpha)),
                                 );
@@ -5123,7 +5123,7 @@ impl QuarkApp {
                 }
                 for backup in &backups {
                     ui.horizontal(|ui| {
-                        ui.label(crate::i18n::rich(&backup.when).size(12.0).color(pal.text));
+                        ui.label(crate::i18n::raw(&backup.when).size(12.0).color(pal.text));
                         if backup.locked {
                             ui.label(crate::i18n::rich("Protégée").size(11.0).color(pal.accent));
                         }
@@ -5168,7 +5168,7 @@ impl QuarkApp {
                     .max_height(240.0)
                     .show(ui, |ui| {
                         for file in &preview.files {
-                            ui.label(crate::i18n::rich(&file.path).size(11.5).color(pal.text_dim));
+                            ui.label(crate::i18n::raw(&file.path).size(11.5).color(pal.text_dim));
                         }
                     });
                 if !preview.errors.is_empty() || preview.files.iter().any(|file| file.failed) {
@@ -5619,10 +5619,7 @@ impl QuarkApp {
             let size_text = if request.size_rx.is_some() {
                 "Taille : calcul en cours…".to_string()
             } else if let Some(size) = request.size {
-                format!(
-                    "Taille à télécharger : {}",
-                    disk::format_bytes(size, crate::i18n::is_english())
-                )
+                format!("Taille à télécharger : {}", disk::format_bytes(size))
             } else if let Some(error) = &request.size_error {
                 format!("Taille non communiquée ({error})")
             } else {

@@ -412,6 +412,12 @@ pub fn merge_gog(existing: &[ProviderGame], refreshed: &[ProviderGame]) -> Vec<P
             {
                 game.install_state = InstallState::Installed;
                 game.install_path = previous.install_path.clone();
+            } else if matches!(
+                previous.install_state,
+                InstallState::Installing | InstallState::Queued
+            ) {
+                game.install_state = previous.install_state;
+                game.install_path = previous.install_path.clone();
             }
             if game.capabilities.achievements == CapabilityState::Unknown {
                 game.capabilities.achievements = previous.capabilities.achievements.clone();
@@ -428,6 +434,24 @@ pub fn merge_gog(existing: &[ProviderGame], refreshed: &[ProviderGame]) -> Vec<P
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn une_synchro_gog_ne_perd_pas_une_installation_en_cours() {
+        let existing = ProviderGame {
+            key: crate::providers::ProviderGameKey {
+                provider: Provider::Gog,
+                product_id: "123".into(),
+            },
+            title: "Jeu GOG".into(),
+            install_state: InstallState::Installing,
+            ..Default::default()
+        };
+        let mut refreshed = existing.clone();
+        refreshed.install_state = InstallState::NotInstalled;
+        let merged = merge_gog(&[existing], &[refreshed]);
+        assert_eq!(merged.len(), 1);
+        assert_eq!(merged[0].install_state, InstallState::Installing);
+    }
 
     #[test]
     fn gogdl_install_keeps_game_id_and_destination_as_separate_arguments() {

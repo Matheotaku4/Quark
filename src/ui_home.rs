@@ -295,31 +295,18 @@ impl QuarkApp {
                         pal.text.gamma_multiply(ease.max(0.15)),
                     );
                     let playtime = if running {
-                        if crate::i18n::is_english() {
-                            format!(
-                                "In game for {}",
-                                config::human_playtime(running_secs.max(1))
-                            )
-                        } else {
-                            format!(
-                                "En jeu depuis {}",
-                                config::human_playtime(running_secs.max(1))
-                            )
-                        }
-                    } else if crate::i18n::is_english() {
-                        format!("{} played", game.playtime_label())
+                        crate::i18n::tr_with(
+                            "En jeu depuis {}",
+                            &[&config::human_playtime(running_secs.max(1))],
+                        )
                     } else {
-                        format!("{} de jeu", game.playtime_label())
+                        crate::i18n::tr_with("{} de jeu", &[&game.playtime_label()])
                     };
                     let meta_line = if game.last_played.is_some() {
-                        if crate::i18n::is_english() {
-                            format!(
-                                "{playtime}  \u{b7}  last played {}",
-                                game.last_played_label()
-                            )
-                        } else {
-                            format!("{playtime}  \u{b7}  jou\u{e9} {}", game.last_played_label())
-                        }
+                        crate::i18n::tr_with(
+                            "{} · joué {}",
+                            &[&playtime, &game.last_played_label()],
+                        )
                     } else {
                         playtime
                     };

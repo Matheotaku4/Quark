@@ -386,7 +386,7 @@ fn parse_scene(text: &str) -> Result<Vec<SiteHit>, String> {
         let size = between(block, "data-size=\"", "\"")
             .and_then(|size| size.parse::<u64>().ok())
             .filter(|size| *size > 0)
-            .map(|size| crate::disk::format_bytes(size, crate::i18n::is_english()))
+            .map(crate::disk::format_bytes)
             .unwrap_or_default();
         let cover = block
             .find("class=\"metadata-cover")

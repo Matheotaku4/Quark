@@ -1,3 +1,23 @@
+## Quark 1.7.3 — Installations protégées et interface réellement multilingue
+
+### Correctifs
+
+- **Synchro GOG et Epic** : `merge_gog` et `merge_epic_with_verified_installs` conservent désormais les états `Installing` et `Queued` pendant une synchronisation. Une bibliothèque rafraîchie ne fait plus disparaître un téléchargement en cours.
+- **Données brutes** : les six appels `crate::i18n::rich(...)` appliqués à des données (toast, heure de sauvegarde, chemin de fichier, nom de jeu, description de ligne, détail de recherche) utilisent `raw(...)`. Un titre ou un chemin n'est plus traduit mot à mot.
+- **Catalogue français** : ajout de `assets/i18n/fr.json`, aligné sur les 742 clés de `en.json`. Un test refuse un catalogue incomplet ou une valeur qui diffère de la source.
+- **Formats localisés** : tailles disque et de téléchargement, décimales, dates, mois, durées de jeu, temps relatifs, runtimes Proton/anti-triche, textures en cache, séries et totaux mesurés suivent la langue de l'interface. L'espagnol, l'allemand et le portugais ne retombent plus sur les libellés français ou anglais.
+
+### Vérifications
+
+- `cargo fmt --all --check` : OK.
+- `cargo test --locked` : 319 tests réussis.
+- `cargo clippy --all-targets --locked -- -D warnings` : OK.
+- Tests dédiés : synchro GOG, synchro Epic, catalogue français, tailles dans les cinq langues, libellés de date dans les cinq langues.
+
+### Limites connues
+
+- Les comptes GOG, Epic et Steam réels, la zone de notification du bureau et l'overlay GPU n'ont pas été validés dans cet environnement ; les chemins concernés restent couverts par leurs tests existants.
+
 ## Quark 1.7.2 — Les installations itch.io en cours restent visibles
 
 ### Correctifs

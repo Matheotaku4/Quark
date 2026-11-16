@@ -1611,15 +1611,10 @@ impl QuarkApp {
                                         .count();
                                     let anticheat = self.runtimes.len() - protons;
                                     ui.label(
-                                        crate::i18n::rich(if crate::i18n::is_english() {
-                                            format!(
-                                                "{protons} Proton runtime(s) · {anticheat} anti-cheat runtime(s)"
-                                            )
-                                        } else {
-                                            format!(
-                                                "{protons} runtime(s) Proton · {anticheat} runtime(s) anti-triche"
-                                            )
-                                        })
+                                        crate::i18n::rich(crate::i18n::tr_with(
+                                            "{} runtime(s) Proton · {} runtime(s) anti-triche",
+                                            &[&protons.to_string(), &anticheat.to_string()],
+                                        ))
                                         .size(12.0)
                                         .color(pal.text_faint),
                                     );
@@ -2199,24 +2194,21 @@ impl QuarkApp {
                                             );
                                             let size = release
                                                 .archive()
-                                                .map(|asset| asset.size as f64 / 1_048_576.0)
-                                                .unwrap_or(0.0);
-                                            let label = if size > 0.0 {
-                                                if crate::i18n::is_english() {
-                                                    format!(
-                                                        "Install {} ({size:.1} MB)",
-                                                        release.tag_name
-                                                    )
-                                                } else {
-                                                    format!(
-                                                        "Installer {} ({size:.1} Mo)",
-                                                        release.tag_name
-                                                    )
-                                                }
-                                            } else if crate::i18n::is_english() {
-                                                format!("Install {}", release.tag_name)
+                                                .map(|asset| asset.size)
+                                                .unwrap_or(0);
+                                            let label = if size > 0 {
+                                                crate::i18n::tr_with(
+                                                    "Installer {} ({})",
+                                                    &[
+                                                        &release.tag_name,
+                                                        &disk::format_bytes(size),
+                                                    ],
+                                                )
                                             } else {
-                                                format!("Installer {}", release.tag_name)
+                                                crate::i18n::tr_with(
+                                                    "Installer {}",
+                                                    &[&release.tag_name],
+                                                )
                                             };
                                             if widgets::ghost_button(
                                                 ui, &label, &pal, Icon::Plus,
@@ -2303,11 +2295,10 @@ impl QuarkApp {
                                 ui.horizontal(|ui| {
                                     let memory = config::resident_mb()
                                         .map(|mb| {
-                                            if crate::i18n::is_english() {
-                                                format!("{mb} MB")
-                                            } else {
-                                                format!("{mb} Mo")
-                                            }
+                                            crate::i18n::tr_with(
+                                                "{} MB",
+                                                &[&mb.to_string()],
+                                            )
                                         })
                                         .unwrap_or_else(|| "—".to_string());
                                     ui.label(
@@ -2319,17 +2310,10 @@ impl QuarkApp {
                                     );
                                     ui.add_space(14.0);
                                     ui.label(
-                                        crate::i18n::rich(if crate::i18n::is_english() {
-                                            format!(
-                                                "{} texture(s) cached",
-                                                self.textures.len()
-                                            )
-                                        } else {
-                                            format!(
-                                                "{} texture(s) en cache",
-                                                self.textures.len()
-                                            )
-                                        })
+                                        crate::i18n::rich(crate::i18n::tr_with(
+                                            "{} texture(s) en cache",
+                                            &[&self.textures.len().to_string()],
+                                        ))
                                         .size(12.0)
                                         .color(pal.text_faint),
                                     );
@@ -2453,11 +2437,7 @@ impl QuarkApp {
                 ui.add_space(22.0);
                 metric(ui, pal, "Cette semaine", &config::human_playtime(this_week));
                 ui.add_space(22.0);
-                let streak_label = if crate::i18n::is_english() {
-                    format!("{streak} day{}", if streak > 1 { "s" } else { "" })
-                } else {
-                    format!("{streak} jour{}", if streak > 1 { "s" } else { "" })
-                };
+                let streak_label = crate::i18n::tr_with("{} jour(s)", &[&streak.to_string()]);
                 metric(ui, pal, "Série en cours", &streak_label);
                 ui.add_space(22.0);
                 metric(ui, pal, "Sessions", &format!("{}", sessions.len()));
@@ -2564,17 +2544,10 @@ impl QuarkApp {
                     if let Some(total) = measured {
                         ui.add_space(14.0);
                         ui.label(
-                            crate::i18n::rich(if crate::i18n::is_english() {
-                                format!(
-                                    "Measured total: {}",
-                                    disk::format_bytes(total, crate::i18n::is_english())
-                                )
-                            } else {
-                                format!(
-                                    "Total mesuré : {}",
-                                    disk::format_bytes(total, crate::i18n::is_english())
-                                )
-                            })
+                            crate::i18n::rich(crate::i18n::tr_with(
+                                "Total mesuré : {}",
+                                &[&disk::format_bytes(total)],
+                            ))
                             .size(13.0)
                             .strong()
                             .color(pal.text),
@@ -2616,12 +2589,9 @@ impl QuarkApp {
                         });
                         ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
                             ui.label(
-                                crate::i18n::rich(disk::format_bytes(
-                                    *bytes,
-                                    crate::i18n::is_english(),
-                                ))
-                                .size(13.0)
-                                .color(pal.text),
+                                crate::i18n::rich(disk::format_bytes(*bytes))
+                                    .size(13.0)
+                                    .color(pal.text),
                             );
                             ui.add_space(10.0);
                             if widgets::icon_button(
@@ -3264,7 +3234,7 @@ impl QuarkApp {
                                                                                         });
                                                                                         if !hit.detail.is_empty() {
                                                                                             ui.label(
-                                                                                                crate::i18n::rich(&hit.detail)
+                                                                                                crate::i18n::raw(&hit.detail)
                                                                                                     .size(10.5)
                                                                                                     .color(pal.text_faint),
                                                                                             );
@@ -4375,7 +4345,7 @@ pub(crate) fn week_chart(ui: &mut egui::Ui, pal: &Palette, sessions: &[config::P
             painter.text(
                 Pos2::new(bar.center().x, base + 4.0),
                 Align2::CENTER_TOP,
-                stats::date_label(*start, crate::i18n::is_english()),
+                stats::date_label(*start),
                 FontId::proportional(9.0),
                 pal.text_faint,
             );
@@ -4404,7 +4374,7 @@ fn heatmap_chart(ui: &mut egui::Ui, pal: &Palette, sessions: &[config::PlaySessi
                 rect.top() + 16.0 + day as f32 * (cell + gap) + cell / 2.0,
             ),
             Align2::LEFT_CENTER,
-            stats::weekday_label(day, crate::i18n::is_english()),
+            stats::weekday_label(day),
             FontId::proportional(9.0),
             pal.text_faint,
         );
@@ -4415,7 +4385,7 @@ fn heatmap_chart(ui: &mut egui::Ui, pal: &Palette, sessions: &[config::PlaySessi
     let mut last_label_week: i64 = -8;
     for (week, days) in map.cells.iter().enumerate() {
         let monday = map.first_day + week as i64 * 7;
-        let month = stats::month_short(monday, crate::i18n::is_english());
+        let month = stats::month_short(monday);
         if month != last_month {
             if week as i64 - last_label_week >= 4 {
                 painter.text(
@@ -4465,7 +4435,7 @@ fn heatmap_chart(ui: &mut egui::Ui, pal: &Palette, sessions: &[config::PlaySessi
                 );
                 response.on_hover_text(format!(
                     "{} · joué {}",
-                    stats::date_label(monday + day as i64, crate::i18n::is_english()),
+                    stats::date_label(monday + day as i64),
                     stats::human(*secs)
                 ));
             }
@@ -5556,7 +5526,7 @@ impl QuarkApp {
                                                 });
                                                 if !row.description.is_empty() {
                                                     ui.label(
-                                                        crate::i18n::rich(&row.description)
+                                                        crate::i18n::raw(&row.description)
                                                             .size(12.0)
                                                             .color(pal.text_dim),
                                                     );

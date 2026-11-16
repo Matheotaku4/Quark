@@ -1095,6 +1095,12 @@ pub fn merge_epic_with_verified_installs(
             {
                 game.install_state = InstallState::Installed;
                 game.install_path = previous.install_path.clone();
+            } else if matches!(
+                previous.install_state,
+                InstallState::Installing | InstallState::Queued
+            ) {
+                game.install_state = previous.install_state;
+                game.install_path = previous.install_path.clone();
             }
             if game.quark_game_id.is_none() {
                 game.quark_game_id = previous.quark_game_id.clone();
@@ -1402,6 +1408,24 @@ Empty,,1.0,False\n";
         assert_eq!(merged[0].install_path, Some(install_path.clone()));
         assert_eq!(merged[0].quark_game_id.as_deref(), Some("quark-1"));
         let _ = std::fs::remove_dir_all(install_path);
+    }
+
+    #[test]
+    fn une_synchro_epic_ne_perd_pas_une_installation_en_cours() {
+        let existing = ProviderGame {
+            key: crate::providers::ProviderGameKey {
+                provider: Provider::Epic,
+                product_id: "epic-game".into(),
+            },
+            title: "Jeu Epic".into(),
+            install_state: InstallState::Installing,
+            ..Default::default()
+        };
+        let mut refreshed = existing.clone();
+        refreshed.install_state = InstallState::NotInstalled;
+        let merged = merge_epic(&[existing], &[refreshed]);
+        assert_eq!(merged.len(), 1);
+        assert_eq!(merged[0].install_state, InstallState::Installing);
     }
 
     #[test]

@@ -14,10 +14,31 @@ pub const MONTHS: [&str; 12] = [
     "déc.",
 ];
 
-/// English month abbreviations, used by the chart labels.
 pub const MONTHS_EN: [&str; 12] = [
     "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
 ];
+
+const MONTHS_ES: [&str; 12] = [
+    "ene.", "feb.", "mar.", "abr.", "may.", "jun.", "jul.", "ago.", "sept.", "oct.", "nov.", "dic.",
+];
+
+const MONTHS_DE: [&str; 12] = [
+    "Jan", "Feb", "März", "Apr", "Mai", "Juni", "Juli", "Aug", "Sept", "Okt", "Nov", "Dez",
+];
+
+const MONTHS_PT: [&str; 12] = [
+    "jan.", "fev.", "mar.", "abr.", "mai.", "jun.", "jul.", "ago.", "set.", "out.", "nov.", "dez.",
+];
+
+fn months() -> &'static [&'static str; 12] {
+    match crate::i18n::language() {
+        crate::config::UiLanguage::French => &MONTHS,
+        crate::config::UiLanguage::English => &MONTHS_EN,
+        crate::config::UiLanguage::Spanish => &MONTHS_ES,
+        crate::config::UiLanguage::German => &MONTHS_DE,
+        crate::config::UiLanguage::Portuguese => &MONTHS_PT,
+    }
+}
 
 /// Numéro du jour depuis l'époque Unix (UTC).
 pub fn day_of(ts: i64) -> i64 {
@@ -30,34 +51,36 @@ pub fn weekday(day: i64) -> usize {
     (day + 3).rem_euclid(7) as usize
 }
 
-pub fn weekday_label(day: usize, english: bool) -> &'static str {
-    if english {
-        ["M", "T", "W", "T", "F", "S", "S"][day.min(6)]
-    } else {
-        ["L", "M", "M", "J", "V", "S", "D"][day.min(6)]
-    }
+pub fn weekday_label(day: usize) -> &'static str {
+    let labels = match crate::i18n::language() {
+        crate::config::UiLanguage::French => ["L", "M", "M", "J", "V", "S", "D"],
+        crate::config::UiLanguage::English => ["M", "T", "W", "T", "F", "S", "S"],
+        crate::config::UiLanguage::Spanish => ["L", "M", "X", "J", "V", "S", "D"],
+        crate::config::UiLanguage::German => ["M", "D", "M", "D", "F", "S", "S"],
+        crate::config::UiLanguage::Portuguese => ["S", "T", "Q", "Q", "S", "S", "D"],
+    };
+    labels[day.min(6)]
 }
 
-/// « 28 oct. » ou « Oct 28 » pour un numéro de jour.
-pub fn date_label(day: i64, english: bool) -> String {
+/// « 28 oct. » / « Oct 28 » / « 28 oct. » / « 28. Okt » pour un numéro de jour.
+pub fn date_label(day: i64) -> String {
     let (_, month, dom) = civil_from_days(day);
     let month = (month as usize).clamp(1, 12) - 1;
-    if english {
-        format!("{} {dom}", MONTHS_EN[month])
+    let name = months()[month];
+    if crate::i18n::is_english() {
+        format!("{name} {dom}")
+    } else if crate::i18n::language() == crate::config::UiLanguage::German {
+        format!("{dom}. {name}")
     } else {
-        format!("{dom} {}", MONTHS[month])
+        format!("{dom} {name}")
     }
 }
 
 /// « oct. 2026 » : libellé court pour l'axe du calendrier.
-pub fn month_short(day: i64, english: bool) -> String {
+pub fn month_short(day: i64) -> String {
     let (year, month, _) = civil_from_days(day);
     let month = (month as usize).clamp(1, 12) - 1;
-    if english {
-        format!("{} {year}", MONTHS_EN[month])
-    } else {
-        format!("{} {year}", MONTHS[month])
-    }
+    format!("{} {year}", months()[month])
 }
 
 /// Durée par jour : la session est comptée le jour où elle a commencé.
@@ -238,11 +261,23 @@ mod tests {
 
     #[test]
     fn les_libelles_de_date_sont_lisibles() {
+        use crate::config::UiLanguage;
+        let _guard = crate::i18n::language_test_lock();
         // 28 octobre 2026 = jour 20754 (1 793 196 300 / 86 400).
-        assert_eq!(date_label(20_754, false), "28 oct.");
-        assert_eq!(date_label(20_754, true), "Oct 28");
-        assert_eq!(month_short(20_754, false), "oct. 2026");
-        assert_eq!(month_short(20_754, true), "Oct 2026");
+        crate::i18n::set_language(UiLanguage::French);
+        assert_eq!(date_label(20_754), "28 oct.");
+        assert_eq!(month_short(20_754), "oct. 2026");
+        crate::i18n::set_language(UiLanguage::English);
+        assert_eq!(date_label(20_754), "Oct 28");
+        assert_eq!(month_short(20_754), "Oct 2026");
+        crate::i18n::set_language(UiLanguage::Spanish);
+        assert_eq!(date_label(20_754), "28 oct.");
+        crate::i18n::set_language(UiLanguage::German);
+        assert_eq!(date_label(20_754), "28. Okt");
+        assert_eq!(month_short(20_754), "Okt 2026");
+        crate::i18n::set_language(UiLanguage::Portuguese);
+        assert_eq!(date_label(20_754), "28 out.");
+        crate::i18n::set_language(UiLanguage::French);
         assert_eq!(human(7_500), "2 h 05");
     }
 }

@@ -62,7 +62,6 @@ pub fn dir_size(path: &Path) -> u64 {
 pub fn scan(lib: &Library) -> DiskReport {
     let mut rows: Vec<DiskRow> = Vec::new();
     let settings = &lib.settings;
-    let english = crate::i18n::is_english();
 
     let artwork = config::artwork_root();
     let artwork_bytes = dir_size(&artwork);
@@ -81,16 +80,10 @@ pub fn scan(lib: &Library) -> DiskReport {
                         || game.artwork.icon.is_some()
                 })
                 .count();
-            if english {
-                if count == 1 {
-                    "1 game with images".to_string()
-                } else {
-                    format!("{count} games with images")
-                }
-            } else if count == 1 {
-                "1 jeu avec des images".to_string()
+            if count == 1 {
+                crate::i18n::tr("1 jeu avec des images")
             } else {
-                format!("{count} jeux avec des images")
+                crate::i18n::tr_with("{} jeux avec des images", &[&count.to_string()])
             }
         },
     });
@@ -100,11 +93,7 @@ pub fn scan(lib: &Library) -> DiskReport {
         label: crate::i18n::tr("Journaux de session"),
         path: logs.clone(),
         bytes: dir_size(&logs),
-        detail: if english {
-            "one session.log per game, rewritten on each launch".to_string()
-        } else {
-            "un fichier session.log par jeu, réécrit à chaque lancement".to_string()
-        },
+        detail: crate::i18n::tr("un fichier session.log par jeu, réécrit à chaque lancement"),
     });
 
     let updates = config::data_dir().join("updates");
@@ -112,11 +101,7 @@ pub fn scan(lib: &Library) -> DiskReport {
         label: crate::i18n::tr("Archives de mise à jour"),
         path: updates.clone(),
         bytes: dir_size(&updates),
-        detail: if english {
-            "downloaded from GitHub releases".to_string()
-        } else {
-            "téléchargées depuis les releases GitHub".to_string()
-        },
+        detail: crate::i18n::tr("téléchargées depuis les releases GitHub"),
     });
 
     // Un dossier de préfixe par chemin réel : plusieurs jeux peuvent partager
@@ -135,17 +120,9 @@ pub fn scan(lib: &Library) -> DiskReport {
     prefixes.sort_by(|a, b| a.0.cmp(&b.0));
     for (path, count) in prefixes {
         let bytes = dir_size(&path);
-        let mut detail = if english {
-            "Proton prefix".to_string()
-        } else {
-            "préfixe Proton".to_string()
-        };
+        let mut detail = crate::i18n::tr("préfixe Proton");
         if count > 1 {
-            detail = if english {
-                format!("shared by {count} games")
-            } else {
-                format!("partagé par {count} jeux")
-            };
+            detail = crate::i18n::tr_with("partagé par {} jeux", &[&count.to_string()]);
         }
         if let Some(game) = lib
             .games
@@ -207,10 +184,14 @@ pub fn spawn(lib: Library) -> std::sync::mpsc::Receiver<DiskReport> {
 }
 
 /// « 1,4 Go » : taille lisible, en français.
-pub fn format_bytes(bytes: u64, english: bool) -> String {
+pub fn format_bytes(bytes: u64) -> String {
     const FR: [&str; 5] = ["o", "Ko", "Mo", "Go", "To"];
     const EN: [&str; 5] = ["B", "KB", "MB", "GB", "TB"];
-    let units = if english { EN } else { FR };
+    let units = if crate::i18n::language() == crate::config::UiLanguage::French {
+        FR
+    } else {
+        EN
+    };
     let mut value = bytes as f64;
     let mut unit = 0;
     while value >= 1024.0 && unit + 1 < units.len() {
@@ -220,16 +201,7 @@ pub fn format_bytes(bytes: u64, english: bool) -> String {
     if unit == 0 {
         format!("{bytes} {}", units[0])
     } else {
-        let number = format!("{value:.1}");
-        format!(
-            "{} {}",
-            if english {
-                number
-            } else {
-                number.replace('.', ",")
-            },
-            units[unit]
-        )
+        format!("{} {}", crate::i18n::format_decimal(value, 1), units[unit])
     }
 }
 
@@ -238,16 +210,27 @@ mod tests {
     use super::*;
 
     #[test]
-    fn les_tailles_sont_lisibles() {
-        assert_eq!(format_bytes(0, false), "0 o");
-        assert_eq!(format_bytes(512, false), "512 o");
-        assert_eq!(format_bytes(1024, false), "1,0 Ko");
-        assert_eq!(format_bytes(1_572_864, false), "1,5 Mo");
-        assert_eq!(format_bytes(12 * 1024 * 1024 * 1024, false), "12,0 Go");
-        assert_eq!(format_bytes(0, true), "0 B");
-        assert_eq!(format_bytes(1024, true), "1.0 KB");
-        assert_eq!(format_bytes(1_572_864, true), "1.5 MB");
-        assert_eq!(format_bytes(12 * 1024 * 1024 * 1024, true), "12.0 GB");
+    fn les_tailles_sont_lisibles_dans_chaque_langue() {
+        use crate::config::UiLanguage;
+        let _guard = crate::i18n::language_test_lock();
+        crate::i18n::set_language(UiLanguage::French);
+        assert_eq!(format_bytes(0), "0 o");
+        assert_eq!(format_bytes(512), "512 o");
+        assert_eq!(format_bytes(1024), "1,0 Ko");
+        assert_eq!(format_bytes(1_572_864), "1,5 Mo");
+        assert_eq!(format_bytes(12 * 1024 * 1024 * 1024), "12,0 Go");
+        crate::i18n::set_language(UiLanguage::English);
+        assert_eq!(format_bytes(0), "0 B");
+        assert_eq!(format_bytes(1024), "1.0 KB");
+        assert_eq!(format_bytes(1_572_864), "1.5 MB");
+        assert_eq!(format_bytes(12 * 1024 * 1024 * 1024), "12.0 GB");
+        crate::i18n::set_language(UiLanguage::Spanish);
+        assert_eq!(format_bytes(1024), "1,0 KB");
+        crate::i18n::set_language(UiLanguage::German);
+        assert_eq!(format_bytes(1024), "1,0 KB");
+        crate::i18n::set_language(UiLanguage::Portuguese);
+        assert_eq!(format_bytes(1024), "1,0 KB");
+        crate::i18n::set_language(UiLanguage::French);
     }
 
     #[test]
