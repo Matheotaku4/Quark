@@ -740,5 +740,10 @@
   "{} de jeu · {}": "{} jugado · {}",
   "Temps {} indisponible": "Tiempo de {} no disponible",
   "Temps {}…": "Tiempo de {}…",
-  "{} MB": "{} MB"
+  "{} MB": "{} MB",
+  "Détecter le dossier…": "Detectar carpeta…",
+  "Cherche les dossiers dont le nom ressemble au titre du jeu dans le préfixe Wine (Saved Games, Documents, AppData).": "Busca carpetas cuyo nombre coincide con el título del juego en el prefijo Wine (Saved Games, Documents, AppData).",
+  "Utiliser ce dossier pour la synchronisation cloud": "Usar esta carpeta para la sincronización en la nube",
+  "Aucun dossier de sauvegarde trouvé dans le préfixe du jeu": "No se encontró ninguna carpeta de guardado en el prefijo del juego",
+  "{} dossier(s) de sauvegarde proposé(s)": "{} carpeta(s) de guardado propuesta(s)"
 }

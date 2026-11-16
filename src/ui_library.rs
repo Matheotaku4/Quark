@@ -1501,6 +1501,44 @@ impl QuarkApp {
                                         {
                                             self.choose_save_folder(ui.ctx(), key);
                                         }
+                                        if key.provider == crate::providers::Provider::Gog {
+                                            if widgets::ghost_button(
+                                                ui,
+                                                &crate::i18n::tr("Détecter le dossier…"),
+                                                &pal,
+                                                Icon::Search,
+                                            )
+                                            .on_hover_text(crate::i18n::tr(
+                                                "Cherche les dossiers dont le nom ressemble au titre du jeu dans le préfixe Wine (Saved Games, Documents, AppData).",
+                                            ))
+                                            .clicked()
+                                            {
+                                                let wine_prefix =
+                                                    game.wine_prefix_path(&settings);
+                                                self.detect_save_folders(
+                                                    key,
+                                                    &game.name,
+                                                    &wine_prefix,
+                                                );
+                                            }
+                                            if let Some(candidates) =
+                                                self.save_candidates.get(key).cloned()
+                                            {
+                                                for path in candidates {
+                                                    if ui
+                                                        .small_button(crate::i18n::raw(
+                                                            path.display().to_string(),
+                                                        ))
+                                                        .on_hover_text(crate::i18n::tr(
+                                                            "Utiliser ce dossier pour la synchronisation cloud",
+                                                        ))
+                                                        .clicked()
+                                                    {
+                                                        self.add_save_folder(key, &path);
+                                                    }
+                                                }
+                                            }
+                                        }
                                         for path in &record.custom_save_paths {
                                             ui.label(
                                                 crate::i18n::raw(path.display().to_string())

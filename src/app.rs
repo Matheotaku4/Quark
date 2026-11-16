@@ -19,7 +19,7 @@ use crate::update::{self, Release};
 use crate::widgets::{self, Icon};
 use eframe::egui::{self, Align, Align2, FontId, Layout, Sense, Stroke, Vec2};
 use std::collections::{HashMap, VecDeque};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::mpsc::{Receiver, TryRecvError, channel};
 use std::sync::{
     Arc, Mutex,
@@ -777,6 +777,8 @@ pub struct QuarkApp {
     /// Synchronisation des sauvegardes cloud Epic/GOG en cours.
     pub cloud_sync: Option<CloudSyncJob>,
     pub cloud_sync_status: HashMap<crate::providers::ProviderGameKey, String>,
+    /// Dossiers de sauvegarde proposés par la détection pour un jeu de boutique.
+    pub save_candidates: HashMap<crate::providers::ProviderGameKey, Vec<PathBuf>>,
     /// Pourquoi l'icône de notification n'a pas pu démarrer (dit dans les
     /// paramètres, jamais avalé).
     pub tray_error: Option<String>,
@@ -1065,6 +1067,7 @@ impl QuarkApp {
             eos_overlay_job: None,
             cloud_sync: None,
             cloud_sync_status: HashMap::new(),
+            save_candidates: HashMap::new(),
             tray_error: None,
             home: start_home,
             carousel: 0,
@@ -4680,6 +4683,47 @@ impl QuarkApp {
             crate::config::home_dir(),
             PickerTarget::SaveFolder(key.clone()),
         );
+    }
+
+    /// Cherche des dossiers de sauvegarde dans le préfixe Wine du jeu et garde
+    /// la liste pour que la fiche propose chaque candidat.
+    pub fn detect_save_folders(
+        &mut self,
+        key: &crate::providers::ProviderGameKey,
+        game_name: &str,
+        wine_prefix: &Path,
+    ) {
+        let found = crate::providers::cloud_saves::save_candidates(game_name, wine_prefix);
+        if found.is_empty() {
+            self.save_candidates.remove(key);
+            self.toast_info(crate::i18n::tr(
+                "Aucun dossier de sauvegarde trouvé dans le préfixe du jeu",
+            ));
+        } else {
+            let count = found.len();
+            self.save_candidates.insert(key.clone(), found);
+            self.toast_info(crate::i18n::tr_with(
+                "{} dossier(s) de sauvegarde proposé(s)",
+                &[&count.to_string()],
+            ));
+        }
+    }
+
+    pub fn add_save_folder(&mut self, key: &crate::providers::ProviderGameKey, path: &Path) {
+        if let Some(game) = self
+            .lib
+            .provider_library
+            .games
+            .iter_mut()
+            .find(|game| &game.key == key)
+            && !game
+                .custom_save_paths
+                .iter()
+                .any(|candidate| candidate == path)
+        {
+            game.custom_save_paths.push(path.to_path_buf());
+            self.touch();
+        }
     }
 
     pub fn remove_save_folder(&mut self, key: &crate::providers::ProviderGameKey, path: &PathBuf) {

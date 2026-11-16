@@ -740,5 +740,10 @@
   "{} de jeu · {}": "{} de jeu · {}",
   "Temps {} indisponible": "Temps {} indisponible",
   "Temps {}…": "Temps {}…",
-  "{} MB": "{} MB"
+  "{} MB": "{} MB",
+  "Détecter le dossier…": "Détecter le dossier…",
+  "Cherche les dossiers dont le nom ressemble au titre du jeu dans le préfixe Wine (Saved Games, Documents, AppData).": "Cherche les dossiers dont le nom ressemble au titre du jeu dans le préfixe Wine (Saved Games, Documents, AppData).",
+  "Utiliser ce dossier pour la synchronisation cloud": "Utiliser ce dossier pour la synchronisation cloud",
+  "Aucun dossier de sauvegarde trouvé dans le préfixe du jeu": "Aucun dossier de sauvegarde trouvé dans le préfixe du jeu",
+  "{} dossier(s) de sauvegarde proposé(s)": "{} dossier(s) de sauvegarde proposé(s)"
 }

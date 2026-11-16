@@ -740,5 +740,10 @@
   "{} de jeu · {}": "{} jogado · {}",
   "Temps {} indisponible": "Tempo de {} indisponível",
   "Temps {}…": "Tempo de {}…",
-  "{} MB": "{} MB"
+  "{} MB": "{} MB",
+  "Détecter le dossier…": "Detectar pasta…",
+  "Cherche les dossiers dont le nom ressemble au titre du jeu dans le préfixe Wine (Saved Games, Documents, AppData).": "Procura pastas cujo nome corresponde ao título do jogo no prefixo Wine (Saved Games, Documents, AppData).",
+  "Utiliser ce dossier pour la synchronisation cloud": "Usar esta pasta para a sincronização na nuvem",
+  "Aucun dossier de sauvegarde trouvé dans le préfixe du jeu": "Nenhuma pasta de saves encontrada no prefixo do jogo",
+  "{} dossier(s) de sauvegarde proposé(s)": "{} pasta(s) de saves proposta(s)"
 }

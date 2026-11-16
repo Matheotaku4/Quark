@@ -740,5 +740,10 @@
   "{} de jeu · {}": "{} gespielt · {}",
   "Temps {} indisponible": "{} Zeit nicht verfügbar",
   "Temps {}…": "{} Zeit…",
-  "{} MB": "{} MB"
+  "{} MB": "{} MB",
+  "Détecter le dossier…": "Ordner erkennen…",
+  "Cherche les dossiers dont le nom ressemble au titre du jeu dans le préfixe Wine (Saved Games, Documents, AppData).": "Sucht im Wine-Präfix nach Ordnern, deren Name zum Spieltitel passt (Saved Games, Documents, AppData).",
+  "Utiliser ce dossier pour la synchronisation cloud": "Diesen Ordner für die Cloud-Synchronisierung verwenden",
+  "Aucun dossier de sauvegarde trouvé dans le préfixe du jeu": "Im Spielpräfix wurde kein Speicherordner gefunden",
+  "{} dossier(s) de sauvegarde proposé(s)": "{} Speicherordner vorgeschlagen"
 }

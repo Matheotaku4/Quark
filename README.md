@@ -6,7 +6,7 @@ titles you own, launches Windows games through Proton (or umu-launcher), and sta
 the way with an AMOLED interface, a store page, save snapshots and an in-game
 overlay.
 
-This is the **1.7.3** documentation. Older release notes are kept on the GitHub
+This is the **1.7.4** documentation. Older release notes are kept on the GitHub
 releases page; `docs/release-notes.md` only describes the release currently
 being published.
 
@@ -28,7 +28,9 @@ The wiki is published from the versioned source in [`wiki/`](wiki/) by the
 | --- | --- |
 | ![Onboarding](docs/images/onboarding-fr.png) | ![What's new](docs/images/whats-new-fr.png) |
 
-## What's new in 1.7.3
+## What's new in 1.7.4
+
+- **Détection du dossier de sauvegarde GOG.** La fiche d'un jeu GOG propose désormais **Détecter le dossier…** : Quark parcourt le préfixe Wine (`Saved Games`, `Documents`, `My Games`, `AppData/Local` et `Roaming`) et propose les dossiers dont le nom ressemble au titre du jeu. Un clic sur un candidat l'ajoute aux dossiers de sauvegarde, sans rien choisir à l'aveugle.
 
 - **Les installations en cours survivent aux synchros.** Une synchronisation de la bibliothèque GOG ou Epic ne remplace plus une entrée `Installing` ou `Queued` par `NotInstalled` : le téléchargement et sa progression restent visibles pendant toute la mise à jour de la bibliothèque.
 - **Les données ne sont plus traduites.** Les toasts, chemins de fichiers, heures de sauvegarde, noms de jeux et descriptions de lignes passent désormais par le catalogue brut ; un titre de jeu ou un chemin contenant un mot français n'est plus remplacé par sa traduction anglaise.
@@ -37,7 +39,7 @@ The wiki is published from the versioned source in [`wiki/`](wiki/) by the
 
 ## Table of contents
 
-1. [What's new in 1.7.3](#whats-new-in-163)
+1. [What's new in 1.7.4](#whats-new-in-164)
 2. [What Quark does](#what-quark-does)
 3. [Installation](#installation)
 4. [First launch](#first-launch)
@@ -97,8 +99,8 @@ Download `quark-<version>-linux-x86_64.tar.gz` and its `.sha256` file from the
 then verify and unpack it:
 
 ```bash
-sha256sum -c quark-1.7.3-linux-x86_64.tar.gz.sha256
-tar -xzf quark-1.7.3-linux-x86_64.tar.gz
+sha256sum -c quark-1.7.4-linux-x86_64.tar.gz.sha256
+tar -xzf quark-1.7.4-linux-x86_64.tar.gz
 ./quark/quark
 ```
 
@@ -140,7 +142,7 @@ A new configuration opens a three-step welcome guide. It is not blocking:
 **Skip** closes it. The guide changes the interface language, startup page,
 theme and hero background live, then offers to add a first game. Existing
 configurations are marked as already welcomed, so updating from 1.1.4 never
-shows it unexpectedly; they still see the 1.7.3 summary once.
+shows it unexpectedly; they still see the 1.7.4 summary once.
 
 1. Open **Settings → Stores & tools** and install Legendary and/or gogdl with
    **Install / update**. Quark verifies the SHA-256 digest published by GitHub

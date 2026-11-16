@@ -136,6 +136,116 @@ fn summarize(stdout: &str, stderr: &str) -> String {
     }
 }
 
+/// Dossiers candidats pour les sauvegardes d'un jeu Windows lancé par Proton.
+///
+/// GOG ne publie pas le chemin de sauvegarde dans `gogdl` : on cherche donc les
+/// dossiers dont le nom ressemble au titre du jeu dans les emplacements usuels
+/// du préfixe Wine (`Saved Games`, `Documents`, `AppData`). Le résultat est une
+/// proposition : l'utilisateur garde le dernier mot et peut choisir son dossier.
+pub fn save_candidates(game_name: &str, wine_prefix: &Path) -> Vec<PathBuf> {
+    let tokens = significant_tokens(game_name);
+    if tokens.is_empty() {
+        return Vec::new();
+    }
+    let mut best: Vec<(u32, PathBuf)> = Vec::new();
+    let users = wine_prefix.join("drive_c/users");
+    let Ok(entries) = std::fs::read_dir(&users) else {
+        return Vec::new();
+    };
+    for user in entries.flatten().map(|entry| entry.path()) {
+        for relative in [
+            "Saved Games",
+            "Documents",
+            "Documents/My Games",
+            "AppData/Local",
+            "AppData/Roaming",
+        ] {
+            let root = user.join(relative);
+            let Ok(children) = std::fs::read_dir(&root) else {
+                continue;
+            };
+            for child in children.flatten().map(|entry| entry.path()) {
+                if !child.is_dir() {
+                    continue;
+                }
+                let Some(score) = candidate_score(&child, game_name, &tokens) else {
+                    continue;
+                };
+                if !best.iter().any(|(_, path)| path == &child) {
+                    best.push((score, child));
+                }
+            }
+        }
+    }
+    best.sort_by(|a, b| b.0.cmp(&a.0).then_with(|| a.1.cmp(&b.1)));
+    best.truncate(5);
+    best.into_iter().map(|(_, path)| path).collect()
+}
+
+fn significant_tokens(name: &str) -> Vec<String> {
+    const GENERIC: [&str; 16] = [
+        "game",
+        "games",
+        "the",
+        "and",
+        "of",
+        "edition",
+        "definitive",
+        "complete",
+        "deluxe",
+        "gold",
+        "goty",
+        "remaster",
+        "remastered",
+        "collection",
+        "la",
+        "les",
+    ];
+    normalize(name)
+        .split(' ')
+        .filter(|token| token.len() >= 4 && !GENERIC.contains(token))
+        .map(str::to_string)
+        .collect()
+}
+
+fn candidate_score(path: &Path, game_name: &str, tokens: &[String]) -> Option<u32> {
+    let name = path.file_name()?.to_string_lossy();
+    let normalized = normalize(&name);
+    let wanted = normalize(game_name);
+    if normalized == wanted {
+        return Some(100);
+    }
+    if !wanted.is_empty() && normalized.contains(&wanted) {
+        return Some(80);
+    }
+    let mut score = 0;
+    for token in tokens {
+        if normalized == *token {
+            score += 40;
+        } else if normalized.starts_with(token) {
+            score += 25;
+        } else if normalized.contains(token) {
+            score += 12;
+        }
+    }
+    (score >= 12).then_some(score)
+}
+
+fn normalize(text: &str) -> String {
+    let mut out = String::new();
+    let mut space = false;
+    for ch in text.chars() {
+        if ch.is_alphanumeric() {
+            out.extend(ch.to_lowercase());
+            space = false;
+        } else if !space && !out.is_empty() {
+            out.push(' ');
+            space = true;
+        }
+    }
+    out.trim().to_string()
+}
+
 /// Dossier de sauvegarde effectif d'une installation : le chemin explicite de
 /// l'installation, sinon le premier dossier personnalisé de la fiche boutique.
 pub fn save_path_for(game: Option<&crate::config::Game>, record: &ProviderGame) -> Option<PathBuf> {
@@ -165,6 +275,26 @@ mod tests {
         assert_eq!(parse_gog_timestamp("aucun nombre"), None);
         // Une ligne de journal contenant un nombre ne doit pas être prise.
         assert_eq!(parse_gog_timestamp("[INFO] 12 files uploaded"), None);
+    }
+
+    #[test]
+    fn les_dossiers_de_sauvegarde_sont_proposes_par_nom() {
+        let root =
+            std::env::temp_dir().join(format!("quark-save-candidates-{}", std::process::id()));
+        let user = root.join("drive_c/users/steamuser");
+        std::fs::create_dir_all(user.join("Documents/My Games/The Witcher 3")).unwrap();
+        std::fs::create_dir_all(user.join("Saved Games/Cyberpunk 2077")).unwrap();
+        std::fs::create_dir_all(user.join("AppData/Local/Microsoft")).unwrap();
+
+        let witcher = save_candidates("The Witcher 3: Wild Hunt", &root);
+        assert!(witcher.iter().any(|path| path.ends_with("The Witcher 3")));
+        assert!(!witcher.iter().any(|path| path.ends_with("Microsoft")));
+
+        let cyberpunk = save_candidates("Cyberpunk 2077", &root);
+        assert_eq!(cyberpunk.len(), 1);
+        assert!(cyberpunk[0].ends_with("Cyberpunk 2077"));
+
+        std::fs::remove_dir_all(&root).ok();
     }
 
     #[test]
