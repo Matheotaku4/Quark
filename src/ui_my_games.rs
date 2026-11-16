@@ -88,42 +88,37 @@ impl QuarkApp {
                                     if busy {
                                         ui.add(egui::Spinner::new().size(12.0));
                                     }
-                                    ui.with_layout(
-                                        Layout::right_to_left(Align::Center),
-                                        |ui| {
-                                            if busy {
-                                                ui.add(egui::Spinner::new().size(14.0));
-                                                ui.add_space(6.0);
-                                            }
-                                            if widgets_button(ui, "Boutiques & outils", &pal) {
-                                                open_settings = true;
-                                            }
-                                            ui.add_space(8.0);
-                                            ui.add_sized(
-                                                Vec2::new(220.0, 30.0),
-                                                egui::TextEdit::singleline(
-                                                    &mut self.my_games_query,
-                                                )
+                                    ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
+                                        if busy {
+                                            ui.add(egui::Spinner::new().size(14.0));
+                                            ui.add_space(6.0);
+                                        }
+                                        if widgets_button(ui, "Boutiques & outils", &pal) {
+                                            open_settings = true;
+                                        }
+                                        ui.add_space(8.0);
+                                        ui.add_sized(
+                                            Vec2::new(220.0, 30.0),
+                                            egui::TextEdit::singleline(&mut self.my_games_query)
                                                 .id(egui::Id::new("quark_my_games_search"))
                                                 .hint_text(crate::i18n::tr("Rechercher un jeu"))
                                                 .font(egui::FontId::proportional(12.5)),
-                                            );
-                                            ui.add_space(8.0);
-                                            let current = usize::from(self.lib.settings.my_games_list);
-                                            if let Some(index) = crate::widgets::segmented(
-                                                ui,
-                                                &pal,
-                                                &[
-                                                    (crate::widgets::Icon::Grid, "Grille"),
-                                                    (crate::widgets::Icon::List, "Liste"),
-                                                ],
-                                                current,
-                                            ) {
-                                                self.lib.settings.my_games_list = index == 1;
-                                                self.touch();
-                                            }
-                                        },
-                                    );
+                                        );
+                                        ui.add_space(8.0);
+                                        let current = usize::from(self.lib.settings.my_games_list);
+                                        if let Some(index) = crate::widgets::segmented(
+                                            ui,
+                                            &pal,
+                                            &[
+                                                (crate::widgets::Icon::Grid, "Grille"),
+                                                (crate::widgets::Icon::List, "Liste"),
+                                            ],
+                                            current,
+                                        ) {
+                                            self.lib.settings.my_games_list = index == 1;
+                                            self.touch();
+                                        }
+                                    });
                                 });
                                 ui.add_space(16.0);
 
@@ -144,13 +139,8 @@ impl QuarkApp {
                                             Some(Provider::Itch) => 4,
                                         };
                                         let title = format!("{label} · {}", counts[index]);
-                                        if store_tab(
-                                            ui,
-                                            &pal,
-                                            &title,
-                                            selected == provider,
-                                            index,
-                                        ) {
+                                        if store_tab(ui, &pal, &title, selected == provider, index)
+                                        {
                                             self.my_games_store = provider;
                                         }
                                         ui.add_space(4.0);
@@ -196,85 +186,68 @@ impl QuarkApp {
 
                                 let needle = self.my_games_query.trim().to_string();
                                 let games = visible_games(&all_games, selected, &needle);
-                                // Deux colonnes : la bibliothèque à gauche,
-                                // les transferts à droite.
-                                ui.horizontal_top(|ui| {
-                                    let side_w = 330.0_f32
-                                        .min((ui.available_width() * 0.32).max(280.0));
-                                    let main_w =
-                                        (ui.available_width() - side_w - 18.0).max(320.0);
-                                    ui.vertical(|ui| {
-                                        ui.set_width(main_w);
-                                        if games.is_empty() {
-                                    ui.add_space(20.0);
-                                    ui.label(
-                                        crate::i18n::rich(if needle.is_empty() {
-                                            "Aucun jeu de boutique synchronisé".to_string()
-                                        } else {
-                                            format!("Aucun jeu ne correspond à « {needle} »")
-                                        })
-                                        .size(16.0)
-                                        .color(pal.text),
-                                    );
-                                    ui.add_space(5.0);
-                                    ui.label(
-                                        crate::i18n::rich(if needle.is_empty() {
-                                            "Connecte une boutique dans Paramètres → Boutiques & outils : \
-                                             la synchronisation suit automatiquement."
-                                                .to_string()
-                                        } else {
-                                            "Le filtre porte sur les jeux possédés des boutiques \
-                                             synchronisées ; efface-le pour tout revoir."
-                                                .to_string()
-                                        })
-                                        .size(12.0)
-                                        .color(pal.text_dim),
+                                if games.is_empty() {
+                                    self.my_games_empty_state(
+                                        ui,
+                                        ctx,
+                                        &pal,
+                                        &needle,
+                                        &mut open_settings,
                                     );
                                 } else {
-                                    // Seules les lignes visibles sont construites
-                                    // et décodées : une bibliothèque de plusieurs
-                                    // centaines de jeux garde un défilement fluide.
-                                    if self.lib.settings.my_games_list {
-                                    self.provider_list(
-                                        ui,
-                                        &pal,
-                                        &games,
-                                        &mut install,
-                                        &mut install_request,
-                                        &mut adopt,
-                                        &mut show_achievements,
-                                        &mut uninstall,
-                                        &mut open_game,
-                                        &mut preview_save,
-                                        &mut inventory_save,
-                                        &mut choose_save_folder,
-                                        &mut remove_save_folder,
-                                    );
-                                    } else {
-                                    self.provider_grid(
-                                        ui,
-                                        &pal,
-                                        &games,
-                                        &mut install,
-                                        &mut install_request,
-                                        &mut adopt,
-                                        &mut show_achievements,
-                                        &mut uninstall,
-                                        &mut open_game,
-                                        &mut preview_save,
-                                        &mut inventory_save,
-                                        &mut choose_save_folder,
-                                        &mut remove_save_folder,
-                                    );
-                                    }
-                                        }
+                                    // Deux colonnes : la bibliothèque à gauche,
+                                    // les transferts à droite.
+                                    ui.horizontal_top(|ui| {
+                                        let side_w =
+                                            330.0_f32.min((ui.available_width() * 0.32).max(280.0));
+                                        let main_w =
+                                            (ui.available_width() - side_w - 18.0).max(320.0);
+                                        ui.vertical(|ui| {
+                                            ui.set_width(main_w);
+                                            // Seules les lignes visibles sont construites
+                                            // et décodées : une bibliothèque de plusieurs
+                                            // centaines de jeux garde un défilement fluide.
+                                            if self.lib.settings.my_games_list {
+                                                self.provider_list(
+                                                    ui,
+                                                    &pal,
+                                                    &games,
+                                                    &mut install,
+                                                    &mut install_request,
+                                                    &mut adopt,
+                                                    &mut show_achievements,
+                                                    &mut uninstall,
+                                                    &mut open_game,
+                                                    &mut preview_save,
+                                                    &mut inventory_save,
+                                                    &mut choose_save_folder,
+                                                    &mut remove_save_folder,
+                                                );
+                                            } else {
+                                                self.provider_grid(
+                                                    ui,
+                                                    &pal,
+                                                    &games,
+                                                    &mut install,
+                                                    &mut install_request,
+                                                    &mut adopt,
+                                                    &mut show_achievements,
+                                                    &mut uninstall,
+                                                    &mut open_game,
+                                                    &mut preview_save,
+                                                    &mut inventory_save,
+                                                    &mut choose_save_folder,
+                                                    &mut remove_save_folder,
+                                                );
+                                            }
+                                        });
+                                        ui.add_space(18.0);
+                                        ui.vertical(|ui| {
+                                            ui.set_width(side_w);
+                                            self.provider_install_panel(ui, &pal);
+                                        });
                                     });
-                                    ui.add_space(18.0);
-                                    ui.vertical(|ui| {
-                                        ui.set_width(side_w);
-                                        self.provider_install_panel(ui, &pal);
-                                    });
-                                });
+                                }
                                 ui.add_space(16.0);
                                 for candidate in
                                     crate::providers::operations::match_candidates(&all_games)
@@ -330,10 +303,7 @@ impl QuarkApp {
                                         );
                                         for key in &group.members {
                                             if ui
-                                                .small_button(format!(
-                                                    "Séparer {}",
-                                                    key.product_id
-                                                ))
+                                                .small_button(format!("Séparer {}", key.product_id))
                                                 .clicked()
                                             {
                                                 split_key = Some(key.clone());
@@ -437,6 +407,241 @@ impl QuarkApp {
             // L'ouverture de l'URI n'étant pas une preuve, cette synchronisation
             // détecte seulement les manifestes déjà présents et ne force aucun état.
             self.start_steam_sync(ctx);
+        }
+    }
+
+    /// État vide de « Mes jeux » : au lieu d'une page noire, proposer
+    /// directement les quatre boutiques et leur état de connexion.
+    fn my_games_empty_state(
+        &mut self,
+        ui: &mut egui::Ui,
+        ctx: &egui::Context,
+        pal: &theme::Palette,
+        needle: &str,
+        open_settings: &mut bool,
+    ) {
+        if !needle.is_empty() {
+            ui.add_space(24.0);
+            egui::Frame::new()
+                .fill(pal.surface)
+                .stroke(egui::Stroke::new(1.0_f32, pal.border))
+                .corner_radius(12.0)
+                .inner_margin(24.0)
+                .show(ui, |ui| {
+                    ui.set_width(ui.available_width());
+                    ui.horizontal(|ui| {
+                        let (rect, _) = ui.allocate_exact_size(Vec2::splat(38.0), Sense::hover());
+                        ui.painter().circle_filled(
+                            rect.center(),
+                            19.0,
+                            pal.accent.gamma_multiply(0.14),
+                        );
+                        crate::widgets::paint_icon(
+                            ui,
+                            rect.shrink(11.0),
+                            crate::widgets::Icon::Search,
+                            pal.accent,
+                        );
+                        ui.add_space(12.0);
+                        ui.vertical(|ui| {
+                            ui.label(
+                                crate::i18n::rich("Aucun jeu ne correspond à cette recherche.")
+                                    .size(16.0)
+                                    .color(pal.text),
+                            );
+                            ui.label(
+                                crate::i18n::raw(format!("« {needle} »"))
+                                    .size(12.0)
+                                    .color(pal.text_dim),
+                            );
+                        });
+                    });
+                    ui.add_space(14.0);
+                    if crate::widgets::ghost_button(
+                        ui,
+                        "Tout effacer",
+                        pal,
+                        crate::widgets::Icon::Close,
+                    )
+                    .clicked()
+                    {
+                        self.my_games_query.clear();
+                    }
+                });
+            return;
+        }
+
+        let steam_key_ready =
+            self.credentials.steam_web_api_key.is_some() && self.credentials.steam_id.is_some();
+        let epic_ready = crate::providers::epic_account::connected_account().is_some()
+            || (crate::providers::tools::ManagedToolId::Legendary
+                .installed_path()
+                .is_file()
+                && crate::providers::legendary::LegendaryAdapter::is_logged_in());
+        let gog_ready = crate::providers::gog::GogAdapter::is_logged_in()
+            && crate::providers::tools::ManagedToolId::Gogdl
+                .installed_path()
+                .is_file();
+        let itch_ready = self.credentials.itch_api_key.is_some();
+
+        let mut sync_request: Option<Provider> = None;
+        ui.add_space(8.0);
+        egui::Frame::new()
+            .fill(pal.surface)
+            .stroke(egui::Stroke::new(1.0_f32, pal.border))
+            .corner_radius(14.0)
+            .inner_margin(24.0)
+            .show(ui, |ui| {
+                ui.set_width(ui.available_width());
+                ui.horizontal(|ui| {
+                    let (rect, _) = ui.allocate_exact_size(Vec2::splat(54.0), Sense::hover());
+                    ui.painter()
+                        .circle_filled(rect.center(), 27.0, pal.accent.gamma_multiply(0.12));
+                    crate::widgets::paint_icon(ui, rect.shrink(16.0), crate::widgets::Icon::Download, pal.accent);
+                    ui.add_space(14.0);
+                    ui.vertical(|ui| {
+                        ui.label(
+                            crate::i18n::rich("Connecte ta première boutique")
+                                .size(20.0)
+                                .strong()
+                                .color(pal.text),
+                        );
+                        ui.add_space(3.0);
+                        ui.label(
+                            crate::i18n::rich(
+                                "Tous tes jeux de boutique, réunis au même endroit. Steam est détecté \
+                                 localement ; Epic, GOG et itch.io se connectent dans les réglages.",
+                            )
+                            .size(12.5)
+                            .color(pal.text_dim),
+                        );
+                    });
+                });
+                ui.add_space(20.0);
+
+                let providers = vec![
+                    (
+                        Provider::Steam,
+                        "Jeux installés détectés localement.",
+                        if steam_key_ready {
+                            crate::i18n::tr("Connecté")
+                        } else {
+                            crate::i18n::tr("Détection locale")
+                        },
+                        true,
+                        self.steam_sync_loading,
+                    ),
+                    (
+                        Provider::Epic,
+                        "Bibliothèque Epic via Legendary ou la connexion directe.",
+                        if epic_ready {
+                            crate::i18n::tr("Connecté")
+                        } else {
+                            crate::i18n::tr("Non connecté")
+                        },
+                        epic_ready,
+                        self.epic_sync_loading,
+                    ),
+                    (
+                        Provider::Gog,
+                        "Bibliothèque GOG via gogdl.",
+                        if gog_ready {
+                            crate::i18n::tr("Connecté")
+                        } else {
+                            crate::i18n::tr("Non connecté")
+                        },
+                        gog_ready,
+                        self.gog_sync_loading,
+                    ),
+                    (
+                        Provider::Itch,
+                        "Bibliothèque itch.io avec une clé API.",
+                        if itch_ready {
+                            crate::i18n::tr("Connecté")
+                        } else {
+                            crate::i18n::tr("Non connecté")
+                        },
+                        itch_ready,
+                        self.itch_sync_loading,
+                    ),
+                ];
+                let gap = 12.0;
+                let available = ui.available_width();
+                let columns = if available >= 720.0 { 2 } else { 1 };
+                let card_w = ((available - gap * (columns as f32 - 1.0)) / columns as f32)
+                    .floor()
+                    .max(260.0);
+                for chunk in providers.chunks(columns) {
+                    ui.horizontal_top(|ui| {
+                        for (index, (provider, description, status, connected, busy)) in
+                            chunk.iter().enumerate()
+                        {
+                            if index > 0 {
+                                // Le spacing de la rangée s'ajoute à cet espace :
+                                // on complète pour garder exactement `gap`.
+                                ui.add_space((gap - ui.spacing().item_spacing.x).max(0.0));
+                            }
+                            let status = if *busy {
+                                crate::i18n::tr("Synchronisation…")
+                            } else {
+                                status.clone()
+                            };
+                            if empty_provider_card(
+                                ui,
+                                pal,
+                                card_w,
+                                *provider,
+                                description,
+                                &status,
+                                *connected,
+                                *busy,
+                            ) {
+                                if *connected {
+                                    sync_request = Some(*provider);
+                                } else {
+                                    *open_settings = true;
+                                }
+                            }
+                        }
+                    });
+                    ui.add_space(gap);
+                }
+
+                ui.add_space(4.0);
+                ui.label(
+                    crate::i18n::rich(
+                        "La synchronisation se lance automatiquement après connexion.",
+                    )
+                    .size(11.5)
+                    .color(pal.text_faint),
+                );
+                ui.add_space(8.0);
+                ui.horizontal(|ui| {
+                    if crate::widgets::accent_button(
+                        ui,
+                        Vec2::new(150.0, 34.0),
+                        "Ajouter un jeu",
+                        pal,
+                        true,
+                        crate::widgets::Icon::Plus,
+                    )
+                    .clicked()
+                    {
+                        self.open_add_dialog();
+                    }
+                    if crate::widgets::ghost_button(ui, "Boutiques & outils", pal, crate::widgets::Icon::Gear).clicked() {
+                        *open_settings = true;
+                    }
+                });
+            });
+
+        if let Some(provider) = sync_request {
+            match provider {
+                Provider::Steam => self.start_steam_sync(ctx),
+                Provider::Epic => self.start_epic_sync(ctx),
+                Provider::Gog => self.start_gog_sync(ctx),
+                Provider::Itch => self.start_itch_sync(ctx),
+            }
         }
     }
 
@@ -855,6 +1060,99 @@ impl QuarkApp {
             .filter(|path| path.exists())
             .cloned()
     }
+}
+
+/// Carte d'une boutique dans l'état vide de « Mes jeux ».
+fn empty_provider_card(
+    ui: &mut egui::Ui,
+    pal: &theme::Palette,
+    width: f32,
+    provider: Provider,
+    description: &str,
+    status: &str,
+    connected: bool,
+    busy: bool,
+) -> bool {
+    let inner_width = (width - 28.0).max(220.0);
+    egui::Frame::new()
+        .fill(pal.bg)
+        .stroke(egui::Stroke::new(1.0_f32, pal.border))
+        .corner_radius(10.0)
+        .inner_margin(14.0)
+        .show(ui, |ui| {
+            // Le parent est une rangée horizontale : forcer une colonne pour
+            // que la description et le bouton ne s'alignent pas à côté du titre.
+            ui.vertical(|ui| {
+                ui.set_width(inner_width);
+                ui.horizontal(|ui| {
+                    let (badge, _) = ui.allocate_exact_size(Vec2::splat(36.0), Sense::hover());
+                    crate::widgets::monogram(
+                        ui.painter(),
+                        badge,
+                        &provider_name(provider)[..1],
+                        provider_color(provider),
+                        pal,
+                    );
+                    ui.add_space(10.0);
+                    ui.vertical(|ui| {
+                        ui.set_width((inner_width - 190.0).max(150.0));
+                        ui.spacing_mut().item_spacing.y = 3.0;
+                        ui.label(
+                            egui::RichText::new(provider_name(provider))
+                                .size(14.0)
+                                .strong()
+                                .color(pal.text),
+                        );
+                        ui.label(
+                            crate::i18n::rich(description)
+                                .size(11.5)
+                                .color(pal.text_dim),
+                        );
+                        let status_color = if busy {
+                            pal.accent
+                        } else if connected {
+                            egui::Color32::from_rgb(0x4f, 0xc3, 0x7a)
+                        } else {
+                            pal.text_faint
+                        };
+                        ui.horizontal(|ui| {
+                            let (dot, _) = ui.allocate_exact_size(Vec2::splat(6.0), Sense::hover());
+                            ui.painter().circle_filled(dot.center(), 2.5, status_color);
+                            ui.label(egui::RichText::new(status).size(10.5).color(status_color));
+                        });
+                    });
+                    ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
+                        if connected {
+                            crate::widgets::accent_button(
+                                ui,
+                                Vec2::new(126.0, 30.0),
+                                if busy {
+                                    "Synchronisation…"
+                                } else {
+                                    "Synchroniser"
+                                },
+                                pal,
+                                !busy,
+                                crate::widgets::Icon::Refresh,
+                            )
+                            .clicked()
+                        } else {
+                            crate::widgets::ghost_button(
+                                ui,
+                                "Configurer",
+                                pal,
+                                crate::widgets::Icon::Gear,
+                            )
+                            .clicked()
+                        }
+                    })
+                    .inner
+                })
+                .inner
+            })
+            .inner
+        })
+        .inner
 }
 
 fn provider_name(provider: Provider) -> &'static str {

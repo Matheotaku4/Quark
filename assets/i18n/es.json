@@ -745,5 +745,20 @@
   "Cherche les dossiers dont le nom ressemble au titre du jeu dans le préfixe Wine (Saved Games, Documents, AppData).": "Busca carpetas cuyo nombre coincide con el título del juego en el prefijo Wine (Saved Games, Documents, AppData).",
   "Utiliser ce dossier pour la synchronisation cloud": "Usar esta carpeta para la sincronización en la nube",
   "Aucun dossier de sauvegarde trouvé dans le préfixe du jeu": "No se encontró ninguna carpeta de guardado en el prefijo del juego",
-  "{} dossier(s) de sauvegarde proposé(s)": "{} carpeta(s) de guardado propuesta(s)"
+  "{} dossier(s) de sauvegarde proposé(s)": "{} carpeta(s) de guardado propuesta(s)",
+  "Connecte ta première boutique": "Conecta tu primera tienda",
+  "Tous tes jeux de boutique, réunis au même endroit. Steam est détecté localement ; Epic, GOG et itch.io se connectent dans les réglages.": "Todos tus juegos de tiendas en un solo lugar. Steam se detecta localmente; Epic, GOG e itch.io se conectan en los ajustes.",
+  "Détection locale": "Detección local",
+  "Connecté": "Conectado",
+  "Non connecté": "No conectado",
+  "Configurer": "Configurar",
+  "Synchronisation…": "Sincronizando…",
+  "La synchronisation se lance automatiquement après connexion.": "La sincronización se inicia automáticamente tras conectar.",
+  "Jeux installés détectés localement.": "Los juegos instalados se detectan localmente.",
+  "Bibliothèque Epic via Legendary ou la connexion directe.": "Biblioteca de Epic mediante Legendary o la conexión directa.",
+  "Bibliothèque GOG via gogdl.": "Biblioteca de GOG mediante gogdl.",
+  "Bibliothèque itch.io avec une clé API.": "Biblioteca de itch.io con una clave API.",
+  "Ajoute un jeu local, importe ta bibliothèque Steam ou explore les boutiques.": "Añade un juego local, importa tu biblioteca de Steam o explora las tiendas.",
+  "Importer Steam": "Importar Steam",
+  "Explorer les boutiques": "Explorar tiendas"
 }

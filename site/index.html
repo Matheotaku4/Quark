@@ -4,11 +4,11 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Quark — A quiet game launcher for Linux</title>
-<meta name="description" content="Quark gathers local games, Steam, Epic Games and GOG in one library, with Proton, save snapshots and an in-game overlay. Free, open source, written in Rust.">
+<meta name="description" content="Quark gathers local games, Steam, Epic Games, GOG and itch.io in one library, with Proton, save snapshots and an in-game overlay. Free, open source, written in Rust.">
 <meta name="theme-color" content="#000000">
 <link rel="canonical" href="https://matheotaku4.github.io/Quark/">
 <meta property="og:title" content="Quark — A quiet game launcher for Linux">
-<meta property="og:description" content="One library for your local, Steam, Epic and GOG games. Rust + egui.">
+<meta property="og:description" content="One library for your local, Steam, Epic, GOG and itch.io games. Rust + egui.">
 <meta property="og:type" content="website">
 <meta property="og:image" content="https://matheotaku4.github.io/Quark/assets/home-en.png">
 <meta name="twitter:card" content="summary_large_image">
@@ -130,7 +130,7 @@ h1 span{background:linear-gradient(100deg,var(--accent),#b388ff,var(--accent));b
 
   <div class="marquee" aria-hidden="true"><div id="mq"></div></div>
   <div class="facts rv">
-    <div><b>3</b><span data-i="f1"></span></div><div><b>13</b><span data-i="f2"></span></div>
+    <div><b>4</b><span data-i="f1"></span></div><div><b>13</b><span data-i="f2"></span></div>
     <div><b>5</b><span data-i="f3"></span></div><div><b>0</b><span data-i="f4"></span></div>
   </div>
 
@@ -180,18 +180,18 @@ h1 span{background:linear-gradient(100deg,var(--accent),#b388ff,var(--accent));b
 <script>
 const D={
 fr:{skip:"Aller au contenu",nav1:"Fonctions",nav2:"Aperçu",nav3:"Installer",
-h1:"Vos jeux. <span>Un seul lanceur.</span>",lead:"Quark réunit jeux locaux, Steam, Epic Games et GOG dans une bibliothèque rapide. Proton, sauvegardes et temps de jeu sont gérés, puis il s’efface.",
+h1:"Vos jeux. <span>Un seul lanceur.</span>",lead:"Quark réunit jeux locaux, Steam, Epic Games, GOG et itch.io dans une bibliothèque rapide. Proton, sauvegardes et temps de jeu sont gérés, puis il s’efface.",
 dl:"Télécharger",how:"Installation",fine:"Gratuit et open source · licence MIT · Linux x86_64",
 f1:"boutiques, une bibliothèque",f2:"thèmes sombres",f3:"langues d’interface",f4:"télémétrie",
 e1:"L’essentiel",t1:"Tout autour du jeu. Rien devant.",
 c1t:"Une seule bibliothèque",c1:"Dossiers locaux et jeux de boutiques partagent jaquettes, notes, tags, statut et temps de jeu. Un jeu en plusieurs éditions reste une seule entrée.",
-c2t:"Steam, Epic et GOG",c2:"Lecture de vos bibliothèques Steam, connexion directe à Epic, installation GOG via gogdl. Vos comptes restent sur votre machine.",
+c2t:"Steam, Epic, GOG et itch.io",c2:"Lecture de vos bibliothèques Steam, connexion directe à Epic, installation GOG via gogdl et itch.io avec votre clé API. Vos comptes restent sur votre machine.",
 c3t:"Proton sans terminal",c3:"Runtime, préfixe, GameMode, MangoHud, gamescope, PRIME et commande wrapper par jeu, en simples cases à cocher.",
 c4t:"Un vrai overlay",c4:"Panneau en jeu, succès, capture F12 et compteur FPS DirectX 11/12.",
 c5t:"Sauvegardes fiables",c5:"Instantanés Ludusavi avant et après chaque session, avec aperçu et restauration validée. Cloud Epic et GOG inclus.",
 c6t:"Fait pour vos yeux",c6:"Treize thèmes AMOLED, liste ou grille, carrousel d’accueil, palette Ctrl+K et cinq langues.",
 e2:"Un aperçu",t2:"Conçu pour qu’on y vive.",n2:"Captures réelles de l’interface actuelle, pas des maquettes.",
-tab:{home:"Accueil",library:"Bibliothèque",store:"Boutique",settings:"Réglages",onboarding:"Premier lancement"},
+tab:{home:"Accueil",library:"Bibliothèque",store:"Boutique","my-games":"Mes jeux",settings:"Réglages",onboarding:"Premier lancement"},
 e3:"Clavier d’abord",t3:"Rapide par défaut.",n3:"Tout est à un raccourci : cherchez dans votre bibliothèque, ouvrez l’overlay ou prenez une capture sans quitter le jeu.",
 k1:"Palette de commandes",k2:"Overlay en jeu",k3:"Capture d’écran",k4:"Rechercher",
 e4:"Démarrer",t4:"Une archive. Pas d’installeur.",n4:"Téléchargez, vérifiez, décompressez, lancez.",copy:"Copier",copied:"Copié ✓",
@@ -201,18 +201,18 @@ q2:"Y a-t-il de la télémétrie ?",a2:"Aucune. Sessions de boutiques et bibliot
 q3:"Et les jeux Windows ?",a3:"Ils passent par Proton ou umu-launcher, avec le préfixe de votre choix.",
 q4:"Puis-je le compiler ?",a4:"Oui : clonez le dépôt puis lancez <code>cargo build --release --locked</code>."},
 en:{skip:"Skip to content",nav1:"Features",nav2:"Preview",nav3:"Install",
-h1:"Your games. <span>One quiet launcher.</span>",lead:"Quark gathers local games, Steam, Epic Games and GOG in one fast library. It handles Proton, saves and playtime, then gets out of the way.",
+h1:"Your games. <span>One quiet launcher.</span>",lead:"Quark gathers local games, Steam, Epic Games, GOG and itch.io in one fast library. It handles Proton, saves and playtime, then gets out of the way.",
 dl:"Download",how:"Install",fine:"Free and open source · MIT licence · Linux x86_64",
 f1:"stores, one library",f2:"dark themes",f3:"interface languages",f4:"telemetry",
 e1:"The essentials",t1:"Everything around the game. Nothing in front of it.",
 c1t:"One library",c1:"Local folders and store games share covers, notes, tags, status and playtime. A game with several editions stays one entry.",
-c2t:"Steam, Epic and GOG",c2:"Reads your Steam libraries, signs in to Epic directly, installs GOG titles through gogdl. Accounts stay on your machine.",
+c2t:"Steam, Epic, GOG and itch.io",c2:"Reads your Steam libraries, signs in to Epic directly, installs GOG and itch.io titles through gogdl and your API key. Accounts stay on your machine.",
 c3t:"Proton without a terminal",c3:"Per-game runtime, prefix, GameMode, MangoHud, gamescope, PRIME and wrapper command, all in plain checkboxes.",
 c4t:"An actual overlay",c4:"In-game panel, achievements, F12 screenshots and a DirectX 11/12 FPS counter.",
 c5t:"Saves you can trust",c5:"Ludusavi snapshots before and after each session, with preview and validated restore. Epic and GOG cloud saves included.",
 c6t:"Easy on the eyes",c6:"Thirteen AMOLED themes, list or grid, home carousel, Ctrl+K palette and five languages.",
 e2:"A closer look",t2:"Built to be lived in.",n2:"Real screenshots of the current interface, not mockups.",
-tab:{home:"Home",library:"Library",store:"Store",settings:"Settings",onboarding:"First launch"},
+tab:{home:"Home",library:"Library",store:"Store","my-games":"My games",settings:"Settings",onboarding:"First launch"},
 e3:"Keyboard first",t3:"Fast by default.",n3:"Everything is a shortcut away: search your library, open the overlay or take a screenshot without leaving the game.",
 k1:"Command palette",k2:"In-game overlay",k3:"Screenshot",k4:"Search",
 e4:"Get started",t4:"One archive. No installer.",n4:"Download, verify, unpack, run.",copy:"Copy",copied:"Copied ✓",
@@ -221,7 +221,7 @@ q1:"Does Quark sell games?",a1:"No. It opens store pages in your browser and nev
 q2:"Does it send telemetry?",a2:"None. Store sessions and library data stay on your machine.",
 q3:"What about Windows games?",a3:"They run through Proton or umu-launcher with the prefix you choose.",
 q4:"Can I build it?",a4:"Yes: clone the repository and run <code>cargo build --release --locked</code>."}};
-const TABS=["home","library","store","settings","onboarding"];
+const TABS=["home","library","my-games","store","settings","onboarding"];
 const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
 let lang=(()=>{try{const s=localStorage.getItem("q-lang");if(s)return s}catch(e){}return "en"})();
 let tab="library",ver="",dlUrl="";

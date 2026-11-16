@@ -113,9 +113,12 @@ pub const HELP: &str = "\
       site-search|command|command-search|history|saved-views|onboarding|\n\
       onboarding-settings|whats-new]\n\
       [--hover X,Y] [--click X,Y] [--button left|right]\n\
-      [--key up|down|left|right|enter|escape] [--demo] [--demo-count N]\n\
+      [--key up|down|left|right|enter|escape] [--demo] [--demo-count N] (0 = vide)\n\
+      [--providers-demo] [--providers-error]\n\
       --demo : bibliothèque de démonstration avec artworks factices (la\n\
-      configuration réelle n'est ni lue ni écrite)\n";
+      configuration réelle n'est ni lue ni écrite)\n\
+      --providers-demo : jeux de boutiques factices (implique --demo)\n\
+      --providers-error : jeux de boutiques et erreurs de synchronisation\n";
 
 /// Construit l'interface, la fait vivre quelques images, puis écrit le PNG.
 pub fn run(opts: &SnapshotOptions) -> Result<(), String> {

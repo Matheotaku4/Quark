@@ -21,16 +21,20 @@ impl QuarkApp {
         let grid_only = view == ViewMode::Grid;
         // La colonne de gauche reste visible dans toutes les vues de la
         // bibliothèque : c'est là que vivent « Accueil » et les filtres, même
-        // quand la grille occupe le reste de la fenêtre.
-        egui::SidePanel::left("quark_library_list")
-            .exact_width(self.lib.settings.sidebar_width.clamp(220.0, 340.0))
-            .resizable(false)
-            .frame(
-                egui::Frame::new()
-                    .fill(pal.panel)
-                    .stroke(egui::Stroke::new(1.0_f32, pal.border)),
-            )
-            .show(ctx, |ui| self.sidebar(ui));
+        // quand la grille occupe le reste de la fenêtre. Une bibliothèque
+        // entièrement vide n'a rien à y filtrer : la fiche prend toute la place.
+        let empty_library = self.lib.games.is_empty() && !self.home;
+        if !empty_library {
+            egui::SidePanel::left("quark_library_list")
+                .exact_width(self.lib.settings.sidebar_width.clamp(220.0, 340.0))
+                .resizable(false)
+                .frame(
+                    egui::Frame::new()
+                        .fill(pal.panel)
+                        .stroke(egui::Stroke::new(1.0_f32, pal.border)),
+                )
+                .show(ctx, |ui| self.sidebar(ui));
+        }
 
         // La fiche dessine sa propre bannière floutée : le panneau doit laisser
         // passer le fond au lieu de le repeindre en noir uni.
@@ -1683,6 +1687,82 @@ impl QuarkApp {
 
     fn empty_state(&mut self, ui: &mut egui::Ui) {
         let pal = self.pal;
+        // Une bibliothèque vide n'est pas une absence de sélection : on guide
+        // vers les trois façons de la remplir au lieu d'afficher un texte seul.
+        if self.lib.games.is_empty() {
+            let ctx = ui.ctx().clone();
+            let width = ui.available_width().min(760.0);
+            ui.add_space(48.0);
+            ui.vertical_centered(|ui| {
+                ui.set_width(width);
+                egui::Frame::new()
+                    .fill(pal.surface)
+                    .stroke(egui::Stroke::new(1.0_f32, pal.border))
+                    .corner_radius(14.0)
+                    .inner_margin(28.0)
+                    .show(ui, |ui| {
+                        ui.set_width((width - 56.0).max(260.0));
+                        ui.vertical_centered(|ui| {
+                            let (rect, _) =
+                                ui.allocate_exact_size(Vec2::splat(58.0), Sense::hover());
+                            ui.painter().circle_filled(
+                                rect.center(),
+                                29.0,
+                                pal.accent.gamma_multiply(0.12),
+                            );
+                            widgets::paint_icon(ui, rect.shrink(17.0), Icon::Grid, pal.accent);
+                            ui.add_space(14.0);
+                            ui.label(
+                                crate::i18n::rich("Ta bibliothèque est vide.")
+                                    .size(21.0)
+                                    .strong()
+                                    .color(pal.text),
+                            );
+                            ui.add_space(5.0);
+                            ui.label(
+                                crate::i18n::rich(
+                                    "Ajoute un jeu local, importe ta bibliothèque Steam ou \
+                                     explore les boutiques.",
+                                )
+                                .size(12.5)
+                                .color(pal.text_dim),
+                            );
+                            ui.add_space(20.0);
+                            ui.horizontal_wrapped(|ui| {
+                                if widgets::accent_button(
+                                    ui,
+                                    Vec2::new(176.0, 38.0),
+                                    "Ajouter un jeu",
+                                    &pal,
+                                    true,
+                                    Icon::Plus,
+                                )
+                                .clicked()
+                                {
+                                    self.open_add_dialog();
+                                }
+                                if widgets::ghost_button(ui, "Importer Steam", &pal, Icon::Steam)
+                                    .clicked()
+                                {
+                                    self.open_steam_import(&ctx);
+                                }
+                                if widgets::ghost_button(
+                                    ui,
+                                    "Explorer les boutiques",
+                                    &pal,
+                                    Icon::ExternalLink,
+                                )
+                                .clicked()
+                                {
+                                    self.tab = crate::app::Tab::Store;
+                                }
+                            });
+                        });
+                    });
+            });
+            return;
+        }
+
         ui.vertical_centered(|ui| {
             ui.add_space(140.0);
             ui.label(

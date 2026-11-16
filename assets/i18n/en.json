@@ -745,5 +745,20 @@
   "Cherche les dossiers dont le nom ressemble au titre du jeu dans le préfixe Wine (Saved Games, Documents, AppData).": "Looks for folders whose name matches the game title in the Wine prefix (Saved Games, Documents, AppData).",
   "Utiliser ce dossier pour la synchronisation cloud": "Use this folder for cloud sync",
   "Aucun dossier de sauvegarde trouvé dans le préfixe du jeu": "No save folder found in the game prefix",
-  "{} dossier(s) de sauvegarde proposé(s)": "{} save folder(s) found"
+  "{} dossier(s) de sauvegarde proposé(s)": "{} save folder(s) found",
+  "Connecte ta première boutique": "Connect your first store",
+  "Tous tes jeux de boutique, réunis au même endroit. Steam est détecté localement ; Epic, GOG et itch.io se connectent dans les réglages.": "All your store games in one place. Steam is detected locally; Epic, GOG and itch.io connect in settings.",
+  "Détection locale": "Local detection",
+  "Connecté": "Connected",
+  "Non connecté": "Not connected",
+  "Configurer": "Set up",
+  "Synchronisation…": "Syncing…",
+  "La synchronisation se lance automatiquement après connexion.": "Sync starts automatically after connecting.",
+  "Jeux installés détectés localement.": "Installed games are detected locally.",
+  "Bibliothèque Epic via Legendary ou la connexion directe.": "Epic library via Legendary or the direct connection.",
+  "Bibliothèque GOG via gogdl.": "GOG library via gogdl.",
+  "Bibliothèque itch.io avec une clé API.": "itch.io library with an API key.",
+  "Ajoute un jeu local, importe ta bibliothèque Steam ou explore les boutiques.": "Add a local game, import your Steam library or explore the stores.",
+  "Importer Steam": "Import Steam",
+  "Explorer les boutiques": "Explore stores"
 }

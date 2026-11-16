@@ -745,5 +745,20 @@
   "Cherche les dossiers dont le nom ressemble au titre du jeu dans le préfixe Wine (Saved Games, Documents, AppData).": "Procura pastas cujo nome corresponde ao título do jogo no prefixo Wine (Saved Games, Documents, AppData).",
   "Utiliser ce dossier pour la synchronisation cloud": "Usar esta pasta para a sincronização na nuvem",
   "Aucun dossier de sauvegarde trouvé dans le préfixe du jeu": "Nenhuma pasta de saves encontrada no prefixo do jogo",
-  "{} dossier(s) de sauvegarde proposé(s)": "{} pasta(s) de saves proposta(s)"
+  "{} dossier(s) de sauvegarde proposé(s)": "{} pasta(s) de saves proposta(s)",
+  "Connecte ta première boutique": "Conecte sua primeira loja",
+  "Tous tes jeux de boutique, réunis au même endroit. Steam est détecté localement ; Epic, GOG et itch.io se connectent dans les réglages.": "Todos os seus jogos de lojas em um só lugar. A Steam é detectada localmente; Epic, GOG e itch.io se conectam nas configurações.",
+  "Détection locale": "Detecção local",
+  "Connecté": "Conectado",
+  "Non connecté": "Não conectado",
+  "Configurer": "Configurar",
+  "Synchronisation…": "Sincronizando…",
+  "La synchronisation se lance automatiquement après connexion.": "A sincronização começa automaticamente após a conexão.",
+  "Jeux installés détectés localement.": "Os jogos instalados são detectados localmente.",
+  "Bibliothèque Epic via Legendary ou la connexion directe.": "Biblioteca da Epic via Legendary ou conexão direta.",
+  "Bibliothèque GOG via gogdl.": "Biblioteca da GOG via gogdl.",
+  "Bibliothèque itch.io avec une clé API.": "Biblioteca da itch.io com uma chave de API.",
+  "Ajoute un jeu local, importe ta bibliothèque Steam ou explore les boutiques.": "Adicione um jogo local, importe sua biblioteca da Steam ou explore as lojas.",
+  "Importer Steam": "Importar Steam",
+  "Explorer les boutiques": "Explorar lojas"
 }

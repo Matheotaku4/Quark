@@ -192,11 +192,15 @@ fn cli(args: &[String]) -> Option<i32> {
                         continue;
                     }
                     "--providers-demo" => {
+                        // La démo de boutiques implique le bac à sable : sans
+                        // `--demo`, aucune configuration réelle ne doit être lue.
+                        opts.demo = true;
                         opts.providers_demo = true;
                         index += 1;
                         continue;
                     }
                     "--providers-error" => {
+                        opts.demo = true;
                         opts.providers_demo = true;
                         opts.providers_error = true;
                         index += 1;
@@ -235,7 +239,7 @@ fn cli(args: &[String]) -> Option<i32> {
                     },
                     "--demo-count" => {
                         match value.as_deref().and_then(|v| v.parse::<usize>().ok()) {
-                            Some(count) => opts.demo_count = Some(count.clamp(1, 2_000)),
+                            Some(count) => opts.demo_count = Some(count.clamp(0, 2_000)),
                             None => {
                                 eprintln!("--demo-count attend un entier (ex. 660)");
                                 return Some(2);
