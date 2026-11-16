@@ -26,6 +26,8 @@ pub struct Credentials {
     pub steam_id: Option<String>,
     pub epic: Option<ProviderTokens>,
     pub gog: Option<ProviderTokens>,
+    /// Clé API personnelle itch.io, jamais affichée ni journalisée.
+    pub itch_api_key: Option<String>,
 }
 
 /// Lit les identifiants. Un fichier absent signifie que les boutiques sont
@@ -164,6 +166,7 @@ mod tests {
                 display_name: "Joueur".to_string(),
             }),
             gog: None,
+            itch_api_key: None,
         };
 
         save_atomic(&path, &credentials).unwrap();

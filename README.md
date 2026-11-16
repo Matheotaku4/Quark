@@ -1,12 +1,12 @@
 # Quark
 
 A lightweight game launcher for Linux, written in Rust with egui. Quark keeps a
-single library for local games and for the Steam, Epic Games and GOG titles you
-own, launches Windows games through Proton (or umu-launcher), and stays out of
+single library for local games and for the Steam, Epic Games, GOG and itch.io
+titles you own, launches Windows games through Proton (or umu-launcher), and stays out of
 the way with an AMOLED interface, a store page, save snapshots and an in-game
 overlay.
 
-This is the **1.6.2** documentation. Older release notes are kept on the GitHub
+This is the **1.7.0** documentation. Older release notes are kept on the GitHub
 releases page; `docs/release-notes.md` only describes the release currently
 being published.
 
@@ -28,17 +28,17 @@ The wiki is published from the versioned source in [`wiki/`](wiki/) by the
 | --- | --- |
 | ![Onboarding](docs/images/onboarding-fr.png) | ![What's new](docs/images/whats-new-fr.png) |
 
-## What's new in 1.6.2
+## What's new in 1.7.0
 
-- **A project website.** A small static site in [`site/`](site/) is published to GitHub Pages at [matheotaku4.github.io/Quark](https://matheotaku4.github.io/Quark/). It presents the library, stores, Proton options, overlay and installation steps without exposing the internal `docs/` folder.
-- **“To Play” stays “To Play”.** Launching or playing a game no longer changes its status automatically. `Backlog` remains `Backlog` until you choose another status; checkpoints and the final session write still update playtime and history.
-- **Crisper typography.** The interface now uses Archivo Medium for body text, with integer font sizes instead of fractional 9–13.5 px labels. Small captions are one step larger, so they stay readable on the AMOLED themes without changing the layout density.
-- **Overlay diagnostics.** When the FPS overlay is enabled, Quark writes `overlay.log` in the game's log folder. It records whether the proxies loaded, which swap-chain creation path was seen, whether `Present`/`Present1` was hooked, and why the counter is hidden. This turns a silent “no FPS” into an actionable log.
-- **CoreWindow and DXGI coverage.** The Windows proxy now also hooks `CreateSwapChainForCoreWindow`, used by UWP/Game Pass games, while keeping the existing D3D11/D3D12 `Present` and `Present1` paths.
+- **The tray icon toggles the window.** Clicking the Quark icon while the window is minimised or in the background brings it forward. Clicking it again closes the window to the tray, without stopping the tray helper; the next click reopens it. The **Open Quark** menu entry only brings the window forward.
+- **itch.io library and installs.** Add a personal itch.io API key in **Settings → Stores & tools**. Quark lists owned download keys, picks the Windows archive published for each game, downloads it, verifies archive paths and extracts it into a dedicated folder. Uploads without a downloadable archive are reported instead of running an opaque installer.
+- **Direct Epic library.** The Epic OAuth session is now enough to read the owned library, with titles and covers, through the launcher GraphQL API. Legendary remains the installation and launch backend, and is still required for those actions.
+- **Safer starts and longer sessions.** The direct Epic session is refreshed from its refresh token when it expires, and a missing Legendary binary no longer hides the library. The new provider is wired through covers, saves, session achievements, playtime and uninstall paths.
+- **Steam achievements.** With the Steam Web API key and SteamID64 already used for recommendations, Quark reads player achievements, the game schema and global rarity. The achievement tab now works for Steam instead of showing a dead end; a missing key, a private profile or a game without stats is reported explicitly.
 
 ## Table of contents
 
-1. [What's new in 1.6.2](#whats-new-in-162)
+1. [What's new in 1.7.0](#whats-new-in-162)
 2. [What Quark does](#what-quark-does)
 3. [Installation](#installation)
 4. [First launch](#first-launch)
@@ -62,9 +62,10 @@ The wiki is published from the versioned source in [`wiki/`](wiki/) by the
   tags, playtime and statistics. A game can have several installed editions
   without becoming two library entries.
 - **Steam, Epic Games and GOG.** Steam is read from the local Steam libraries.
-  Epic sign-in is direct; Legendary handles its library and installation, and
-  GOG uses gogdl. Accounts are connected from the settings; passwords never
-  pass through Quark.
+  Epic sign-in and library are direct; Legendary handles installation and
+  launch. GOG uses gogdl, and itch.io uses a personal API key for the owned
+  library and archive installs. Accounts are connected from the settings;
+  passwords never pass through Quark.
 - **Proton without command lines.** Per-game runtime, prefix, GameMode,
   MangoHud, gamescope, PRIME offload, a free wrapper command, environment
   variables, BattlEye/EasyAntiCheat runtimes and umu-launcher.
@@ -97,8 +98,8 @@ Download `quark-<version>-linux-x86_64.tar.gz` and its `.sha256` file from the
 then verify and unpack it:
 
 ```bash
-sha256sum -c quark-1.6.2-linux-x86_64.tar.gz.sha256
-tar -xzf quark-1.6.2-linux-x86_64.tar.gz
+sha256sum -c quark-1.7.0-linux-x86_64.tar.gz.sha256
+tar -xzf quark-1.7.0-linux-x86_64.tar.gz
 ./quark/quark
 ```
 
@@ -140,7 +141,7 @@ A new configuration opens a three-step welcome guide. It is not blocking:
 **Skip** closes it. The guide changes the interface language, startup page,
 theme and hero background live, then offers to add a first game. Existing
 configurations are marked as already welcomed, so updating from 1.1.4 never
-shows it unexpectedly; they still see the 1.6.2 summary once.
+shows it unexpectedly; they still see the 1.7.0 summary once.
 
 1. Open **Settings → Stores & tools** and install Legendary and/or gogdl with
    **Install / update**. Quark verifies the SHA-256 digest published by GitHub
@@ -273,13 +274,17 @@ installation is the source of truth when it is selected.
 ### Accounts
 
 - **Steam** is read locally from `libraryfolders.vdf` and
-  `appmanifest_*.acf`. A personal Steam Web API key and SteamID64 are optional
-  and only improve recommendations.
-- **Epic Games** signs in directly: Quark exchanges the authorization code and
-  writes the resulting `user.json` to Legendary's configuration directory.
-  Legendary still reads that session for the library, installation and launch.
+  `appmanifest_*.acf`. A personal Steam Web API key and SteamID64 are optional;
+  they improve recommendations and unlock the Steam achievement tab.
+- **Epic Games** signs in directly: Quark exchanges the authorization code,
+  writes the resulting `user.json` for Legendary, and reads the owned library
+  itself through Epic's launcher API. The session is refreshed automatically.
+  Legendary remains the installation and launch backend.
 - **GOG** uses gogdl. Its token file is separate from Quark's
   `credentials.json` and is written with private permissions.
+- **itch.io** uses a personal API key, stored in the private credentials file.
+  Quark lists `profile/owned-keys`, selects a Windows archive from the game's
+  uploads, downloads it and extracts it without executing the archive.
 
 The managed tools are downloaded from their official GitHub releases. Quark
 refuses an asset without a published SHA-256 digest and never trusts a
@@ -502,7 +507,8 @@ src/
   ui_onboarding.rs    first-run guide and what's-new summary
   ui_providers.rs     store accounts and synchronization UI
   overlay_dll.rs      embedded Windows d3d11.dll/dxgi.dll proxy and installation
-  providers/          Steam, Epic (Legendary + direct sign-in), GOG (gogdl),
+  providers/          Steam, Epic (direct library + Legendary), GOG (gogdl),
+                      itch.io (API key),
                       achievements, cloud_saves, artwork and managed tools
   providers/epic_account.rs  direct Epic OAuth exchange and session file
   proton.rs           runtime detection, prefix resolution and launch options
@@ -541,11 +547,18 @@ their existing GitHub releases.
 
 ## Known limitations
 
-- Steam achievements are not readable without a Steam session, so Quark shows
-  the Steam achievement tab only when the store exposes a readable source.
-  Steam Cloud is left to the Steam client.
+- Steam achievements are read through the public Steam Web API and require a
+  personal API key plus SteamID64 in **Settings → Stores & tools**. Private
+  profiles, games without stats and rate-limited requests are reported in the
+  achievement panel. Steam Cloud is left to the Steam client.
 - GOG cloud saves need an explicit save folder; gogdl cannot infer it from the
   installation path. Epic can compute its path with Legendary.
+- Epic installation and launch still go through Legendary. The direct session
+  removes the Legendary requirement for the library, not for those two actions.
+- itch.io installs only archives (`.zip`, `.tar`, `.tar.gz`, `.tgz`). An upload
+  that exists only as an `.exe`, `.dmg` or `.apk` installer must be installed
+  manually; Quark never runs an opaque installer. itch.io exposes neither
+  achievements, cloud saves nor playtime through its API.
 - Real Epic/GOG accounts, a Windows GPU and a graphical X11 session are not
   available in the development environment. The parsers, argument construction,
   migration and error paths are covered by tests; a manual account and overlay

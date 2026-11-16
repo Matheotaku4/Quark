@@ -28,6 +28,7 @@ pub fn fetch(key: &ProviderGameKey) -> Result<u64, String> {
             crate::config::now_ts(),
         ),
         Provider::Steam => Err("Steam ne publie pas le temps de jeu sans sa session".to_string()),
+        Provider::Itch => Err("itch.io ne publie pas le temps de jeu".to_string()),
     }
 }
 

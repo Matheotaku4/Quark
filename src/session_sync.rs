@@ -36,6 +36,7 @@ pub fn provider_key_id(key: &ProviderGameKey) -> String {
         Provider::Steam => "steam",
         Provider::Epic => "epic",
         Provider::Gog => "gog",
+        Provider::Itch => "itch",
     };
     format!("{provider}:{}", key.product_id)
 }
@@ -46,6 +47,7 @@ pub fn parse_provider_key_id(text: &str) -> Option<ProviderGameKey> {
         "steam" => Provider::Steam,
         "epic" => Provider::Epic,
         "gog" => Provider::Gog,
+        "itch" => Provider::Itch,
         _ => return None,
     };
     (!product_id.trim().is_empty()).then(|| ProviderGameKey {

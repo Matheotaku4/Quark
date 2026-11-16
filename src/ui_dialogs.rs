@@ -4175,6 +4175,7 @@ impl QuarkApp {
             crate::providers::Provider::Steam => "Steam",
             crate::providers::Provider::Epic => "Epic Games",
             crate::providers::Provider::Gog => "GOG",
+            crate::providers::Provider::Itch => "itch.io",
         };
         let mut cancel = false;
         let mut confirm = false;
@@ -5347,6 +5348,7 @@ impl QuarkApp {
             crate::providers::Provider::Steam => "Steam",
             crate::providers::Provider::Epic => "Epic Games",
             crate::providers::Provider::Gog => "GOG",
+            crate::providers::Provider::Itch => "itch.io",
         };
         // Les succès rapportés par la session sont fusionnés ici : la liste de
         // la boutique reste la source, le pont local la complète.

@@ -1,3 +1,29 @@
+## Quark 1.7.0 — Icône qui bascule, itch.io et bibliothèque Epic directe
+
+### Nouveautés
+
+- **Icône de la zone de notification** : un clic ramène la fenêtre au premier plan quand elle est réduite ou en arrière-plan ; un second clic la ferme vers l'icône sans arrêter le helper. Le menu « Ouvrir Quark » ne fait que ramener la fenêtre. Le réveil passe par un signal Unix et un descripteur de réveil, donc egui ne dessine pas en continu quand la fenêtre est réduite.
+- **itch.io** : ajout d'une clé API personnelle dans Paramètres → Boutiques & outils, lecture des clés de téléchargement possédées, sélection de l'archive Windows publiée, téléchargement avec progression et extraction sûre dans un dossier dédié. Les uploads sans archive sont signalés, jamais exécutés.
+- **Epic Games direct** : la session OAuth directe suffit désormais à lire la bibliothèque possédée (titres et jaquettes) via l'API du launcher, avec renouvellement automatique du jeton. Legendary reste utilisé pour l'installation et le lancement.
+- **Succès Steam** : avec la clé Steam Web API et le SteamID64 déjà utilisés pour les recommandations, Quark lit les succès du joueur, le schéma du jeu et la rareté globale. L'onglet Succès fonctionne désormais pour Steam ; une clé absente, un profil privé ou un jeu sans statistiques est signalé explicitement.
+- Les nouveaux fournisseurs sont branchés sur les couvertures, les sauvegardes, les succès de session, le temps de jeu et la désinstallation.
+
+### Vérifications
+
+- `cargo fmt --all --check` : OK.
+- `cargo clippy --all-targets --locked -- -D warnings` : OK.
+- `cargo test --locked` : 310 tests réussis.
+- `cargo check --locked` : OK.
+- Rendu de Paramètres → Boutiques & outils vérifié hors écran, avec la ligne itch.io.
+
+### Limites connues
+
+- La bibliothèque Epic directe n'a pas pu être validée avec un vrai compte dans l'environnement de développement ; les analyseurs, le renouvellement de session et les erreurs sont testés.
+- L'installation Epic passe toujours par Legendary ; l'API directe ne remplace pas encore le téléchargement des manifests et des chunks.
+- itch.io ne propose que des archives pour l'installation automatique. Les installateurs `.exe`, `.dmg` ou `.apk` restent manuels. Aucun succès, sauvegarde cloud ou temps de jeu n'est publié par l'API itch.io.
+- Le clic sur l'icône n'a pas été validé sur un bureau réel avec zone de notification dans cet environnement ; le code compile et le chemin de signal est isolé.
+- Les succès Steam n'ont pas pu être validés avec une vraie clé Web API ; l'analyse des réponses, le schéma et la rareté sont couverts par des tests.
+
 ## Quark 1.6.2 — Site officiel, statut manuel et overlay plus lisible
 
 ### Nouveautés

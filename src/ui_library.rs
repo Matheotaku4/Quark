@@ -73,6 +73,7 @@ impl QuarkApp {
                 crate::providers::Provider::Steam => "Steam",
                 crate::providers::Provider::Epic => "Epic Games",
                 crate::providers::Provider::Gog => "GOG",
+                crate::providers::Provider::Itch => "itch.io",
             }
         }
 
@@ -893,12 +894,16 @@ impl QuarkApp {
         let store_record = self.provider_record_for_game(&id).cloned();
         // Steam ne publie pas ce temps : ces fiches gardent le temps local,
         // tandis qu'Epic et GOG affichent la valeur de la boutique.
-        let store_playtime_record = store_record
-            .as_ref()
-            .filter(|record| record.key.provider != crate::providers::Provider::Steam);
+        let store_playtime_record = store_record.as_ref().filter(|record| {
+            matches!(
+                record.key.provider,
+                crate::providers::Provider::Epic | crate::providers::Provider::Gog
+            )
+        });
         let store_label = store_playtime_record.map(|record| match record.key.provider {
             crate::providers::Provider::Epic => "Epic Games",
             crate::providers::Provider::Gog => "GOG",
+            crate::providers::Provider::Itch => "itch.io",
             crate::providers::Provider::Steam => "Steam",
         });
         let store_playtime = store_playtime_record
@@ -1852,21 +1857,8 @@ impl QuarkApp {
             crate::providers::Provider::Steam => "Steam",
             crate::providers::Provider::Epic => "Epic Games",
             crate::providers::Provider::Gog => "GOG",
+            crate::providers::Provider::Itch => "itch.io",
         };
-        if provider == crate::providers::Provider::Steam {
-            ui.horizontal(|ui| {
-                ui.add_space(32.0);
-                ui.label(
-                    crate::i18n::rich(
-                        "Steam n'expose pas ses succès sans sa propre session : \
-                         ils ne sont pas lisibles depuis Quark.",
-                    )
-                    .size(12.5)
-                    .color(pal.text_dim),
-                );
-            });
-            return;
-        }
         let mut state = self.achievements.get(&key).cloned();
         if state.is_none() {
             self.request_achievements(ui.ctx(), &key);

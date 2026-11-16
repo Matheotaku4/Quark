@@ -174,6 +174,86 @@ fn remember_in_credentials(session: &Session) {
     let _ = credentials::save_atomic(&path, &credentials);
 }
 
+/// Session encore valide, ou renouvelée avec le refresh token et réécrite
+/// dans `credentials.json`. Sert à la bibliothèque Epic directe, qui n'a pas
+/// besoin de Legendary.
+pub fn usable_tokens(now: i64) -> Result<ProviderTokens, String> {
+    let path = crate::config::credentials_path();
+    let mut credentials = credentials::load(&path)?;
+    let tokens = credentials.epic.clone().ok_or_else(|| {
+        "compte Epic non connecté : connecte-le dans Paramètres → Boutiques & outils".to_string()
+    })?;
+    if !tokens.access_token.is_empty() && (tokens.expires_at <= 0 || now < tokens.expires_at - 60) {
+        return Ok(tokens);
+    }
+    if tokens.refresh_token.is_empty() {
+        return Err(
+            "session Epic expirée : reconnecte le compte dans Paramètres → Boutiques & outils"
+                .to_string(),
+        );
+    }
+    let refreshed = refresh_with_token(&tokens.refresh_token)?;
+    let updated = ProviderTokens {
+        access_token: refreshed.access_token,
+        refresh_token: refreshed.refresh_token,
+        expires_at: refreshed.expires_at,
+        account_id: if refreshed.account_id.is_empty() {
+            tokens.account_id
+        } else {
+            refreshed.account_id
+        },
+        display_name: if refreshed.display_name.is_empty() {
+            tokens.display_name
+        } else {
+            refreshed.display_name
+        },
+    };
+    credentials.epic = Some(updated.clone());
+    credentials::save_atomic(&path, &credentials)?;
+    Ok(updated)
+}
+
+fn refresh_with_token(refresh_token: &str) -> Result<Session, String> {
+    let client = reqwest::blocking::Client::builder()
+        .timeout(Duration::from_secs(30))
+        .build()
+        .map_err(|_| "client HTTP Epic indisponible".to_string())?;
+    let response = client
+        .post(TOKEN_URL)
+        .basic_auth(CLIENT_ID, Some(CLIENT_SECRET))
+        .header("User-Agent", "Quark/1.7 (Epic direct library)")
+        .form(&[
+            ("grant_type", "refresh_token"),
+            ("refresh_token", refresh_token),
+            ("token_type", "eg1"),
+        ])
+        .send()
+        .map_err(|_| "renouvellement de la session Epic impossible (réseau)".to_string())?;
+    let status = response.status();
+    let bytes = response
+        .bytes()
+        .map_err(|_| "réponse Epic illisible".to_string())?;
+    if !status.is_success() {
+        return Err(oauth_error(&bytes));
+    }
+    let value: serde_json::Value = serde_json::from_slice(&bytes)
+        .map_err(|_| "réponse Epic illisible (JSON invalide)".to_string())?;
+    let parsed: TokenResponse = serde_json::from_value(value.clone())
+        .map_err(|_| "réponse Epic incomplète (session absente)".to_string())?;
+    if parsed.access_token.is_empty() || parsed.refresh_token.is_empty() {
+        return Err("réponse Epic incomplète (session absente)".to_string());
+    }
+    let expires_at = expires_at(&parsed);
+    Ok(Session {
+        access_token: parsed.access_token,
+        refresh_token: parsed.refresh_token,
+        account_id: parsed.account_id,
+        display_name: parsed.display_name,
+        expires_at,
+        raw: value,
+    })
+}
+
 /// Compte Epic enregistré, sans exposer les jetons. La session reste utilisable
 /// par Legendary même si Quark a été fermé entre-temps.
 pub fn connected_account() -> Option<(String, String)> {

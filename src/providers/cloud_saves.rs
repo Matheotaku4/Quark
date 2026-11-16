@@ -36,6 +36,7 @@ pub fn sync(
         Provider::Steam => {
             Err("Steam ne publie pas ses sauvegardes cloud sans le client Steam".to_string())
         }
+        Provider::Itch => Err("itch.io ne fournit pas de sauvegarde cloud".to_string()),
     }
 }
 

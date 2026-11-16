@@ -183,6 +183,7 @@ pub fn cache_icons(info: &mut AchievementInfo, provider: Provider, product_id: &
                 Provider::Steam => "steam",
                 Provider::Epic => "epic",
                 Provider::Gog => "gog",
+                Provider::Itch => "itch",
             },
             safe_segment(product_id)
         ));
