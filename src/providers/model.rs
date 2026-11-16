@@ -9,6 +9,7 @@ pub enum Provider {
     Steam,
     Epic,
     Gog,
+    Itch,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]

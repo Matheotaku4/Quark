@@ -27,6 +27,7 @@ fn provider_stem(provider: Provider) -> &'static str {
         Provider::Steam => "steam",
         Provider::Epic => "epic",
         Provider::Gog => "gog",
+        Provider::Itch => "itch",
     }
 }
 
@@ -201,6 +202,7 @@ pub fn ensure(game: &ProviderGame) -> Result<(PathBuf, Option<String>), String> 
                 }
             },
         },
+        Provider::Itch => game.cover_url.clone(),
     };
     if let Some(url) = candidate {
         match download(&url, &game.key) {
@@ -248,6 +250,7 @@ pub fn ensure_hero(game: &ProviderGame) -> Result<(PathBuf, Option<String>), Str
                 None
             }
         },
+        Provider::Itch => None,
     };
     if let Some(url) = candidate {
         match download_hero(&url, &game.key) {

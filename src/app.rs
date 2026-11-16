@@ -422,7 +422,7 @@ impl SettingsTab {
                 "Sources des images, téléchargement et remplacement des artworks."
             }
             SettingsTab::Providers => {
-                "Synchronisation, comptes Steam / Epic / GOG et outils gérés par Quark."
+                "Synchronisation, comptes Steam / Epic / GOG / itch.io et outils gérés par Quark."
             }
             SettingsTab::Stats => "Historique de jeu : heures, calendrier et séries.",
             SettingsTab::Disk => "Poids des préfixes, du cache, des journaux et des jeux.",
@@ -821,10 +821,19 @@ pub struct QuarkApp {
     pub epic_sync_error: Option<String>,
     pub epic_sync_rx: Option<Receiver<ProviderGamesResult>>,
     pub epic_install_sync_rx: Option<Receiver<ProviderInstallSyncResult>>,
+    /// Vrai quand la synchronisation Epic courante vient de l'API directe :
+    /// elle ne doit pas enchaîner sur la détection locale de Legendary.
+    pub epic_direct_sync: bool,
     /// Synchronisation GOG : l'API GOG est interrogée avec la session gogdl.
     pub gog_sync_loading: bool,
     pub gog_sync_error: Option<String>,
     pub gog_sync_rx: Option<Receiver<ProviderGamesResult>>,
+    /// Synchronisation itch.io : la clé API reste dans `credentials.json`.
+    pub itch_sync_loading: bool,
+    pub itch_sync_error: Option<String>,
+    pub itch_sync_rx: Option<Receiver<ProviderGamesResult>>,
+    /// Brouillon de la clé API itch.io, effacé après enregistrement.
+    pub itch_api_key_draft: String,
     /// Onglet de boutique actif dans « Mes jeux » (None = toutes).
     pub my_games_store: Option<crate::providers::Provider>,
     /// Recherche libre dans les jeux possédés.
@@ -864,6 +873,8 @@ pub struct QuarkApp {
     pub provider_cover_scan_at: Option<Instant>,
     /// Installation GOG (gogdl), même principe que l'installation Epic.
     pub gog_install_pending: Option<crate::providers::ProviderGameKey>,
+    /// Installation itch.io (archive téléchargée puis extraite).
+    pub itch_install_pending: Option<crate::providers::ProviderGameKey>,
     /// Succès Epic lus à la demande (jamais au démarrage).
     pub achievements: HashMap<crate::providers::ProviderGameKey, AchievementsState>,
     pub achievements_job: Option<
@@ -1078,9 +1089,14 @@ impl QuarkApp {
             epic_sync_error: None,
             epic_sync_rx: None,
             epic_install_sync_rx: None,
+            epic_direct_sync: false,
             gog_sync_loading: false,
             gog_sync_error: None,
             gog_sync_rx: None,
+            itch_sync_loading: false,
+            itch_sync_error: None,
+            itch_sync_rx: None,
+            itch_api_key_draft: String::new(),
             my_games_store: None,
             my_games_query: String::new(),
             provider_cover_job: None,
@@ -1099,6 +1115,7 @@ impl QuarkApp {
             install_request: None,
             provider_install_jobs: Vec::new(),
             gog_install_pending: None,
+            itch_install_pending: None,
             achievements: HashMap::new(),
             achievements_job: None,
             achievements_open: None,
@@ -1207,6 +1224,34 @@ impl QuarkApp {
     // Boucle
     // -----------------------------------------------------------------------
 
+    /// Un clic sur l'icône alterne premier plan / fermeture vers l'icône. Un
+    /// clic sur « Ouvrir Quark » ne fait que ramener la fenêtre au premier plan.
+    fn handle_tray_requests(&mut self, ctx: &egui::Context) {
+        let show = tray::take_show_requests();
+        if show > 0 {
+            ctx.send_viewport_cmd(egui::ViewportCommand::Minimized(false));
+            ctx.send_viewport_cmd(egui::ViewportCommand::Focus);
+        }
+        for _ in 0..tray::take_toggle_requests() {
+            let (minimized, focused) = ctx.input(|input| {
+                let viewport = input.viewport();
+                (
+                    viewport.minimized.unwrap_or(false),
+                    viewport.focused.unwrap_or(false),
+                )
+            });
+            if minimized || !focused {
+                ctx.send_viewport_cmd(egui::ViewportCommand::Minimized(false));
+                ctx.send_viewport_cmd(egui::ViewportCommand::Focus);
+            } else {
+                // La croix et ce chemin ferment la fenêtre tout en laissant le
+                // helper d'icône vivant : le prochain clic relance Quark.
+                ctx.send_viewport_cmd(egui::ViewportCommand::Close);
+                return;
+            }
+        }
+    }
+
     fn tick(&mut self, ctx: &egui::Context) {
         self.poll_running_games(ctx);
         self.poll_update(ctx);
@@ -1231,6 +1276,7 @@ impl QuarkApp {
         self.poll_steam_sync(ctx);
         self.poll_epic_sync(ctx);
         self.poll_gog_sync(ctx);
+        self.poll_itch_sync(ctx);
         self.poll_provider_installs(ctx);
         self.poll_install_size(ctx);
         self.poll_provider_covers(ctx);
@@ -1523,7 +1569,7 @@ impl QuarkApp {
                     && crate::providers::cloud_saves::save_path_for(self.lib.get(game_id), record)
                         .is_some()
             }
-            crate::providers::Provider::Steam => false,
+            crate::providers::Provider::Steam | crate::providers::Provider::Itch => false,
         }
     }
 
@@ -2425,6 +2471,7 @@ impl QuarkApp {
                 crate::providers::Provider::Steam => "Steam",
                 crate::providers::Provider::Epic => "Epic Games",
                 crate::providers::Provider::Gog => "GOG",
+                crate::providers::Provider::Itch => "itch.io",
             };
             for (kind, path) in [
                 (
@@ -2919,8 +2966,11 @@ impl QuarkApp {
     /// Démarrage de la fenêtre : inscrit son PID et lance l'icône si elle est
     /// activée. Appelé une seule fois par `main`, jamais par les rendus hors
     /// écran (`quark --ui`), qui ne doivent démarrer aucun processus.
-    pub fn startup(&mut self) {
+    pub fn startup(&mut self, ctx: &egui::Context) {
         tray::write_gui_pid();
+        if let Err(error) = tray::install_toggle_listener(ctx.clone()) {
+            self.tray_error = Some(error);
+        }
         // Une mise à jour interrompue peut avoir laissé une sauvegarde ou un
         // binaire préparé à côté de l'exécutable ; le nouveau processus les
         // nettoie une fois qu'il a démarré correctement.
@@ -3349,6 +3399,7 @@ impl QuarkApp {
             ctx.input_mut(|input| input.smooth_scroll_delta = scroll * 1.2);
         }
         self.tick(ctx);
+        self.handle_tray_requests(ctx);
         self.keyboard(ctx);
 
         if self.applied_theme != Some(self.lib.settings.theme) {
@@ -3780,6 +3831,7 @@ impl QuarkApp {
             crate::providers::Provider::Steam => "Steam",
             crate::providers::Provider::Epic => "Epic Games",
             crate::providers::Provider::Gog => "GOG",
+            crate::providers::Provider::Itch => "itch.io",
         };
         self.game_overlay
             .notice(format!("Succès {label}"), format!("{title} · débloqué"));
@@ -4613,6 +4665,7 @@ impl QuarkApp {
             crate::providers::Provider::Steam => "steam",
             crate::providers::Provider::Epic => "epic",
             crate::providers::Provider::Gog => "gog",
+            crate::providers::Provider::Itch => "itch",
         };
         format!("{title} [{provider}:{}]", key.product_id)
     }
@@ -5364,8 +5417,8 @@ impl QuarkApp {
                 )
                 .login_with_code(&code)
                 .map(|()| "Compte GOG connecté (gogdl)".to_string()),
-                crate::providers::Provider::Steam => {
-                    Err("Steam n'utilise pas cette connexion par code".to_string())
+                crate::providers::Provider::Steam | crate::providers::Provider::Itch => {
+                    Err("cette boutique n'utilise pas cette connexion par code".to_string())
                 }
             };
             let _ = tx.send(result);
@@ -5450,13 +5503,15 @@ impl QuarkApp {
             crate::providers::Provider::Gog => crate::providers::tools::ManagedToolId::Gogdl
                 .installed_path()
                 .is_file(),
+            crate::providers::Provider::Itch => self.credentials.itch_api_key.is_some(),
             crate::providers::Provider::Steam => false,
         };
         if !ready {
-            let tool = if key.provider == crate::providers::Provider::Epic {
-                "Legendary"
-            } else {
-                "gogdl"
+            let tool = match key.provider {
+                crate::providers::Provider::Epic => "Legendary",
+                crate::providers::Provider::Gog => "gogdl",
+                crate::providers::Provider::Itch => "la clé API itch.io",
+                crate::providers::Provider::Steam => "Steam",
             };
             self.toast_error(format!(
                 "{tool} n'est pas installé : Paramètres → Boutiques & outils"
@@ -5475,6 +5530,7 @@ impl QuarkApp {
                 crate::providers::Provider::Gog => {
                     crate::providers::gog::gog_install_size(&sent_key.product_id)
                 }
+                crate::providers::Provider::Itch => Ok(None),
                 crate::providers::Provider::Steam => Ok(None),
             };
             let _ = tx.send(result);
@@ -5553,6 +5609,7 @@ impl QuarkApp {
                 crate::i18n::rich(match request.key.provider {
                     crate::providers::Provider::Epic => "Epic Games · via Legendary",
                     crate::providers::Provider::Gog => "GOG · via gogdl",
+                    crate::providers::Provider::Itch => "itch.io · archive téléchargée",
                     crate::providers::Provider::Steam => "Steam",
                 })
                 .size(12.5)
@@ -5647,6 +5704,10 @@ impl QuarkApp {
                 crate::providers::Provider::Gog => {
                     self.gog_install_pending = Some(request.key.clone());
                     self.start_gog_install(ctx, request.destination);
+                }
+                crate::providers::Provider::Itch => {
+                    self.itch_install_pending = Some(request.key.clone());
+                    self.start_itch_install(ctx, request.destination);
                 }
                 crate::providers::Provider::Steam => {}
             }
@@ -5862,6 +5923,7 @@ impl QuarkApp {
         let name = match provider {
             crate::providers::Provider::Epic => "Epic",
             crate::providers::Provider::Gog => "GOG",
+            crate::providers::Provider::Itch => "itch.io",
             crate::providers::Provider::Steam => "Steam",
         };
         let cancelled = error.to_lowercase().contains("annul");
@@ -6166,6 +6228,7 @@ impl QuarkApp {
                     crate::providers::Provider::Steam => "Steam",
                     crate::providers::Provider::Epic => "Epic Games",
                     crate::providers::Provider::Gog => "GOG",
+                    crate::providers::Provider::Itch => "itch.io",
                 }
             ));
             self.lib.migrate_installations();
@@ -6331,6 +6394,7 @@ impl QuarkApp {
             let resolvable = match game.key.provider {
                 crate::providers::Provider::Epic => legendary_ready,
                 crate::providers::Provider::Gog => true,
+                crate::providers::Provider::Itch => game.cover_url.is_some(),
                 crate::providers::Provider::Steam => game.cover_url.is_some(),
             };
             if game.cover_url.is_none() && !resolvable {
@@ -6450,6 +6514,31 @@ impl QuarkApp {
         else {
             return;
         };
+        let steam_auth = if game.key.provider == crate::providers::Provider::Steam {
+            match (
+                self.credentials.steam_web_api_key.as_deref(),
+                self.credentials.steam_id.as_deref(),
+            ) {
+                (Some(api_key), Some(steam_id))
+                    if !api_key.trim().is_empty() && !steam_id.trim().is_empty() =>
+                {
+                    Some((api_key.to_string(), steam_id.to_string()))
+                }
+                _ => {
+                    self.achievements.insert(
+                        key.clone(),
+                        AchievementsState::Failed(
+                            "Renseigne la clé Steam Web API et le SteamID64 dans Paramètres → \
+                             Boutiques & outils pour lire les succès Steam"
+                                .into(),
+                        ),
+                    );
+                    return;
+                }
+            }
+        } else {
+            None
+        };
         match game.key.provider {
             crate::providers::Provider::Epic => {
                 if !crate::providers::tools::ManagedToolId::Legendary
@@ -6478,11 +6567,12 @@ impl QuarkApp {
                     return;
                 }
             }
-            crate::providers::Provider::Steam => {
+            crate::providers::Provider::Steam => {}
+            crate::providers::Provider::Itch => {
                 self.achievements.insert(
                     key.clone(),
                     AchievementsState::Failed(
-                        "Steam n'expose pas de succès lisibles sans sa propre session".into(),
+                        "itch.io ne publie pas de succès dans son API".into(),
                     ),
                 );
                 return;
@@ -6507,8 +6597,14 @@ impl QuarkApp {
                         crate::config::now_ts(),
                     )
                 }
-                crate::providers::Provider::Steam => {
-                    Err("Steam n'expose pas de succès lisibles".to_string())
+                crate::providers::Provider::Steam => match &steam_auth {
+                    Some((api_key, steam_id)) => {
+                        crate::providers::steam::fetch_achievements(&product_id, api_key, steam_id)
+                    }
+                    None => Err("clé Steam Web API absente".to_string()),
+                },
+                crate::providers::Provider::Itch => {
+                    Err("itch.io ne publie pas de succès dans son API".to_string())
                 }
             }
             .map(|mut info| {
@@ -6557,20 +6653,32 @@ impl QuarkApp {
     }
 
     pub fn start_epic_sync(&mut self, ctx: &egui::Context) {
-        if self.epic_sync_loading
-            || !crate::providers::tools::ManagedToolId::Legendary
-                .installed_path()
-                .is_file()
-        {
+        if self.epic_sync_loading || self.epic_sync_rx.is_some() {
+            return;
+        }
+        // Legendary fournit aussi l'état local. Quand il est absent ou sans
+        // session, l'API directe donne la bibliothèque possédée ; l'installation
+        // reste alors indisponible jusqu'à l'installation de Legendary.
+        let legendary_ready = crate::providers::tools::ManagedToolId::Legendary
+            .installed_path()
+            .is_file()
+            && crate::providers::legendary::LegendaryAdapter::is_logged_in();
+        let direct = !legendary_ready;
+        if direct && crate::providers::epic_account::connected_account().is_none() {
             return;
         }
         self.epic_sync_loading = true;
         self.epic_sync_error = None;
+        self.epic_direct_sync = direct;
         let (tx, rx) = channel();
         let repaint = ctx.clone();
         std::thread::spawn(move || {
-            let result = crate::providers::legendary::LegendaryAdapter::new()
-                .sync_owned(crate::config::now_ts(), None);
+            let result = if direct {
+                crate::providers::epic_library::library(crate::config::now_ts())
+            } else {
+                crate::providers::legendary::LegendaryAdapter::new()
+                    .sync_owned(crate::config::now_ts(), None)
+            };
             let _ = tx.send(result);
             repaint.request_repaint();
         });
@@ -6657,7 +6765,16 @@ impl QuarkApp {
                 self.epic_sync_rx = None;
                 self.epic_sync_loading = false;
                 if games.is_empty() {
+                    self.epic_direct_sync = false;
                     self.epic_sync_error = Some("bibliothèque Epic vide ou compte Legendary indisponible; données précédentes conservées".into());
+                } else if self.epic_direct_sync {
+                    self.epic_direct_sync = false;
+                    self.lib.provider_library.games = crate::providers::legendary::merge_epic(
+                        &self.lib.provider_library.games,
+                        &games,
+                    );
+                    self.epic_sync_error = None;
+                    self.touch();
                 } else {
                     self.epic_sync_loading = true;
                     self.start_epic_install_sync(ctx, games);
@@ -6666,11 +6783,13 @@ impl QuarkApp {
             Ok(Err(error)) => {
                 self.epic_sync_rx = None;
                 self.epic_sync_loading = false;
+                self.epic_direct_sync = false;
                 self.epic_sync_error = Some(error);
             }
             Err(TryRecvError::Disconnected) => {
                 self.epic_sync_rx = None;
                 self.epic_sync_loading = false;
+                self.epic_direct_sync = false;
                 self.epic_sync_error =
                     Some("synchronisation Epic interrompue; données précédentes conservées".into());
             }
@@ -6690,15 +6809,19 @@ impl QuarkApp {
         self.startup_sync_done = true;
         self.maybe_startup_update(ctx);
         self.start_steam_sync(ctx);
-        if crate::providers::tools::ManagedToolId::Legendary
-            .installed_path()
-            .is_file()
-            && crate::providers::legendary::LegendaryAdapter::is_logged_in()
+        if crate::providers::epic_account::connected_account().is_some()
+            || (crate::providers::tools::ManagedToolId::Legendary
+                .installed_path()
+                .is_file()
+                && crate::providers::legendary::LegendaryAdapter::is_logged_in())
         {
             self.start_epic_sync(ctx);
         }
         if crate::providers::gog::GogAdapter::is_logged_in() {
             self.start_gog_sync(ctx);
+        }
+        if self.credentials.itch_api_key.is_some() {
+            self.start_itch_sync(ctx);
         }
     }
 
@@ -6749,6 +6872,185 @@ impl QuarkApp {
             }
             Err(TryRecvError::Empty) => ctx.request_repaint_after(Duration::from_millis(120)),
         }
+    }
+
+    /// Enregistre la clé API itch.io dans le fichier privé puis lance la
+    /// bibliothèque. Le brouillon est effacé immédiatement après succès.
+    pub fn save_itch_key(&mut self, ctx: &egui::Context) {
+        let key = self.itch_api_key_draft.trim().to_string();
+        if key.is_empty() || key.len() > 512 || key.chars().any(char::is_whitespace) {
+            self.itch_sync_error = Some("clé API itch.io invalide".to_string());
+            return;
+        }
+        self.credentials.itch_api_key = Some(key);
+        if let Err(error) = crate::providers::credentials::save_atomic(
+            &crate::config::credentials_path(),
+            &self.credentials,
+        ) {
+            self.credentials.itch_api_key = None;
+            self.itch_sync_error = Some(error);
+            return;
+        }
+        self.itch_api_key_draft.clear();
+        self.itch_sync_error = None;
+        self.toast_info("Clé API itch.io enregistrée");
+        self.start_itch_sync(ctx);
+    }
+
+    pub fn disconnect_itch(&mut self) {
+        self.credentials.itch_api_key = None;
+        let _ = crate::providers::credentials::save_atomic(
+            &crate::config::credentials_path(),
+            &self.credentials,
+        );
+        self.itch_sync_error = None;
+        self.itch_sync_loading = false;
+        self.itch_sync_rx = None;
+        self.lib
+            .provider_library
+            .games
+            .retain(|game| game.key.provider != crate::providers::Provider::Itch);
+        self.touch();
+    }
+
+    pub fn start_itch_sync(&mut self, ctx: &egui::Context) {
+        if self.itch_sync_loading || self.itch_sync_rx.is_some() {
+            return;
+        }
+        let Some(api_key) = self.credentials.itch_api_key.clone() else {
+            self.itch_sync_error =
+                Some("ajoute une clé API itch.io dans Paramètres → Boutiques & outils".to_string());
+            return;
+        };
+        self.itch_sync_loading = true;
+        self.itch_sync_error = None;
+        let (tx, rx) = channel();
+        let repaint = ctx.clone();
+        std::thread::spawn(move || {
+            let result = crate::providers::itch::library(&api_key, crate::config::now_ts());
+            let _ = tx.send(result);
+            repaint.request_repaint();
+        });
+        self.itch_sync_rx = Some(rx);
+        ctx.request_repaint_after(Duration::from_millis(120));
+    }
+
+    fn poll_itch_sync(&mut self, ctx: &egui::Context) {
+        let Some(result) = self.itch_sync_rx.as_ref().map(Receiver::try_recv) else {
+            return;
+        };
+        match result {
+            Ok(Ok(games)) => {
+                self.itch_sync_rx = None;
+                self.itch_sync_loading = false;
+                self.itch_sync_error = None;
+                self.lib.provider_library.games =
+                    crate::providers::itch::merge_itch(&self.lib.provider_library.games, &games);
+                self.touch();
+            }
+            Ok(Err(error)) => {
+                self.itch_sync_rx = None;
+                self.itch_sync_loading = false;
+                self.itch_sync_error = Some(error);
+            }
+            Err(TryRecvError::Disconnected) => {
+                self.itch_sync_rx = None;
+                self.itch_sync_loading = false;
+                self.itch_sync_error = Some(
+                    "synchronisation itch.io interrompue; données précédentes conservées".into(),
+                );
+            }
+            Err(TryRecvError::Empty) => ctx.request_repaint_after(Duration::from_millis(120)),
+        }
+    }
+
+    fn start_itch_install(&mut self, ctx: &egui::Context, destination: PathBuf) {
+        let Some(key) = self.itch_install_pending.take() else {
+            return;
+        };
+        let Some(api_key) = self.credentials.itch_api_key.clone() else {
+            self.toast_error("Ajoute la clé API itch.io dans Paramètres → Boutiques & outils");
+            return;
+        };
+        if self.provider_install_jobs.iter().any(|job| job.key == key) {
+            self.toast_info("Cette installation est déjà en cours");
+            return;
+        }
+        if self.provider_install_jobs.len() >= MAX_CONCURRENT_INSTALLS {
+            self.toast_info(format!(
+                "Maximum de {MAX_CONCURRENT_INSTALLS} téléchargements simultanés"
+            ));
+            return;
+        }
+        if let Err(error) = std::fs::create_dir_all(&destination) {
+            self.toast_error(format!("Dossier de destination itch.io invalide : {error}"));
+            return;
+        }
+        let Some(game) = self
+            .lib
+            .provider_library
+            .games
+            .iter()
+            .find(|game| game.key == key)
+            .cloned()
+        else {
+            return;
+        };
+        if let Some(record) = self
+            .lib
+            .provider_library
+            .games
+            .iter_mut()
+            .find(|game| game.key == key)
+        {
+            record.install_state = crate::providers::InstallState::Installing;
+        }
+        self.touch();
+        let progress = Arc::new(Mutex::new(
+            crate::providers::runner::InstallProgress::default(),
+        ));
+        let cancel = Arc::new(AtomicBool::new(false));
+        let (tx, rx) = channel();
+        let repaint = ctx.clone();
+        let title = game.title.clone();
+        let job_key = key.clone();
+        let job_progress = progress.clone();
+        let job_cancel = cancel.clone();
+        std::thread::spawn(move || {
+            let result = (|| {
+                std::fs::create_dir_all(&destination).map_err(|_| {
+                    "impossible de préparer la destination itch.io choisie".to_string()
+                })?;
+                let mut operation = crate::providers::operations::InstallOperation::new(
+                    key.clone(),
+                    destination.clone(),
+                );
+                operation.start();
+                let installed = crate::providers::itch::install(
+                    &api_key,
+                    &game,
+                    &destination,
+                    progress.clone(),
+                    cancel.clone(),
+                )?;
+                let path = installed
+                    .install_path
+                    .clone()
+                    .ok_or_else(|| "installation itch.io sans dossier local".to_string())?;
+                operation.complete_verified(path)?;
+                Ok(installed)
+            })();
+            let _ = tx.send((key, result));
+            repaint.request_repaint();
+        });
+        self.provider_install_jobs.push(ProviderInstallJob {
+            key: job_key,
+            progress: job_progress,
+            cancel: job_cancel,
+            rx,
+        });
+        self.toast_info(format!("Installation itch.io de {title} lancée"));
+        ctx.request_repaint_after(Duration::from_millis(120));
     }
 
     pub fn start_steam_sync(&mut self, ctx: &egui::Context) {

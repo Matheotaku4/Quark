@@ -624,6 +624,7 @@ fn provider_label(provider: Provider) -> &'static str {
         Provider::Steam => "STEAM",
         Provider::Epic => "EPIC GAMES",
         Provider::Gog => "GOG",
+        Provider::Itch => "ITCH.IO",
     }
 }
 
@@ -632,6 +633,7 @@ fn provider_color(provider: Provider) -> Color32 {
         Provider::Steam => Color32::from_rgb(0x8F, 0xB8, 0xE8),
         Provider::Epic => Color32::from_rgb(0xC8, 0xC8, 0xD2),
         Provider::Gog => Color32::from_rgb(0xB9, 0x8B, 0xE8),
+        Provider::Itch => Color32::from_rgb(0xFA, 0x5C, 0x5C),
     }
 }
 

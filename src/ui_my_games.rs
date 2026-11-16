@@ -31,7 +31,10 @@ impl QuarkApp {
         let mut uninstall: Option<crate::providers::ProviderGameKey> = None;
         let mut sync_after_handoff = false;
 
-        let busy = self.steam_sync_loading || self.epic_sync_loading || self.gog_sync_loading;
+        let busy = self.steam_sync_loading
+            || self.epic_sync_loading
+            || self.gog_sync_loading
+            || self.itch_sync_loading;
         let all_games = self.lib.provider_library.games.clone();
         let counts = [
             all_games.len(),
@@ -46,6 +49,10 @@ impl QuarkApp {
             all_games
                 .iter()
                 .filter(|game| game.key.provider == Provider::Gog)
+                .count(),
+            all_games
+                .iter()
+                .filter(|game| game.key.provider == Provider::Itch)
                 .count(),
         ];
 
@@ -127,12 +134,14 @@ impl QuarkApp {
                                         (Some(Provider::Steam), "Steam"),
                                         (Some(Provider::Epic), "Epic Games"),
                                         (Some(Provider::Gog), "GOG"),
+                                        (Some(Provider::Itch), "itch.io"),
                                     ] {
                                         let index = match provider {
                                             None => 0,
                                             Some(Provider::Steam) => 1,
                                             Some(Provider::Epic) => 2,
                                             Some(Provider::Gog) => 3,
+                                            Some(Provider::Itch) => 4,
                                         };
                                         let title = format!("{label} · {}", counts[index]);
                                         if store_tab(
@@ -853,6 +862,7 @@ fn provider_name(provider: Provider) -> &'static str {
         Provider::Steam => "Steam",
         Provider::Epic => "Epic Games",
         Provider::Gog => "GOG",
+        Provider::Itch => "itch.io",
     }
 }
 
@@ -861,6 +871,7 @@ fn provider_color(provider: Provider) -> egui::Color32 {
         Provider::Steam => egui::Color32::from_rgb(0x66, 0xC0, 0xF4),
         Provider::Epic => egui::Color32::from_rgb(0xC8, 0xC8, 0xD0),
         Provider::Gog => egui::Color32::from_rgb(0xB0, 0x8C, 0xFF),
+        Provider::Itch => egui::Color32::from_rgb(0xFA, 0x5C, 0x5C),
     }
 }
 
@@ -1441,6 +1452,14 @@ fn actions_menu_items(
         *install_request = Some(game.key.clone());
         ui.close();
     }
+    if game.owned
+        && game.key.provider == Provider::Itch
+        && !installed
+        && ui.button(crate::i18n::tr("Installer itch.io…")).clicked()
+    {
+        *install_request = Some(game.key.clone());
+        ui.close();
+    }
     if installed
         && game.quark_game_id.is_none()
         && ui
@@ -1451,7 +1470,10 @@ fn actions_menu_items(
         ui.close();
     }
     if installed
-        && matches!(game.key.provider, Provider::Epic | Provider::Gog)
+        && matches!(
+            game.key.provider,
+            Provider::Epic | Provider::Gog | Provider::Itch
+        )
         && ui.button(crate::i18n::tr("Désinstaller…")).clicked()
     {
         *uninstall = Some(game.key.clone());
@@ -1491,7 +1513,7 @@ fn actions_menu_items(
                     "gogdl n'est pas installé : Paramètres → Boutiques & outils",
                 );
         }
-        Provider::Steam => {}
+        Provider::Steam | Provider::Itch => {}
     }
     if installed
         && ui

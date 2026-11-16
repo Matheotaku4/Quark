@@ -29,27 +29,33 @@ impl QuarkApp {
         let epic_logged_in =
             epic_account.is_some() || crate::providers::legendary::LegendaryAdapter::is_logged_in();
         let gog_logged_in = crate::providers::gog::GogAdapter::is_logged_in();
+        let itch_logged_in = self.credentials.itch_api_key.is_some();
         let legendary_ready = ManagedToolId::Legendary.installed_path().is_file();
         let steam_owned =
             self.credentials.steam_web_api_key.is_some() && self.credentials.steam_id.is_some();
         // Compteurs et dernière synchronisation, relevés en une fois : le bloc
         // peut ensuite modifier l'application sans conflit d'emprunt.
-        let summary: Vec<(usize, Option<i64>)> = [Provider::Steam, Provider::Epic, Provider::Gog]
-            .into_iter()
-            .map(|provider| {
-                let mut count = 0;
-                let mut last = None;
-                for game in self.lib.provider_library.games.iter() {
-                    if game.key.provider == provider {
-                        count += 1;
-                        if let Some(ts) = game.last_synced {
-                            last = Some(last.map_or(ts, |value: i64| value.max(ts)));
-                        }
+        let summary: Vec<(usize, Option<i64>)> = [
+            Provider::Steam,
+            Provider::Epic,
+            Provider::Gog,
+            Provider::Itch,
+        ]
+        .into_iter()
+        .map(|provider| {
+            let mut count = 0;
+            let mut last = None;
+            for game in self.lib.provider_library.games.iter() {
+                if game.key.provider == provider {
+                    count += 1;
+                    if let Some(ts) = game.last_synced {
+                        last = Some(last.map_or(ts, |value: i64| value.max(ts)));
                     }
                 }
-                (count, last)
-            })
-            .collect();
+            }
+            (count, last)
+        })
+        .collect();
 
         ui.label(
             crate::i18n::rich(
@@ -63,11 +69,14 @@ impl QuarkApp {
             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                 if widgets::ghost_button(ui, "Tout synchroniser", pal, Icon::Refresh).clicked() {
                     self.start_steam_sync(ctx);
-                    if legendary_ready && epic_logged_in {
+                    if epic_logged_in {
                         self.start_epic_sync(ctx);
                     }
                     if gog_logged_in {
                         self.start_gog_sync(ctx);
+                    }
+                    if itch_logged_in {
+                        self.start_itch_sync(ctx);
                     }
                 }
             });
@@ -79,6 +88,7 @@ impl QuarkApp {
         let steam_error = self.steam_sync_error.clone();
         let epic_error = self.epic_sync_error.clone();
         let gog_error = self.gog_sync_error.clone();
+        let itch_error = self.itch_sync_error.clone();
         for (index, provider, label, note, connected, busy, error) in [
             (
                 0,
@@ -97,14 +107,16 @@ impl QuarkApp {
                 1,
                 Provider::Epic,
                 "Epic Games",
-                if !legendary_ready {
-                    "Legendary n'est pas installé : installe-le dans « Outils gérés par Quark »."
+                if epic_logged_in && legendary_ready {
+                    "Compte Epic connecté (bibliothèque directe et installation via Legendary)."
                 } else if epic_logged_in {
-                    "Compte Epic connecté."
-                } else {
+                    "Compte Epic connecté (bibliothèque directe ; Legendary reste requis pour installer)."
+                } else if legendary_ready {
                     "Compte Epic non connecté."
+                } else {
+                    "Compte Epic non connecté ; la connexion directe suffit pour la bibliothèque."
                 },
-                legendary_ready && epic_logged_in,
+                epic_logged_in,
                 self.epic_sync_loading,
                 epic_error.as_deref(),
             ),
@@ -120,6 +132,19 @@ impl QuarkApp {
                 gog_logged_in,
                 self.gog_sync_loading,
                 gog_error.as_deref(),
+            ),
+            (
+                3,
+                Provider::Itch,
+                "itch.io",
+                if itch_logged_in {
+                    "Bibliothèque possédée lue avec ta clé API personnelle."
+                } else {
+                    "Ajoute une clé API itch.io pour lire les jeux possédés."
+                },
+                itch_logged_in,
+                self.itch_sync_loading,
+                itch_error.as_deref(),
             ),
         ] {
             let (count, last) = summary[index];
@@ -155,6 +180,7 @@ impl QuarkApp {
                                 Provider::Steam => self.start_steam_sync(ctx),
                                 Provider::Epic => self.start_epic_sync(ctx),
                                 Provider::Gog => self.start_gog_sync(ctx),
+                                Provider::Itch => self.start_itch_sync(ctx),
                             }
                         }
                     });
@@ -166,7 +192,11 @@ impl QuarkApp {
             }
             ui.add_space(4.0);
         }
-        if self.epic_sync_loading || self.gog_sync_loading || self.steam_sync_loading {
+        if self.epic_sync_loading
+            || self.gog_sync_loading
+            || self.itch_sync_loading
+            || self.steam_sync_loading
+        {
             ui.horizontal(|ui| {
                 ui.add(egui::Spinner::new().size(12.0));
                 ui.label(
@@ -189,6 +219,7 @@ impl QuarkApp {
         let epic_logged_in =
             epic_account.is_some() || crate::providers::legendary::LegendaryAdapter::is_logged_in();
         let gog_logged_in = crate::providers::gog::GogAdapter::is_logged_in();
+        let itch_logged_in = self.credentials.itch_api_key.is_some();
         let legendary_ready = ManagedToolId::Legendary.installed_path().is_file();
         let gogdl_ready = ManagedToolId::Gogdl.installed_path().is_file();
         let mut action = LoginAction::None;
@@ -254,6 +285,75 @@ impl QuarkApp {
                 crate::providers::gog::LOGIN_URL,
             );
         }
+
+        // itch.io n'utilise pas de code d'autorisation : la clé API personnelle
+        // est lue directement, puis effacée du champ après enregistrement.
+        account_row(
+            ui,
+            pal,
+            "itch.io",
+            if itch_logged_in {
+                "Connecté · bibliothèque lue via ta clé API"
+            } else {
+                "Non connecté · ajoute une clé API personnelle"
+            },
+            None,
+        );
+        if itch_logged_in {
+            if crate::widgets::ghost_button(ui, "Déconnecter itch.io", pal, Icon::Info).clicked() {
+                self.disconnect_itch();
+            }
+        } else {
+            egui::Frame::new()
+                .fill(pal.surface)
+                .stroke(egui::Stroke::new(1.0_f32, pal.border))
+                .corner_radius(6.0)
+                .inner_margin(egui::Margin::symmetric(12, 10))
+                .show(ui, |ui| {
+                    ui.label(
+                        crate::i18n::rich(
+                            "Crée une clé sur itch.io → Settings → API keys, puis colle-la ici. \
+                             Elle reste dans le fichier privé des identifiants.",
+                        )
+                        .size(12.5)
+                        .color(pal.text_dim),
+                    );
+                    ui.add_space(6.0);
+                    ui.horizontal_wrapped(|ui| {
+                        if crate::widgets::ghost_button(
+                            ui,
+                            "Ouvrir la page des clés",
+                            pal,
+                            Icon::Info,
+                        )
+                        .clicked()
+                        {
+                            action =
+                                LoginAction::OpenPage("https://itch.io/user/settings/api-keys");
+                        }
+                        ui.add_space(10.0);
+                        ui.add_sized(
+                            Vec2::new(320.0, 28.0),
+                            egui::TextEdit::singleline(&mut self.itch_api_key_draft)
+                                .password(true)
+                                .hint_text(crate::i18n::tr("Clé API itch.io")),
+                        );
+                        if ui
+                            .add_enabled(
+                                !self.itch_api_key_draft.trim().is_empty(),
+                                egui::Button::new(crate::i18n::tr("Enregistrer")),
+                            )
+                            .clicked()
+                        {
+                            self.save_itch_key(ctx);
+                        }
+                    });
+                    if let Some(error) = &self.itch_sync_error {
+                        ui.label(crate::i18n::rich(error).size(12.0).color(pal.danger));
+                    }
+                });
+        }
+        ui.add_space(6.0);
 
         if let Some(provider) = open_login {
             self.open_provider_login(provider);

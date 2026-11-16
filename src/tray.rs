@@ -12,11 +12,20 @@
 
 use crate::config;
 use ksni::blocking::TrayMethods;
+use std::io::Read;
 use std::os::unix::io::AsRawFd;
+use std::os::unix::net::UnixStream;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicI32, AtomicU32, Ordering};
 use std::time::{Duration, Instant};
+
+/// Demandes envoyées par le processus « icône seule » à la fenêtre. Un signal
+/// Unix réveille la boucle egui même quand la fenêtre est réduite et ne
+/// dessine plus.
+static TOGGLE_REQUESTS: AtomicU32 = AtomicU32::new(0);
+static SHOW_REQUESTS: AtomicU32 = AtomicU32::new(0);
+static WAKE_FD: AtomicI32 = AtomicI32::new(-1);
 
 /// Argument qui démarre le processus « icône seule ».
 pub const HELPER_ARG: &str = "--tray";
@@ -25,6 +34,7 @@ pub const HELPER_ARG: &str = "--tray";
 #[derive(Default)]
 struct TrayShared {
     show: AtomicBool,
+    toggle: AtomicBool,
     quit: AtomicBool,
 }
 
@@ -54,6 +64,10 @@ impl TrayHandle {
         self.shared.show.swap(false, Ordering::Relaxed)
     }
 
+    fn take_toggle(&self) -> bool {
+        self.shared.toggle.swap(false, Ordering::Relaxed)
+    }
+
     fn take_quit(&self) -> bool {
         self.shared.quit.swap(false, Ordering::Relaxed)
     }
@@ -75,6 +89,11 @@ struct QuarkTray {
 impl QuarkTray {
     fn request_show(&self) {
         self.shared.show.store(true, Ordering::Relaxed);
+        self.ctx.request_repaint();
+    }
+
+    fn request_toggle(&self) {
+        self.shared.toggle.store(true, Ordering::Relaxed);
         self.ctx.request_repaint();
     }
 
@@ -106,7 +125,7 @@ impl ksni::Tray for QuarkTray {
     }
 
     fn activate(&mut self, _x: i32, _y: i32) {
-        self.request_show();
+        self.request_toggle();
     }
 
     fn menu(&self) -> Vec<ksni::MenuItem<Self>> {
@@ -251,6 +270,85 @@ pub fn clear_gui_pid() {
     let _ = std::fs::remove_file(gui_pid_path());
 }
 
+// ---------------------------------------------------------------------------
+// Réveil de la fenêtre depuis l'icône
+// ---------------------------------------------------------------------------
+
+extern "C" fn on_toggle_signal(_signal: libc::c_int) {
+    TOGGLE_REQUESTS.fetch_add(1, Ordering::SeqCst);
+    let fd = WAKE_FD.load(Ordering::SeqCst);
+    if fd >= 0 {
+        let byte = 1u8;
+        unsafe {
+            libc::write(fd, (&byte as *const u8).cast(), 1);
+        }
+    }
+}
+
+extern "C" fn on_show_signal(_signal: libc::c_int) {
+    SHOW_REQUESTS.fetch_add(1, Ordering::SeqCst);
+    let fd = WAKE_FD.load(Ordering::SeqCst);
+    if fd >= 0 {
+        let byte = 1u8;
+        unsafe {
+            libc::write(fd, (&byte as *const u8).cast(), 1);
+        }
+    }
+}
+
+/// Installe les deux signaux qui réveillent la fenêtre. La lecture se fait
+/// dans un fil séparé : le gestionnaire de signal ne peut pas toucher à egui.
+pub fn install_toggle_listener(ctx: eframe::egui::Context) -> Result<(), String> {
+    let (mut reader, writer) = UnixStream::pair().map_err(|err| err.to_string())?;
+    WAKE_FD.store(writer.as_raw_fd(), Ordering::SeqCst);
+    // Le descripteur doit rester ouvert pour toute la vie de la fenêtre.
+    std::mem::forget(writer);
+    let previous_toggle = unsafe {
+        libc::signal(
+            libc::SIGUSR1,
+            on_toggle_signal as *const () as libc::sighandler_t,
+        )
+    };
+    let previous_show = unsafe {
+        libc::signal(
+            libc::SIGUSR2,
+            on_show_signal as *const () as libc::sighandler_t,
+        )
+    };
+    if previous_toggle == libc::SIG_ERR || previous_show == libc::SIG_ERR {
+        return Err("installation des signaux de l'icône impossible".to_string());
+    }
+    std::thread::spawn(move || {
+        let mut buffer = [0u8; 32];
+        loop {
+            match reader.read(&mut buffer) {
+                Ok(0) => break,
+                Ok(_) => ctx.request_repaint(),
+                Err(error) if error.kind() == std::io::ErrorKind::Interrupted => {}
+                Err(_) => break,
+            }
+        }
+    });
+    Ok(())
+}
+
+pub fn take_toggle_requests() -> u32 {
+    TOGGLE_REQUESTS.swap(0, Ordering::SeqCst)
+}
+
+pub fn take_show_requests() -> u32 {
+    SHOW_REQUESTS.swap(0, Ordering::SeqCst)
+}
+
+/// Envoie un signal à la fenêtre si elle est vivante. Renvoie faux si elle
+/// n'existe plus, pour que le helper puisse en relancer une.
+fn signal_gui(signal: libc::c_int) -> bool {
+    let Some(pid) = gui_pid() else {
+        return false;
+    };
+    unsafe { libc::kill(pid as i32, signal) == 0 }
+}
+
 /// Démarre l'icône si elle ne tourne pas déjà. Renvoie son PID dès qu'elle a
 /// pris la parole sur le bus ; sinon l'erreur explique que le bureau n'a pas de
 /// zone de notification.
@@ -330,7 +428,11 @@ pub fn run_helper() -> i32 {
     let _ = std::fs::write(&pid_path, pid_file_contents());
 
     loop {
-        if tray.take_show() && gui_pid().is_none() {
+        if tray.take_toggle() && !signal_gui(libc::SIGUSR1) {
+            // La fenêtre a disparu entre deux clics : on la relance.
+            spawn_gui();
+        }
+        if tray.take_show() && !signal_gui(libc::SIGUSR2) {
             spawn_gui();
         }
         if tray.take_quit() {

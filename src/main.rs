@@ -83,7 +83,7 @@ fn main() -> eframe::Result<()> {
             egui_extras::install_image_loaders(&cc.egui_ctx);
             fonts::install(&cc.egui_ctx);
             let mut app = QuarkApp::new(&cc.egui_ctx);
-            app.startup();
+            app.startup(&cc.egui_ctx);
             Ok(Box::new(app))
         }),
     )

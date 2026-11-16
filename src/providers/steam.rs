@@ -1,11 +1,20 @@
 //! Adaptateur Steam : manifestes locaux et accès optionnel à GetOwnedGames.
 
 use crate::config::Game;
-use crate::providers::{InstallState, Provider, ProviderGame, ProviderGameKey};
+use crate::providers::achievements::rarity_percent;
+use crate::providers::{
+    AchievementInfo, AchievementRow, InstallState, Provider, ProviderGame, ProviderGameKey,
+};
 use reqwest::blocking::Client;
 use serde::Deserialize;
+use std::collections::HashMap;
 
 const OWNED_GAMES_URL: &str = "https://api.steampowered.com/IPlayerService/GetOwnedGames/v1/";
+const PLAYER_ACHIEVEMENTS_URL: &str =
+    "https://api.steampowered.com/ISteamUserStats/GetPlayerAchievements/v1/";
+const SCHEMA_URL: &str = "https://api.steampowered.com/ISteamUserStats/GetSchemaForGame/v2/";
+const GLOBAL_PERCENTAGES_URL: &str =
+    "https://api.steampowered.com/ISteamUserStats/GetGlobalAchievementPercentagesForApp/v2/";
 const MAX_RESPONSE_BYTES: u64 = 8 * 1024 * 1024;
 
 #[derive(Deserialize)]
@@ -263,6 +272,257 @@ pub fn install_uri(app_id: u32) -> Result<String, String> {
     Ok(format!("steam://install/{app_id}"))
 }
 
+#[derive(Debug, Default, Deserialize)]
+struct PlayerResponse {
+    #[serde(default)]
+    playerstats: Option<PlayerStats>,
+}
+
+#[derive(Debug, Default, Deserialize)]
+struct PlayerStats {
+    #[serde(default)]
+    success: bool,
+    #[serde(default)]
+    achievements: Vec<PlayerAchievement>,
+    #[serde(default)]
+    error: Option<String>,
+}
+
+#[derive(Debug, Default, Deserialize)]
+struct PlayerAchievement {
+    #[serde(default)]
+    apiname: String,
+    #[serde(default)]
+    achieved: u8,
+}
+
+#[derive(Debug, Default, Deserialize)]
+struct SchemaResponse {
+    #[serde(default)]
+    game: Option<SchemaGame>,
+}
+
+#[derive(Debug, Default, Deserialize)]
+struct SchemaGame {
+    #[serde(default, rename = "availableGameStats")]
+    available_game_stats: Option<SchemaStats>,
+}
+
+#[derive(Debug, Default, Deserialize)]
+struct SchemaStats {
+    #[serde(default)]
+    achievements: Vec<SchemaAchievement>,
+}
+
+#[derive(Debug, Default, Deserialize)]
+struct SchemaAchievement {
+    #[serde(default)]
+    name: String,
+    #[serde(default, rename = "displayName")]
+    display_name: String,
+    #[serde(default)]
+    description: String,
+    #[serde(default)]
+    hidden: Option<serde_json::Value>,
+    #[serde(default)]
+    icon: Option<String>,
+}
+
+#[derive(Debug, Default, Deserialize)]
+struct GlobalResponse {
+    #[serde(default, rename = "achievementpercentages")]
+    achievement_percentages: Option<GlobalStats>,
+}
+
+#[derive(Debug, Default, Deserialize)]
+struct GlobalStats {
+    #[serde(default)]
+    achievements: Vec<GlobalAchievement>,
+}
+
+#[derive(Debug, Default, Deserialize)]
+struct GlobalAchievement {
+    #[serde(default)]
+    name: String,
+    #[serde(default)]
+    percent: Option<serde_json::Value>,
+}
+
+fn schema_hidden(value: Option<&serde_json::Value>) -> bool {
+    match value {
+        Some(serde_json::Value::Bool(hidden)) => *hidden,
+        Some(serde_json::Value::Number(number)) => number.as_u64().is_some_and(|value| value != 0),
+        _ => false,
+    }
+}
+
+/// Assemble les succès du joueur avec le schéma du jeu et les pourcentages
+/// globaux. Les trois réponses Steam sont séparées ; cette fonction pure
+/// permet de tester les cas où le schéma ou la rareté manquent.
+pub fn parse_achievements(
+    player_json: &str,
+    schema_json: Option<&str>,
+    global_json: Option<&str>,
+) -> Result<AchievementInfo, String> {
+    let player: PlayerResponse = serde_json::from_str(player_json)
+        .map_err(|_| "réponse de succès Steam illisible".to_string())?;
+    let stats = player
+        .playerstats
+        .ok_or_else(|| "Steam n'a pas renvoyé les succès de ce jeu".to_string())?;
+    if !stats.success {
+        return Err(stats
+            .error
+            .filter(|error| !error.trim().is_empty())
+            .unwrap_or_else(|| "Steam n'expose pas les succès de ce jeu".to_string()));
+    }
+
+    let schema = schema_json
+        .and_then(|json| serde_json::from_str::<SchemaResponse>(json).ok())
+        .and_then(|response| response.game)
+        .and_then(|game| game.available_game_stats)
+        .map(|stats| {
+            stats
+                .achievements
+                .into_iter()
+                .filter(|entry| !entry.name.trim().is_empty())
+                .map(|entry| (entry.name.to_lowercase(), entry))
+                .collect::<HashMap<_, _>>()
+        })
+        .unwrap_or_default();
+    let global = global_json
+        .and_then(|json| serde_json::from_str::<GlobalResponse>(json).ok())
+        .and_then(|response| response.achievement_percentages)
+        .map(|stats| {
+            stats
+                .achievements
+                .into_iter()
+                .filter(|entry| !entry.name.trim().is_empty())
+                .filter_map(|entry| {
+                    rarity_percent(entry.percent.as_ref())
+                        .map(|percent| (entry.name.to_lowercase(), percent))
+                })
+                .collect::<HashMap<_, _>>()
+        })
+        .unwrap_or_default();
+
+    let rows = stats
+        .achievements
+        .into_iter()
+        .filter(|achievement| !achievement.apiname.trim().is_empty())
+        .map(|achievement| {
+            let schema_entry = schema.get(&achievement.apiname.to_lowercase());
+            let hidden = schema_entry
+                .map(|entry| schema_hidden(entry.hidden.as_ref()))
+                .unwrap_or(false);
+            let description = schema_entry
+                .map(|entry| entry.description.trim().to_string())
+                .filter(|description| !description.is_empty())
+                .unwrap_or_else(|| {
+                    if hidden {
+                        "Succès masqué".to_string()
+                    } else {
+                        String::new()
+                    }
+                });
+            AchievementRow {
+                key: achievement.apiname.clone(),
+                id: String::new(),
+                name: schema_entry
+                    .map(|entry| entry.display_name.trim().to_string())
+                    .filter(|name| !name.is_empty())
+                    .unwrap_or_else(|| achievement.apiname.clone()),
+                description,
+                unlocked: achievement.achieved != 0,
+                progress: if achievement.achieved != 0 { 1.0 } else { 0.0 },
+                session: false,
+                rarity: global.get(&achievement.apiname.to_lowercase()).copied(),
+                icon_url: schema_entry.and_then(|entry| entry.icon.clone()),
+                icon_path: None,
+            }
+        })
+        .collect::<Vec<_>>();
+    let mut info = AchievementInfo {
+        total: rows.len() as u32,
+        unlocked: 0,
+        rows,
+    };
+    info.normalize();
+    Ok(info)
+}
+
+fn steam_get(
+    client: &Client,
+    url: &str,
+    query: &[(&str, &str)],
+    label: &str,
+) -> Result<String, String> {
+    let response = client
+        .get(url)
+        .query(query)
+        .send()
+        .map_err(|_| format!("connexion à {label} impossible"))?;
+    let status = response.status();
+    if status == reqwest::StatusCode::UNAUTHORIZED || status == reqwest::StatusCode::FORBIDDEN {
+        return Err("Steam Web API refuse la clé ou le profil est privé".to_string());
+    }
+    if !status.is_success() {
+        return Err(format!("{label} a répondu {}", status.as_u16()));
+    }
+    crate::net::text(response, MAX_RESPONSE_BYTES, label)
+}
+
+/// Lit les succès Steam avec la clé Web et le SteamID64 déjà configurés pour
+/// la bibliothèque. Le schéma et la rareté sont facultatifs : un jeu sans
+/// schéma public garde quand même ses noms d'API et ses déblocages.
+pub fn fetch_achievements(
+    app_id: &str,
+    api_key: &str,
+    steam_id: &str,
+) -> Result<AchievementInfo, String> {
+    let app_id = app_id
+        .parse::<u32>()
+        .ok()
+        .filter(|id| *id != 0)
+        .ok_or_else(|| "AppID Steam invalide".to_string())?;
+    if !valid_steam_id(steam_id) {
+        return Err("SteamID64 invalide".to_string());
+    }
+    if api_key.trim().is_empty() {
+        return Err("clé Steam Web API absente".to_string());
+    }
+    let app_id_text = app_id.to_string();
+    let client = Client::builder()
+        .timeout(std::time::Duration::from_secs(20))
+        .build()
+        .map_err(|_| "client HTTP Steam indisponible".to_string())?;
+    let player = steam_get(
+        &client,
+        PLAYER_ACHIEVEMENTS_URL,
+        &[
+            ("key", api_key),
+            ("steamid", steam_id),
+            ("appid", &app_id_text),
+            ("l", "english"),
+        ],
+        "succès Steam",
+    )?;
+    let schema = steam_get(
+        &client,
+        SCHEMA_URL,
+        &[("key", api_key), ("appid", &app_id_text), ("l", "english")],
+        "schéma des succès Steam",
+    )
+    .ok();
+    let global = steam_get(
+        &client,
+        GLOBAL_PERCENTAGES_URL,
+        &[("gameid", &app_id_text)],
+        "rareté des succès Steam",
+    )
+    .ok();
+    parse_achievements(&player, schema.as_deref(), global.as_deref())
+}
+
 /// Demande au client Steam installé de démarrer l'installation.
 /// Le succès de l'ouverture ne constitue pas une preuve d'installation.
 pub fn request_install(app_id: u32) -> Result<(), String> {
@@ -377,6 +637,50 @@ mod tests {
                 .any(|game| game.key == steam.key && game.install_path == steam.install_path)
         );
         assert!(merged.iter().any(|game| game.key == epic.key));
+    }
+
+    #[test]
+    fn les_succes_steam_fusionnent_schema_raretes_et_deblocages() {
+        let player = r#"{"playerstats":{"success":true,"achievements":[
+            {"apiname":"ACH_WIN","achieved":1,"unlocktime":1700000000},
+            {"apiname":"ACH_SECRET","achieved":0,"unlocktime":0}
+        ]}}"#;
+        let schema = r#"{"game":{"availableGameStats":{"achievements":[
+            {"name":"ACH_WIN","displayName":"Victoire","description":"Terminer le jeu","hidden":0,"icon":"https://cdn/win.jpg"},
+            {"name":"ACH_SECRET","displayName":"Secret","description":"","hidden":1}
+        ]}}}"#;
+        let global = r#"{"achievementpercentages":{"achievements":[
+            {"name":"ACH_WIN","percent":42.5},
+            {"name":"ACH_SECRET","percent":"3,2"}
+        ]}}"#;
+        let info = parse_achievements(player, Some(schema), Some(global)).unwrap();
+        assert_eq!(info.total, 2);
+        assert_eq!(info.unlocked, 1);
+        let win = info.rows.iter().find(|row| row.key == "ACH_WIN").unwrap();
+        assert_eq!(win.name, "Victoire");
+        assert!(win.unlocked);
+        assert_eq!(win.rarity, Some(42.5));
+        assert_eq!(win.icon_url.as_deref(), Some("https://cdn/win.jpg"));
+        let secret = info
+            .rows
+            .iter()
+            .find(|row| row.key == "ACH_SECRET")
+            .unwrap();
+        assert_eq!(secret.description, "Succès masqué");
+        assert_eq!(secret.rarity, Some(3.2));
+    }
+
+    #[test]
+    fn les_succes_steam_signalent_un_jeu_sans_statistiques() {
+        let response = r#"{"playerstats":{"success":false,"error":"Requested app has no stats"}}"#;
+        let error = parse_achievements(response, None, None).unwrap_err();
+        assert!(error.contains("no stats"));
+        assert!(
+            parse_achievements(r#"{"playerstats":{"success":true}}"#, None, None)
+                .unwrap()
+                .rows
+                .is_empty()
+        );
     }
 
     #[test]

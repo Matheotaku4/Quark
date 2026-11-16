@@ -1330,6 +1330,7 @@ impl Installation {
             Some(crate::providers::Provider::Steam) => "Steam",
             Some(crate::providers::Provider::Epic) => "Epic Games",
             Some(crate::providers::Provider::Gog) => "GOG",
+            Some(crate::providers::Provider::Itch) => "itch.io",
         }
     }
 
@@ -1339,6 +1340,7 @@ impl Installation {
             Some(crate::providers::Provider::Steam) => "steam",
             Some(crate::providers::Provider::Epic) => "epic",
             Some(crate::providers::Provider::Gog) => "gog",
+            Some(crate::providers::Provider::Itch) => "itch",
         }
     }
 }
@@ -2079,6 +2081,7 @@ impl Library {
                         crate::providers::Provider::Steam => "steam",
                         crate::providers::Provider::Epic => "epic",
                         crate::providers::Provider::Gog => "gog",
+                        crate::providers::Provider::Itch => "itch",
                     },
                     record.key.product_id
                 ),
