@@ -183,7 +183,7 @@ the blur radius is adjustable from 2 to 30 px and is part of the blur cache key.
 ### Library
 
 The top bar switches between **Grid** and **List** with a labelled segmented
-control, and the **Add** button sits next to it. The search field adapts to
+control, and the **Add** button sits next to it. A single search entry point in the top bar adapts to
 narrower windows. The list shows one row per game with a square icon, a status
 dot and a blue selection marker. The grid shows covers and opens the game page
 as an overlay.
@@ -198,16 +198,17 @@ other view. The **Filters** button groups status, Steam genre and tags in a
 single popup instead of stacking chips above the list; active filters are
 counted on the button and **Clear all** resets them. Group the list by status,
 store, genre or release year, or show a continuous list; group headers can be
-collapsed. Sort by name, last session, date added or play time. Library search
-now ignores accents and compares the title, developer, tags and genres
-separately, like the command palette.
+collapsed. Sort by name, last session, date added or play time. The global search
+ignores accents, covers local games, owned store games and settings, and
+requires a real substring so a query cannot scatter across unrelated fields.
 
 ![Filters menu](docs/images/filters-fr.png)
 
-Keyboard shortcuts: arrows navigate, `Enter` launches, `Ctrl+F` or `/` focuses
-the search field, `Esc` clears it and `Ctrl+Q` really quits Quark. `Ctrl+K`
-opens the command palette from any tab: type to fuzzy-search pages, actions and
-games, use `↑`/`↓` to move, `Enter` to open and `Esc` to close.
+Keyboard shortcuts: arrows navigate, `Enter` launches, `Ctrl+F` or `/` opens
+the same global search as `Ctrl+K`, `Esc` closes it and `Ctrl+Q` really quits
+Quark. The search runs from any tab: type to find pages, actions, local games,
+owned store games and settings, use `↑`/`↓` to move, `Enter` to open and `Esc`
+to close.
 
 ### Game page
 
@@ -405,8 +406,9 @@ and keeps the file.
 ## Settings
 
 Settings occupy the whole window, with a left sidebar and sections separated by
-accented headings. The content scrolls independently and `Esc` or the top-right
-**×** closes the page.
+accented headings. A search field above the sidebar finds a setting by task
+(for example **cloud saves** or **overlay**) and jumps to the right page. The
+content scrolls independently and `Esc` or the top-right **×** closes the page.
 
 - **Appearance:** interface language, 13 themes, interface size (compact mode,
   sidebar, rows, covers, banner and overview widths), random hero background,

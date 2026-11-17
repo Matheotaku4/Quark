@@ -58,266 +58,12 @@ impl QuarkApp {
                     self.grid_page(ui);
                 } else {
                     self.detail_pane(ui);
+                    if self.detail_from_home {
+                        let x = self.lib.settings.sidebar_width.clamp(220.0, 340.0) + 18.0;
+                        self.detail_back_button(ui.ctx(), x);
+                    }
                 }
             });
-    }
-
-    /// Recherche rapide ouverte par la loupe : les jeux installés d'abord, puis
-    /// les jeux achetés dans les boutiques qui ne sont pas encore dans Quark.
-    pub(crate) fn library_search_dialog(&mut self, ctx: &egui::Context) {
-        if !self.library_search_open {
-            return;
-        }
-        let pal = self.pal;
-        let mut close = false;
-        let mut open_library: Option<String> = None;
-        let mut open_provider: Option<(crate::providers::ProviderGameKey, String)> = None;
-
-        fn provider_label(provider: crate::providers::Provider) -> &'static str {
-            match provider {
-                crate::providers::Provider::Steam => "Steam",
-                crate::providers::Provider::Epic => "Epic Games",
-                crate::providers::Provider::Gog => "GOG",
-                crate::providers::Provider::Itch => "itch.io",
-            }
-        }
-
-        fn result_row(ui: &mut egui::Ui, pal: &Palette, title: &str, subtitle: &str) -> bool {
-            let width = ui.available_width().max(220.0);
-            let (rect, response) = ui.allocate_exact_size(Vec2::new(width, 46.0), Sense::click());
-            let painter = ui.painter_at(rect);
-            let hover = ui.ctx().animate_bool_with_time(
-                egui::Id::new(("quark_search_row", title)),
-                response.hovered(),
-                0.10,
-            );
-            if hover > 0.0 {
-                painter.rect_filled(rect, 6.0, pal.surface_hover.gamma_multiply(hover));
-            }
-            let thumb = Rect::from_min_size(
-                Pos2::new(rect.left() + 6.0, rect.top() + 7.0),
-                Vec2::splat(32.0),
-            );
-            let letter = title.chars().next().unwrap_or('?').to_string();
-            widgets::monogram(&painter, thumb, &letter, theme::monogram_color(title), pal);
-            let text_x = thumb.right() + 10.0;
-            let text_w = (rect.right() - text_x - 8.0).max(80.0);
-            let title_job = single_line(title, 12.5, pal.text, text_w);
-            painter.galley(
-                Pos2::new(text_x, rect.top() + 8.0),
-                painter.layout_job(title_job),
-                pal.text,
-            );
-            let sub_job = single_line(subtitle, 10.5, pal.text_faint, text_w);
-            painter.galley(
-                Pos2::new(text_x, rect.top() + 26.0),
-                painter.layout_job(sub_job),
-                pal.text_faint,
-            );
-            response
-                .on_hover_cursor(egui::CursorIcon::PointingHand)
-                .clicked()
-        }
-
-        let modal = egui::Modal::new(egui::Id::new("quark_library_search"))
-            .backdrop_color(Color32::from_black_alpha(190))
-            .frame(
-                egui::Frame::new()
-                    .fill(pal.header)
-                    .stroke(egui::Stroke::new(1.0_f32, pal.border))
-                    .corner_radius(12.0)
-                    .inner_margin(16.0),
-            )
-            .show(ctx, |ui| {
-                ui.set_width(620.0);
-                ui.horizontal(|ui| {
-                    ui.label(
-                        crate::i18n::rich("RECHERCHER")
-                            .size(11.0)
-                            .strong()
-                            .color(pal.accent),
-                    );
-                    ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-                        if widgets::icon_button(ui, 26.0, Icon::Close, &pal, "Fermer (Échap)")
-                            .clicked()
-                        {
-                            close = true;
-                        }
-                    });
-                });
-                ui.add_space(8.0);
-                let response = ui.add_sized(
-                    Vec2::new(ui.available_width(), 36.0),
-                    egui::TextEdit::singleline(&mut self.library_search_query)
-                        .id(egui::Id::new("quark_library_search_query"))
-                        .hint_text(crate::i18n::tr("Rechercher un jeu…"))
-                        .font(FontId::proportional(14.0)),
-                );
-                if self.library_search_focus {
-                    response.request_focus();
-                    self.library_search_focus = false;
-                }
-                if ui.input(|input| input.key_pressed(egui::Key::Escape)) {
-                    close = true;
-                }
-                let query = self.library_search_query.trim().to_string();
-                let needle = config::normalized_search(&query);
-                ui.add_space(10.0);
-                if needle.is_empty() {
-                    ui.label(
-                        crate::i18n::rich("Tape le nom d'un jeu installé ou acheté.")
-                            .size(12.0)
-                            .color(pal.text_dim),
-                    );
-                    return;
-                }
-
-                // Installés : la bibliothèque Quark, puis les installations de
-                // boutique qui n'ont pas encore de fiche dans Quark.
-                let mut installed: Vec<Game> = self
-                    .lib
-                    .games
-                    .iter()
-                    .filter(|game| game.matches_query(&query))
-                    .cloned()
-                    .collect();
-                installed.sort_by_key(|game| game.name.to_lowercase());
-                let installed_provider: Vec<crate::providers::ProviderGame> = self
-                    .lib
-                    .provider_library
-                    .games
-                    .iter()
-                    .filter(|record| record.owned)
-                    .filter(|record| {
-                        record.install_state == crate::providers::InstallState::Installed
-                    })
-                    .filter(|record| {
-                        record
-                            .quark_game_id
-                            .as_deref()
-                            .is_none_or(|id| self.lib.get(id).is_none())
-                    })
-                    .filter(|record| config::normalized_search(&record.title).contains(&needle))
-                    .cloned()
-                    .collect();
-                let purchased: Vec<crate::providers::ProviderGame> = self
-                    .lib
-                    .provider_library
-                    .games
-                    .iter()
-                    .filter(|record| record.owned)
-                    .filter(|record| {
-                        record.install_state != crate::providers::InstallState::Installed
-                    })
-                    .filter(|record| {
-                        record
-                            .quark_game_id
-                            .as_deref()
-                            .is_none_or(|id| self.lib.get(id).is_none())
-                    })
-                    .filter(|record| config::normalized_search(&record.title).contains(&needle))
-                    .cloned()
-                    .collect();
-                let installed_count = installed.len() + installed_provider.len();
-                let total = installed_count + purchased.len();
-                if total == 0 {
-                    ui.label(
-                        crate::i18n::rich(format!(
-                            "{} « {query} ».",
-                            crate::i18n::tr("Aucun jeu trouvé pour")
-                        ))
-                        .size(12.0)
-                        .color(pal.text_dim),
-                    );
-                    return;
-                }
-
-                egui::ScrollArea::vertical()
-                    .id_salt("quark_library_search_results")
-                    .max_height(430.0)
-                    .show(ui, |ui| {
-                        if installed_count > 0 {
-                            ui.label(
-                                crate::i18n::rich(format!(
-                                    "{} · {installed_count}",
-                                    crate::i18n::tr("INSTALLÉS")
-                                ))
-                                .size(10.5)
-                                .strong()
-                                .color(pal.accent),
-                            );
-                            ui.add_space(2.0);
-                            for game in installed.iter().take(10) {
-                                let subtitle = if game.exe_missing() {
-                                    crate::i18n::tr("Exécutable introuvable")
-                                } else {
-                                    crate::i18n::tr("Installé · Bibliothèque")
-                                };
-                                if result_row(ui, &pal, &game.name, &subtitle) {
-                                    open_library = Some(game.id.clone());
-                                }
-                            }
-                            for record in installed_provider.iter().take(10) {
-                                let subtitle = format!(
-                                    "{} · {}",
-                                    provider_label(record.key.provider),
-                                    crate::i18n::tr("Installé")
-                                );
-                                if result_row(ui, &pal, &record.title, &subtitle) {
-                                    open_provider =
-                                        Some((record.key.clone(), record.title.clone()));
-                                }
-                            }
-                            ui.add_space(8.0);
-                        }
-                        if !purchased.is_empty() {
-                            ui.label(
-                                crate::i18n::rich(format!(
-                                    "{} · {}",
-                                    crate::i18n::tr("ACHETÉS"),
-                                    purchased.len()
-                                ))
-                                .size(10.5)
-                                .strong()
-                                .color(pal.text_faint),
-                            );
-                            ui.add_space(2.0);
-                            for record in purchased.iter().take(10) {
-                                let subtitle = format!(
-                                    "{} · {}",
-                                    provider_label(record.key.provider),
-                                    crate::i18n::tr("Acheté")
-                                );
-                                if result_row(ui, &pal, &record.title, &subtitle) {
-                                    open_provider =
-                                        Some((record.key.clone(), record.title.clone()));
-                                }
-                            }
-                        }
-                    });
-            });
-
-        if let Some(id) = open_library {
-            self.selected = Some(id.clone());
-            self.tab = crate::app::Tab::Library;
-            self.home = false;
-            // En grille, le résultat ouvre la fiche pleine page ; en liste, il
-            // remplit simplement le panneau de droite.
-            self.overlay = (self.lib.settings.view == ViewMode::Grid).then_some(id);
-            close = true;
-        }
-        if let Some((key, title)) = open_provider {
-            self.tab = crate::app::Tab::MyGames;
-            self.home = false;
-            self.my_games_store = Some(key.provider);
-            self.my_games_query = title;
-            close = true;
-        }
-        if close || modal.should_close() {
-            self.library_search_open = false;
-            self.library_search_query.clear();
-            self.library_search_focus = false;
-        }
     }
 
     /// Grille pleine largeur (vue grille) : toutes les couvertures, sans fiche.
@@ -508,8 +254,7 @@ impl QuarkApp {
                 }
             });
         if let Some(id) = opened {
-            self.overlay = Some(id.clone());
-            self.selected = Some(id);
+            self.open_game_page(&id, false);
         }
     }
 
@@ -523,17 +268,20 @@ impl QuarkApp {
         };
         if self.lib.get(&id).is_none() {
             self.overlay = None;
+            self.detail_from_home = false;
             self.grid_page(ui);
             return;
         }
         self.selected = Some(id);
         self.detail_pane(ui);
-        self.detail_back_button(ui.ctx());
+        self.detail_back_button(ui.ctx(), 18.0);
     }
 
     /// Retour flottant au-dessus de la fiche : il reste visible quand on fait
-    /// défiler les actualités, sans ajouter une barre de fenêtre.
-    fn detail_back_button(&mut self, ctx: &egui::Context) {
+    /// défiler les actualités, sans ajouter une barre de fenêtre. Le libellé
+    /// dit où l'on revient, et `x` laisse la place à la colonne de gauche en
+    /// vue liste.
+    fn detail_back_button(&mut self, ctx: &egui::Context, x: f32) {
         let pal = self.pal;
         let top = if self.lib.settings.ui_compact {
             54.0 + 8.0
@@ -541,9 +289,14 @@ impl QuarkApp {
             62.0 + 8.0
         };
         let mut back = false;
+        let label = if self.detail_from_home {
+            "Retour à l'accueil"
+        } else {
+            "Retour"
+        };
         egui::Area::new(egui::Id::new("quark_detail_back"))
             .order(egui::Order::Middle)
-            .fixed_pos(Pos2::new(18.0, top))
+            .fixed_pos(Pos2::new(x, top))
             .show(ctx, |ui| {
                 egui::Frame::new()
                     .fill(pal.surface.gamma_multiply(0.94))
@@ -551,13 +304,13 @@ impl QuarkApp {
                     .corner_radius(18.0)
                     .inner_margin(egui::Margin::symmetric(8, 4))
                     .show(ui, |ui| {
-                        if widgets::ghost_button(ui, "Retour", &pal, Icon::ArrowLeft).clicked() {
+                        if widgets::ghost_button(ui, label, &pal, Icon::ArrowLeft).clicked() {
                             back = true;
                         }
                     });
             });
         if back {
-            self.overlay = None;
+            self.close_game_page();
         }
     }
 
@@ -762,7 +515,7 @@ impl QuarkApp {
                         // En vue grille, la fiche s'ouvre en pleine page,
                         // comme depuis une tuile de la grille principale.
                         if self.lib.settings.view == ViewMode::Grid {
-                            self.overlay = Some(id.to_string());
+                            self.open_game_page(id, false);
                         }
                     }
                 }
@@ -1132,6 +885,7 @@ impl QuarkApp {
                             .get(AssetKind::Logo)
                             .filter(|path| path.exists())
                             .and_then(|path| self.texture(ui.ctx(), path));
+                        let mut logo_drawn = false;
                         if let Some(texture) = logo_texture {
                             let size = texture.size_vec2();
                             if size.x > 0.0 && size.y > 0.0 {
@@ -1150,8 +904,10 @@ impl QuarkApp {
                                     Rect::from_min_max(Pos2::ZERO, Pos2::new(1.0, 1.0)),
                                     Color32::from_white_alpha(245),
                                 );
+                                logo_drawn = true;
                             }
-                        } else {
+                        }
+                        if !logo_drawn {
                             painter.text(
                                 Pos2::new(hero.left() + 34.0, logo_rect.bottom()),
                                 Align2::LEFT_BOTTOM,
@@ -2187,13 +1943,16 @@ impl QuarkApp {
         if !linked {
             ui.horizontal(|ui| {
                 ui.add_space(32.0);
-                ui.label(
-                    crate::i18n::rich(
+                ui.vertical(|ui| {
+                    ui.set_max_width((width - 64.0).clamp(220.0, 680.0));
+                    widgets::status_note(
+                        ui,
+                        pal,
+                        Icon::Info,
                         "Ce jeu n'est pas lié à la fiche Steam : pas d'actualités à afficher.",
-                    )
-                    .size(12.0)
-                    .color(pal.text_faint),
-                );
+                        pal.text_faint,
+                    );
+                });
             });
             return;
         }
@@ -2201,13 +1960,17 @@ impl QuarkApp {
         if loading {
             ui.horizontal(|ui| {
                 ui.add_space(32.0);
-                ui.spinner();
-                ui.add_space(6.0);
-                ui.label(
-                    crate::i18n::rich("Chargement des actualités\u{2026}")
-                        .size(12.0)
-                        .color(pal.text_dim),
-                );
+                ui.vertical(|ui| {
+                    ui.set_max_width((width - 64.0).clamp(220.0, 680.0));
+                    ui.spinner();
+                    ui.add_space(6.0);
+                    widgets::skeleton_lines(ui, pal, ui.available_width(), 3);
+                    ui.label(
+                        crate::i18n::rich("Chargement des actualités\u{2026}")
+                            .size(12.0)
+                            .color(pal.text_dim),
+                    );
+                });
             });
             return;
         }
@@ -2215,11 +1978,16 @@ impl QuarkApp {
         if let Some(message) = failure {
             ui.horizontal(|ui| {
                 ui.add_space(32.0);
-                ui.label(
-                    crate::i18n::rich(format!("Actualités indisponibles · {message}"))
-                        .size(12.0)
-                        .color(pal.danger),
-                );
+                ui.vertical(|ui| {
+                    ui.set_max_width((width - 64.0).clamp(220.0, 680.0));
+                    widgets::status_note(
+                        ui,
+                        pal,
+                        Icon::Info,
+                        format!("Actualités indisponibles · {message}"),
+                        pal.danger,
+                    );
+                });
             });
             return;
         }
@@ -2227,11 +1995,16 @@ impl QuarkApp {
         if items.is_empty() {
             ui.horizontal(|ui| {
                 ui.add_space(32.0);
-                ui.label(
-                    crate::i18n::rich("Aucune actualité pour ce jeu.")
-                        .size(12.0)
-                        .color(pal.text_faint),
-                );
+                ui.vertical(|ui| {
+                    ui.set_max_width((width - 64.0).clamp(220.0, 680.0));
+                    widgets::status_note(
+                        ui,
+                        pal,
+                        Icon::Info,
+                        "Aucune actualité pour ce jeu.",
+                        pal.text_faint,
+                    );
+                });
             });
             return;
         }

@@ -3,7 +3,8 @@
 //! (XDG Desktop Portal), ouverts via `QuarkApp::pick_file` / `pick_directory`.
 
 use crate::app::{
-    AddStep, GameSection, GameTab, PickerTarget, QuarkApp, SearchState, SettingsTab, UpdateState,
+    AddStep, GameSection, GameTab, PickerTarget, QuarkApp, SETTINGS_TASKS, SearchState,
+    SettingsTab, SettingsTask, UpdateState,
 };
 use crate::config::{
     self, AssetKind, EnvVar, GameActionPlacement, GameStatus, ProtonMode, StartPage, ThemeMode,
@@ -537,12 +538,61 @@ impl QuarkApp {
     // Paramètres généraux
     // -----------------------------------------------------------------------
 
+    /// Résultat de la recherche de réglages : une tâche formulée comme une action,
+    /// avec l'onglet où elle se trouve. Le clic ouvre directement la bonne page.
+    fn settings_task_row(ui: &mut egui::Ui, pal: &Palette, task: &SettingsTask) -> bool {
+        let width = ui.available_width().max(260.0);
+        let (rect, response) = ui.allocate_exact_size(Vec2::new(width, 44.0), Sense::click());
+        let hover = ui.ctx().animate_bool_with_time(
+            ui.id().with(("settings_task", task.label)),
+            response.hovered(),
+            0.12,
+        );
+        let painter = ui.painter_at(rect);
+        if response.hovered() || hover > 0.0 {
+            painter.rect_filled(rect, 8.0, pal.surface_hover.gamma_multiply(hover.max(0.35)));
+        }
+        let icon_rect = Rect::from_center_size(
+            Pos2::new(rect.left() + 22.0, rect.center().y),
+            Vec2::splat(17.0),
+        );
+        widgets::paint_icon(ui, icon_rect, Icon::ArrowRight, pal.accent);
+        let tab_label = SettingsTab::ALL
+            .iter()
+            .find(|(tab, _)| *tab == task.tab)
+            .map(|(_, label)| crate::i18n::tr(label))
+            .unwrap_or_default();
+        let title = crate::i18n::tr(task.label);
+        painter.text(
+            Pos2::new(rect.left() + 42.0, rect.center().y - 8.0),
+            Align2::LEFT_CENTER,
+            title,
+            FontId::proportional(13.0),
+            pal.text,
+        );
+        painter.text(
+            Pos2::new(rect.left() + 42.0, rect.center().y + 9.0),
+            Align2::LEFT_CENTER,
+            format!("{} · {tab_label}", crate::i18n::tr("Paramètres")),
+            FontId::proportional(10.5),
+            pal.text_faint,
+        );
+        response
+            .on_hover_cursor(egui::CursorIcon::PointingHand)
+            .clicked()
+    }
+
     pub(crate) fn settings_dialog(&mut self, ctx: &egui::Context) {
         if !self.settings_open {
             return;
         }
         if ctx.input(|i| i.key_pressed(egui::Key::Escape)) {
-            self.settings_open = false;
+            if !self.settings_query.is_empty() {
+                self.settings_query.clear();
+                self.settings_focus = false;
+            } else {
+                self.settings_open = false;
+            }
             return;
         }
         let pal = self.pal;
@@ -619,6 +669,26 @@ impl QuarkApp {
                             // d'onglets qui déborde à 1024 px.
                             ui.vertical(|ui| {
                                 ui.set_width(220.0);
+                                ui.horizontal(|ui| {
+                                    let (icon_rect, _) =
+                                        ui.allocate_exact_size(Vec2::splat(16.0), Sense::hover());
+                                    widgets::paint_icon(ui, icon_rect, Icon::Search, pal.text_faint);
+                                    ui.add_space(4.0);
+                                    let response = ui.add_sized(
+                                        Vec2::new(190.0, 30.0),
+                                        egui::TextEdit::singleline(&mut self.settings_query)
+                                            .id(egui::Id::new("quark_settings_query"))
+                                            .hint_text(crate::i18n::tr(
+                                                "Chercher un réglage…",
+                                            ))
+                                            .font(FontId::proportional(12.5)),
+                                    );
+                                    if self.settings_focus {
+                                        response.request_focus();
+                                        self.settings_focus = false;
+                                    }
+                                });
+                                ui.add_space(8.0);
                                 for (tab, label) in SettingsTab::ALL {
                                     if widgets::nav_entry(
                                         ui,
@@ -637,6 +707,45 @@ impl QuarkApp {
 
                             ui.vertical(|ui| {
                                 ui.set_width(ui.available_width());
+                                let settings_query = self.settings_query.trim().to_string();
+                                if !settings_query.is_empty() {
+                                    ui.label(
+                                        crate::i18n::rich("RÉSULTATS")
+                                            .size(11.0)
+                                            .strong()
+                                            .color(pal.accent),
+                                    );
+                                    ui.add_space(8.0);
+                                    let mut found = false;
+                                    let needle = crate::config::normalized_search(&settings_query);
+                                    for task in SETTINGS_TASKS {
+                                        let localized = crate::i18n::tr(task.label);
+                                        if !crate::config::normalized_search(task.label)
+                                            .contains(&needle)
+                                            && !crate::config::normalized_search(&localized)
+                                                .contains(&needle)
+                                            && !crate::config::normalized_search(task.keywords)
+                                                .contains(&needle)
+                                        {
+                                            continue;
+                                        }
+                                        found = true;
+                                        if Self::settings_task_row(ui, &pal, task) {
+                                            self.settings_tab = task.tab;
+                                            self.settings_query.clear();
+                                            self.settings_focus = false;
+                                            break;
+                                        }
+                                    }
+                                    if !found {
+                                        ui.label(
+                                            crate::i18n::rich("Aucun réglage ne correspond.")
+                                                .size(12.0)
+                                                .color(pal.text_dim),
+                                        );
+                                    }
+                                    return;
+                                }
                                 let tab_label = SettingsTab::ALL
                                     .iter()
                                     .find(|(tab, _)| *tab == self.settings_tab)
@@ -659,6 +768,10 @@ impl QuarkApp {
                                     .max_height(page_height)
                                     .auto_shrink([false, true])
                                     .show(ui, |ui| {
+                                        // Réserve la gouttière du scrollbar vertical :
+                                        // sans elle, les cartes calculées sur toute la
+                                        // largeur déclenchent une barre horizontale.
+                                        ui.set_width((ui.available_width() - 12.0).max(240.0));
                                         let page_fade = ui.ctx().animate_bool_with_time(
                                             egui::Id::new((
                                                 "quark_settings_page",
@@ -709,14 +822,18 @@ impl QuarkApp {
                                 "Le thème s'applique immédiatement à toute l'interface. L'aperçu utilise les couleurs de chaque palette.",
                             ),
                             |ui| {
-                                let columns = if ui.available_width() >= 900.0 { 5 } else { 4 };
+                                let columns = if ui.available_width() >= theme::NARROW { 5 } else { 4 };
                                 let gap = 10.0;
                                 let card_width = (ui.available_width()
                                     - gap * (columns - 1) as f32)
                                     / columns as f32;
                                 for row in ThemeMode::ALL.chunks(columns) {
                                     ui.horizontal(|ui| {
-                                        for mode in row {
+                                        // Les cartes gèrent elles-mêmes l'espacement :
+                                        // le spacing automatique doublerait le gap et
+                                        // ferait déborder la dernière carte.
+                                        ui.spacing_mut().item_spacing.x = 0.0;
+                                        for (index, mode) in row.iter().enumerate() {
                                             if theme_card(
                                                 ui,
                                                 &pal,
@@ -727,7 +844,11 @@ impl QuarkApp {
                                                 self.lib.settings.theme = *mode;
                                                 self.touch();
                                             }
-                                            ui.add_space(gap);
+                                            // Le dernier card ne doit pas ajouter un
+                                            // gap qui déborderait de la largeur.
+                                            if index + 1 < row.len() {
+                                                ui.add_space(gap);
+                                            }
                                         }
                                     });
                                     ui.add_space(gap);

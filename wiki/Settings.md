@@ -6,7 +6,9 @@
 ![Settings](https://raw.githubusercontent.com/Matheotaku4/Quark/main/docs/images/settings-en.png)
 
 Since 1.4, settings fill the whole window as cards, with side navigation and
-separate sections. Every change is saved automatically; there is no **Apply**
+separate sections. A search field above the navigation finds a setting by task
+(for example **cloud saves**, **overlay** or **disk space**) and opens the page
+that contains it. Every change is saved automatically; there is no **Apply**
 button.
 
 ## Appearance

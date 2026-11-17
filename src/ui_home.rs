@@ -353,11 +353,7 @@ impl QuarkApp {
             self.show_slide(index, recent.len());
         }
         if open_game {
-            self.selected = Some(id.clone());
-            self.home = false;
-            if self.lib.settings.view == crate::config::ViewMode::Grid {
-                self.overlay = Some(id);
-            }
+            self.open_game_page(&id, true);
         }
         if open_protondb && let Some(app_id) = game.steam_app_id {
             let url = crate::protondb::Tier::url(app_id);
@@ -511,11 +507,7 @@ impl QuarkApp {
             });
 
         if let Some(id) = opened {
-            self.selected = Some(id.clone());
-            self.home = false;
-            if self.lib.settings.view == crate::config::ViewMode::Grid {
-                self.overlay = Some(id);
-            }
+            self.open_game_page(&id, true);
         }
         true
     }
@@ -698,12 +690,9 @@ impl QuarkApp {
 
         if let Some(id) = opened {
             // Vue grille : la fiche prend toute la page. Vue liste : elle prend
-            // simplement la place du panneau de droite.
-            self.selected = Some(id.clone());
-            self.home = false;
-            if self.lib.settings.view == crate::config::ViewMode::Grid {
-                self.overlay = Some(id);
-            }
+            // simplement la place du panneau de droite. Dans les deux cas, le
+            // retour ramène à l'accueil et à sa position.
+            self.open_game_page(&id, true);
         }
     }
 }

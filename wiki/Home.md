@@ -74,8 +74,8 @@ repository under [`wiki/`](https://github.com/Matheotaku4/Quark/tree/main/wiki).
 
 | Shortcut | Action |
 | --- | --- |
-| `Ctrl+K` | Command palette: pages, actions and games |
-| `Ctrl+F` or `/` | Search the library |
+| `Ctrl+K` | Global search: pages, actions, games and settings |
+| `Ctrl+F` or `/` | Global search (games, stores, settings) |
 | `Escape` | Close a search, panel or the overlay |
 | `Enter` | Launch the selected game |
 | Arrow keys | Move through the library |
