@@ -282,21 +282,21 @@ fn dynamic_english(text: &str) -> String {
 pub fn release_summary() -> [&'static str; 6] {
     if !matches!(language(), UiLanguage::French) {
         [
-            "The FPS counter is now a Windows DLL dropped next to the game: it hooks Direct3D 11 and draws a Steam-like overlay that hides when the game loses focus.",
-            "The in-game settings install the d3d11.dll proxy and enable the counter for Windows games launched with Proton or Wine, without overwriting a foreign DLL.",
-            "Epic sign-in is direct: Quark exchanges the authorization code itself and writes the Legendary session, without running legendary auth.",
-            "Spanish, German and Portuguese join French and English, with complete interface catalogues and a --lang option.",
-            "cargo fmt --check and clippy -D warnings now guard every change, and the overlay DLL is rebuilt in the release workflow.",
-            "The existing Quark panel, screenshots, achievements and cloud saves are unchanged; the DLL only adds the FPS counter.",
+            "Home is now its own page, with a dedicated tab, a full-width hero and a carousel of recent games.",
+            "A game page opens full-width from the grid, and Back returns to Home or the library depending on where you came from.",
+            "One global search (Ctrl+F, Ctrl+K or the magnifier) covers local games, store games and settings.",
+            "Settings can be searched by task: type “cloud saves” and the right page opens directly.",
+            "Loading, error and missing-artwork states now share the same layout, without page jumps.",
+            "All five interface languages are checked at 900, 1024 and 1360 px, with the same visual landmarks.",
         ]
     } else {
         [
-            "Le compteur FPS est désormais une DLL Windows posée à côté du jeu : elle accroche Direct3D 11 et affiche un overlay façon Steam qui se cache quand le jeu perd le focus.",
-            "Les réglages « En jeu » installent le proxy d3d11.dll et activent le compteur pour les jeux Windows lancés avec Proton ou Wine, sans écraser une DLL étrangère.",
-            "La connexion Epic est directe : Quark échange lui-même le code d'autorisation et écrit la session Legendary, sans lancer legendary auth.",
-            "L'espagnol, l'allemand et le portugais rejoignent le français et l'anglais, avec des catalogues complets et l'option --lang.",
-            "cargo fmt --check et clippy -D warnings protègent désormais chaque changement, et la DLL de l'overlay est reconstruite dans le workflow de release.",
-            "Le panneau Quark existant, les captures, les succès et les sauvegardes cloud ne changent pas ; la DLL ajoute seulement le compteur FPS.",
+            "L'accueil est désormais une page autonome avec son onglet, un hero plein écran et un carrousel de jeux récents.",
+            "La fiche d'un jeu s'ouvre en pleine page depuis la grille, avec un retour contextuel vers l'accueil ou la bibliothèque.",
+            "Une recherche globale unique (Ctrl+F, Ctrl+K ou la loupe) réunit les jeux locaux, les jeux de boutique et les réglages.",
+            "Les réglages se cherchent par tâche : tapez « sauvegardes cloud » et la bonne page s'ouvre directement.",
+            "Les chargements, erreurs et artworks manquants ont désormais des états communs, sans saut de mise en page.",
+            "Les cinq langues de l'interface sont vérifiées aux largeurs 900, 1024 et 1360 px, avec les mêmes repères visuels.",
         ]
     }
 }
@@ -455,11 +455,11 @@ mod tests {
     fn le_resume_de_version_suit_la_langue() {
         let _guard = language_lock();
         set_language(UiLanguage::French);
-        assert!(release_summary()[0].starts_with("Le compteur FPS"));
-        assert!(release_summary()[1].starts_with("Les réglages « En jeu »"));
+        assert!(release_summary()[0].starts_with("L'accueil est désormais"));
+        assert!(release_summary()[1].starts_with("La fiche d'un jeu"));
         set_language(UiLanguage::English);
-        assert!(release_summary()[0].starts_with("The FPS counter"));
-        assert!(release_summary()[1].starts_with("The in-game settings"));
+        assert!(release_summary()[0].starts_with("Home is now"));
+        assert!(release_summary()[1].starts_with("A game page"));
         assert!(release_title().starts_with("What's new"));
         set_language(UiLanguage::French);
     }
