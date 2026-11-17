@@ -3401,9 +3401,18 @@ impl QuarkApp {
         self.tab = Tab::Library;
         self.selected = Some(id.to_string());
         self.marked.clear();
+        // Si la fiche était déjà ouverte depuis l'accueil, on garde la vignette
+        // de départ : une seconde ouverture depuis la palette ne doit pas la
+        // remplacer par le jeu choisi. Sinon, on mémorise la vignette réellement
+        // affichée, qui peut différer du jeu ouvert depuis les favoris/la grille.
+        let was_detail_from_home = self.detail_from_home;
         self.home = false;
         self.detail_from_home = from_home;
-        self.detail_return_carousel = from_home.then(|| id.to_string());
+        if !from_home {
+            self.detail_return_carousel = None;
+        } else if !was_detail_from_home {
+            self.detail_return_carousel = self.recent_ids().get(self.carousel).cloned();
+        }
         self.overlay = (self.lib.settings.view == ViewMode::Grid).then(|| id.to_string());
     }
 
