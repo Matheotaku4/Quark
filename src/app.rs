@@ -801,7 +801,7 @@ pub struct QuarkApp {
     last_view: ViewMode,
     /// Bannières floutées (fond de la fiche jeu), une par fichier.
     pub blurs: crate::images::BlurCache,
-    /// Fiche du jeu affichée en surimpression (vue grille).
+    /// Fiche du jeu affichée en pleine page (vue grille).
     pub overlay: Option<String>,
     /// Import de la bibliothèque Steam installée.
     pub steam_import: Option<SteamImport>,
@@ -3074,18 +3074,22 @@ impl QuarkApp {
                     if widgets::tab(ui, "Accueil", home_active, &pal).clicked() {
                         self.tab = Tab::Library;
                         self.home = true;
+                        self.overlay = None;
                     }
                     if widgets::tab(ui, "Boutique", self.tab == Tab::Store, &pal).clicked() {
                         self.tab = Tab::Store;
                         self.home = false;
+                        self.overlay = None;
                     }
                     if widgets::tab(ui, "Mes jeux", self.tab == Tab::MyGames, &pal).clicked() {
                         self.tab = Tab::MyGames;
                         self.home = false;
+                        self.overlay = None;
                     }
                     if widgets::tab(ui, "Bibliothèque", library_active, &pal).clicked() {
                         self.tab = Tab::Library;
                         self.home = false;
+                        self.overlay = None;
                     }
 
                     ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
@@ -3528,7 +3532,9 @@ impl QuarkApp {
             return;
         }
         if escape {
-            if self.tab != Tab::Library {
+            if self.overlay.is_some() {
+                self.overlay = None;
+            } else if self.tab != Tab::Library {
                 self.tab = Tab::Library;
             } else if self.home {
                 self.home = false;
@@ -4267,6 +4273,7 @@ impl QuarkApp {
     pub fn set_view(&mut self, view: ViewMode) {
         if self.lib.settings.view != view {
             self.lib.settings.view = view;
+            self.overlay = None;
             self.touch();
         }
     }

@@ -354,11 +354,9 @@ impl QuarkApp {
         }
         if open_game {
             self.selected = Some(id.clone());
-            // En vue grille, la fiche s'ouvre par-dessus le carrousel.
+            self.home = false;
             if self.lib.settings.view == crate::config::ViewMode::Grid {
                 self.overlay = Some(id);
-            } else {
-                self.home = false;
             }
         }
         if open_protondb && let Some(app_id) = game.steam_app_id {
@@ -513,12 +511,10 @@ impl QuarkApp {
             });
 
         if let Some(id) = opened {
+            self.selected = Some(id.clone());
+            self.home = false;
             if self.lib.settings.view == crate::config::ViewMode::Grid {
-                self.selected = Some(id.clone());
                 self.overlay = Some(id);
-            } else {
-                self.selected = Some(id);
-                self.home = false;
             }
         }
         true
@@ -701,14 +697,12 @@ impl QuarkApp {
         }
 
         if let Some(id) = opened {
-            // Vue grille : la fiche s'ouvre en surimpression, la grille reste
-            // en place derrière. Vue liste : la fiche prend la place du panneau.
+            // Vue grille : la fiche prend toute la page. Vue liste : elle prend
+            // simplement la place du panneau de droite.
+            self.selected = Some(id.clone());
+            self.home = false;
             if self.lib.settings.view == crate::config::ViewMode::Grid {
-                self.selected = Some(id.clone());
                 self.overlay = Some(id);
-            } else {
-                self.selected = Some(id);
-                self.home = false;
             }
         }
     }

@@ -16,14 +16,15 @@ impl QuarkApp {
     pub(crate) fn library_tab(&mut self, ctx: &egui::Context) {
         let pal = self.pal;
         let view = self.lib.settings.view;
-        // Vue grille : **seulement** la grille. La fiche du jeu s'ouvre en
-        // surimpression, avec sa croix, et se ferme d'un clic à côté.
+        // Vue grille : **seulement** la grille. Un clic sur une jaquette ouvre
+        // la fiche en pleine page ; elle remplace la grille et sa colonne.
         let grid_only = view == ViewMode::Grid;
+        let detail_open = grid_only && self.overlay.is_some() && !self.home;
         // L'accueil est une page autonome : il n'a pas de colonne de filtres.
         // La bibliothèque garde la sienne, sauf quand elle est entièrement vide
         // et que la fiche peut utiliser toute la largeur.
         let empty_library = self.lib.games.is_empty();
-        if !self.home && !empty_library {
+        if !self.home && !empty_library && !detail_open {
             egui::SidePanel::left("quark_library_list")
                 .exact_width(self.lib.settings.sidebar_width.clamp(220.0, 340.0))
                 .resizable(false)
@@ -37,8 +38,9 @@ impl QuarkApp {
 
         // La fiche dessine sa propre bannière floutée : le panneau doit laisser
         // passer le fond au lieu de le repeindre en noir uni.
-        let see_through =
-            (!self.home && !grid_only) || (self.home && self.lib.settings.hero_background);
+        let see_through = detail_open
+            || (!self.home && !grid_only)
+            || (self.home && self.lib.settings.hero_background);
         egui::CentralPanel::default()
             .frame(egui::Frame::new().fill(if see_through {
                 Color32::TRANSPARENT
@@ -48,16 +50,14 @@ impl QuarkApp {
             .show(ctx, |ui| {
                 if self.home {
                     self.home_pane(ui);
+                } else if detail_open {
+                    self.detail_page(ui);
                 } else if grid_only {
                     self.grid_page(ui);
                 } else {
                     self.detail_pane(ui);
                 }
             });
-
-        if grid_only && !self.home {
-            self.detail_overlay(ctx);
-        }
     }
 
     /// Recherche rapide ouverte par la loupe : les jeux installés d'abord, puis
@@ -296,9 +296,12 @@ impl QuarkApp {
             });
 
         if let Some(id) = open_library {
-            self.selected = Some(id);
+            self.selected = Some(id.clone());
             self.tab = crate::app::Tab::Library;
             self.home = false;
+            // En grille, le résultat ouvre la fiche pleine page ; en liste, il
+            // remplit simplement le panneau de droite.
+            self.overlay = (self.lib.settings.view == ViewMode::Grid).then_some(id);
             close = true;
         }
         if let Some((key, title)) = open_provider {
@@ -508,56 +511,50 @@ impl QuarkApp {
         }
     }
 
-    /// Fiche du jeu en surimpression : croix, clic à côté, ou Échap pour fermer.
-    fn detail_overlay(&mut self, ctx: &egui::Context) {
+    /// Fiche du jeu en pleine page depuis la grille. La page remplace la
+    /// grille et occupe toute la zone sous la barre haute ; « Retour » ou
+    /// Échap ramène aux jaquettes.
+    fn detail_page(&mut self, ui: &mut egui::Ui) {
         let Some(id) = self.overlay.clone() else {
+            self.grid_page(ui);
             return;
         };
         if self.lib.get(&id).is_none() {
             self.overlay = None;
+            self.grid_page(ui);
             return;
         }
         self.selected = Some(id);
+        self.detail_pane(ui);
+        self.detail_back_button(ui.ctx());
+    }
+
+    /// Retour flottant au-dessus de la fiche : il reste visible quand on fait
+    /// défiler les actualités, sans ajouter une barre de fenêtre.
+    fn detail_back_button(&mut self, ctx: &egui::Context) {
         let pal = self.pal;
-        let screen = ctx.screen_rect();
-        let size = Vec2::new(
-            (screen.width() * 0.94).max(720.0),
-            (screen.height() * 0.92).max(480.0),
-        );
-        let name = self
-            .lib
-            .get(&self.overlay.clone().unwrap_or_default())
-            .map(|game| game.name.clone())
-            .unwrap_or_default();
-        let mut close = false;
-        let modal = egui::Modal::new(egui::Id::new("quark_game_overlay"))
-            .backdrop_color(Color32::from_black_alpha(200))
-            .frame(
-                egui::Frame::new()
-                    .fill(pal.bg)
-                    .stroke(egui::Stroke::new(1.0_f32, pal.border))
-                    .corner_radius(14.0)
-                    .inner_margin(egui::Margin::ZERO),
-            )
+        let top = if self.lib.settings.ui_compact {
+            54.0 + 8.0
+        } else {
+            62.0 + 8.0
+        };
+        let mut back = false;
+        egui::Area::new(egui::Id::new("quark_detail_back"))
+            .order(egui::Order::Middle)
+            .fixed_pos(Pos2::new(18.0, top))
             .show(ctx, |ui| {
-                ui.set_min_size(size);
-                ui.set_max_size(size);
-                ui.horizontal(|ui| {
-                    ui.add_space(16.0);
-                    ui.label(crate::i18n::raw(&name).size(13.0).color(pal.text_dim));
-                    ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-                        ui.add_space(10.0);
-                        if widgets::icon_button(ui, 30.0, Icon::Close, &pal, "Fermer (Échap)")
-                            .clicked()
-                        {
-                            close = true;
+                egui::Frame::new()
+                    .fill(pal.surface.gamma_multiply(0.94))
+                    .stroke(egui::Stroke::new(1.0_f32, pal.border))
+                    .corner_radius(18.0)
+                    .inner_margin(egui::Margin::symmetric(8, 4))
+                    .show(ui, |ui| {
+                        if widgets::ghost_button(ui, "Retour", &pal, Icon::ArrowLeft).clicked() {
+                            back = true;
                         }
                     });
-                });
-                ui.add_space(6.0);
-                self.detail_pane(ui);
             });
-        if modal.should_close() || close {
+        if back {
             self.overlay = None;
         }
     }
@@ -760,7 +757,7 @@ impl QuarkApp {
                         self.toggle_marked(id);
                     } else {
                         self.select(id);
-                        // En vue grille, la fiche s'ouvre en surimpression,
+                        // En vue grille, la fiche s'ouvre en pleine page,
                         // comme depuis une tuile de la grille principale.
                         if self.lib.settings.view == ViewMode::Grid {
                             self.overlay = Some(id.to_string());
@@ -939,10 +936,9 @@ impl QuarkApp {
         {
             // Toute la zone du panneau, jusqu'en bas : sinon le fond flouté
             // s'arrêtait avant le bord et laissait une bande noire franche
-            // sous les actualités. `max_rect` couvre le panneau entier (ou
-            // la fiche en surimpression), le painter rogne le reste.
-            // À partir du curseur : en surimpression, la barre de titre et
-            // sa croix restent visibles au-dessus du fond flouté.
+            // sous les actualités. `max_rect` couvre la page entière, le
+            // painter rogne le reste. À partir du curseur : le bouton Retour
+            // reste visible au-dessus du fond flouté.
             let area = Rect::from_min_max(ui.cursor().min, ui.max_rect().max);
             let painter = ui.painter_at(area);
             draw_cover(&painter, &texture, area);
