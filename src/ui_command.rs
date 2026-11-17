@@ -497,7 +497,9 @@ impl QuarkApp {
                 self.touch();
             }
             PaletteAction::OpenGame(id) => {
-                let from_home = self.tab == Tab::Library && self.home;
+                // Depuis une fiche ouverte via l'accueil, `home` est déjà faux
+                // mais `detail_from_home` conserve l'origine pour le retour.
+                let from_home = self.tab == Tab::Library && (self.home || self.detail_from_home);
                 self.open_game_page(&id, from_home);
             }
             PaletteAction::OpenProviderGame { provider, title } => {

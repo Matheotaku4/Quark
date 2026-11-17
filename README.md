@@ -159,17 +159,16 @@ shows it unexpectedly; they still see the 1.8.0 summary once.
 
 ### Home
 
-Home is the first row of the left column, just above **Filters**. The top bar
-keeps Store, My games and Library; the Library tab stays selected on Home. The
-left column is also visible in grid view, so Home and Filters remain reachable
-from every library layout. The home page is a carousel of recently played games. The banner is the game's
-hero image, the logo (or title) sits above a **Continue/Stop** button, and the
-playtime, last session, ProtonDB rating and native-Linux badge are visible at a
-glance. Below the carousel, the whole library is shown as covers. Sort it by
+Home is a page of its own, reached from the **Home** tab in the top bar. It has
+no library sidebar: a full-width carousel of recently played games presents the
+hero image, logo or title, a **Continue/Stop** button, playtime, last session,
+ProtonDB rating and the native-Linux badge. Below it, the whole library is shown
+as covers. The top bar keeps Home, Store, My games and Library; the library
+sidebar and its **Filters** button appear in Library view. Sort the covers by
 last session, date added or hours played. The **Filters** button opens one menu
-for status, Steam genre and personal tag; the button shows the number of active
-filters and the menu includes **Clear all**. The carousel can advance
-automatically; the delay is set in **Settings → Appearance**.
+for status, Steam genre and personal tag; it shows the number of active filters
+and includes **Clear all**. The carousel can advance automatically; the delay is
+set in **Settings → Appearance**.
 
 **Startup page.** Settings → Appearance → **Startup page** decides what Quark
 opens at launch: **Home** (the default), **Library**, **Store** or **My games**.

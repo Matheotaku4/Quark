@@ -697,6 +697,10 @@ impl QuarkApp {
                                         self.settings_tab == tab,
                                     ) {
                                         self.settings_tab = tab;
+                                        // Changer d'onglet quitte la recherche :
+                                        // sinon l'ancien filtre masque le contenu.
+                                        self.settings_query.clear();
+                                        self.settings_focus = false;
                                     }
                                     ui.add_space(2.0);
                                 }
@@ -718,32 +722,42 @@ impl QuarkApp {
                                     ui.add_space(8.0);
                                     let mut found = false;
                                     let needle = crate::config::normalized_search(&settings_query);
-                                    for task in SETTINGS_TASKS {
-                                        let localized = crate::i18n::tr(task.label);
-                                        if !crate::config::normalized_search(task.label)
-                                            .contains(&needle)
-                                            && !crate::config::normalized_search(&localized)
-                                                .contains(&needle)
-                                            && !crate::config::normalized_search(task.keywords)
-                                                .contains(&needle)
-                                        {
-                                            continue;
-                                        }
-                                        found = true;
-                                        if Self::settings_task_row(ui, &pal, task) {
-                                            self.settings_tab = task.tab;
-                                            self.settings_query.clear();
-                                            self.settings_focus = false;
-                                            break;
-                                        }
-                                    }
-                                    if !found {
-                                        ui.label(
-                                            crate::i18n::rich("Aucun réglage ne correspond.")
-                                                .size(12.0)
-                                                .color(pal.text_dim),
-                                        );
-                                    }
+                                    egui::ScrollArea::vertical()
+                                        .id_salt("quark_settings_results")
+                                        .max_height(page_height)
+                                        .auto_shrink([false, true])
+                                        .show(ui, |ui| {
+                                            for task in SETTINGS_TASKS {
+                                                let localized = crate::i18n::tr(task.label);
+                                                if !crate::config::normalized_search(task.label)
+                                                    .contains(&needle)
+                                                    && !crate::config::normalized_search(&localized)
+                                                        .contains(&needle)
+                                                    && !crate::config::normalized_search(
+                                                        task.keywords,
+                                                    )
+                                                    .contains(&needle)
+                                                {
+                                                    continue;
+                                                }
+                                                found = true;
+                                                if Self::settings_task_row(ui, &pal, task) {
+                                                    self.settings_tab = task.tab;
+                                                    self.settings_query.clear();
+                                                    self.settings_focus = false;
+                                                    break;
+                                                }
+                                            }
+                                            if !found {
+                                                ui.label(
+                                                    crate::i18n::rich(
+                                                        "Aucun réglage ne correspond.",
+                                                    )
+                                                    .size(12.0)
+                                                    .color(pal.text_dim),
+                                                );
+                                            }
+                                        });
                                     return;
                                 }
                                 let tab_label = SettingsTab::ALL

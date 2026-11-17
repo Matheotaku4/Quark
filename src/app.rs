@@ -883,9 +883,10 @@ pub struct QuarkApp {
     /// La fiche a été ouverte depuis l'accueil : Retour et Échap y ramènent,
     /// au lieu de laisser l'utilisateur dans la grille de la bibliothèque.
     pub detail_from_home: bool,
-    /// Vignette du carrousel au moment de quitter l'accueil, pour la retrouver
-    /// exactement au retour même si le défilement automatique a avancé.
-    detail_return_carousel: Option<usize>,
+    /// Jeu dont la vignette du carrousel était affichée au moment de quitter
+    /// l'accueil. On retrouve sa position au retour : un enregistrement de
+    /// session peut réordonner les jeux récents entre-temps.
+    detail_return_carousel: Option<String>,
     /// Import de la bibliothèque Steam installée.
     pub steam_import: Option<SteamImport>,
     /// Identifiants de boutiques lus depuis le fichier local privé.
@@ -3402,7 +3403,7 @@ impl QuarkApp {
         self.marked.clear();
         self.home = false;
         self.detail_from_home = from_home;
-        self.detail_return_carousel = from_home.then_some(self.carousel);
+        self.detail_return_carousel = from_home.then(|| id.to_string());
         self.overlay = (self.lib.settings.view == ViewMode::Grid).then(|| id.to_string());
     }
 
@@ -3417,9 +3418,15 @@ impl QuarkApp {
             self.tab = Tab::Library;
             self.home = true;
             // Le carrousel ne doit pas sauter de vignette pendant que la fiche
-            // était ouverte : le retour reprend exactement la vignette quittée.
-            if let Some(carousel) = self.detail_return_carousel.take() {
-                self.carousel = carousel;
+            // était ouverte. On retrouve le jeu par identifiant, car une session
+            // enregistrée entre-temps peut avoir changé l'ordre des récents ;
+            // s'il a disparu, on repart explicitement de la première vignette.
+            if let Some(game_id) = self.detail_return_carousel.take() {
+                self.carousel = self
+                    .recent_ids()
+                    .iter()
+                    .position(|recent| recent == &game_id)
+                    .unwrap_or(0);
             }
             self.carousel_at = Instant::now();
         }
