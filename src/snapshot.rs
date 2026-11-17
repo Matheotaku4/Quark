@@ -113,9 +113,12 @@ pub const HELP: &str = "\
       site-search|command|command-search|history|saved-views|onboarding|\n\
       onboarding-settings|whats-new]\n\
       [--hover X,Y] [--click X,Y] [--button left|right]\n\
-      [--key up|down|left|right|enter|escape] [--demo] [--demo-count N]\n\
+      [--key up|down|left|right|enter|escape] [--demo] [--demo-count N] (0 = vide)\n\
+      [--providers-demo] [--providers-error]\n\
       --demo : bibliothèque de démonstration avec artworks factices (la\n\
-      configuration réelle n'est ni lue ni écrite)\n";
+      configuration réelle n'est ni lue ni écrite)\n\
+      --providers-demo : jeux de boutiques factices (implique --demo)\n\
+      --providers-error : jeux de boutiques et erreurs de synchronisation\n";
 
 /// Construit l'interface, la fait vivre quelques images, puis écrit le PNG.
 pub fn run(opts: &SnapshotOptions) -> Result<(), String> {
@@ -190,7 +193,7 @@ pub fn run(opts: &SnapshotOptions) -> Result<(), String> {
             umu_run: false,
         };
         app.store_offline_mode = true;
-        if opts.providers_demo {
+        if opts.providers_demo && !app.lib.games.is_empty() {
             app.lib.settings.my_games_list = true;
             app.lib.provider_library.games = vec![
                 crate::providers::ProviderGame {
@@ -1155,55 +1158,100 @@ fn seed_news(app: &mut QuarkApp) {
         return;
     };
     let now = now_ts();
-    let items = vec![
-        NewsItem {
-            title: "Mise à jour 1.6 : nouvelles quêtes et corrections".to_string(),
-            url: "https://store.steampowered.com/news/app/292030/view/1".to_string(),
-            feed: "Community Announcements".to_string(),
-            author: "Studio".to_string(),
-            date: now - 3600 * 5,
-            excerpt: "La mise à jour apporte trois nouvelles quêtes secondaires, un rééquilibrage \
-                      complet du mode difficile et une trentaine de corrections signalées par la \
-                      communauté."
-                .to_string(),
-            ..Default::default()
-        },
-        NewsItem {
-            title: "Concours de captures d'écran : les gagnants".to_string(),
-            url: "https://store.steampowered.com/news/app/292030/view/2".to_string(),
-            feed: "Community Announcements".to_string(),
-            author: "Équipe communauté".to_string(),
-            date: now - 3 * 86400,
-            excerpt: "Plus de deux mille participations cette année : merci ! Voici la sélection \
-                      finale, ainsi que les coulisses du jury."
-                .to_string(),
-            ..Default::default()
-        },
-        NewsItem {
-            title: "Journal des développeurs : l'audio du jeu".to_string(),
-            url: "https://store.steampowered.com/news/app/292030/view/3".to_string(),
-            feed: "PC Gamer".to_string(),
-            author: String::new(),
-            date: now - 12 * 86400,
-            excerpt: "Retour sur la conception de la bande-son, des premières maquettes aux \
-                      enregistrements avec l'orchestre."
-                .to_string(),
-            ..Default::default()
-        },
-    ];
+    let english = crate::i18n::is_english();
+    let items = if english {
+        vec![
+            NewsItem {
+                title: "Update 1.6: new quests and fixes".to_string(),
+                url: "https://store.steampowered.com/news/app/292030/view/1".to_string(),
+                feed: "Community Announcements".to_string(),
+                author: "Studio".to_string(),
+                date: now - 3600 * 5,
+                excerpt: "The update adds three new side quests, a full rebalance of hard mode, \
+                          and around thirty fixes reported by the community."
+                    .to_string(),
+                ..Default::default()
+            },
+            NewsItem {
+                title: "Screenshot contest: the winners".to_string(),
+                url: "https://store.steampowered.com/news/app/292030/view/2".to_string(),
+                feed: "Community Announcements".to_string(),
+                author: "Community team".to_string(),
+                date: now - 3 * 86400,
+                excerpt: "Over two thousand entries this year: thank you! Here is the final \
+                          selection, along with a look behind the jury."
+                    .to_string(),
+                ..Default::default()
+            },
+            NewsItem {
+                title: "Developer diary: the game's audio".to_string(),
+                url: "https://store.steampowered.com/news/app/292030/view/3".to_string(),
+                feed: "PC Gamer".to_string(),
+                author: String::new(),
+                date: now - 12 * 86400,
+                excerpt: "A look at the soundtrack's design, from early mockups to recordings \
+                          with the orchestra."
+                    .to_string(),
+                ..Default::default()
+            },
+        ]
+    } else {
+        vec![
+            NewsItem {
+                title: "Mise à jour 1.6 : nouvelles quêtes et corrections".to_string(),
+                url: "https://store.steampowered.com/news/app/292030/view/1".to_string(),
+                feed: "Community Announcements".to_string(),
+                author: "Studio".to_string(),
+                date: now - 3600 * 5,
+                excerpt: "La mise à jour apporte trois nouvelles quêtes secondaires, un rééquilibrage \
+                          complet du mode difficile et une trentaine de corrections signalées par la \
+                          communauté."
+                    .to_string(),
+                ..Default::default()
+            },
+            NewsItem {
+                title: "Concours de captures d'écran : les gagnants".to_string(),
+                url: "https://store.steampowered.com/news/app/292030/view/2".to_string(),
+                feed: "Community Announcements".to_string(),
+                author: "Équipe communauté".to_string(),
+                date: now - 3 * 86400,
+                excerpt: "Plus de deux mille participations cette année : merci ! Voici la sélection \
+                          finale, ainsi que les coulisses du jury."
+                    .to_string(),
+                ..Default::default()
+            },
+            NewsItem {
+                title: "Journal des développeurs : l'audio du jeu".to_string(),
+                url: "https://store.steampowered.com/news/app/292030/view/3".to_string(),
+                feed: "PC Gamer".to_string(),
+                author: String::new(),
+                date: now - 12 * 86400,
+                excerpt: "Retour sur la conception de la bande-son, des premières maquettes aux \
+                          enregistrements avec l'orchestre."
+                    .to_string(),
+                ..Default::default()
+            },
+        ]
+    };
     let mut items = items;
-    for (index, item) in items.iter_mut().take(2).enumerate() {
-        if index == 0 {
-            // Texte déplié : le rendu vérifie la mise en page de l'article
-            // intégré, pas seulement la carte repliée.
-            item.body = "La mise à jour 1.6 ajoute trois nouvelles quêtes secondaires en Velen et \
-                         à Skellige, un rééquilibrage complet du mode difficile, la prise en charge \
-                         de la manette sur Steam Deck et une trentaine de corrections signalées par \
-                         la communauté : sauvegardes corrompues, quêtes bloquées au chapitre III, \
-                         ombres manquantes sur les cartes Ampere, et le retour du mode photo en \
-                         fenêtré."
-                .to_string();
-        }
+    if let Some(first) = items.first_mut() {
+        // Texte déplié : le rendu vérifie la mise en page de l'article
+        // intégré, pas seulement la carte repliée.
+        first.body = if english {
+            "Update 1.6 adds three new side quests in Velen and Skellige, a full rebalance \
+             of hard mode, controller support on Steam Deck, and around thirty fixes reported \
+             by the community: corrupted saves, quests stuck in chapter III, missing shadows \
+             on Ampere cards, and the return of photo mode in windowed mode."
+                .to_string()
+        } else {
+            "La mise à jour 1.6 ajoute trois nouvelles quêtes secondaires en Velen et \
+             à Skellige, un rééquilibrage complet du mode difficile, la prise en charge \
+             de la manette sur Steam Deck et une trentaine de corrections signalées par \
+             la communauté : sauvegardes corrompues, quêtes bloquées au chapitre III, \
+             ombres manquantes sur les cartes Ampere, et le retour du mode photo en \
+             fenêtré."
+                .to_string()
+        };
     }
     app.news.insert(id, NewsState::Loaded(items));
 }

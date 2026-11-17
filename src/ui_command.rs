@@ -312,28 +312,34 @@ impl QuarkApp {
                 self.tab = Tab::Library;
                 self.set_view(ViewMode::List);
                 self.home = true;
+                self.overlay = None;
             }
             PaletteAction::Library => {
                 self.tab = Tab::Library;
                 self.home = false;
+                self.overlay = None;
             }
             PaletteAction::Grid => {
                 self.tab = Tab::Library;
                 self.home = false;
                 self.set_view(ViewMode::Grid);
+                self.overlay = None;
             }
             PaletteAction::List => {
                 self.tab = Tab::Library;
                 self.home = false;
                 self.set_view(ViewMode::List);
+                self.overlay = None;
             }
             PaletteAction::Store => {
                 self.tab = Tab::Store;
                 self.home = false;
+                self.overlay = None;
             }
             PaletteAction::MyGames => {
                 self.tab = Tab::MyGames;
                 self.home = false;
+                self.overlay = None;
             }
             PaletteAction::AddGame => self.open_add_dialog(),
             PaletteAction::Downloads => self.downloads_open = true,

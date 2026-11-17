@@ -54,7 +54,9 @@ impl QuarkApp {
                 ui.add_space(18.0);
                 if recent.is_empty() {
                     if self.lib.games.is_empty() {
-                        self.home_empty(ui);
+                        // Même écran que la bibliothèque vide : l'accueil ne
+                        // duplique plus un message de bienvenue séparé.
+                        self.empty_state(ui);
                     } else {
                         if self.favorites_section(ui) {
                             ui.add_space(30.0);
@@ -115,37 +117,6 @@ impl QuarkApp {
         }
         self.carousel = index % len;
         self.carousel_at = std::time::Instant::now();
-    }
-
-    fn home_empty(&mut self, ui: &mut egui::Ui) {
-        let pal = self.pal;
-        ui.vertical_centered(|ui| {
-            ui.add_space(120.0);
-            ui.label(
-                crate::i18n::rich("Bienvenue dans Quark")
-                    .size(22.0)
-                    .color(pal.text),
-            );
-            ui.add_space(8.0);
-            ui.label(
-                crate::i18n::rich("Ajoute un jeu pour le voir apparaître ici.")
-                    .size(13.0)
-                    .color(pal.text_dim),
-            );
-            ui.add_space(18.0);
-            if widgets::accent_button(
-                ui,
-                Vec2::new(190.0, 40.0),
-                "Ajouter un jeu",
-                &pal,
-                true,
-                Icon::Plus,
-            )
-            .clicked()
-            {
-                self.open_add_dialog();
-            }
-        });
     }
 
     // -----------------------------------------------------------------------
@@ -383,11 +354,9 @@ impl QuarkApp {
         }
         if open_game {
             self.selected = Some(id.clone());
-            // En vue grille, la fiche s'ouvre par-dessus le carrousel.
+            self.home = false;
             if self.lib.settings.view == crate::config::ViewMode::Grid {
                 self.overlay = Some(id);
-            } else {
-                self.home = false;
             }
         }
         if open_protondb && let Some(app_id) = game.steam_app_id {
@@ -542,12 +511,10 @@ impl QuarkApp {
             });
 
         if let Some(id) = opened {
+            self.selected = Some(id.clone());
+            self.home = false;
             if self.lib.settings.view == crate::config::ViewMode::Grid {
-                self.selected = Some(id.clone());
                 self.overlay = Some(id);
-            } else {
-                self.selected = Some(id);
-                self.home = false;
             }
         }
         true
@@ -730,14 +697,12 @@ impl QuarkApp {
         }
 
         if let Some(id) = opened {
-            // Vue grille : la fiche s'ouvre en surimpression, la grille reste
-            // en place derrière. Vue liste : la fiche prend la place du panneau.
+            // Vue grille : la fiche prend toute la page. Vue liste : elle prend
+            // simplement la place du panneau de droite.
+            self.selected = Some(id.clone());
+            self.home = false;
             if self.lib.settings.view == crate::config::ViewMode::Grid {
-                self.selected = Some(id.clone());
                 self.overlay = Some(id);
-            } else {
-                self.selected = Some(id);
-                self.home = false;
             }
         }
     }
