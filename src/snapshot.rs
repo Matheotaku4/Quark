@@ -193,7 +193,7 @@ pub fn run(opts: &SnapshotOptions) -> Result<(), String> {
             umu_run: false,
         };
         app.store_offline_mode = true;
-        if opts.providers_demo {
+        if opts.providers_demo && !app.lib.games.is_empty() {
             app.lib.settings.my_games_list = true;
             app.lib.provider_library.games = vec![
                 crate::providers::ProviderGame {

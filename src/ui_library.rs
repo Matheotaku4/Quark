@@ -50,6 +50,8 @@ impl QuarkApp {
             .show(ctx, |ui| {
                 if self.home {
                     self.home_pane(ui);
+                } else if empty_library {
+                    self.empty_state(ui);
                 } else if detail_open {
                     self.detail_page(ui);
                 } else if grid_only {
