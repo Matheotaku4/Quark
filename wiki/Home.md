@@ -5,35 +5,27 @@ games and your Steam, Epic Games and GOG libraries together, launches Windows
 games through Proton or umu-launcher, and adds an in-game overlay, screenshots,
 achievements and verified local saves.
 
-This documentation describes **Quark 1.6.2**. It is also versioned in the
+This documentation describes **Quark 1.8.0**. It is also versioned in the
 repository under [`wiki/`](https://github.com/Matheotaku4/Quark/tree/main/wiki).
 
 ![Quark home](https://raw.githubusercontent.com/Matheotaku4/Quark/main/docs/images/home-en.png)
 
-## What's new in 1.6
+## What's new in 1.8.0
 
-- **1.6.2** adds the [project website](https://matheotaku4.github.io/Quark/),
-  keeps the `Backlog` status when a game is launched, sharpens the interface
-  typography, and writes an `overlay.log` diagnostic for the FPS proxy. The
-  DXGI proxy also covers `CreateSwapChainForCoreWindow`.
-- **1.6.1** adds the DXGI proxy for DirectX 12, shares the FPS counter between
-  the DXGI and Direct3D 11 proxies, and plays the `F12` chime for every store.
-- **1.6.0** adds a DirectX 11 FPS overlay installed as a `d3d11.dll` proxy next
-  to the game, direct Epic sign-in, and Spanish, German and Portuguese
-  interface languages. It also adds `cargo fmt` and Clippy checks to CI.
-- **1.5.0** adds game favorites and a Favorites strip on Home, desktop
-  notifications, `quark launch`/`quark list`, and removes the PlayStation 2,
-  PCSX2 and RetroAchievements support. Update checks now use the Quark
-  repository again.
-- **1.4.5** sharpens the game page: the hero banner is back, the SteamGridDB
-  logo replaces the title when available, playtime and last session move to the
-  overview panel, and the game actions can sit in the top-right corner or beside
-  **Play**.
-- **1.4.4** adds HowLongToBeat times to the game overview.
-- **1.4.3** turns the settings into full-width cards and makes the interface
-  denser by default.
-- **1.4.2** redesigns the store into two columns with a SteamGridDB banner and
-  logo, and moves the **Filters** panel under the Home button.
+- **A home page of its own.** Home has a dedicated tab, a full-width hero and a
+  recent-games carousel, without the library sidebar.
+- **A full-page game page.** Opening a game from the grid replaces the library;
+  **Back** or `Escape` returns to Home or the grid depending on where you came
+  from, restoring the carousel slide.
+- **One global search.** `Ctrl+F`, `Ctrl+K`, `/` or the magnifier opens the same
+  palette for local games, owned store games and settings. Accents are ignored
+  and a real substring is required.
+- **Settings by task.** A search field above the settings navigation finds an
+  action such as **cloud saves** or **overlay** and opens the right page.
+- **Coherent async states.** News, loading, error and missing-artwork states
+  share the same skeletons and status cards, with a logo fallback.
+- **Five languages at three widths.** The main screens are checked in French,
+  English, German, Spanish and Portuguese at 900, 1024 and 1360 px.
 
 ## Where to start
 
@@ -74,8 +66,8 @@ repository under [`wiki/`](https://github.com/Matheotaku4/Quark/tree/main/wiki).
 
 | Shortcut | Action |
 | --- | --- |
-| `Ctrl+K` | Command palette: pages, actions and games |
-| `Ctrl+F` or `/` | Search the library |
+| `Ctrl+K` | Global search: pages, actions, games and settings |
+| `Ctrl+F` or `/` | Global search (games, stores, settings) |
 | `Escape` | Close a search, panel or the overlay |
 | `Enter` | Launch the selected game |
 | Arrow keys | Move through the library |

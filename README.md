@@ -6,7 +6,7 @@ titles you own, launches Windows games through Proton (or umu-launcher), and sta
 the way with an AMOLED interface, a store page, save snapshots and an in-game
 overlay.
 
-This is the **1.7.4** documentation. Older release notes are kept on the GitHub
+This is the **1.8.0** documentation. Older release notes are kept on the GitHub
 releases page; `docs/release-notes.md` only describes the release currently
 being published.
 
@@ -28,18 +28,18 @@ The wiki is published from the versioned source in [`wiki/`](wiki/) by the
 | --- | --- |
 | ![Onboarding](docs/images/onboarding-fr.png) | ![What's new](docs/images/whats-new-fr.png) |
 
-## What's new in 1.7.4
+## What's new in 1.8.0
 
-- **Détection du dossier de sauvegarde GOG.** La fiche d'un jeu GOG propose désormais **Détecter le dossier…** : Quark parcourt le préfixe Wine (`Saved Games`, `Documents`, `My Games`, `AppData/Local` et `Roaming`) et propose les dossiers dont le nom ressemble au titre du jeu. Un clic sur un candidat l'ajoute aux dossiers de sauvegarde, sans rien choisir à l'aveugle.
-
-- **Les installations en cours survivent aux synchros.** Une synchronisation de la bibliothèque GOG ou Epic ne remplace plus une entrée `Installing` ou `Queued` par `NotInstalled` : le téléchargement et sa progression restent visibles pendant toute la mise à jour de la bibliothèque.
-- **Les données ne sont plus traduites.** Les toasts, chemins de fichiers, heures de sauvegarde, noms de jeux et descriptions de lignes passent désormais par le catalogue brut ; un titre de jeu ou un chemin contenant un mot français n'est plus remplacé par sa traduction anglaise.
-- **Le français est un catalogue complet.** `assets/i18n/fr.json` couvre les 742 clés du catalogue anglais et un test vérifie qu'aucune clé ne manque et que les valeurs restent identiques à la source.
-- **Formats et unités suivent la langue.** Les tailles (o/Ko/Mo/Go/To contre B/KB/MB/GB/TB), les décimales, les dates, les mois, les durées de jeu, les « il y a … », les compteurs de runtimes, de textures, de séries et les totaux mesurés sont formatés dans la langue choisie, espagnol, allemand et portugais compris.
+- **Un accueil autonome.** L'accueil a son propre onglet, un hero plein largeur et un carrousel de jeux récents, sans colonne latérale.
+- **La fiche jeu en pleine page.** Depuis la grille, la fiche remplace la bibliothèque ; **Retour** ou `Échap` ramène à l'accueil ou à la grille selon l'origine, avec la vignette du carrousel restaurée.
+- **Une recherche globale unique.** `Ctrl+F`, `Ctrl+K`, `/` ou la loupe ouvrent la même palette : jeux locaux, jeux possédés dans les boutiques et réglages. La recherche ignore les accents et exige une sous-chaîne réelle.
+- **Les réglages par tâche.** Un champ au-dessus de la navigation trouve une action (« sauvegardes cloud », « overlay », « espace disque ») et ouvre directement la bonne page.
+- **Des états asynchrones cohérents.** Les actualités, les chargements, les erreurs et les artworks manquants partagent les mêmes squelettes et cartes d'état ; le logo dispose d'un repli si la texture est vide.
+- **Cinq langues aux trois largeurs.** Les écrans principaux sont vérifiés en français, anglais, allemand, espagnol et portugais à 900, 1024 et 1360 px.
 
 ## Table of contents
 
-1. [What's new in 1.7.4](#whats-new-in-164)
+1. [What's new in 1.8.0](#whats-new-in-180)
 2. [What Quark does](#what-quark-does)
 3. [Installation](#installation)
 4. [First launch](#first-launch)
@@ -83,7 +83,7 @@ The wiki is published from the versioned source in [`wiki/`](wiki/) by the
   languages (French, English, Spanish, German and Portuguese), compact spacing
   and adjustable panel sizes, list or grid, a home carousel, a
   random blurred hero background, HowLongToBeat times in the game overview,
-  status columns, tags, filters, a Ctrl+K command palette and an embedded
+  status columns, tags, filters, a global search palette (Ctrl+K/Ctrl+F) and an embedded
   Archivo font with Lucide icons.
 
 Quark is not a store: it never buys anything, and it never downloads or
@@ -99,8 +99,8 @@ Download `quark-<version>-linux-x86_64.tar.gz` and its `.sha256` file from the
 then verify and unpack it:
 
 ```bash
-sha256sum -c quark-1.7.4-linux-x86_64.tar.gz.sha256
-tar -xzf quark-1.7.4-linux-x86_64.tar.gz
+sha256sum -c quark-1.8.0-linux-x86_64.tar.gz.sha256
+tar -xzf quark-1.8.0-linux-x86_64.tar.gz
 ./quark/quark
 ```
 
@@ -142,7 +142,7 @@ A new configuration opens a three-step welcome guide. It is not blocking:
 **Skip** closes it. The guide changes the interface language, startup page,
 theme and hero background live, then offers to add a first game. Existing
 configurations are marked as already welcomed, so updating from 1.1.4 never
-shows it unexpectedly; they still see the 1.7.4 summary once.
+shows it unexpectedly; they still see the 1.8.0 summary once.
 
 1. Open **Settings → Stores & tools** and install Legendary and/or gogdl with
    **Install / update**. Quark verifies the SHA-256 digest published by GitHub
@@ -159,17 +159,16 @@ shows it unexpectedly; they still see the 1.7.4 summary once.
 
 ### Home
 
-Home is the first row of the left column, just above **Filters**. The top bar
-keeps Store, My games and Library; the Library tab stays selected on Home. The
-left column is also visible in grid view, so Home and Filters remain reachable
-from every library layout. The home page is a carousel of recently played games. The banner is the game's
-hero image, the logo (or title) sits above a **Continue/Stop** button, and the
-playtime, last session, ProtonDB rating and native-Linux badge are visible at a
-glance. Below the carousel, the whole library is shown as covers. Sort it by
+Home is a page of its own, reached from the **Home** tab in the top bar. It has
+no library sidebar: a full-width carousel of recently played games presents the
+hero image, logo or title, a **Continue/Stop** button, playtime, last session,
+ProtonDB rating and the native-Linux badge. Below it, the whole library is shown
+as covers. The top bar keeps Home, Store, My games and Library; the library
+sidebar and its **Filters** button appear in Library view. Sort the covers by
 last session, date added or hours played. The **Filters** button opens one menu
-for status, Steam genre and personal tag; the button shows the number of active
-filters and the menu includes **Clear all**. The carousel can advance
-automatically; the delay is set in **Settings → Appearance**.
+for status, Steam genre and personal tag; it shows the number of active filters
+and includes **Clear all**. The carousel can advance automatically; the delay is
+set in **Settings → Appearance**.
 
 **Startup page.** Settings → Appearance → **Startup page** decides what Quark
 opens at launch: **Home** (the default), **Library**, **Store** or **My games**.
@@ -183,7 +182,7 @@ the blur radius is adjustable from 2 to 30 px and is part of the blur cache key.
 ### Library
 
 The top bar switches between **Grid** and **List** with a labelled segmented
-control, and the **Add** button sits next to it. The search field adapts to
+control, and the **Add** button sits next to it. A single search entry point in the top bar adapts to
 narrower windows. The list shows one row per game with a square icon, a status
 dot and a blue selection marker. The grid shows covers and opens the game page
 as an overlay.
@@ -198,16 +197,17 @@ other view. The **Filters** button groups status, Steam genre and tags in a
 single popup instead of stacking chips above the list; active filters are
 counted on the button and **Clear all** resets them. Group the list by status,
 store, genre or release year, or show a continuous list; group headers can be
-collapsed. Sort by name, last session, date added or play time. Library search
-now ignores accents and compares the title, developer, tags and genres
-separately, like the command palette.
+collapsed. Sort by name, last session, date added or play time. The global search
+ignores accents, covers local games, owned store games and settings, and
+requires a real substring so a query cannot scatter across unrelated fields.
 
 ![Filters menu](docs/images/filters-fr.png)
 
-Keyboard shortcuts: arrows navigate, `Enter` launches, `Ctrl+F` or `/` focuses
-the search field, `Esc` clears it and `Ctrl+Q` really quits Quark. `Ctrl+K`
-opens the command palette from any tab: type to fuzzy-search pages, actions and
-games, use `↑`/`↓` to move, `Enter` to open and `Esc` to close.
+Keyboard shortcuts: arrows navigate, `Enter` launches, `Ctrl+F` or `/` opens
+the same global search as `Ctrl+K`, `Esc` closes it and `Ctrl+Q` really quits
+Quark. The search runs from any tab: type to find pages, actions, local games,
+owned store games and settings, use `↑`/`↓` to move, `Enter` to open and `Esc`
+to close.
 
 ### Game page
 
@@ -405,8 +405,9 @@ and keeps the file.
 ## Settings
 
 Settings occupy the whole window, with a left sidebar and sections separated by
-accented headings. The content scrolls independently and `Esc` or the top-right
-**×** closes the page.
+accented headings. A search field above the sidebar finds a setting by task
+(for example **cloud saves** or **overlay**) and jumps to the right page. The
+content scrolls independently and `Esc` or the top-right **×** closes the page.
 
 - **Appearance:** interface language, 13 themes, interface size (compact mode,
   sidebar, rows, covers, banner and overview widths), random hero background,
@@ -467,7 +468,7 @@ the status and playtime of every game.
 `--select`, `--dialog`, `--hero-bg`, `--blur`, `--size`, `--frames`, `--hover`,
 `--click` and `--key`; `--demo` uses a temporary configuration and never reads or
 writes the real library. `--group` accepts `status`, `store`, `genre`, `year` or
-`none`; `--lang` accepts `fr` or `en`; `--blur` is a 2–30 px radius.
+`none`; `--lang` accepts `fr`, `en`, `de`, `es` or `pt`; `--blur` is a 2–30 px radius.
 `--dialog` includes `onboarding`, `onboarding-settings` and `whats-new` for the
 new screens.
 
@@ -500,7 +501,7 @@ src/
   config.rs           library, settings, Game and Installation models
   i18n.rs             multilingual catalogues and dynamic labels
   theme.rs            the 13 palettes
-  ui_command.rs       Ctrl+K command palette
+  ui_command.rs       global search palette (Ctrl+K/Ctrl+F)
   ui_home.rs          home carousel and random hero background
   ui_library.rs       library, game page and installation selector
   ui_my_games.rs      owned/installed store games and install actions

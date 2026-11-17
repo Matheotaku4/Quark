@@ -3,7 +3,7 @@
 //! accents et aux lettres intermédiaires, dans l'esprit des palettes des
 //! launchers modernes.
 
-use crate::app::{QuarkApp, SettingsTab, Tab};
+use crate::app::{QuarkApp, SETTINGS_TASKS, SettingsTab, Tab};
 use crate::config::{ViewMode, fold_char};
 use crate::widgets::{self, Icon};
 use eframe::egui::{self, Align2, Color32, FontId, Pos2, Rect, Sense, Stroke, Vec2};
@@ -24,6 +24,13 @@ pub enum PaletteAction {
     Updates,
     ToggleTheme,
     OpenGame(String),
+    /// Ouvre un jeu possédé dans une boutique, même sans fiche Quark.
+    OpenProviderGame {
+        provider: crate::providers::Provider,
+        title: String,
+    },
+    /// Saute directement à la page de réglages qui contient la tâche.
+    OpenSettings(SettingsTab),
 }
 
 #[derive(Clone)]
@@ -55,6 +62,14 @@ impl Entry {
         }
     }
 
+    /// Traduit les libellés d'interface. Les titres de jeux et les données
+    /// dynamiques utilisent `Entry::new` directement et restent intacts.
+    fn localized(mut self) -> Self {
+        self.label = crate::i18n::tr(&self.label);
+        self.detail = crate::i18n::tr(&self.detail);
+        self
+    }
+
     /// Les champs sont comparés séparément : concaténer le titre et les mots
     /// clés permettrait à « witcher » de se disperser dans « Hollow Knight ·
     /// Team Cherry » et de proposer un jeu sans rapport.
@@ -63,6 +78,22 @@ impl Entry {
             .into_iter()
             .filter_map(|field| fuzzy_score(query, field))
             .max()
+    }
+
+    /// La sous-séquence seule est trop permissive sur des mots-clés composites
+    /// (« portal » pouvait se disperser dans « Plateforme · Indépendant »).
+    /// La recherche globale exige donc une sous-chaîne réelle, puis classe les
+    /// résultats avec le score flou.
+    fn contains(&self, query: &str) -> bool {
+        let needle = normalized(query.trim());
+        needle.is_empty()
+            || [&self.label, &self.detail, &self.keywords]
+                .into_iter()
+                .any(|field| {
+                    normalized(field)
+                        .windows(needle.len())
+                        .any(|window| window == needle.as_slice())
+                })
     }
 }
 
@@ -120,6 +151,15 @@ pub(crate) fn fuzzy_score(query: &str, text: &str) -> Option<i32> {
     Some(score)
 }
 
+fn provider_label(provider: crate::providers::Provider) -> &'static str {
+    match provider {
+        crate::providers::Provider::Steam => "Steam",
+        crate::providers::Provider::Epic => "Epic Games",
+        crate::providers::Provider::Gog => "GOG",
+        crate::providers::Provider::Itch => "itch.io",
+    }
+}
+
 impl QuarkApp {
     pub(crate) fn open_command_palette(&mut self, ctx: &egui::Context) {
         self.command_palette_open = true;
@@ -139,7 +179,8 @@ impl QuarkApp {
     }
 
     fn command_entries(&self) -> Vec<Entry> {
-        let mut entries = vec![
+        let query = self.command_query.trim();
+        let mut entries: Vec<Entry> = vec![
             Entry::new(
                 "PAGES",
                 "Accueil",
@@ -248,9 +289,11 @@ impl QuarkApp {
                 Icon::Info,
                 PaletteAction::ToggleTheme,
             ),
-        ];
+        ]
+        .into_iter()
+        .map(Entry::localized)
+        .collect();
 
-        let query = self.command_query.trim();
         // Sans requête, seuls les jeux récents sont proposés : la palette
         // reste courte et utile. Une recherche parcourt toute la collection.
         let game_ids = if query.is_empty() {
@@ -277,6 +320,68 @@ impl QuarkApp {
                 PaletteAction::OpenGame(id),
             ));
         }
+
+        // Les jeux possédés dans une boutique mais absents de la bibliothèque
+        // Quark complètent la recherche : un seul champ cherche partout.
+        if !query.is_empty() {
+            let needle = crate::config::normalized_search(query);
+            for record in self.lib.provider_library.games.iter().filter(|record| {
+                record.owned
+                    && !record
+                        .quark_game_id
+                        .as_deref()
+                        .is_some_and(|id| self.lib.get(id).is_some())
+                    && (crate::config::normalized_search(&record.title).contains(&needle)
+                        || crate::config::normalized_search(provider_label(record.key.provider))
+                            .contains(&needle))
+            }) {
+                let title = record.title.clone();
+                let provider = record.key.provider;
+                let state = match record.install_state {
+                    crate::providers::InstallState::Installed => "Installé",
+                    _ => "Acheté",
+                };
+                entries.push(Entry::new(
+                    "MES JEUX",
+                    title.clone(),
+                    format!("{} · {}", provider_label(provider), crate::i18n::tr(state)),
+                    format!("{} {} boutique store", title, provider_label(provider)),
+                    Icon::Download,
+                    PaletteAction::OpenProviderGame { provider, title },
+                ));
+            }
+        }
+
+        // Les réglages sont cherchés par tâche (« sauvegardes cloud »,
+        // « overlay ») et non par nom d'onglet : on trouve ce qu'on veut faire.
+        if !query.is_empty() {
+            let needle = crate::config::normalized_search(query);
+            for task in SETTINGS_TASKS {
+                let localized = crate::i18n::tr(task.label);
+                if !crate::config::normalized_search(task.label).contains(&needle)
+                    && !crate::config::normalized_search(&localized).contains(&needle)
+                    && !crate::config::normalized_search(task.keywords).contains(&needle)
+                {
+                    continue;
+                }
+                let tab_label = SettingsTab::ALL
+                    .iter()
+                    .find(|(tab, _)| *tab == task.tab)
+                    .map(|(_, label)| crate::i18n::tr(label))
+                    .unwrap_or_default();
+                entries.push(
+                    Entry::new(
+                        "RÉGLAGES",
+                        task.label,
+                        format!("{} · {tab_label}", crate::i18n::tr("Paramètres")),
+                        task.keywords,
+                        Icon::Gear,
+                        PaletteAction::OpenSettings(task.tab),
+                    )
+                    .localized(),
+                );
+            }
+        }
         entries
     }
 
@@ -286,15 +391,23 @@ impl QuarkApp {
         if query.is_empty() {
             return all;
         }
-        let groups = ["PAGES", "AFFICHAGE", "ACTIONS", "JEUX"];
+        let groups = [
+            "PAGES",
+            "AFFICHAGE",
+            "ACTIONS",
+            "JEUX",
+            "MES JEUX",
+            "RÉGLAGES",
+        ];
         let mut filtered = Vec::new();
         for group in groups {
             let mut matches: Vec<(i32, Entry)> = all
                 .iter()
                 .filter(|entry| entry.group == group)
+                .filter(|entry| entry.contains(query))
                 .filter_map(|entry| entry.score(query).map(|score| (score, entry.clone())))
                 .collect();
-            if group == "JEUX" {
+            if group == "JEUX" || group == "MES JEUX" || group == "RÉGLAGES" {
                 matches
                     .sort_by_key(|(score, entry)| (std::cmp::Reverse(*score), entry.label.clone()));
                 matches.truncate(12);
@@ -313,50 +426,64 @@ impl QuarkApp {
                 self.set_view(ViewMode::List);
                 self.home = true;
                 self.overlay = None;
+                self.detail_from_home = false;
             }
             PaletteAction::Library => {
                 self.tab = Tab::Library;
                 self.home = false;
                 self.overlay = None;
+                self.detail_from_home = false;
             }
             PaletteAction::Grid => {
                 self.tab = Tab::Library;
                 self.home = false;
                 self.set_view(ViewMode::Grid);
                 self.overlay = None;
+                self.detail_from_home = false;
             }
             PaletteAction::List => {
                 self.tab = Tab::Library;
                 self.home = false;
                 self.set_view(ViewMode::List);
                 self.overlay = None;
+                self.detail_from_home = false;
             }
             PaletteAction::Store => {
                 self.tab = Tab::Store;
                 self.home = false;
                 self.overlay = None;
+                self.detail_from_home = false;
             }
             PaletteAction::MyGames => {
                 self.tab = Tab::MyGames;
                 self.home = false;
                 self.overlay = None;
+                self.detail_from_home = false;
             }
             PaletteAction::AddGame => self.open_add_dialog(),
             PaletteAction::Downloads => self.downloads_open = true,
             PaletteAction::Settings => {
                 self.settings_tab = SettingsTab::Appearance;
+                self.settings_query.clear();
+                self.settings_focus = false;
                 self.settings_open = true;
             }
             PaletteAction::Stats => {
                 self.settings_tab = SettingsTab::Stats;
+                self.settings_query.clear();
+                self.settings_focus = false;
                 self.settings_open = true;
             }
             PaletteAction::Disk => {
                 self.settings_tab = SettingsTab::Disk;
+                self.settings_query.clear();
+                self.settings_focus = false;
                 self.settings_open = true;
             }
             PaletteAction::Updates => {
                 self.settings_tab = SettingsTab::About;
+                self.settings_query.clear();
+                self.settings_focus = false;
                 self.settings_open = true;
                 self.check_updates(ctx, false);
             }
@@ -370,12 +497,24 @@ impl QuarkApp {
                 self.touch();
             }
             PaletteAction::OpenGame(id) => {
-                self.tab = Tab::Library;
+                // Depuis une fiche ouverte via l'accueil, `home` est déjà faux
+                // mais `detail_from_home` conserve l'origine pour le retour.
+                let from_home = self.tab == Tab::Library && (self.home || self.detail_from_home);
+                self.open_game_page(&id, from_home);
+            }
+            PaletteAction::OpenProviderGame { provider, title } => {
+                self.tab = Tab::MyGames;
                 self.home = false;
-                self.select(&id);
-                if self.lib.settings.view == ViewMode::Grid {
-                    self.overlay = Some(id);
-                }
+                self.overlay = None;
+                self.detail_from_home = false;
+                self.my_games_store = Some(provider);
+                self.my_games_query = title;
+            }
+            PaletteAction::OpenSettings(tab) => {
+                self.settings_tab = tab;
+                self.settings_query.clear();
+                self.settings_focus = false;
+                self.settings_open = true;
             }
         }
     }
@@ -461,7 +600,7 @@ impl QuarkApp {
                                 egui::TextEdit::singleline(&mut self.command_query)
                                     .id(egui::Id::new("quark_command_query"))
                                     .hint_text(crate::i18n::tr(
-                                        "Rechercher un jeu ou une commande…",
+                                        "Rechercher un jeu, un réglage ou une action…",
                                     ))
                                     .frame(false)
                                     .font(FontId::proportional(14.0)),
@@ -653,6 +792,20 @@ mod tests {
     #[test]
     fn la_requete_vide_accepte_tout() {
         assert_eq!(fuzzy_score("", "n'importe quoi"), Some(0));
+    }
+
+    #[test]
+    fn la_recherche_globale_ne_se_disperse_pas_dans_les_mots_cles() {
+        let entry = Entry::new(
+            "JEUX",
+            "Celeste",
+            "Terminé · 46,2 h",
+            "Maddy Makes Games Plateforme Indépendant plateforme difficile jeu game",
+            Icon::Play,
+            PaletteAction::Library,
+        );
+        assert!(!entry.contains("portal"));
+        assert!(entry.contains("plateforme"));
     }
 
     #[test]

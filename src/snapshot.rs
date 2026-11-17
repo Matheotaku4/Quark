@@ -103,14 +103,15 @@ pub const HELP: &str = "\
   quark --ui <fichier.png>  Rend l'interface hors écran dans un PNG (sans écran)\n\
       [--size 1360x860 (max 8192x8192)] [--scale 1.5 (0.5-4)] [--frames 16]\n\
       [--view list|grid] [--group status|store|genre|year|none]\n\
-      [--tab library|store] [--theme amoled|graphite|catppuccin-mocha|...]\n\
-      [--lang fr|en]\n\
+      [--tab library|store|my-games] [--theme amoled|graphite|catppuccin-mocha|...]\n\
+      [--lang fr|en|de|es|pt]\n\
       [--select <jeu>] [--info] [--running] [--marked] [--home]\n\
       [--dialog none|add|artwork|exe|scan|settings|settings-defaults|\n\
       settings-ingame|settings-env|settings-artworks|settings-stats|\n\
       settings-disk|\n\
       settings-about|game|game-dll|logs|updates|customize|remove|steam|overlay|install|\n\
-      site-search|command|command-search|history|saved-views|onboarding|\n\
+      site-search|command|command-search|command-global|history|saved-views|onboarding|\n\
+      settings-search|detail-home|\n\
       onboarding-settings|whats-new]\n\
       [--hover X,Y] [--click X,Y] [--button left|right]\n\
       [--key up|down|left|right|enter|escape] [--demo] [--demo-count N] (0 = vide)\n\
@@ -671,6 +672,14 @@ fn apply_dialog(app: &mut QuarkApp, dialog: &str) -> Result<(), String> {
             app.command_palette_open = true;
             app.command_query = "witcher".to_string();
         }
+        "command-global" => {
+            app.command_palette_open = true;
+            app.command_query = "portal".to_string();
+        }
+        "command-settings" => {
+            app.command_palette_open = true;
+            app.command_query = "sauvegarde".to_string();
+        }
         "history" => {
             app.home = false;
             app.detail_tab = crate::app::DetailTab::History;
@@ -749,6 +758,20 @@ fn apply_dialog(app: &mut QuarkApp, dialog: &str) -> Result<(), String> {
                 .ok_or_else(|| "aucun jeu sélectionné".to_string())?;
             app.lib.settings.view = ViewMode::Grid;
             app.overlay = Some(id);
+            app.detail_from_home = false;
+        }
+        "settings-search" => {
+            app.settings_open = true;
+            app.settings_query = "sauvegarde".to_string();
+            app.settings_focus = true;
+        }
+        "detail-home" => {
+            let id = app
+                .selected
+                .clone()
+                .ok_or_else(|| "aucun jeu sélectionné".to_string())?;
+            app.lib.settings.view = ViewMode::Grid;
+            app.open_game_page(&id, true);
         }
         "site-search" => {
             use crate::game_search::{SearchSite, SiteHit};

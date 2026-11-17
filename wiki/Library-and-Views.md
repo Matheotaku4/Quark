@@ -21,13 +21,15 @@ keeps that state visible after switching pages.
 
 ## Search
 
-- `Ctrl+F` or `/` focuses the search field.
-- `Escape` clears the search.
-- Search ignores accents and compares the title, developer, tags and genres
-  separately. A query cannot match by scattering its letters across fields.
-- The **Filters** button opens one panel for status, Steam genre and personal
-  tags. The number of active filters appears on the button, and **Clear all**
-  removes them at once.
+- `Ctrl+F`, `/` or `Ctrl+K` opens one global search from any tab.
+- It covers local games, games owned in a connected store, pages, actions and
+  settings tasks. A store game opens in **My games**; a settings task opens the
+  right page.
+- Search ignores accents and requires a real substring. A query cannot match by
+  scattering its letters across unrelated fields.
+- `Escape` closes the search; the **Filters** button still opens one panel for
+  status, Steam genre and personal tags. The number of active filters appears
+  on the button, and **Clear all** removes them at once.
 
 ## Sort, filter, group
 
@@ -36,7 +38,7 @@ keeps that state visible after switching pages.
 **Filters**: the funnel button above the list groups status (`To play`,
 `Playing`, `Completed`, `Dropped`), Steam genre and personal tag. Filters
 combine, stay open while selecting and show their count on the button. **Clear
-all** restores the full library. Free-text search stays in the top bar.
+all** restores the full library. The global search stays in the top bar.
 
 List **grouping**:
 
@@ -114,14 +116,14 @@ selection. Removing an entry does not delete the game files: it only removes the
 library entry. Prefixes, saves and installations stay on disk unless you
 explicitly remove them in the relevant tools.
 
-## Command palette
+## Global search
 
-`Ctrl+K` opens a palette that searches pages, actions and games.
+`Ctrl+K`, `Ctrl+F` or `/` opens the same palette from any tab.
 
-- Type to filter; accents are ignored.
+- Type to filter; accents are ignored and a real substring is required.
 - `↑`/`↓` move the selection, `Enter` opens, `Escape` closes.
-- Actions depend on context: open settings, switch page, launch a game or
-  refresh a store.
+- Results include pages, actions, local games, owned store games and settings
+  tasks. Settings results jump directly to the relevant page.
 
 ## Library shortcuts
 
@@ -129,9 +131,9 @@ explicitly remove them in the relevant tools.
 | --- | --- |
 | `↑` / `↓` | Select the previous or next game |
 | `Enter` | Launch the selected game |
-| `Ctrl+F` or `/` | Search |
+| `Ctrl+F` or `/` | Global search |
 | `Escape` | Clear search or close a panel |
-| `Ctrl+K` | Command palette |
+| `Ctrl+K` | Global search |
 | `Ctrl+Q` | Quit Quark |
 
 ## Going further

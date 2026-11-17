@@ -431,6 +431,83 @@ impl SettingsTab {
     }
 }
 
+/// Une tâche de réglage, formulée comme ce que l'utilisateur veut faire. Elle
+/// alimente la recherche des paramètres et la recherche globale, pour éviter
+/// d'obliger à deviner dans quel onglet se cache une option.
+pub struct SettingsTask {
+    pub tab: SettingsTab,
+    pub label: &'static str,
+    pub keywords: &'static str,
+}
+
+pub const SETTINGS_TASKS: &[SettingsTask] = &[
+    SettingsTask {
+        tab: SettingsTab::Appearance,
+        label: "Thème et couleurs",
+        keywords: "theme apparence couleurs amoled graphite clair sombre",
+    },
+    SettingsTask {
+        tab: SettingsTab::Appearance,
+        label: "Langue de l'interface",
+        keywords: "langue language francais anglais allemand espagnol portugais",
+    },
+    SettingsTask {
+        tab: SettingsTab::Appearance,
+        label: "Page d'ouverture",
+        keywords: "demarrage page ouverture accueil bibliotheque boutique",
+    },
+    SettingsTask {
+        tab: SettingsTab::Appearance,
+        label: "Taille de l'interface",
+        keywords: "taille compact densite marges espacement",
+    },
+    SettingsTask {
+        tab: SettingsTab::InGame,
+        label: "Overlay en jeu",
+        keywords: "overlay superposition jeu raccourci captures",
+    },
+    SettingsTask {
+        tab: SettingsTab::InGame,
+        label: "Captures et succès",
+        keywords: "captures screenshots succes achievements notifications",
+    },
+    SettingsTask {
+        tab: SettingsTab::InGame,
+        label: "Sauvegardes cloud",
+        keywords: "sauvegardes cloud sync backup restauration",
+    },
+    SettingsTask {
+        tab: SettingsTab::Defaults,
+        label: "Runtime et préfixe des nouveaux jeux",
+        keywords: "runtime proton prefixe prefixe variables arguments defaut",
+    },
+    SettingsTask {
+        tab: SettingsTab::Artworks,
+        label: "Artworks et couvertures",
+        keywords: "artworks images couvertures banniere logo steamgriddb",
+    },
+    SettingsTask {
+        tab: SettingsTab::Providers,
+        label: "Comptes et synchronisation des boutiques",
+        keywords: "comptes boutiques steam epic gog itch synchronisation connexion",
+    },
+    SettingsTask {
+        tab: SettingsTab::Stats,
+        label: "Statistiques de jeu",
+        keywords: "statistiques heures calendrier series historique",
+    },
+    SettingsTask {
+        tab: SettingsTab::Disk,
+        label: "Espace disque et cache",
+        keywords: "espace disque cache stockage prefixes journaux poids",
+    },
+    SettingsTask {
+        tab: SettingsTab::About,
+        label: "Mises à jour",
+        keywords: "mises a jour updates version release github",
+    },
+];
+
 /// Onglet de la fiche d'un jeu. La fiche générale reste le point d'entrée ;
 /// les DLL ont leur propre page pour ne pas allonger encore le formulaire.
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -624,12 +701,8 @@ pub struct QuarkApp {
     /// du clavier suivent la mise en page réelle (2 à 8 colonnes).
     pub grid_columns: usize,
     pub filter: String,
-    /// Recherche rapide (loupe de la barre du haut) : installés puis achetés.
-    pub library_search_open: bool,
-    pub library_search_query: String,
-    /// Demande le focus du champ à la première image du panneau.
-    pub library_search_focus: bool,
-    /// Palette de commandes (Ctrl+K) : ouverte, requête et ligne sélectionnée.
+    /// Recherche globale unifiée (Ctrl+F, Ctrl+K ou la loupe) : jeux locaux,
+    /// jeux de boutique et réglages. Une seule palette, une seule requête.
     pub command_palette_open: bool,
     pub command_query: String,
     pub command_selected: usize,
@@ -662,6 +735,10 @@ pub struct QuarkApp {
     pub add: AddGame,
     pub settings_open: bool,
     pub settings_tab: SettingsTab,
+    /// Recherche par tâche dans les paramètres.
+    pub settings_query: String,
+    /// Demande le focus du champ à la première image des paramètres.
+    pub settings_focus: bool,
     /// Parcours de bienvenue du premier lancement.
     pub onboarding_open: bool,
     pub onboarding_step: usize,
@@ -803,6 +880,13 @@ pub struct QuarkApp {
     pub blurs: crate::images::BlurCache,
     /// Fiche du jeu affichée en pleine page (vue grille).
     pub overlay: Option<String>,
+    /// La fiche a été ouverte depuis l'accueil : Retour et Échap y ramènent,
+    /// au lieu de laisser l'utilisateur dans la grille de la bibliothèque.
+    pub detail_from_home: bool,
+    /// Jeu dont la vignette du carrousel était affichée au moment de quitter
+    /// l'accueil. On retrouve sa position au retour : un enregistrement de
+    /// session peut réordonner les jeux récents entre-temps.
+    detail_return_carousel: Option<String>,
     /// Import de la bibliothèque Steam installée.
     pub steam_import: Option<SteamImport>,
     /// Identifiants de boutiques lus depuis le fichier local privé.
@@ -976,9 +1060,6 @@ impl QuarkApp {
             pal,
             tab: start_tab,
             filter: String::new(),
-            library_search_open: false,
-            library_search_query: String::new(),
-            library_search_focus: false,
             command_palette_open: false,
             command_query: String::new(),
             command_selected: 0,
@@ -1009,6 +1090,8 @@ impl QuarkApp {
             },
             settings_open: false,
             settings_tab: SettingsTab::Appearance,
+            settings_query: String::new(),
+            settings_focus: false,
             onboarding_open,
             onboarding_step: 0,
             whats_new_open,
@@ -1080,6 +1163,8 @@ impl QuarkApp {
             last_view: ViewMode::List,
             blurs: crate::images::BlurCache::default(),
             overlay: None,
+            detail_from_home: false,
+            detail_return_carousel: None,
             steam_import: None,
             credentials,
             credentials_error,
@@ -3069,27 +3154,32 @@ impl QuarkApp {
 
                     // L'accueil est une page autonome : il a son propre onglet
                     // et ne partage plus l'état actif de la bibliothèque.
-                    let home_active = self.tab == Tab::Library && self.home;
-                    let library_active = self.tab == Tab::Library && !self.home;
+                    let home_active =
+                        self.tab == Tab::Library && (self.home || self.detail_from_home);
+                    let library_active = self.tab == Tab::Library && !home_active;
                     if widgets::tab(ui, "Accueil", home_active, &pal).clicked() {
                         self.tab = Tab::Library;
                         self.home = true;
                         self.overlay = None;
+                        self.detail_from_home = false;
                     }
                     if widgets::tab(ui, "Boutique", self.tab == Tab::Store, &pal).clicked() {
                         self.tab = Tab::Store;
                         self.home = false;
                         self.overlay = None;
+                        self.detail_from_home = false;
                     }
                     if widgets::tab(ui, "Mes jeux", self.tab == Tab::MyGames, &pal).clicked() {
                         self.tab = Tab::MyGames;
                         self.home = false;
                         self.overlay = None;
+                        self.detail_from_home = false;
                     }
                     if widgets::tab(ui, "Bibliothèque", library_active, &pal).clicked() {
                         self.tab = Tab::Library;
                         self.home = false;
                         self.overlay = None;
+                        self.detail_from_home = false;
                     }
 
                     ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
@@ -3100,9 +3190,9 @@ impl QuarkApp {
                         // onglets. En dessous, on garde les icônes seules pour ne
                         // pas faire chevaucher les onglets.
                         let wide_threshold = if self.tab == Tab::Library && !self.home {
-                            1480.0
+                            theme::WIDE
                         } else {
-                            1180.0
+                            theme::MEDIUM
                         };
                         let wide = ctx.screen_rect().width() >= wide_threshold;
                         let settings_hint = crate::i18n::tr("Paramètres · Ctrl+Q pour quitter");
@@ -3122,6 +3212,8 @@ impl QuarkApp {
                         };
                         if settings_clicked {
                             self.settings_open = true;
+                            self.settings_query.clear();
+                            self.settings_focus = false;
                         }
                         ui.add_space(6.0);
                         // Téléchargements : le même panneau, accessible depuis
@@ -3157,20 +3249,19 @@ impl QuarkApp {
                             );
                         }
                         ui.add_space(6.0);
-                        // La bibliothèque a déjà son champ de recherche :
-                        // l'icône de palette y faisait doublon. L'accueil, lui,
-                        // garde la recherche globale.
-                        let palette_clicked = if self.tab == Tab::Library && !self.home {
-                            false
-                        } else if wide {
+                        // Une seule recherche pour toute l'application : jeux
+                        // locaux, jeux de boutique et réglages. Ctrl+F ouvre la
+                        // même palette que Ctrl+K, avec le focus dans le champ.
+                        let palette_clicked = if wide {
                             widgets::pill_button(
                                 ui,
                                 &pal,
                                 Icon::Search,
-                                "Rechercher ou commande",
+                                "Rechercher",
                                 0,
-                                Some("Ctrl K"),
+                                Some("Ctrl F"),
                             )
+                            .on_hover_text(crate::i18n::tr("Recherche globale · Ctrl+F ou Ctrl+K"))
                             .clicked()
                         } else {
                             widgets::icon_button(
@@ -3178,7 +3269,7 @@ impl QuarkApp {
                                 32.0,
                                 Icon::Search,
                                 &pal,
-                                "Palette de commandes · Ctrl+K",
+                                "Recherche globale · Ctrl+F ou Ctrl+K",
                             )
                             .clicked()
                         };
@@ -3210,24 +3301,6 @@ impl QuarkApp {
                                 });
                             }
                             ui.add_space(10.0);
-                        }
-                        if self.tab == Tab::Library && !self.home {
-                            ui.add_space(8.0);
-                            if widgets::icon_button(
-                                ui,
-                                34.0,
-                                Icon::Search,
-                                &pal,
-                                "Rechercher · Ctrl+F",
-                            )
-                            .clicked()
-                            {
-                                self.library_search_open = !self.library_search_open;
-                                self.library_search_focus = self.library_search_open;
-                                if !self.library_search_open {
-                                    self.library_search_query.clear();
-                                }
-                            }
                         } else if self.tab == Tab::Store {
                             ui.label(
                                 crate::i18n::rich("Catalogue Steam")
@@ -3318,6 +3391,54 @@ impl QuarkApp {
         self.marked.clear();
         // Choisir un jeu quitte l'accueil : la fiche prend sa place.
         self.home = false;
+    }
+
+    /// Ouvre la fiche d'un jeu en mémorisant d'où l'on vient. En vue grille,
+    /// la fiche remplace la grille ; en vue liste, elle reste dans le panneau
+    /// de droite. Le retour restaure l'accueil ou la grille, sans perdre les
+    /// filtres ni le défilement de la page précédente.
+    pub fn open_game_page(&mut self, id: &str, from_home: bool) {
+        self.tab = Tab::Library;
+        self.selected = Some(id.to_string());
+        self.marked.clear();
+        // Si la fiche était déjà ouverte depuis l'accueil, on garde la vignette
+        // de départ : une seconde ouverture depuis la palette ne doit pas la
+        // remplacer par le jeu choisi. Sinon, on mémorise la vignette réellement
+        // affichée, qui peut différer du jeu ouvert depuis les favoris/la grille.
+        let was_detail_from_home = self.detail_from_home;
+        self.home = false;
+        self.detail_from_home = from_home;
+        if !from_home {
+            self.detail_return_carousel = None;
+        } else if !was_detail_from_home {
+            self.detail_return_carousel = self.recent_ids().get(self.carousel).cloned();
+        }
+        self.overlay = (self.lib.settings.view == ViewMode::Grid).then(|| id.to_string());
+    }
+
+    /// Ferme la fiche et revient à l'écran d'origine. Un jeu ouvert depuis
+    /// l'accueil y retourne ; un jeu ouvert depuis la bibliothèque retrouve la
+    /// grille et sa position.
+    pub fn close_game_page(&mut self) {
+        let from_home = self.detail_from_home;
+        self.overlay = None;
+        self.detail_from_home = false;
+        if from_home {
+            self.tab = Tab::Library;
+            self.home = true;
+            // Le carrousel ne doit pas sauter de vignette pendant que la fiche
+            // était ouverte. On retrouve le jeu par identifiant, car une session
+            // enregistrée entre-temps peut avoir changé l'ordre des récents ;
+            // s'il a disparu, on repart explicitement de la première vignette.
+            if let Some(game_id) = self.detail_return_carousel.take() {
+                self.carousel = self
+                    .recent_ids()
+                    .iter()
+                    .position(|recent| recent == &game_id)
+                    .unwrap_or(0);
+            }
+            self.carousel_at = Instant::now();
+        }
     }
 
     /// Ctrl+clic : ajoute ou retire un jeu de la sélection multiple. Le panneau
@@ -3440,7 +3561,6 @@ impl QuarkApp {
         }
         self.startup_sync(ctx);
         self.top_bar(ctx);
-        self.library_search_dialog(ctx);
         self.config_error_banner(ctx);
         match self.tab {
             Tab::Store => self.store_tab(ctx),
@@ -3495,9 +3615,6 @@ impl QuarkApp {
         if self.command_palette_open {
             return;
         }
-        if self.library_search_open {
-            return;
-        }
         if self.add.open
             || self.settings_open
             || self.saved_views_open
@@ -3524,16 +3641,15 @@ impl QuarkApp {
         });
 
         if find || (!typing && slash) {
-            self.library_search_open = true;
-            self.library_search_focus = true;
+            self.open_command_palette(ctx);
             return;
         }
         if typing {
             return;
         }
         if escape {
-            if self.overlay.is_some() {
-                self.overlay = None;
+            if self.overlay.is_some() || self.detail_from_home {
+                self.close_game_page();
             } else if self.tab != Tab::Library {
                 self.tab = Tab::Library;
             } else if self.home {
@@ -4274,6 +4390,7 @@ impl QuarkApp {
         if self.lib.settings.view != view {
             self.lib.settings.view = view;
             self.overlay = None;
+            self.detail_from_home = false;
             self.touch();
         }
     }

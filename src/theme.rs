@@ -29,6 +29,14 @@ const fn rgb(r: u8, g: u8, b: u8) -> Color32 {
     Color32::from_rgb(r, g, b)
 }
 
+/// Points de rupture de la mise en page, partagés par la barre du haut, les
+/// réglages et les pages à deux colonnes. En dessous de `NARROW`, les actions
+/// perdent leurs libellés ; entre `MEDIUM` et `WIDE`, les contrôles de la
+/// bibliothèque restent compacts pour ne jamais chevaucher les onglets.
+pub const NARROW: f32 = 900.0;
+pub const MEDIUM: f32 = 1180.0;
+pub const WIDE: f32 = 1480.0;
+
 /// Couleur d'accent lisible sur le noir AMOLED à partir d'une teinte (degrés).
 pub fn accent_from_hue(hue: f32) -> Color32 {
     hsv(hue, 0.78, 0.90)

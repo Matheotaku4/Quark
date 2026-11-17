@@ -1300,6 +1300,53 @@ pub fn nav_entry(ui: &mut egui::Ui, pal: &Palette, label: &str, selected: bool) 
         .clicked()
 }
 
+/// Squelette de chargement : des lignes qui respirent à la place du contenu
+/// asynchrone. Il évite le saut de mise en page qu'un simple spinner provoque
+/// quand les actualités arrivent, et suit la densité de l'interface.
+pub fn skeleton_lines(ui: &mut egui::Ui, pal: &Palette, width: f32, lines: usize) {
+    let time = ui.input(|input| input.time) as f32;
+    let pulse = 0.45 + 0.25 * ((time * 2.2).sin() * 0.5 + 0.5);
+    for index in 0..lines.max(1) {
+        let line_width = if index + 1 == lines {
+            width * 0.58
+        } else {
+            width * (1.0 - index as f32 * 0.06)
+        };
+        let (rect, _) =
+            ui.allocate_exact_size(Vec2::new(line_width.max(80.0), 10.0), Sense::hover());
+        ui.painter()
+            .rect_filled(rect, 4.0, pal.surface_hover.gamma_multiply(pulse));
+        ui.add_space(7.0);
+    }
+    ui.ctx()
+        .request_repaint_after(std::time::Duration::from_millis(60));
+}
+
+/// Message d'état asynchrone (vide, erreur, source indisponible) dans une
+/// carte commune, pour que toutes les pages parlent le même langage visuel.
+pub fn status_note(
+    ui: &mut egui::Ui,
+    pal: &Palette,
+    icon: Icon,
+    text: impl Into<String>,
+    color: Color32,
+) -> Response {
+    egui::Frame::new()
+        .fill(pal.surface)
+        .stroke(Stroke::new(1.0_f32, pal.border))
+        .corner_radius(8.0)
+        .inner_margin(egui::Margin::symmetric(12, 10))
+        .show(ui, |ui| {
+            ui.horizontal(|ui| {
+                let (icon_rect, _) = ui.allocate_exact_size(Vec2::splat(16.0), Sense::hover());
+                paint_icon(ui, icon_rect, icon, color);
+                ui.add_space(4.0);
+                ui.label(crate::i18n::rich(text.into()).size(12.0).color(color));
+            });
+        })
+        .response
+}
+
 /// Onglet de contenu (fiche de jeu) : casse naturelle et soulignement bleu,
 /// pour distinguer la navigation interne de la barre du haut.
 pub fn detail_tab(ui: &mut egui::Ui, label: &str, selected: bool, pal: &Palette) -> egui::Response {

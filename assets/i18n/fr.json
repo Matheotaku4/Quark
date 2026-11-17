@@ -759,5 +759,22 @@
   "Bibliothèque itch.io avec une clé API.": "Bibliothèque itch.io avec une clé API.",
   "Ajoute un jeu local, importe ta bibliothèque Steam ou explore les boutiques.": "Ajoute un jeu local, importe ta bibliothèque Steam ou explore les boutiques.",
   "Importer Steam": "Importer Steam",
-  "Explorer les boutiques": "Explorer les boutiques"
+  "Explorer les boutiques": "Explorer les boutiques",
+  "RÉGLAGES": "RÉGLAGES",
+  "Rechercher un jeu, un réglage ou une action…": "Rechercher un jeu, un réglage ou une action…",
+  "Recherche globale · Ctrl+F ou Ctrl+K": "Recherche globale · Ctrl+F ou Ctrl+K",
+  "Chercher un réglage ou une tâche…": "Chercher un réglage ou une tâche…",
+  "Aucun réglage ne correspond.": "Aucun réglage ne correspond.",
+  "Retour à l'accueil": "Retour à l'accueil",
+  "Thème et couleurs": "Thème et couleurs",
+  "Overlay en jeu": "Overlay en jeu",
+  "Captures et succès": "Captures et succès",
+  "Runtime et préfixe des nouveaux jeux": "Runtime et préfixe des nouveaux jeux",
+  "Artworks et couvertures": "Artworks et couvertures",
+  "Comptes et synchronisation des boutiques": "Comptes et synchronisation des boutiques",
+  "Statistiques de jeu": "Statistiques de jeu",
+  "Espace disque et cache": "Espace disque et cache",
+  "Chercher un réglage…": "Chercher un réglage…",
+  "Installations et transferts en cours": "Installations et transferts en cours",
+  "Apparence et comportement de Quark": "Apparence et comportement de Quark"
 }
