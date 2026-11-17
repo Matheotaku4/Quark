@@ -54,7 +54,9 @@ impl QuarkApp {
                 ui.add_space(18.0);
                 if recent.is_empty() {
                     if self.lib.games.is_empty() {
-                        self.home_empty(ui);
+                        // Même écran que la bibliothèque vide : l'accueil ne
+                        // duplique plus un message de bienvenue séparé.
+                        self.empty_state(ui);
                     } else {
                         if self.favorites_section(ui) {
                             ui.add_space(30.0);
@@ -115,37 +117,6 @@ impl QuarkApp {
         }
         self.carousel = index % len;
         self.carousel_at = std::time::Instant::now();
-    }
-
-    fn home_empty(&mut self, ui: &mut egui::Ui) {
-        let pal = self.pal;
-        ui.vertical_centered(|ui| {
-            ui.add_space(120.0);
-            ui.label(
-                crate::i18n::rich("Bienvenue dans Quark")
-                    .size(22.0)
-                    .color(pal.text),
-            );
-            ui.add_space(8.0);
-            ui.label(
-                crate::i18n::rich("Ajoute un jeu pour le voir apparaître ici.")
-                    .size(13.0)
-                    .color(pal.text_dim),
-            );
-            ui.add_space(18.0);
-            if widgets::accent_button(
-                ui,
-                Vec2::new(190.0, 40.0),
-                "Ajouter un jeu",
-                &pal,
-                true,
-                Icon::Plus,
-            )
-            .clicked()
-            {
-                self.open_add_dialog();
-            }
-        });
     }
 
     // -----------------------------------------------------------------------

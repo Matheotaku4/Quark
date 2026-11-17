@@ -164,7 +164,7 @@ impl QuarkApp {
         ui.add_space(4.0);
         ui.label(
             i18n::rich(
-                "Une seule bibliothèque pour les jeux locaux, Steam, Epic et GOG, avec les mêmes artworks, tags, notes et statistiques.",
+                "Une seule bibliothèque pour les jeux locaux, Steam, Epic, GOG et itch.io, avec les mêmes artworks, tags, notes et statistiques.",
             )
             .size(12.0)
             .color(pal.text_dim),
@@ -183,7 +183,7 @@ impl QuarkApp {
                 &pal,
                 Icon::Steam,
                 "Boutiques",
-                "Steam, Epic et GOG : comptes, installations, temps de jeu et sauvegardes cloud.",
+                "Steam, Epic, GOG et itch.io : comptes, installations, temps de jeu et sauvegardes cloud.",
             );
             onboarding_card(
                 &mut columns[1],

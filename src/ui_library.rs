@@ -19,12 +19,11 @@ impl QuarkApp {
         // Vue grille : **seulement** la grille. La fiche du jeu s'ouvre en
         // surimpression, avec sa croix, et se ferme d'un clic à côté.
         let grid_only = view == ViewMode::Grid;
-        // La colonne de gauche reste visible dans toutes les vues de la
-        // bibliothèque : c'est là que vivent « Accueil » et les filtres, même
-        // quand la grille occupe le reste de la fenêtre. Une bibliothèque
-        // entièrement vide n'a rien à y filtrer : la fiche prend toute la place.
-        let empty_library = self.lib.games.is_empty() && !self.home;
-        if !empty_library {
+        // L'accueil est une page autonome : il n'a pas de colonne de filtres.
+        // La bibliothèque garde la sienne, sauf quand elle est entièrement vide
+        // et que la fiche peut utiliser toute la largeur.
+        let empty_library = self.lib.games.is_empty();
+        if !self.home && !empty_library {
             egui::SidePanel::left("quark_library_list")
                 .exact_width(self.lib.settings.sidebar_width.clamp(220.0, 340.0))
                 .resizable(false)
@@ -56,7 +55,7 @@ impl QuarkApp {
                 }
             });
 
-        if grid_only {
+        if grid_only && !self.home {
             self.detail_overlay(ctx);
         }
     }
@@ -598,16 +597,8 @@ impl QuarkApp {
             });
         });
         ui.add_space(10.0);
-        let (home_clicked, add_clicked) = widgets::home_row(ui, self.home, &pal);
-        if home_clicked {
-            self.home = true;
-        }
-        if add_clicked {
-            self.open_add_dialog();
-        }
-
-        // Une seule commande sous « Accueil » : le panneau Filtres réunit
-        // aussi les vues enregistrées, le tri et le regroupement.
+        // L'accueil a son onglet dans la barre haute : la colonne ne garde que
+        // le panneau Filtres, qui réunit aussi les vues, le tri et le regroupement.
         self.filter_menu(ui, 16.0);
         if marked_count > 0 {
             // Barre de sélection : supprimer plusieurs jeux d'un coup.
@@ -1685,7 +1676,7 @@ impl QuarkApp {
         }
     }
 
-    fn empty_state(&mut self, ui: &mut egui::Ui) {
+    pub(crate) fn empty_state(&mut self, ui: &mut egui::Ui) {
         let pal = self.pal;
         // Une bibliothèque vide n'est pas une absence de sélection : on guide
         // vers les trois façons de la remplir au lieu d'afficher un texte seul.
@@ -1728,7 +1719,14 @@ impl QuarkApp {
                                 .color(pal.text_dim),
                             );
                             ui.add_space(20.0);
-                            ui.horizontal_wrapped(|ui| {
+                            // Les boutons sont mesurés pour centrer la rangée
+                            // sans dépendre de la largeur de leurs traductions.
+                            let row_width = 176.0
+                                + ui.spacing().item_spacing.x * 2.0
+                                + ghost_button_width(ui, "Importer Steam")
+                                + ghost_button_width(ui, "Explorer les boutiques");
+                            ui.horizontal(|ui| {
+                                ui.add_space((ui.available_width() - row_width).max(0.0) / 2.0);
                                 if widgets::accent_button(
                                     ui,
                                     Vec2::new(176.0, 38.0),
@@ -3002,4 +3000,15 @@ fn history_metric(ui: &mut egui::Ui, pal: &Palette, label: &str, value: &str) {
         ui.label(crate::i18n::rich(label).size(11.0).color(pal.text_faint));
         ui.label(crate::i18n::rich(value).size(15.0).strong().color(pal.text));
     });
+}
+
+/// Largeur du bouton fantôme tel que `widgets::ghost_button` le dessine :
+/// libellé traduit + icône + gouttière + marges.
+fn ghost_button_width(ui: &egui::Ui, label: &str) -> f32 {
+    let galley = ui.painter().layout_no_wrap(
+        crate::i18n::tr(label),
+        egui::FontId::proportional(12.5),
+        egui::Color32::WHITE,
+    );
+    galley.size().x + 13.0 + 8.0 + 24.0
 }

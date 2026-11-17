@@ -3067,16 +3067,21 @@ impl QuarkApp {
                     );
                     ui.add_space(26.0);
 
-                    // L'accueil n'a plus d'onglet dédié : il s'ouvre par la
-                    // ligne « Accueil » de la colonne de gauche, juste au-dessus
-                    // des filtres. « Bibliothèque » reste actif sur les deux
-                    // pages, comme un seul et même espace.
-                    let library_active = self.tab == Tab::Library;
+                    // L'accueil est une page autonome : il a son propre onglet
+                    // et ne partage plus l'état actif de la bibliothèque.
+                    let home_active = self.tab == Tab::Library && self.home;
+                    let library_active = self.tab == Tab::Library && !self.home;
+                    if widgets::tab(ui, "Accueil", home_active, &pal).clicked() {
+                        self.tab = Tab::Library;
+                        self.home = true;
+                    }
                     if widgets::tab(ui, "Boutique", self.tab == Tab::Store, &pal).clicked() {
                         self.tab = Tab::Store;
+                        self.home = false;
                     }
                     if widgets::tab(ui, "Mes jeux", self.tab == Tab::MyGames, &pal).clicked() {
                         self.tab = Tab::MyGames;
+                        self.home = false;
                     }
                     if widgets::tab(ui, "Bibliothèque", library_active, &pal).clicked() {
                         self.tab = Tab::Library;
@@ -3090,7 +3095,7 @@ impl QuarkApp {
                         // recherche) et demande donc plus de place que les autres
                         // onglets. En dessous, on garde les icônes seules pour ne
                         // pas faire chevaucher les onglets.
-                        let wide_threshold = if self.tab == Tab::Library {
+                        let wide_threshold = if self.tab == Tab::Library && !self.home {
                             1480.0
                         } else {
                             1180.0
@@ -3149,8 +3154,9 @@ impl QuarkApp {
                         }
                         ui.add_space(6.0);
                         // La bibliothèque a déjà son champ de recherche :
-                        // l'icône de palette y faisait doublon.
-                        let palette_clicked = if self.tab == Tab::Library {
+                        // l'icône de palette y faisait doublon. L'accueil, lui,
+                        // garde la recherche globale.
+                        let palette_clicked = if self.tab == Tab::Library && !self.home {
                             false
                         } else if wide {
                             widgets::pill_button(
@@ -3180,7 +3186,7 @@ impl QuarkApp {
                         // Seul endroit où l'on bascule de vue : un contrôle
                         // segmenté aux libellés visibles, et un bouton
                         // « Ajouter » explicite à la place de trois icônes.
-                        if self.tab == Tab::Library {
+                        if self.tab == Tab::Library && !self.home {
                             if widgets::icon_button(ui, 34.0, Icon::Plus, &pal, "Ajouter un jeu")
                                 .clicked()
                             {
@@ -3201,7 +3207,7 @@ impl QuarkApp {
                             }
                             ui.add_space(10.0);
                         }
-                        if self.tab == Tab::Library {
+                        if self.tab == Tab::Library && !self.home {
                             ui.add_space(8.0);
                             if widgets::icon_button(
                                 ui,
