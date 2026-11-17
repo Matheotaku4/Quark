@@ -519,51 +519,51 @@ impl QuarkApp {
                 });
                 ui.add_space(20.0);
 
-                let providers = vec![
-                    (
-                        Provider::Steam,
-                        "Jeux installés détectés localement.",
-                        if steam_key_ready {
+                let providers = [
+                    ProviderCard {
+                        provider: Provider::Steam,
+                        description: "Jeux installés détectés localement.",
+                        status: if steam_key_ready {
                             crate::i18n::tr("Connecté")
                         } else {
                             crate::i18n::tr("Détection locale")
                         },
-                        true,
-                        self.steam_sync_loading,
-                    ),
-                    (
-                        Provider::Epic,
-                        "Bibliothèque Epic via Legendary ou la connexion directe.",
-                        if epic_ready {
+                        connected: true,
+                        busy: self.steam_sync_loading,
+                    },
+                    ProviderCard {
+                        provider: Provider::Epic,
+                        description: "Bibliothèque Epic via Legendary ou la connexion directe.",
+                        status: if epic_ready {
                             crate::i18n::tr("Connecté")
                         } else {
                             crate::i18n::tr("Non connecté")
                         },
-                        epic_ready,
-                        self.epic_sync_loading,
-                    ),
-                    (
-                        Provider::Gog,
-                        "Bibliothèque GOG via gogdl.",
-                        if gog_ready {
+                        connected: epic_ready,
+                        busy: self.epic_sync_loading,
+                    },
+                    ProviderCard {
+                        provider: Provider::Gog,
+                        description: "Bibliothèque GOG via gogdl.",
+                        status: if gog_ready {
                             crate::i18n::tr("Connecté")
                         } else {
                             crate::i18n::tr("Non connecté")
                         },
-                        gog_ready,
-                        self.gog_sync_loading,
-                    ),
-                    (
-                        Provider::Itch,
-                        "Bibliothèque itch.io avec une clé API.",
-                        if itch_ready {
+                        connected: gog_ready,
+                        busy: self.gog_sync_loading,
+                    },
+                    ProviderCard {
+                        provider: Provider::Itch,
+                        description: "Bibliothèque itch.io avec une clé API.",
+                        status: if itch_ready {
                             crate::i18n::tr("Connecté")
                         } else {
                             crate::i18n::tr("Non connecté")
                         },
-                        itch_ready,
-                        self.itch_sync_loading,
-                    ),
+                        connected: itch_ready,
+                        busy: self.itch_sync_loading,
+                    },
                 ];
                 let gap = 12.0;
                 let available = ui.available_width();
@@ -573,31 +573,15 @@ impl QuarkApp {
                     .max(260.0);
                 for chunk in providers.chunks(columns) {
                     ui.horizontal_top(|ui| {
-                        for (index, (provider, description, status, connected, busy)) in
-                            chunk.iter().enumerate()
-                        {
+                        for (index, card) in chunk.iter().enumerate() {
                             if index > 0 {
                                 // Le spacing de la rangée s'ajoute à cet espace :
                                 // on complète pour garder exactement `gap`.
                                 ui.add_space((gap - ui.spacing().item_spacing.x).max(0.0));
                             }
-                            let status = if *busy {
-                                crate::i18n::tr("Synchronisation…")
-                            } else {
-                                status.clone()
-                            };
-                            if empty_provider_card(
-                                ui,
-                                pal,
-                                card_w,
-                                *provider,
-                                description,
-                                &status,
-                                *connected,
-                                *busy,
-                            ) {
-                                if *connected {
-                                    sync_request = Some(*provider);
+                            if empty_provider_card(ui, pal, card_w, card) {
+                                if card.connected {
+                                    sync_request = Some(card.provider);
                                 } else {
                                     *open_settings = true;
                                 }
@@ -1062,17 +1046,31 @@ impl QuarkApp {
     }
 }
 
+/// Données d'une boutique dans l'état vide de « Mes jeux ».
+struct ProviderCard {
+    provider: Provider,
+    description: &'static str,
+    status: String,
+    connected: bool,
+    busy: bool,
+}
+
 /// Carte d'une boutique dans l'état vide de « Mes jeux ».
 fn empty_provider_card(
     ui: &mut egui::Ui,
     pal: &theme::Palette,
     width: f32,
-    provider: Provider,
-    description: &str,
-    status: &str,
-    connected: bool,
-    busy: bool,
+    card: &ProviderCard,
 ) -> bool {
+    let provider = card.provider;
+    let description = card.description;
+    let connected = card.connected;
+    let busy = card.busy;
+    let status = if busy {
+        crate::i18n::tr("Synchronisation…")
+    } else {
+        card.status.clone()
+    };
     let inner_width = (width - 28.0).max(220.0);
     egui::Frame::new()
         .fill(pal.bg)
