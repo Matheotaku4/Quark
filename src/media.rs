@@ -22,8 +22,10 @@ pub struct Trailer {
     pub title: String,
     /// Vignette 16:9 affichée avant lecture.
     pub thumbnail: String,
-    /// MP4 ou WebM ouvert dans le navigateur au clic.
+    /// Flux lisible par le lecteur intégré : HLS, DASH, MP4 ou WebM.
     pub video: String,
+    /// Fiche Steam, utilisée si le lecteur intégré n'est pas disponible.
+    pub page: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
@@ -85,8 +87,7 @@ fn parse(body: &str, app_id: u32) -> Result<GameMedia, String> {
         mp4: Video,
         #[serde(default)]
         webm: Video,
-        /// Steam sert désormais les bandes-annonces en HLS/DASH : le navigateur
-        /// ne les ouvre pas directement, la fiche Steam sert alors de repli.
+        /// Steam sert désormais les bandes-annonces en HLS/DASH.
         #[serde(default)]
         hls_h264: String,
         #[serde(default)]
@@ -117,19 +118,26 @@ fn parse(body: &str, app_id: u32) -> Result<GameMedia, String> {
     }
     let data = envelope.data.clone().unwrap_or_default();
 
+    let page = format!("https://store.steampowered.com/app/{app_id}/");
     let mut trailers: Vec<Trailer> = data
         .movies
         .iter()
         .filter_map(|movie| {
+            // HLS/DASH d'abord : c'est le format des bandes-annonces récentes
+            // et il contient l'audio. Les anciens MP4/WebM restent acceptés.
+            let streaming = https_or_empty(&movie.hls_h264);
+            let streaming = if streaming.is_empty() {
+                https_or_empty(&movie.dash_h264)
+            } else {
+                streaming
+            };
             let direct = first_url(&movie.mp4.max, &movie.mp4.small)
                 .or_else(|| first_url(&movie.webm.max, &movie.webm.small));
-            // Une vidéo HLS/DASH prouve qu'une bande-annonce existe, mais le
-            // navigateur ne la lit pas seule : on ouvre la fiche Steam, qui la
-            // joue, au lieu de produire un lien mort.
-            let streaming = !movie.hls_h264.trim().is_empty() || !movie.dash_h264.trim().is_empty();
-            let video = direct.or_else(|| {
-                streaming.then(|| format!("https://store.steampowered.com/app/{app_id}/"))
-            })?;
+            let video = if streaming.is_empty() {
+                direct?
+            } else {
+                streaming
+            };
             let thumbnail = https_or_empty(&movie.thumbnail);
             if thumbnail.is_empty() {
                 return None;
@@ -138,6 +146,7 @@ fn parse(body: &str, app_id: u32) -> Result<GameMedia, String> {
                 title: movie.name.trim().to_string(),
                 thumbnail,
                 video,
+                page: page.clone(),
             })
         })
         .collect();
@@ -214,12 +223,16 @@ mod tests {
         let media = parse(body, 730).unwrap();
         assert_eq!(media.trailers.len(), 1);
         assert_eq!(media.trailers[0].video, "https://cdn.test/trailer.mp4");
+        assert_eq!(
+            media.trailers[0].page,
+            "https://store.steampowered.com/app/730/"
+        );
         assert_eq!(media.screenshots.len(), 2);
         assert_eq!(media.screenshots[0].full, "https://cdn.test/shot-1.jpg");
     }
 
     #[test]
-    fn une_video_hls_ouvre_la_fiche_steam() {
+    fn une_video_hls_reste_lisible_dans_le_lecteur() {
         let body = r#"{
           "20": {"success": true, "data": {
             "movies": [{"name": "Trailer", "thumbnail": "https://cdn.test/trailer.jpg",
@@ -229,8 +242,9 @@ mod tests {
         }"#;
         let media = parse(body, 20).unwrap();
         assert_eq!(media.trailers.len(), 1);
+        assert_eq!(media.trailers[0].video, "https://video.test/master.m3u8");
         assert_eq!(
-            media.trailers[0].video,
+            media.trailers[0].page,
             "https://store.steampowered.com/app/20/"
         );
     }

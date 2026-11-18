@@ -5,23 +5,28 @@ games and your Steam, Epic Games and GOG libraries together, launches Windows
 games through Proton or umu-launcher, and adds an in-game overlay, screenshots,
 achievements and verified local saves.
 
-This documentation describes **Quark 1.8.5**. It is also versioned in the
+This documentation describes **Quark 1.8.6**. It is also versioned in the
 repository under [`wiki/`](https://github.com/Matheotaku4/Quark/tree/main/wiki).
 
 ![Quark home](https://raw.githubusercontent.com/Matheotaku4/Quark/main/docs/images/home-en.png)
 
-## What's new in 1.8.5
+## What's new in 1.8.6
 
-- **News becomes Media.** The game page now shows the trailer first, then the
-  game's screenshots, instead of the Steam news feed.
-- **A Steam-like layout.** The trailer spans the content width with a play
-  button, followed by a 16:9 screenshot grid. Clicking opens the video or the
-  full image in the browser.
-- **Game logs now document store connections.** Every session starts with the
-  GOG (gogdl) and Epic (direct session and Legendary) connection state, tool
+- **Trailers play inside Quark.** The Media tab now plays Steam trailers (HLS,
+  DASH, MP4 and WebM) with sound. GStreamer runs in a separate process, so a
+  decoder failure cannot take the launcher down, and a missing player falls
+  back to the Steam page with a clear message.
+- **A Steam-like media strip.** The large view shows the selected trailer or
+  screenshot. Below it, a horizontal strip lists the trailer first, then the
+  screenshots. Clicking a screenshot replaces the trailer with the image;
+  clicking the trailer brings it back full size and starts playback.
+- **Horizontal navigation.** The strip scrolls with the wheel, by dragging or
+  with the previous/next arrows. The selected item keeps an accent border.
+- **Game logs document store connections.** Every session starts with the GOG
+  (gogdl) and Epic (direct session and Legendary) connection state, tool
   presence and the launched game's store. No token is ever written.
-- **Tests:** 342 unit tests, plus 3 live network tests run separately (Steam
-  media, GOG pack resolution and the game's Windows builds).
+- **Tests:** 344 unit tests, plus 4 live network tests run separately (a real
+  HLS trailer, Steam media, GOG pack resolution and the game's Windows builds).
 
 ## Where to start
 

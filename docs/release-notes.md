@@ -1,22 +1,36 @@
-## Quark 1.8.5 — Média façon Steam et journaux de connexion
+## Quark 1.8.6 — La bande-annonce se lit dans Quark
 
 ### Nouveautés
 
-- **L'onglet « Actualités » devient « Média ».** La fiche jeu charge la fiche publique Steam du jeu et affiche sa bande-annonce avant ses captures. Les jeux sans fiche Steam reliée affichent un message explicite au lieu d'un flux vide.
-- **Disposition proche de Steam.** La bande-annonce occupe la largeur disponible, avec un bouton de lecture sur sa vignette. Les captures suivent en grille 16:9 (trois colonnes sur une fenêtre large), avec un liseré d'accent au survol. Un clic ouvre la vidéo ou l'image complète dans le navigateur.
-- **Les connexions GOG et Epic entrent dans le journal du jeu.** Chaque session commence par l'état de la session gogdl, des sessions Epic directe et Legendary, la présence des outils et la boutique du jeu lancé. Les jetons et codes d'autorisation ne sont jamais journalisés.
-- **Cache et chargement.** Les médias sont chargés une fois par jeu, à l'ouverture de l'onglet Média, et le bouton « Actualiser » permet de réessayer après une erreur réseau.
+- **Lecture intégrée.** L'onglet Média lit désormais les bandes-annonces Steam directement dans la fiche : HLS, DASH, MP4 et WebM, avec le son. Quitter la fiche, changer d'onglet ou sélectionner une capture arrête la lecture et libère le lecteur.
+- **Une vraie pellicule façon Steam.** La grande vue montre la vidéo ou la capture sélectionnée. En dessous, une liste horizontale présente la vidéo en premier, puis les captures. Un clic sur une capture remplace la vidéo par l'image ; un clic sur la vidéo la remet en grand et démarre la lecture.
+- **Navigation horizontale.** La pellicule se parcourt à la molette, en la faisant glisser ou avec les flèches précédent/suivant. La sélection reste entourée d'un liseré d'accent.
+- **Lecteur isolé et repli propre.** GStreamer tourne dans un processus séparé : une erreur du décodeur ne peut pas emporter Quark. Si GStreamer ou ses greffons manquent, la fiche affiche la vignette, explique l'erreur et propose d'ouvrir la page Steam.
+- **Journaux de connexion conservés.** Chaque session GOG ou Epic continue d'écrire l'état de gogdl, des sessions Epic directe et Legendary, la présence des outils et la boutique du jeu lancé, sans jeton.
 
 ### Vérifications
 
 - `cargo fmt --all -- --check` : OK.
-- `cargo test --locked` : 342 tests réussis, 3 tests réseau ignorés par défaut.
-- `cargo test --locked -- --ignored` : 3 tests réseau réussis (médias réels de The Witcher 3, résolution du pack GOG et builds Windows).
+- `cargo test --locked` : 344 tests réussis, 4 tests réseau ignorés par défaut.
+- `cargo test --locked -- --ignored` : 4 tests réseau réussis (bande-annonce HLS réelle dans le lecteur, médias Steam, résolution du pack GOG et builds Windows).
 - `cargo clippy --all-targets --locked -- -D warnings` : OK.
-- Rendu hors écran de la nouvelle fiche Média en 1360×1800 : bande-annonce, bouton de lecture, titre et grille de six captures visibles.
+- Lecture réelle de la bande-annonce HLS de The Witcher 3 : première image reçue dans le lecteur, puis arrêt propre.
+- Rendus hors écran 1360×1600 : grande vue, pellicule vidéo puis captures, sélection d'une capture et défilement horizontal.
+
+### Prérequis de lecture intégrée
+
+GStreamer n'est pas embarqué dans l'archive. La lecture fonctionne quand `gst-launch-1.0` et les greffons HLS/H.264 sont installés, par exemple sous Ubuntu/Debian :
+
+```bash
+sudo apt install gstreamer1.0-tools gstreamer1.0-plugins-base \
+  gstreamer1.0-plugins-good gstreamer1.0-libav
+```
+
+Sans ces paquets, Quark reste utilisable et propose la fiche Steam à la place.
 
 ### Limites connues
 
-- Steam sert de plus en plus ses bandes-annonces en HLS/DASH. Quark affiche la vignette et ouvre alors la fiche Steam, qui joue la vidéo, au lieu de fabriquer un lien mort. Les anciens trailers MP4/WebM s'ouvrent directement.
+- La lecture intégrée s'appuie sur GStreamer et sur la sortie audio du système ; le premier tampon HLS peut prendre quelques secondes.
+- Le lecteur intégré propose lecture/pause et relecture, mais pas encore de barre de progression ni de sélection de piste audio.
 - L'onglet Média s'appuie sur la fiche Steam : un jeu GOG, Epic ou local non relié à Steam n'a pas de galerie pour l'instant.
 - Les diagnostics de connexion indiquent la présence des sessions et des outils, pas leur validité côté serveur : un jeton expiré reste marqué « connecté » jusqu'à la prochaine requête de la boutique.

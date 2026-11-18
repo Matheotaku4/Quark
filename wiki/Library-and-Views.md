@@ -88,8 +88,10 @@ The game page shows:
 - the **Logs**, **Information**, **Customize** and **Game settings** actions;
 - a star button to add or remove the game from the **Favorites** strip.
 
-**Media** shows the Steam trailer first, then a 16:9 screenshot grid; clicking
-a thumbnail opens the video or the full image in the browser. **History**
+**Media** plays the Steam trailer in the page itself, then lists it before the
+screenshots in a horizontal filmstrip. Click a screenshot to show it full size,
+click the video to bring it back and start playback, and scroll the strip with
+the wheel, a drag or the previous/next arrows. **History**
 summarizes sessions, shows the last twelve weeks and lists recent play sessions. Playtime published by Epic or GOG replaces local playtime when
 the store provides it; Steam Cloud remains managed by Steam.
 

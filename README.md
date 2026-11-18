@@ -6,7 +6,7 @@ titles you own, launches Windows games through Proton (or umu-launcher), and sta
 the way with an AMOLED interface, a store page, save snapshots and an in-game
 overlay.
 
-This is the **1.8.5** documentation. Older release notes are kept on the GitHub
+This is the **1.8.6** documentation. Older release notes are kept on the GitHub
 releases page; `docs/release-notes.md` only describes the release currently
 being published.
 
@@ -28,16 +28,17 @@ The wiki is published from the versioned source in [`wiki/`](wiki/) by the
 | --- | --- |
 | ![Onboarding](docs/images/onboarding-fr.png) | ![What's new](docs/images/whats-new-fr.png) |
 
-## What's new in 1.8.5
+## What's new in 1.8.6
 
-- **L'onglet Actualités devient Média.** La fiche jeu affiche maintenant la bande-annonce du jeu, puis ses captures, à la place du flux d'actualités Steam.
-- **Une disposition proche de Steam.** La bande-annonce occupe toute la largeur avec un bouton de lecture, suivie d'une grille de captures 16:9. Un clic ouvre la vidéo ou l'image en grand dans le navigateur.
+- **La bande-annonce se lit dans Quark.** L'onglet Média lit les trailers Steam (HLS, DASH, MP4, WebM) dans un lecteur intégré, avec le son. GStreamer tourne dans un processus séparé : Quark reste lançable et affiche un repli propre s'il manque.
+- **Une pellicule façon Steam.** La grande vue montre la vidéo ou la capture sélectionnée. En dessous, la liste horizontale place la vidéo en premier, puis les captures ; un clic sur une capture remplace la vidéo, un clic sur la vidéo la remet en grand et démarre la lecture.
+- **Navigation dans la pellicule.** Molette, glisser-déposer et flèches précédent/suivant font défiler la liste horizontalement. La capture ou la vidéo choisie reste entourée d'un liseré d'accent.
 - **Le journal des jeux documente les connexions boutiques.** Chaque session commence par l'état des sessions GOG (gogdl) et Epic (connexion directe et Legendary), la présence des outils et la boutique du jeu lancé. Aucun jeton n'est écrit.
-- **Tests** : 342 tests unitaires, plus 3 tests réseau exécutés séparément (médias Steam, résolution du pack GOG et builds Windows du jeu).
+- **Tests** : 344 tests unitaires, plus 4 tests réseau exécutés séparément (bande-annonce HLS réelle, médias Steam, résolution du pack GOG et builds Windows du jeu).
 
 ## Table of contents
 
-1. [What's new in 1.8.5](#whats-new-in-185)
+1. [What's new in 1.8.6](#whats-new-in-186)
 2. [What Quark does](#what-quark-does)
 3. [Installation](#installation)
 4. [First launch](#first-launch)
@@ -97,8 +98,8 @@ Download `quark-<version>-linux-x86_64.tar.gz` and its `.sha256` file from the
 then verify and unpack it:
 
 ```bash
-sha256sum -c quark-1.8.5-linux-x86_64.tar.gz.sha256
-tar -xzf quark-1.8.5-linux-x86_64.tar.gz
+sha256sum -c quark-1.8.6-linux-x86_64.tar.gz.sha256
+tar -xzf quark-1.8.6-linux-x86_64.tar.gz
 ./quark/quark
 ```
 
@@ -117,6 +118,10 @@ update-desktop-database ~/.local/share/applications 2>/dev/null || true
 is not, use the absolute path of the binary in the desktop file. Quark needs
 X11 or Wayland, OpenGL and the usual font/GL libraries of your distribution.
 `python3` is required by Legendary and gogdl (both are Python zipapps).
+For inline trailers, install GStreamer with `gst-launch-1.0` and the HLS/H.264
+plugins (`gstreamer1.0-tools`, `gstreamer1.0-plugins-good` and
+`gstreamer1.0-libav` on Debian/Ubuntu). Without them, the Media tab shows the
+thumbnail and offers the Steam page instead.
 
 ### Build from source
 
@@ -210,8 +215,11 @@ to close.
 ### Game page
 
 The page shows the hero banner, ProtonDB/native badges, the **Play** button with
-playtime, media, achievements and history tabs. The information button stays on
-the banner; per-game settings, customization, the session log and removal live
+playtime, media, achievements and history tabs. The **Media** tab plays the Steam
+trailer inline and lists it before the screenshots in a horizontal filmstrip;
+clicking a screenshot replaces the video, clicking the video starts it again.
+The information button stays on the banner; per-game settings, customization,
+the session log and removal live
 in a single **···** menu (removal still asks for confirmation). **History**
 summarises the game's sessions, shows the last twelve weeks and lists its latest
 play sessions.
@@ -553,6 +561,8 @@ their existing GitHub releases.
   achievement panel. Steam Cloud is left to the Steam client.
 - GOG cloud saves need an explicit save folder; gogdl cannot infer it from the
   installation path. Epic can compute its path with Legendary.
+- Inline trailer playback needs GStreamer and its HLS/H.264 plugins; the archive
+  does not bundle them. The media gallery remains limited to Steam-linked games.
 - Epic installation and launch still go through Legendary. The direct session
   removes the Legendary requirement for the library, not for those two actions.
 - itch.io installs only archives (`.zip`, `.tar`, `.tar.gz`, `.tgz`). An upload

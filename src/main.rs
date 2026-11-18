@@ -44,6 +44,7 @@ mod ui_providers;
 mod ui_store;
 mod ui_views;
 mod update;
+mod video;
 mod widgets;
 
 use app::QuarkApp;

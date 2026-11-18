@@ -785,5 +785,9 @@
   "Chargement des médias…": "Loading media…",
   "Ce jeu n'est pas lié à la fiche Steam : aucun média à afficher.": "This game isn't linked to a Steam page: no media to show.",
   "Aucun média pour ce jeu.": "No media for this game.",
-  "Médias indisponibles": "Media unavailable"
+  "Médias indisponibles": "Media unavailable",
+  "Vidéo": "Video",
+  "Chargement de la vidéo…": "Loading video…",
+  "Lecteur vidéo indisponible": "Video player unavailable",
+  "Précédent": "Previous"
 }

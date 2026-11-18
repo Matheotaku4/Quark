@@ -1905,11 +1905,8 @@ impl QuarkApp {
         }
     }
 
-    /// Bande-annonce et captures du jeu (fiche publique Steam).
-    ///
-    /// La bande-annonce occupe toute la largeur, puis les captures suivent en
-    /// grille, comme sur Steam. Un clic ouvre la vidéo ou l'image dans le
-    /// navigateur : egui n'embarque pas de décodeur vidéo.
+    /// Médias du jeu : grande vue (bande-annonce ou capture), puis pellicule
+    /// horizontale dans l'ordre de Steam. La vidéo est lue dans Quark.
     fn media_section(&mut self, ui: &mut egui::Ui, game: &Game, pal: &Palette, width: f32) {
         let (loading, failure, media) = match self.media.get(&game.id) {
             Some(MediaState::Loading) => (true, None, None),
@@ -1920,11 +1917,32 @@ impl QuarkApp {
         let linked = game.steam_app_id.is_some();
         let mut reload = false;
         let mut open: Option<String> = None;
+        let total = media
+            .as_ref()
+            .map(|media| media.trailers.len() + media.screenshots.len())
+            .unwrap_or(0);
+        let shown = if total == 0 {
+            0
+        } else {
+            self.media_index.min(total - 1) + 1
+        };
+        let strip_width = (width - 64.0).max(220.0);
+        let strip_content = total as f32 * 148.0 + total.saturating_sub(1) as f32 * 8.0;
+        let strip_overflow = strip_content > strip_width;
+        let strip_max = (strip_content - strip_width).max(0.0);
 
         ui.add_space(26.0);
         ui.horizontal(|ui| {
             ui.add_space(32.0);
             ui.label(crate::i18n::rich("MÉDIA").size(12.0).color(pal.text_faint));
+            if total > 0 {
+                ui.add_space(6.0);
+                ui.label(
+                    egui::RichText::new(format!("{shown} / {total}"))
+                        .size(11.5)
+                        .color(pal.text_faint),
+                );
+            }
             if linked {
                 ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
                     ui.add_space(32.0);
@@ -1935,6 +1953,19 @@ impl QuarkApp {
                     };
                     if widgets::ghost_button(ui, label, pal, Icon::Refresh).clicked() {
                         reload = true;
+                    }
+                    if strip_overflow {
+                        ui.add_space(6.0);
+                        if widgets::icon_button(ui, 26.0, Icon::ArrowRight, pal, "Suivant")
+                            .clicked()
+                        {
+                            self.media_scroll = (self.media_scroll + 468.0).min(strip_max);
+                        }
+                        if widgets::icon_button(ui, 26.0, Icon::ArrowLeft, pal, "Précédent")
+                            .clicked()
+                        {
+                            self.media_scroll = (self.media_scroll - 468.0).max(0.0);
+                        }
                     }
                 });
             }
@@ -1996,52 +2027,11 @@ impl QuarkApp {
         let Some(media) = media else {
             return;
         };
-        let card_width = (width - 64.0).max(220.0);
-        ui.horizontal(|ui| {
-            ui.add_space(32.0);
-            ui.vertical(|ui| {
-                ui.set_width(card_width);
-
-                if let Some(trailer) = media.trailers.first()
-                    && trailer_card(ui, pal, trailer, card_width)
-                {
-                    open = Some(trailer.video.clone());
-                }
-
-                if !media.screenshots.is_empty() {
-                    ui.add_space(22.0);
-                    ui.horizontal(|ui| {
-                        ui.label(crate::i18n::rich("PHOTOS").size(12.0).color(pal.text_faint));
-                        ui.add_space(6.0);
-                        ui.label(
-                            egui::RichText::new(media.screenshots.len().to_string())
-                                .size(11.5)
-                                .color(pal.text_faint),
-                        );
-                    });
-                    ui.add_space(8.0);
-                    let columns = (((card_width + MEDIA_GAP) / (220.0 + MEDIA_GAP)).floor()
-                        as usize)
-                        .clamp(1, 3);
-                    let tile_width = ((card_width - MEDIA_GAP * columns.saturating_sub(1) as f32)
-                        / columns as f32)
-                        .max(120.0);
-                    for chunk in media.screenshots.chunks(columns) {
-                        ui.scope(|ui| {
-                            ui.spacing_mut().item_spacing.x = MEDIA_GAP;
-                            ui.horizontal(|ui| {
-                                for photo in chunk {
-                                    if photo_tile(ui, pal, photo, tile_width) {
-                                        open = Some(photo.full.clone());
-                                    }
-                                }
-                            });
-                        });
-                        ui.add_space(MEDIA_GAP);
-                    }
-                }
-
-                if media.trailers.is_empty() && media.screenshots.is_empty() {
+        if media.trailers.is_empty() && media.screenshots.is_empty() {
+            ui.horizontal(|ui| {
+                ui.add_space(32.0);
+                ui.vertical(|ui| {
+                    ui.set_max_width((width - 64.0).clamp(220.0, 680.0));
                     widgets::status_note(
                         ui,
                         pal,
@@ -2049,10 +2039,139 @@ impl QuarkApp {
                         "Aucun média pour ce jeu.",
                         pal.text_faint,
                     );
+                });
+            });
+            return;
+        }
+
+        // Le lecteur et la sélection appartiennent à une seule fiche.
+        if self.media_game.as_deref() != Some(game.id.as_str()) {
+            self.stop_media_player();
+            self.media_error = None;
+            self.media_index = 0;
+            self.media_scroll = 0.0;
+            self.media_game = Some(game.id.clone());
+        }
+
+        let trailer_count = media.trailers.len();
+        let total = trailer_count + media.screenshots.len();
+        let index = self.media_index.min(total - 1);
+        self.media_index = index;
+        let selected_url = (index < trailer_count)
+            .then(|| media.trailers[index].video.clone())
+            .filter(|url| !url.is_empty());
+
+        if let Some(player) = self.media_player.as_mut() {
+            player.poll(ui.ctx());
+        }
+        if self
+            .media_player
+            .as_ref()
+            .is_some_and(|player| selected_url.as_deref() != Some(player.url()))
+        {
+            self.stop_media_player();
+        }
+
+        let player_error = self.media_player.as_ref().and_then(|player| {
+            if let crate::video::PlaybackState::Failed(message) = player.state() {
+                Some(message.clone())
+            } else {
+                None
+            }
+        });
+        let error = self.media_error.clone().or(player_error);
+        let page = (index < trailer_count).then(|| media.trailers[index].page.clone());
+        let card_width = (width - 64.0).max(220.0);
+        let mut action = None;
+        let mut clicked_strip = None;
+
+        ui.horizontal(|ui| {
+            ui.add_space(32.0);
+            ui.vertical(|ui| {
+                ui.set_width(card_width);
+                action = media_viewer(
+                    ui,
+                    pal,
+                    &media,
+                    index,
+                    self.media_player.as_ref(),
+                    error.as_deref(),
+                    card_width,
+                );
+
+                if let Some(message) = error.as_deref() {
+                    ui.add_space(8.0);
+                    ui.horizontal_wrapped(|ui| {
+                        ui.set_max_width(card_width);
+                        ui.label(
+                            crate::i18n::rich(format!(
+                                "{} · {message}",
+                                crate::i18n::tr("Lecteur vidéo indisponible")
+                            ))
+                            .size(11.5)
+                            .color(pal.danger),
+                        );
+                    });
+                    if let Some(page) = page.as_deref()
+                        && widgets::ghost_button(ui, "Voir sur Steam", pal, Icon::None).clicked()
+                    {
+                        open = Some(page.to_string());
+                    }
                 }
+
+                ui.add_space(12.0);
+                let (clicked, offset) =
+                    media_strip(ui, pal, &media, index, card_width, self.media_scroll);
+                self.media_scroll = offset;
+                clicked_strip = clicked;
                 ui.add_space(18.0);
             });
         });
+
+        if let Some(action) = action
+            && let Some(url) = selected_url.clone()
+        {
+            match action {
+                MediaAction::Start => self.start_media_player(&url),
+                MediaAction::Toggle => {
+                    if let Some(player) = self.media_player.as_mut() {
+                        player.toggle_pause();
+                    }
+                }
+            }
+            ui.ctx().request_repaint();
+        }
+        if let Some(clicked) = clicked_strip {
+            if clicked != index {
+                self.stop_media_player();
+                self.media_error = None;
+                self.media_index = clicked;
+            }
+            if clicked < trailer_count {
+                let url = media.trailers[clicked].video.clone();
+                if clicked != index {
+                    if !url.is_empty() {
+                        self.start_media_player(&url);
+                    }
+                } else {
+                    let toggle = self.media_player.as_ref().is_some_and(|player| {
+                        matches!(
+                            player.state(),
+                            crate::video::PlaybackState::Playing
+                                | crate::video::PlaybackState::Paused
+                        )
+                    });
+                    if toggle {
+                        if let Some(player) = self.media_player.as_mut() {
+                            player.toggle_pause();
+                        }
+                    } else if !url.is_empty() {
+                        self.start_media_player(&url);
+                    }
+                }
+            }
+            ui.ctx().request_repaint();
+        }
 
         if reload {
             self.reload_media(ui.ctx());
@@ -2065,115 +2184,236 @@ impl QuarkApp {
     }
 }
 
-/// Espace entre deux captures de la grille Média.
-const MEDIA_GAP: f32 = 8.0;
+/// Action demandée par la grande vue média.
+#[derive(Clone, Copy)]
+enum MediaAction {
+    Start,
+    Toggle,
+}
 
-/// Vignette 16:9 de la bande-annonce, avec un bouton de lecture au centre.
-/// Le retour indique un clic : la vidéo s'ouvre dans le navigateur.
-fn trailer_card(
+/// Dessine la grande vue et renvoie l'action demandée par un clic.
+fn media_viewer(
     ui: &mut egui::Ui,
     pal: &Palette,
-    trailer: &crate::media::Trailer,
+    media: &crate::media::GameMedia,
+    index: usize,
+    player: Option<&crate::video::MediaPlayer>,
+    error: Option<&str>,
     width: f32,
-) -> bool {
-    let height = (width * 9.0 / 16.0).clamp(180.0, 440.0);
+) -> Option<MediaAction> {
+    let trailer_count = media.trailers.len();
+    let trailer = (index < trailer_count).then(|| &media.trailers[index]);
+    let photo = index
+        .checked_sub(trailer_count)
+        .and_then(|photo| media.screenshots.get(photo));
+    let height = (width * 9.0 / 16.0).clamp(190.0, 540.0);
     let (rect, response) = ui.allocate_exact_size(Vec2::new(width, height), Sense::click());
     let painter = ui.painter_at(rect);
-    painter.rect_filled(rect, 10.0, pal.surface);
-    let painted = paint_remote_cover(
-        &painter,
-        ui.ctx(),
-        &trailer.thumbnail,
-        rect,
-        Vec2::new(960.0, 540.0),
-    );
-    if !painted {
-        painter.rect_filled(rect, 10.0, pal.surface_hover);
+    painter.rect_filled(rect, 12.0, Color32::BLACK);
+
+    let texture = player.and_then(|player| player.texture());
+    let state = player.map(|player| player.state());
+    let starting = matches!(state, Some(crate::video::PlaybackState::Starting));
+    let playing = matches!(state, Some(crate::video::PlaybackState::Playing));
+    let paused = matches!(state, Some(crate::video::PlaybackState::Paused));
+    let ended = matches!(state, Some(crate::video::PlaybackState::Ended));
+    let failed = matches!(state, Some(crate::video::PlaybackState::Failed(_))) || error.is_some();
+    let has_texture = texture.is_some();
+
+    if let Some(trailer) = trailer {
+        if let Some(texture) = texture {
+            let fitted = contain_rect(texture.size_vec2(), rect);
+            painter.image(
+                texture.id(),
+                fitted,
+                Rect::from_min_max(Pos2::ZERO, Pos2::new(1.0, 1.0)),
+                Color32::WHITE,
+            );
+        } else {
+            let painted = paint_remote_cover(
+                &painter,
+                ui.ctx(),
+                &trailer.thumbnail,
+                rect,
+                Vec2::new(960.0, 540.0),
+            );
+            if !painted {
+                painter.rect_filled(rect, 12.0, pal.surface_hover);
+            }
+        }
+        vertical_veil(
+            &painter,
+            Rect::from_min_max(
+                Pos2::new(rect.left(), rect.bottom() - 120.0),
+                rect.right_bottom(),
+            ),
+            0,
+            215,
+        );
+
+        let title = if trailer.title.trim().is_empty() {
+            crate::i18n::tr("Bande-annonce")
+        } else {
+            trailer.title.trim().to_string()
+        };
+        painter.text(
+            Pos2::new(rect.left() + 20.0, rect.bottom() - 18.0),
+            Align2::LEFT_BOTTOM,
+            title,
+            FontId::proportional(16.0),
+            Color32::WHITE,
+        );
+        painter.text(
+            Pos2::new(rect.left() + 20.0, rect.bottom() - 42.0),
+            Align2::LEFT_BOTTOM,
+            crate::i18n::tr(if playing || paused {
+                "Bande-annonce"
+            } else {
+                "Lire la bande-annonce"
+            }),
+            FontId::proportional(11.5),
+            Color32::from_white_alpha(205),
+        );
+
+        if starting && !has_texture && !failed {
+            painter.text(
+                rect.center(),
+                Align2::CENTER_CENTER,
+                crate::i18n::tr("Chargement de la vidéo…"),
+                FontId::proportional(13.0),
+                Color32::from_white_alpha(220),
+            );
+        } else if has_texture && playing && response.hovered() {
+            paint_pause_icon(&painter, rect.center());
+        } else if !has_texture || paused || ended || failed {
+            paint_play_icon(&painter, rect.center());
+        }
+
+        if response.clicked() && !starting {
+            if ended || failed || player.is_none() {
+                return Some(MediaAction::Start);
+            }
+            if has_texture {
+                return Some(MediaAction::Toggle);
+            }
+        }
+    } else if let Some(photo) = photo {
+        let painted = paint_remote_contain(
+            &painter,
+            ui.ctx(),
+            &photo.full,
+            rect,
+            Vec2::new(1600.0, 900.0),
+        );
+        if !painted {
+            painter.rect_filled(rect, 12.0, pal.surface_hover);
+        }
     }
-    // Dégradé bas : le titre reste lisible sur n'importe quelle vignette.
-    vertical_veil(
-        &painter,
-        Rect::from_min_max(
-            Pos2::new(rect.left(), rect.bottom() - 110.0),
-            rect.right_bottom(),
-        ),
-        0,
-        205,
-    );
 
-    let center = rect.center();
-    painter.circle_filled(center, 35.0, Color32::from_black_alpha(175));
-    painter.circle_stroke(
-        center,
-        35.0,
-        egui::Stroke::new(1.5_f32, Color32::from_white_alpha(220)),
-    );
-    let play = vec![
-        center + Vec2::new(-8.0, -13.0),
-        center + Vec2::new(-8.0, 13.0),
-        center + Vec2::new(14.0, 0.0),
-    ];
-    painter.add(egui::Shape::convex_polygon(
-        play,
-        Color32::WHITE,
-        egui::Stroke::NONE,
-    ));
-
-    let title = if trailer.title.trim().is_empty() {
-        crate::i18n::tr("Bande-annonce")
-    } else {
-        trailer.title.trim().to_string()
-    };
-    painter.text(
-        Pos2::new(rect.left() + 18.0, rect.bottom() - 16.0),
-        Align2::LEFT_BOTTOM,
-        title,
-        FontId::proportional(15.5),
-        Color32::WHITE,
-    );
-    painter.text(
-        Pos2::new(rect.left() + 18.0, rect.bottom() - 38.0),
-        Align2::LEFT_BOTTOM,
-        crate::i18n::tr("Lire la bande-annonce"),
-        FontId::proportional(11.5),
-        Color32::from_white_alpha(205),
-    );
     if response.hovered() {
         painter.rect_stroke(
             rect,
-            10.0,
+            12.0,
             egui::Stroke::new(1.5_f32, pal.accent),
             egui::StrokeKind::Inside,
         );
+        if trailer.is_some() {
+            response.on_hover_cursor(egui::CursorIcon::PointingHand);
+        }
     }
-    response
-        .on_hover_cursor(egui::CursorIcon::PointingHand)
-        .clicked()
+    None
 }
 
-/// Une capture de la grille Média, recadrée en 16:9 comme sur Steam.
-fn photo_tile(ui: &mut egui::Ui, pal: &Palette, photo: &crate::media::Photo, width: f32) -> bool {
+/// Pellicule horizontale : la vidéo en premier, puis les captures. Un clic
+/// sélectionne l'élément ; la grande vue le reprend à l'image suivante.
+fn media_strip(
+    ui: &mut egui::Ui,
+    pal: &Palette,
+    media: &crate::media::GameMedia,
+    selected: usize,
+    width: f32,
+    offset: f32,
+) -> (Option<usize>, f32) {
+    let mut clicked = None;
+    let mut updated_offset = offset;
+    ui.scope(|ui| {
+        ui.set_width(width);
+        let output = egui::ScrollArea::horizontal()
+            .id_salt(("quark_media_strip", width.round() as i32))
+            .horizontal_scroll_offset(offset)
+            .scroll_source(egui::scroll_area::ScrollSource::ALL)
+            .scroll_bar_visibility(egui::scroll_area::ScrollBarVisibility::AlwaysVisible)
+            .auto_shrink([false, true])
+            .show(ui, |ui| {
+                ui.horizontal(|ui| {
+                    ui.spacing_mut().item_spacing.x = 8.0;
+                    for (index, trailer) in media.trailers.iter().enumerate() {
+                        if media_strip_item(ui, pal, &trailer.thumbnail, selected == index, true) {
+                            clicked = Some(index);
+                        }
+                    }
+                    for (offset, photo) in media.screenshots.iter().enumerate() {
+                        let index = media.trailers.len() + offset;
+                        if media_strip_item(ui, pal, &photo.thumbnail, selected == index, false) {
+                            clicked = Some(index);
+                        }
+                    }
+                });
+            });
+        updated_offset = output.state.offset.x;
+    });
+    (clicked, updated_offset)
+}
+
+fn media_strip_item(
+    ui: &mut egui::Ui,
+    pal: &Palette,
+    thumbnail: &str,
+    selected: bool,
+    video: bool,
+) -> bool {
+    let width = 148.0;
     let height = width * 9.0 / 16.0;
     let (rect, response) = ui.allocate_exact_size(Vec2::new(width, height), Sense::click());
     let painter = ui.painter_at(rect);
     painter.rect_filled(rect, 7.0, pal.surface);
-    let painted = paint_remote_cover(
-        &painter,
-        ui.ctx(),
-        &photo.thumbnail,
-        rect,
-        Vec2::new(640.0, 360.0),
-    );
+    let painted = paint_remote_cover(&painter, ui.ctx(), thumbnail, rect, Vec2::new(320.0, 180.0));
     if !painted {
         painter.rect_filled(rect, 7.0, pal.surface_hover);
+    }
+    if video {
+        painter.circle_filled(rect.center(), 17.0, Color32::from_black_alpha(170));
+        let center = rect.center();
+        painter.add(egui::Shape::convex_polygon(
+            vec![
+                center + Vec2::new(-5.0, -8.0),
+                center + Vec2::new(-5.0, 8.0),
+                center + Vec2::new(9.0, 0.0),
+            ],
+            Color32::WHITE,
+            egui::Stroke::NONE,
+        ));
+        painter.text(
+            Pos2::new(rect.left() + 7.0, rect.bottom() - 5.0),
+            Align2::LEFT_BOTTOM,
+            crate::i18n::tr("Vidéo"),
+            FontId::proportional(10.5),
+            Color32::WHITE,
+        );
     }
     painter.rect_stroke(
         rect,
         7.0,
         egui::Stroke::new(
-            if response.hovered() { 1.5_f32 } else { 1.0_f32 },
-            if response.hovered() {
+            if selected || response.hovered() {
+                2.0_f32
+            } else {
+                1.0_f32
+            },
+            if selected {
                 pal.accent
+            } else if response.hovered() {
+                pal.text_dim
             } else {
                 pal.border
             },
@@ -2185,8 +2425,88 @@ fn photo_tile(ui: &mut egui::Ui, pal: &Palette, photo: &crate::media::Photo, wid
         .clicked()
 }
 
-/// Charge une image distante par le loader HTTP d'egui et la recadre en
-/// « cover » dans `rect`. Pendant le téléchargement, le cadre garde son fond.
+fn paint_play_icon(painter: &egui::Painter, center: Pos2) {
+    painter.circle_filled(center, 34.0, Color32::from_black_alpha(175));
+    painter.circle_stroke(
+        center,
+        34.0,
+        egui::Stroke::new(1.5_f32, Color32::from_white_alpha(220)),
+    );
+    painter.add(egui::Shape::convex_polygon(
+        vec![
+            center + Vec2::new(-8.0, -13.0),
+            center + Vec2::new(-8.0, 13.0),
+            center + Vec2::new(14.0, 0.0),
+        ],
+        Color32::WHITE,
+        egui::Stroke::NONE,
+    ));
+}
+
+fn paint_pause_icon(painter: &egui::Painter, center: Pos2) {
+    painter.circle_filled(center, 34.0, Color32::from_black_alpha(175));
+    painter.circle_stroke(
+        center,
+        34.0,
+        egui::Stroke::new(1.5_f32, Color32::from_white_alpha(220)),
+    );
+    for x in [-9.0, 3.0] {
+        painter.rect_filled(
+            Rect::from_min_size(
+                Pos2::new(center.x + x, center.y - 12.0),
+                Vec2::new(5.0, 24.0),
+            ),
+            1.0,
+            Color32::WHITE,
+        );
+    }
+}
+
+/// Charge une image distante et la place entière dans `rect`, sans la rogner.
+fn paint_remote_contain(
+    painter: &egui::Painter,
+    ctx: &egui::Context,
+    url: &str,
+    rect: Rect,
+    size: Vec2,
+) -> bool {
+    if url.is_empty() || rect.width() <= 0.0 || rect.height() <= 0.0 {
+        return false;
+    }
+    let hint = egui::load::SizeHint::Size {
+        width: size.x.max(1.0) as u32,
+        height: size.y.max(1.0) as u32,
+        maintain_aspect_ratio: false,
+    };
+    match ctx.try_load_texture(url, egui::TextureOptions::LINEAR, hint) {
+        Ok(egui::load::TexturePoll::Ready { texture, .. }) => {
+            painter.image(
+                texture.id,
+                contain_rect(texture.size, rect),
+                Rect::from_min_max(Pos2::ZERO, Pos2::new(1.0, 1.0)),
+                Color32::WHITE,
+            );
+            true
+        }
+        Ok(egui::load::TexturePoll::Pending { .. }) => {
+            ctx.request_repaint_after(std::time::Duration::from_millis(120));
+            false
+        }
+        _ => false,
+    }
+}
+
+/// Rectangle « contain » : l'image entière tient dans le cadre, avec des
+/// bandes noires si son ratio diffère.
+fn contain_rect(size: Vec2, rect: Rect) -> Rect {
+    if size.x <= 0.0 || size.y <= 0.0 || rect.width() <= 0.0 || rect.height() <= 0.0 {
+        return rect;
+    }
+    let scale = (rect.width() / size.x).min(rect.height() / size.y);
+    Rect::from_center_size(rect.center(), size * scale)
+}
+
+/// Charge une image distante et la recadre en « cover » dans `rect`.
 fn paint_remote_cover(
     painter: &egui::Painter,
     ctx: &egui::Context,
@@ -2241,7 +2561,6 @@ fn cover_uv(size: Vec2, rect: Rect) -> Rect {
         )
     }
 }
-
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum RowAction {
     Launch,

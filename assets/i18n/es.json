@@ -785,5 +785,9 @@
   "Chargement des médias…": "Cargando medios…",
   "Ce jeu n'est pas lié à la fiche Steam : aucun média à afficher.": "Este juego no está vinculado a una ficha de Steam: no hay medios que mostrar.",
   "Aucun média pour ce jeu.": "No hay medios para este juego.",
-  "Médias indisponibles": "Medios no disponibles"
+  "Médias indisponibles": "Medios no disponibles",
+  "Vidéo": "Vídeo",
+  "Chargement de la vidéo…": "Cargando el vídeo…",
+  "Lecteur vidéo indisponible": "Reproductor de vídeo no disponible",
+  "Précédent": "Anterior"
 }

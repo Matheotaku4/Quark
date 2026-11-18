@@ -1217,6 +1217,7 @@ fn seed_media(app: &mut QuarkApp) {
             title: "The Witcher 3: Wild Hunt — bande-annonce".to_string(),
             thumbnail: url(0),
             video: "https://store.steampowered.com/app/292030/".to_string(),
+            page: "https://store.steampowered.com/app/292030/".to_string(),
         }],
         screenshots: (1..7)
             .map(|index| Photo {

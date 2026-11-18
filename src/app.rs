@@ -807,6 +807,16 @@ pub struct QuarkApp {
     pub media: HashMap<String, MediaState>,
     /// Chargement des médias en cours.
     pub media_job: Option<MediaJob>,
+    /// Bande-annonce actuellement lue dans la fiche, s'il y en a une.
+    pub media_player: Option<crate::video::MediaPlayer>,
+    /// Erreur du dernier démarrage du lecteur intégré.
+    pub media_error: Option<String>,
+    /// Élément sélectionné dans la pellicule : bandes-annonces puis photos.
+    pub media_index: usize,
+    /// Défilement horizontal de la pellicule média, en pixels.
+    pub media_scroll: f32,
+    /// Jeu auquel appartiennent la sélection et le lecteur courants.
+    pub media_game: Option<String>,
     /// État de la vérification des mises à jour.
     pub update: UpdateState,
     pub update_rx: Option<Receiver<UpdateMessage>>,
@@ -1141,6 +1151,11 @@ impl QuarkApp {
             accents: HashMap::new(),
             media: HashMap::new(),
             media_job: None,
+            media_player: None,
+            media_error: None,
+            media_index: 0,
+            media_scroll: 0.0,
+            media_game: None,
             update: UpdateState::Idle,
             update_rx: None,
             update_auto: false,
@@ -1355,6 +1370,16 @@ impl QuarkApp {
     }
 
     fn tick(&mut self, ctx: &egui::Context) {
+        // La vidéo ne doit pas continuer à parler quand on quitte la fiche,
+        // change d'onglet ou revient à l'accueil.
+        if self.media_player.is_some()
+            && (self.tab != Tab::Library
+                || self.home
+                || self.detail_tab != DetailTab::Media
+                || self.selected.is_none())
+        {
+            self.stop_media_player();
+        }
         self.poll_running_games(ctx);
         self.poll_update(ctx);
         self.poll_artwork_plan(ctx);
@@ -2223,8 +2248,29 @@ impl QuarkApp {
         let Some(app_id) = self.lib.get(&id).and_then(|game| game.steam_app_id) else {
             return;
         };
+        self.stop_media_player();
+        self.media_error = None;
+        self.media_index = 0;
+        self.media_scroll = 0.0;
         self.media.remove(&id);
         self.start_media(ctx, &id, app_id);
+    }
+
+    /// Arrête le lecteur intégré et libère sa texture.
+    pub fn stop_media_player(&mut self) {
+        if let Some(mut player) = self.media_player.take() {
+            player.stop();
+        }
+    }
+
+    /// Démarre une bande-annonce dans la fiche, sans quitter Quark.
+    pub fn start_media_player(&mut self, url: &str) {
+        self.stop_media_player();
+        self.media_error = None;
+        match crate::video::MediaPlayer::start(url) {
+            Ok(player) => self.media_player = Some(player),
+            Err(error) => self.media_error = Some(error),
+        }
     }
 
     pub fn start_asset_job(&mut self, ctx: &egui::Context, game_id: &str, hit: SearchHit) {
@@ -3505,6 +3551,13 @@ impl QuarkApp {
     /// Sélectionne un jeu ; bascule sur la bibliothèque si besoin. Un clic
     /// simple abandonne la sélection multiple (Ctrl+clic la construit).
     pub fn select(&mut self, id: &str) {
+        if self.media_game.as_deref() != Some(id) {
+            self.stop_media_player();
+            self.media_error = None;
+            self.media_index = 0;
+            self.media_scroll = 0.0;
+            self.media_game = None;
+        }
         self.selected = Some(id.to_string());
         self.marked.clear();
         // Choisir un jeu quitte l'accueil : la fiche prend sa place.
@@ -3543,6 +3596,11 @@ impl QuarkApp {
     /// l'accueil y retourne ; un jeu ouvert depuis la bibliothèque retrouve la
     /// grille et sa position.
     pub fn close_game_page(&mut self) {
+        self.stop_media_player();
+        self.media_game = None;
+        self.media_error = None;
+        self.media_index = 0;
+        self.media_scroll = 0.0;
         let from_home = self.detail_from_home;
         self.overlay = None;
         self.grid_detail = false;
@@ -3834,6 +3892,7 @@ impl eframe::App for QuarkApp {
     }
 
     fn on_exit(&mut self, _gl: Option<&eframe::glow::Context>) {
+        self.stop_media_player();
         // Les sessions encore en cours sont comptabilisées avant la fermeture,
         // sinon le temps de jeu est perdu en quittant le launcher.
         let sessions: Vec<(String, u64, i64)> = self
