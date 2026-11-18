@@ -1,6 +1,6 @@
 //! Provider title matching and installation lifecycle state.
 
-use super::model::{ManualGameGroup, ProviderGame, ProviderGameKey};
+use super::model::{InstallState, ManualGameGroup, ProviderGame, ProviderGameKey};
 use std::path::PathBuf;
 
 #[derive(Debug, Clone, PartialEq)]
@@ -58,6 +58,38 @@ impl InstallOperation {
         self.state = OperationState::Succeeded { install_path };
         Ok(())
     }
+}
+
+/// Remet d'aplomb les états laissés par une installation interrompue.
+///
+/// Aucun téléchargement ne survit à la fermeture de Quark : un état
+/// transitoire au démarrage est donc périmé. Si le dossier existe encore, le
+/// jeu est réellement installé ; sinon il redevient disponible au
+/// téléchargement. Sans cela, un jeu Epic présent sur le disque restait
+/// bloqué sur « Installation… » pour toujours.
+pub fn recover_interrupted_installs(games: &mut [ProviderGame]) -> usize {
+    let mut recovered = 0;
+    for game in games {
+        if matches!(
+            game.install_state,
+            InstallState::Installing
+                | InstallState::Queued
+                | InstallState::Updating
+                | InstallState::Repairing
+        ) {
+            let installed = game.install_path.as_ref().is_some_and(|path| path.is_dir());
+            game.install_state = if installed {
+                InstallState::Installed
+            } else {
+                InstallState::NotInstalled
+            };
+            if !installed {
+                game.install_path = None;
+            }
+            recovered += 1;
+        }
+    }
+    recovered
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -236,6 +268,31 @@ mod tests {
         let missing = directory.join("not-installed");
         assert!(operation.complete_verified(missing).is_err());
         let _ = std::fs::remove_dir_all(directory);
+    }
+
+    #[test]
+    fn une_installation_interrompue_est_reclassee_au_demarrage() {
+        let root =
+            std::env::temp_dir().join(format!("quark-install-recover-{}", std::process::id()));
+        std::fs::create_dir_all(&root).unwrap();
+        let mut installed = record(Provider::Epic, "installed", "Déjà là");
+        installed.install_state = InstallState::Installing;
+        installed.install_path = Some(root.clone());
+        let mut missing = record(Provider::Gog, "missing", "Absent");
+        missing.install_state = InstallState::Queued;
+        missing.install_path = Some(root.join("disparu"));
+        let untouched = record(Provider::Steam, "kept", "Intact");
+        let mut games = vec![installed, missing, untouched];
+
+        assert_eq!(recover_interrupted_installs(&mut games), 2);
+        // Le dossier existe : le jeu est réellement installé.
+        assert_eq!(games[0].install_state, InstallState::Installed);
+        assert_eq!(games[0].install_path.as_deref(), Some(root.as_path()));
+        // Le dossier a disparu : le jeu redevient installable.
+        assert_eq!(games[1].install_state, InstallState::NotInstalled);
+        assert!(games[1].install_path.is_none());
+        assert_eq!(games[2].install_state, InstallState::NotInstalled);
+        let _ = std::fs::remove_dir_all(root);
     }
 
     #[test]

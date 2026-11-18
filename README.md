@@ -30,9 +30,10 @@ The wiki is published from the versioned source in [`wiki/`](wiki/) by the
 
 ## What's new in 1.8.1
 
-- **Une version de maintenance.** Aucun changement visible : le retour du carrousel (vignette réellement affichée, jeux récents réordonnés, repli explicite) est désormais couvert par un test de régression permanent.
+- **Correctifs boutiques et navigation.** En vue grille, un clic ouvre la fiche en mode liste et Retour ramène aux jaquettes. Mes jeux ne réserve plus une colonne vide quand aucun transfert n'est actif. Epic ne bloque plus un jeu déjà installé en « Installation… ». GOG lit les sorties `gogdl` entourées de journaux et retrouve le dossier après téléchargement. Les sessions GOG publient leur temps de jeu et synchronisent leurs sauvegardes automatiquement.
+- **Un test carrousel permanent.** La vignette réellement affichée, le réordonnancement des récents et le repli explicite sont couverts par la suite de tests.
 - **Un accueil autonome.** L'accueil a son propre onglet, un hero plein largeur et un carrousel de jeux récents, sans colonne latérale.
-- **La fiche jeu en pleine page.** Depuis la grille, la fiche remplace la bibliothèque ; **Retour** ou `Échap` ramène à l'accueil ou à la grille selon l'origine, avec la vignette du carrousel restaurée.
+- **La fiche jeu contextuelle.** Depuis la grille, elle s'ouvre en mode liste (colonne + panneau) ; **Retour** ou `Échap` ramène à l'accueil ou à la grille selon l'origine, avec la vignette du carrousel restaurée.
 - **Une recherche globale unique.** `Ctrl+F`, `Ctrl+K`, `/` ou la loupe ouvrent la même palette : jeux locaux, jeux possédés dans les boutiques et réglages. La recherche ignore les accents et exige une sous-chaîne réelle.
 - **Les réglages par tâche.** Un champ au-dessus de la navigation trouve une action (« sauvegardes cloud », « overlay », « espace disque ») et ouvre directement la bonne page.
 - **Des états asynchrones cohérents.** Les actualités, les chargements, les erreurs et les artworks manquants partagent les mêmes squelettes et cartes d'état ; le logo dispose d'un repli si la texture est vide.

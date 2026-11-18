@@ -195,13 +195,22 @@ impl QuarkApp {
                                         &mut open_settings,
                                     );
                                 } else {
-                                    // Deux colonnes : la bibliothèque à gauche,
-                                    // les transferts à droite.
+                                    // Deux colonnes seulement quand un transfert
+                                    // est actif : sinon la colonne de droite
+                                    // restait vide et laissait un grand espace
+                                    // noir à côté de la bibliothèque.
+                                    let has_transfers = !self.provider_install_jobs.is_empty();
                                     ui.horizontal_top(|ui| {
-                                        let side_w =
-                                            330.0_f32.min((ui.available_width() * 0.32).max(280.0));
-                                        let main_w =
-                                            (ui.available_width() - side_w - 18.0).max(320.0);
+                                        let side_w = if has_transfers {
+                                            330.0_f32.min((ui.available_width() * 0.32).max(280.0))
+                                        } else {
+                                            0.0
+                                        };
+                                        let main_w = if has_transfers {
+                                            (ui.available_width() - side_w - 18.0).max(320.0)
+                                        } else {
+                                            ui.available_width()
+                                        };
                                         ui.vertical(|ui| {
                                             ui.set_width(main_w);
                                             // Seules les lignes visibles sont construites
@@ -241,11 +250,13 @@ impl QuarkApp {
                                                 );
                                             }
                                         });
-                                        ui.add_space(18.0);
-                                        ui.vertical(|ui| {
-                                            ui.set_width(side_w);
-                                            self.provider_install_panel(ui, &pal);
-                                        });
+                                        if has_transfers {
+                                            ui.add_space(18.0);
+                                            ui.vertical(|ui| {
+                                                ui.set_width(side_w);
+                                                self.provider_install_panel(ui, &pal);
+                                            });
+                                        }
                                     });
                                 }
                                 ui.add_space(16.0);

@@ -12,12 +12,13 @@ repository under [`wiki/`](https://github.com/Matheotaku4/Quark/tree/main/wiki).
 
 ## What's new in 1.8.1
 
-- **A maintenance release.** No visible change: the carousel return (displayed slide, reordered recent games, explicit fallback) is now covered by a permanent regression test.
+- **Store and navigation fixes.** In grid view, clicking a game opens the list-style page and Back returns to the tiles. My Games no longer reserves an empty transfers column. Epic no longer leaves an already installed game on “Installing…”. GOG reads gogdl output wrapped in log lines and finds the install folder after download. GOG sessions now publish playtime and sync saves automatically.
+- **A permanent carousel test.** The displayed slide, reordered recent games and explicit fallback are covered by the test suite.
 - **A home page of its own.** Home has a dedicated tab, a full-width hero and a
   recent-games carousel, without the library sidebar.
-- **A full-page game page.** Opening a game from the grid replaces the library;
-  **Back** or `Escape` returns to Home or the grid depending on where you came
-  from, restoring the carousel slide.
+- **A contextual game page.** Opening a game from the grid shows the list-style
+  page; **Back** or `Escape` returns to Home or the grid depending on where you
+  came from, restoring the carousel slide.
 - **One global search.** `Ctrl+F`, `Ctrl+K`, `/` or the magnifier opens the same
   palette for local games, owned store games and settings. Accents are ignored
   and a real substring is required.

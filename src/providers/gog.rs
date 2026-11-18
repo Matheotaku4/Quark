@@ -192,11 +192,11 @@ pub fn gog_install_size(game_id: &str) -> Result<Option<u64>, String> {
 
 /// Nom du dossier d'installation publié par `gogdl info`.
 pub fn folder_from_info(text: &str) -> Result<String, String> {
-    let start = text
-        .find('{')
-        .ok_or_else(|| "réponse gogdl illisible".to_string())?;
-    let root: serde_json::Value =
-        serde_json::from_str(&text[start..]).map_err(|_| "réponse gogdl illisible".to_string())?;
+    if super::first_json_value(text).is_none() {
+        return Err("réponse gogdl illisible".to_string());
+    }
+    let root = super::json_object_with_key(text, "folder_name")
+        .ok_or_else(|| "gogdl ne publie pas de dossier pour ce jeu".to_string())?;
     root.get("folder_name")
         .and_then(serde_json::Value::as_str)
         .map(str::trim)
@@ -549,6 +549,21 @@ mod tests {
         );
         assert!(resolve_install_path(&root, "Call of Juarez", "404").is_none());
         let _ = std::fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn le_dossier_est_lu_meme_entoure_de_journaux_gogdl() {
+        // gogdl 1.4 écrit le JSON au milieu de lignes de journal : l'ancien
+        // `from_str` sur toute la sortie échouait avec « réponse illisible ».
+        let output = "[INFO] Getting Dependencies repository {\"repository_manifest\": \"x\"}\n\
+                      [API] INFO: reading manifest\n\
+                      {\"size\": {\"*\": {\"download_size\": 42}}, \"folder_name\": \"Call of Juarez Gunslinger\", \"buildId\": \"7\"}\n\
+                      [INFO] Finished";
+        assert_eq!(
+            folder_from_info(output).unwrap(),
+            "Call of Juarez Gunslinger"
+        );
+        assert!(folder_from_info("[INFO] aucune réponse").is_err());
     }
 
     #[test]

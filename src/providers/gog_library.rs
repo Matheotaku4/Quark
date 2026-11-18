@@ -935,6 +935,50 @@ pub fn gog_playtime(auth_path: &Path, product_id: &str, now: i64) -> Result<u64,
     Err(last_error)
 }
 
+/// Charge utile d'une session GOG, comme Heroic : début en secondes Unix et
+/// durée en minutes. Les parties de moins d'une minute ne sont pas publiées.
+pub fn playtime_session_payload(session_date: i64, seconds: u64) -> Option<(i64, u64)> {
+    let minutes = seconds / 60;
+    (minutes > 0 && session_date > 0).then_some((session_date, minutes))
+}
+
+/// Publie une session terminée sur `gameplay.gog.com`, avec la même requête
+/// que Heroic. Le temps de jeu GOG reste ainsi à jour sur le compte, au lieu
+/// d'être seulement relu à la prochaine ouverture de la fiche.
+pub fn post_playtime_session(
+    auth_path: &Path,
+    product_id: &str,
+    session_date: i64,
+    seconds: u64,
+) -> Result<(), String> {
+    let Some((session_date, minutes)) = playtime_session_payload(session_date, seconds) else {
+        return Ok(());
+    };
+    let tokens = usable_tokens(auth_path, crate::config::now_ts())?;
+    if tokens.user_id.trim().is_empty() {
+        return Err("session GOG sans identifiant de compte".to_string());
+    }
+    let response = client()
+        .post(format!(
+            "{GAMEPLAY_URL}/games/{product_id}/users/{}/sessions",
+            tokens.user_id
+        ))
+        .bearer_auth(&tokens.access_token)
+        .header("X-Gog-Lc", LOCALE)
+        .json(&serde_json::json!({ "session_date": session_date, "time": minutes }))
+        .timeout(http_timeout())
+        .send()
+        .map_err(|_| "GOG injoignable pendant l'envoi de la session".to_string())?;
+    let status = response.status();
+    if status.is_success() {
+        Ok(())
+    } else if matches!(status.as_u16(), 401 | 403) {
+        Err("GOG a refusé la session : reconnecte la boutique dans Paramètres".to_string())
+    } else {
+        Err(format!("GOG a répondu {status} pour l'envoi de la session"))
+    }
+}
+
 /// Somme les sessions publiées par GOG. `time` est en minutes ; `seconds` et
 /// `duration` restent acceptés tels quels.
 pub fn parse_sessions_seconds(body: &str) -> Result<u64, String> {
@@ -1096,6 +1140,17 @@ mod tests {
         "loginTime": 1700000000.5
       }
     }"#;
+
+    #[test]
+    fn une_session_gog_est_publiee_en_minutes_entieres() {
+        assert_eq!(
+            playtime_session_payload(1_700_000_000, 125),
+            Some((1_700_000_000, 2))
+        );
+        // Moins d'une minute ou date absente : rien à publier.
+        assert_eq!(playtime_session_payload(1_700_000_000, 59), None);
+        assert_eq!(playtime_session_payload(0, 3600), None);
+    }
 
     #[test]
     fn le_temps_de_jeu_gog_somme_les_sessions_et_accepte_plusieurs_formes() {

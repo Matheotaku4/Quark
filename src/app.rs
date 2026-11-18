@@ -880,6 +880,10 @@ pub struct QuarkApp {
     pub blurs: crate::images::BlurCache,
     /// Fiche du jeu affichée en pleine page (vue grille).
     pub overlay: Option<String>,
+    /// Un clic sur une jaquette en vue grille ouvre la fiche dans la mise en
+    /// page liste (colonne de gauche + panneau de droite), sans changer le
+    /// réglage de vue : Retour ramène à la grille.
+    pub grid_detail: bool,
     /// La fiche a été ouverte depuis l'accueil : Retour et Échap y ramènent,
     /// au lieu de laisser l'utilisateur dans la grille de la bibliothèque.
     pub detail_from_home: bool,
@@ -978,6 +982,8 @@ pub struct QuarkApp {
     pub provider_playtime:
         HashMap<crate::providers::ProviderGameKey, crate::providers::PlaytimeState>,
     pub playtime_job: Option<Receiver<(crate::providers::ProviderGameKey, Result<u64, String>)>>,
+    /// Envoi d'une session GOG terminée vers `gameplay.gog.com`.
+    pub gog_playtime_rx: Option<Receiver<Result<(), String>>>,
     /// Overlay en jeu (panneau au-dessus du jeu, captures F12, notifications).
     pub game_overlay: crate::overlay::Overlay,
     /// Vérification périodique des dossiers installés : un jeu supprimé hors de
@@ -1169,6 +1175,7 @@ impl QuarkApp {
             last_view: ViewMode::List,
             blurs: crate::images::BlurCache::default(),
             overlay: None,
+            grid_detail: false,
             detail_from_home: false,
             detail_return_carousel: None,
             steam_import: None,
@@ -1216,6 +1223,7 @@ impl QuarkApp {
             detail_tab: DetailTab::News,
             provider_playtime: HashMap::new(),
             playtime_job: None,
+            gog_playtime_rx: None,
             game_overlay: crate::overlay::Overlay::default(),
             install_probe_at: None,
             install_probe_rx: None,
@@ -1378,6 +1386,7 @@ impl QuarkApp {
         self.poll_session_sync(ctx);
         self.poll_overlay(ctx);
         self.poll_provider_playtime();
+        self.poll_gog_playtime(ctx);
         self.poll_install_probe(ctx);
         self.poll_uninstall(ctx);
         self.ensure_provider_playtime(ctx);
@@ -1607,6 +1616,13 @@ impl QuarkApp {
                 .map(|record| record.key.clone())
             {
                 self.provider_playtime.remove(&key);
+                if key.provider == crate::providers::Provider::Gog {
+                    // Comme Heroic : après une partie GOG, on retrouve le
+                    // dossier de sauvegarde dans le préfixe puis on publie la
+                    // session sur le compte GOG.
+                    self.auto_detect_gog_save_path(&key, &id);
+                    self.queue_gog_playtime(ctx, &key, started_ts, secs);
+                }
             }
             self.touch();
             // La fin de session doit être écrite sans attendre un mouvement de
@@ -1667,9 +1683,101 @@ impl QuarkApp {
         }
     }
 
+    /// Cherche le dossier de sauvegarde d'un jeu GOG dans le préfixe Wine du
+    /// jeu lié quand l'utilisateur n'en a pas encore choisi. Heroic s'appuie
+    /// sur les emplacements Galaxy ; Quark réutilise ici la détection par nom
+    /// déjà proposée par la fiche, pour que la synchronisation automatique ait
+    /// un dossier sans configuration manuelle.
+    fn auto_detect_gog_save_path(
+        &mut self,
+        key: &crate::providers::ProviderGameKey,
+        game_id: &str,
+    ) -> Option<PathBuf> {
+        if key.provider != crate::providers::Provider::Gog || game_id.is_empty() {
+            return None;
+        }
+        let record = self.provider_record_for_game(game_id)?.clone();
+        if let Some(path) = record.custom_save_paths.first() {
+            return Some(path.clone());
+        }
+        let (name, prefix) = {
+            let game = self.lib.get(game_id)?;
+            (game.name.clone(), game.wine_prefix_path(&self.lib.settings))
+        };
+        let path = crate::providers::cloud_saves::save_candidates(&name, &prefix)
+            .into_iter()
+            .next()?;
+        if let Some(record) = self
+            .lib
+            .provider_library
+            .games
+            .iter_mut()
+            .find(|record| &record.key == key)
+            && !record.custom_save_paths.contains(&path)
+        {
+            record.custom_save_paths.push(path.clone());
+        }
+        if let Some(installation) = self.lib.installation_for_provider_mut(game_id, key)
+            && installation
+                .save_path
+                .as_deref()
+                .is_none_or(|value| value.trim().is_empty())
+        {
+            installation.save_path = Some(path.display().to_string());
+        }
+        self.touch();
+        Some(path)
+    }
+
+    /// Envoie la session GOG terminée au compte, sans bloquer le rendu.
+    fn queue_gog_playtime(
+        &mut self,
+        ctx: &egui::Context,
+        key: &crate::providers::ProviderGameKey,
+        started_ts: i64,
+        secs: u64,
+    ) {
+        if key.provider != crate::providers::Provider::Gog
+            || secs < 60
+            || self.gog_playtime_rx.is_some()
+        {
+            return;
+        }
+        let product_id = key.product_id.clone();
+        let (tx, rx) = channel();
+        let repaint = ctx.clone();
+        std::thread::spawn(move || {
+            let result = crate::providers::gog_library::post_playtime_session(
+                &crate::providers::gog::auth_config_path(),
+                &product_id,
+                started_ts,
+                secs,
+            );
+            let _ = tx.send(result);
+            repaint.request_repaint();
+        });
+        self.gog_playtime_rx = Some(rx);
+    }
+
+    fn poll_gog_playtime(&mut self, ctx: &egui::Context) {
+        let Some(rx) = self.gog_playtime_rx.as_ref() else {
+            return;
+        };
+        match rx.try_recv() {
+            Ok(Ok(())) | Err(TryRecvError::Disconnected) => self.gog_playtime_rx = None,
+            Ok(Err(error)) => {
+                self.gog_playtime_rx = None;
+                self.toast_error(format!("GOG : session non envoyée ({error})"));
+            }
+            Err(TryRecvError::Empty) => {
+                ctx.request_repaint_after(Duration::from_millis(150));
+            }
+        }
+    }
+
     /// Lance la synchronisation des sauvegardes cloud d'un jeu lié à Epic ou
     /// GOG. Epic peut calculer son dossier tout seul ; GOG utilise le dossier
-    /// choisi dans la fiche du jeu.
+    /// choisi dans la fiche du jeu, ou le premier dossier détecté.
     pub fn sync_cloud_saves(&mut self, ctx: &egui::Context, game_id: &str) {
         if self.cloud_sync.is_some() {
             self.toast_info("Une synchronisation de sauvegardes est déjà en cours");
@@ -1687,8 +1795,11 @@ impl QuarkApp {
             self.toast_info("Installe d'abord le jeu pour synchroniser ses sauvegardes");
             return;
         }
-        let save_path =
+        let mut save_path =
             crate::providers::cloud_saves::save_path_for(self.lib.get(game_id), &record);
+        if record.key.provider == crate::providers::Provider::Gog && save_path.is_none() {
+            save_path = self.auto_detect_gog_save_path(&record.key, game_id);
+        }
         if record.key.provider == crate::providers::Provider::Gog && save_path.is_none() {
             self.cloud_sync_status.insert(
                 record.key.clone(),
@@ -3419,7 +3530,12 @@ impl QuarkApp {
         } else if !was_detail_from_home {
             self.detail_return_carousel = self.recent_ids().get(self.carousel).cloned();
         }
-        self.overlay = (self.lib.settings.view == ViewMode::Grid).then(|| id.to_string());
+        // La fiche s'ouvre toujours dans la mise en page liste. En vue grille,
+        // elle prend la place de la grille sans en changer le réglage : Retour
+        // ramène aux jaquettes. L'overlay plein écran n'est plus utilisé pour
+        // un clic sur un jeu.
+        self.grid_detail = self.lib.settings.view == ViewMode::Grid;
+        self.overlay = None;
     }
 
     /// Ferme la fiche et revient à l'écran d'origine. Un jeu ouvert depuis
@@ -3428,6 +3544,7 @@ impl QuarkApp {
     pub fn close_game_page(&mut self) {
         let from_home = self.detail_from_home;
         self.overlay = None;
+        self.grid_detail = false;
         self.detail_from_home = false;
         if from_home {
             self.tab = Tab::Library;
@@ -3654,7 +3771,7 @@ impl QuarkApp {
             return;
         }
         if escape {
-            if self.overlay.is_some() || self.detail_from_home {
+            if self.overlay.is_some() || self.grid_detail || self.detail_from_home {
                 self.close_game_page();
             } else if self.tab != Tab::Library {
                 self.tab = Tab::Library;
@@ -4396,6 +4513,7 @@ impl QuarkApp {
         if self.lib.settings.view != view {
             self.lib.settings.view = view;
             self.overlay = None;
+            self.grid_detail = false;
             self.detail_from_home = false;
             self.touch();
         }
@@ -5676,6 +5794,28 @@ impl QuarkApp {
             self.toast_error("Ce jeu n'est pas possédé sur cette boutique");
             return;
         }
+        // Un jeu déjà présent sur le disque ne doit jamais repartir en
+        // « Installation… » : c'est l'état local qui fait foi.
+        if game.install_state == crate::providers::InstallState::Installed
+            && game.install_path.as_ref().is_some_and(|path| path.is_dir())
+        {
+            self.toast_info(format!("{} est déjà installé", game.title));
+            return;
+        }
+        if game.install_path.as_ref().is_some_and(|path| path.is_dir()) {
+            if let Some(record) = self
+                .lib
+                .provider_library
+                .games
+                .iter_mut()
+                .find(|record| record.key == *key)
+            {
+                record.install_state = crate::providers::InstallState::Installed;
+            }
+            self.touch();
+            self.toast_info(format!("{} est déjà installé", game.title));
+            return;
+        }
         let ready = match key.provider {
             crate::providers::Provider::Epic => crate::providers::tools::ManagedToolId::Legendary
                 .installed_path()
@@ -6201,12 +6341,19 @@ impl QuarkApp {
                 );
                 operation.start();
                 // gogdl ajoute lui-même le nom de dossier du jeu : `info` le
-                // publie, ce qui évite de chercher au hasard après coup.
-                let info = adapter.run(
-                    crate::providers::gog::GogAdapter::info_args(&key.product_id, "windows"),
-                    None,
-                )?;
-                let folder = crate::providers::gog::folder_from_info(&info.stdout)?;
+                // publie, ce qui évite de chercher au hasard après coup. Un
+                // `info` illisible ne doit pas bloquer le téléchargement : le
+                // dossier est alors retrouvé après coup par son manifeste.
+                let folder = adapter
+                    .run(
+                        crate::providers::gog::GogAdapter::info_args(&key.product_id, "windows"),
+                        None,
+                    )
+                    .ok()
+                    .filter(|output| output.exit_code == Some(0))
+                    .and_then(|output| {
+                        crate::providers::gog::folder_from_info(&output.stdout).ok()
+                    });
                 let output = adapter.run_install_streaming(
                     crate::providers::gog::GogAdapter::install_args(
                         &key.product_id,
@@ -6224,7 +6371,7 @@ impl QuarkApp {
                 }
                 let install_path = crate::providers::gog::resolve_install_path(
                     &destination,
-                    &folder,
+                    folder.as_deref().unwrap_or_default(),
                     &key.product_id,
                 )
                 .ok_or_else(|| {
@@ -6985,6 +7132,17 @@ impl QuarkApp {
             return;
         }
         self.startup_sync_done = true;
+        // Aucun téléchargement ne survit à la fermeture : un état « en cours »
+        // laissé par une session précédente est périmé. Le remettre à jour
+        // évite qu'un jeu Epic déjà présent reste bloqué sur « Installation… ».
+        if !self.snapshot_mode {
+            let recovered = crate::providers::operations::recover_interrupted_installs(
+                &mut self.lib.provider_library.games,
+            );
+            if recovered > 0 {
+                self.touch();
+            }
+        }
         self.maybe_startup_update(ctx);
         self.start_steam_sync(ctx);
         if crate::providers::epic_account::connected_account().is_some()
@@ -7537,7 +7695,7 @@ impl QuarkApp {
 #[cfg(test)]
 mod tests {
     use super::{QuarkApp, StartPage, Tab, removal_targets, startup_route};
-    use crate::config::{Game, Library};
+    use crate::config::{Game, Library, ViewMode};
 
     /// Application minimale pour les tests de navigation : la bibliothèque est
     /// construite en mémoire, aucune assertion ne dépend du disque.
@@ -7578,6 +7736,20 @@ mod tests {
         assert_eq!(startup_route(StartPage::Library), (Tab::Library, false));
         assert_eq!(startup_route(StartPage::Store), (Tab::Store, false));
         assert_eq!(startup_route(StartPage::MyGames), (Tab::MyGames, false));
+    }
+
+    #[test]
+    fn un_clic_en_vue_grille_ouvre_la_fiche_en_mode_liste() {
+        let mut app = test_app(vec![played("a", 300)]);
+        app.lib.settings.view = ViewMode::Grid;
+        app.open_game_page("a", false);
+        // Pas de fiche plein écran : la mise en page liste et son Retour.
+        assert!(app.overlay.is_none());
+        assert!(app.grid_detail);
+        // Le réglage de vue n'est pas modifié : Retour ramène à la grille.
+        assert_eq!(app.lib.settings.view, ViewMode::Grid);
+        app.close_game_page();
+        assert!(!app.grid_detail);
     }
 
     #[test]

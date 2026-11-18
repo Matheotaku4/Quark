@@ -39,8 +39,7 @@ pub use playtime::PlaytimeState;
 /// ou une chaîne de chiffres. Aucune valeur n'est inventée quand la réponse ne
 /// la contient pas.
 pub fn install_size_from_json(text: &str) -> Option<u64> {
-    let start = text.find('{')?;
-    let root: serde_json::Value = serde_json::from_str(&text[start..]).ok()?;
+    let root = first_json_value(text)?;
     fn find(value: &serde_json::Value, depth: usize) -> Option<u64> {
         if depth > 6 {
             return None;
@@ -72,6 +71,49 @@ pub fn install_size_from_json(text: &str) -> Option<u64> {
         }
     }
     find(&root, 0)
+}
+
+/// Première valeur JSON complète d'une sortie d'outil, même entourée de
+/// lignes de journal : Legendary et gogdl écrivent parfois `[INFO] …` avant
+/// ou après le JSON. `serde_json::from_str` refusait alors toute la sortie,
+/// ce qui faisait échouer une installation GOG pourtant valide.
+pub fn first_json_value(text: &str) -> Option<serde_json::Value> {
+    let mut rest = text;
+    while let Some(index) = rest.find('{') {
+        let candidate = &rest[index..];
+        let mut stream =
+            serde_json::Deserializer::from_str(candidate).into_iter::<serde_json::Value>();
+        match stream.next() {
+            Some(Ok(value)) => return Some(value),
+            Some(Err(error)) if error.is_eof() => return None,
+            _ => rest = &candidate[1..],
+        }
+    }
+    None
+}
+
+/// Premier objet JSON qui contient `key`. Les journaux de gogdl peuvent
+/// contenir des accolades ; on ignore les objets qui ne portent pas la clé
+/// attendue au lieu de renoncer à lire la sortie.
+pub fn json_object_with_key(text: &str, key: &str) -> Option<serde_json::Value> {
+    let mut rest = text;
+    while let Some(index) = rest.find('{') {
+        let candidate = &rest[index..];
+        let mut stream =
+            serde_json::Deserializer::from_str(candidate).into_iter::<serde_json::Value>();
+        match stream.next() {
+            Some(Ok(value)) => {
+                if value.get(key).is_some() {
+                    return Some(value);
+                }
+                let consumed = stream.byte_offset();
+                rest = &candidate[consumed..];
+            }
+            Some(Err(error)) if error.is_eof() => return None,
+            _ => rest = &candidate[1..],
+        }
+    }
+    None
 }
 
 pub fn session_written(before: Option<&[u8]>, after: Option<&[u8]>) -> bool {

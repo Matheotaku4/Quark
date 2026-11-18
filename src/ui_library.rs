@@ -18,7 +18,7 @@ impl QuarkApp {
         let view = self.lib.settings.view;
         // Vue grille : **seulement** la grille. Un clic sur une jaquette ouvre
         // la fiche en pleine page ; elle remplace la grille et sa colonne.
-        let grid_only = view == ViewMode::Grid;
+        let grid_only = view == ViewMode::Grid && !self.grid_detail;
         let detail_open = grid_only && self.overlay.is_some() && !self.home;
         // L'accueil est une page autonome : il n'a pas de colonne de filtres.
         // La bibliothèque garde la sienne, sauf quand elle est entièrement vide
@@ -58,7 +58,7 @@ impl QuarkApp {
                     self.grid_page(ui);
                 } else {
                     self.detail_pane(ui);
-                    if self.detail_from_home {
+                    if self.detail_from_home || self.grid_detail {
                         let x = self.lib.settings.sidebar_width.clamp(220.0, 340.0) + 18.0;
                         self.detail_back_button(ui.ctx(), x);
                     }
