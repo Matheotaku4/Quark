@@ -5,21 +5,29 @@ games and your Steam, Epic Games and GOG libraries together, launches Windows
 games through Proton or umu-launcher, and adds an in-game overlay, screenshots,
 achievements and verified local saves.
 
-This documentation describes **Quark 1.8.2**. It is also versioned in the
+This documentation describes **Quark 1.8.3**. It is also versioned in the
 repository under [`wiki/`](https://github.com/Matheotaku4/Quark/tree/main/wiki).
 
 ![Quark home](https://raw.githubusercontent.com/Matheotaku4/Quark/main/docs/images/home-en.png)
 
-## What's new in 1.8.2
+## What's new in 1.8.3
 
+- **A GOG pack no longer hides the installable game.** Amazon Prime lists Call of
+  Juarez: Gunslinger twice under the same title, and the pack has no content
+  builds, so gogdl failed with “Game doesn't support content system api”.
+  Deduplication now keeps the `game` entry with the Windows builds and only
+  falls back to the pack when it is the only entry.
+- **Home stays inside the library.** The Home tab is gone from the top bar: Home
+  sits under **Filters**, and the game list and filters remain visible while the
+  carousel fills the central pane. `Escape` returns to the list.
+- **A regression test** reproduces both real Call of Juarez: Gunslinger entries
+  and checks that the installable game ID wins.
 - **Custom save folders survive library syncs.** An Epic or Steam refresh now
   keeps the folders chosen in a game page instead of replacing them with an
   empty list. Known paths are merged without duplicates, including when Steam's
   owned-games list is unavailable.
 - **Two regression tests** cover `merge_epic` and `merge_sync` with an existing
   custom folder and a refreshed record without paths.
-- **A home page of its own.** Home has a dedicated tab, a full-width hero and a
-  recent-games carousel, without the library sidebar.
 - **A contextual game page.** Opening a game from the grid shows the list-style
   page; **Back** or `Escape` returns to Home or the grid depending on where you
   came from, restoring the carousel slide.

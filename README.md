@@ -6,7 +6,7 @@ titles you own, launches Windows games through Proton (or umu-launcher), and sta
 the way with an AMOLED interface, a store page, save snapshots and an in-game
 overlay.
 
-This is the **1.8.2** documentation. Older release notes are kept on the GitHub
+This is the **1.8.3** documentation. Older release notes are kept on the GitHub
 releases page; `docs/release-notes.md` only describes the release currently
 being published.
 
@@ -28,14 +28,15 @@ The wiki is published from the versioned source in [`wiki/`](wiki/) by the
 | --- | --- |
 | ![Onboarding](docs/images/onboarding-fr.png) | ![What's new](docs/images/whats-new-fr.png) |
 
-## What's new in 1.8.2
+## What's new in 1.8.3
 
-- **Les dossiers de sauvegarde personnalisés survivent aux synchros.** Une synchronisation Epic ou Steam conserve les chemins choisis dans la fiche de jeu au lieu de repartir avec une liste vide. Les chemins connus sont fusionnés sans doublon, y compris quand la liste possédée de Steam est indisponible.
-- **Deux tests de régression** vérifient `merge_epic` et `merge_sync` avec un dossier personnalisé existant et une fiche rafraîchie sans chemin.
+- **GOG : un pack ne masque plus le jeu installable.** Amazon Prime expose Call of Juarez: Gunslinger sous deux fiches de même titre ; le pack n'a aucun build de contenu et faisait échouer gogdl avec « Game doesn't support content system api ». La déduplication garde désormais la fiche `game`, celle qui possède les builds Windows, et ne conserve le pack que s'il est seul.
+- **L'accueil reste dans la bibliothèque.** L'onglet Accueil quitte la barre haute : il se trouve sous **Filtres**, et la colonne avec la liste des jeux reste visible pendant que le carrousel occupe le panneau central. `Échap` revient à la liste.
+- **Un test de régression** reproduit les deux fiches réelles de Call of Juarez: Gunslinger et vérifie que l'identifiant du jeu installable est conservé.
 
 ## Table of contents
 
-1. [What's new in 1.8.2](#whats-new-in-182)
+1. [What's new in 1.8.3](#whats-new-in-183)
 2. [What Quark does](#what-quark-does)
 3. [Installation](#installation)
 4. [First launch](#first-launch)
@@ -95,8 +96,8 @@ Download `quark-<version>-linux-x86_64.tar.gz` and its `.sha256` file from the
 then verify and unpack it:
 
 ```bash
-sha256sum -c quark-1.8.2-linux-x86_64.tar.gz.sha256
-tar -xzf quark-1.8.2-linux-x86_64.tar.gz
+sha256sum -c quark-1.8.3-linux-x86_64.tar.gz.sha256
+tar -xzf quark-1.8.3-linux-x86_64.tar.gz
 ./quark/quark
 ```
 

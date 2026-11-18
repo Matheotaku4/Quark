@@ -3269,17 +3269,9 @@ impl QuarkApp {
                     );
                     ui.add_space(26.0);
 
-                    // L'accueil est une page autonome : il a son propre onglet
-                    // et ne partage plus l'état actif de la bibliothèque.
-                    let home_active =
-                        self.tab == Tab::Library && (self.home || self.detail_from_home);
-                    let library_active = self.tab == Tab::Library && !home_active;
-                    if widgets::tab(ui, "Accueil", home_active, &pal).clicked() {
-                        self.tab = Tab::Library;
-                        self.home = true;
-                        self.overlay = None;
-                        self.detail_from_home = false;
-                    }
+                    // L'accueil vit dans la colonne de la bibliothèque, sous
+                    // les filtres : la barre haute n'a plus d'onglet dédié.
+                    let library_active = self.tab == Tab::Library;
                     if widgets::tab(ui, "Boutique", self.tab == Tab::Store, &pal).clicked() {
                         self.tab = Tab::Store;
                         self.home = false;

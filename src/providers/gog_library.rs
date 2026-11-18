@@ -42,6 +42,9 @@ pub struct OwnedGame {
     pub title: String,
     /// Laissée vide : GOG ne publie pas de jaquette dans la fiche produit.
     pub cover_url: Option<String>,
+    /// `game`, `pack` ou `dlc`. Les packs n'ont pas de builds de contenu et
+    /// ne doivent jamais masquer le jeu qu'ils contiennent.
+    pub game_type: String,
 }
 
 fn client() -> reqwest::blocking::Client {
@@ -405,6 +408,17 @@ fn title_key(title: &str) -> String {
         .collect()
 }
 
+/// Priorité de conservation quand deux fiches portent le même titre : un jeu
+/// installable passe avant un pack (Amazon Prime, bundle), qui n'a pas de
+/// builds de contenu et ne peut pas être téléchargé par gogdl.
+fn gog_product_rank(game_type: &str) -> u8 {
+    match game_type {
+        "game" => 0,
+        "pack" => 1,
+        _ => 2,
+    }
+}
+
 /// Nettoie les titres et fusionne les doublons créés par Amazon Prime. La fiche
 /// sans suffixe est gardée en priorité, avec son identifiant GOG d'origine.
 fn dedupe_gog_titles(games: &mut Vec<OwnedGame>) {
@@ -414,6 +428,9 @@ fn dedupe_gog_titles(games: &mut Vec<OwnedGame>) {
     games.sort_by(|left, right| {
         title_key(&left.title)
             .cmp(&title_key(&right.title))
+            .then_with(|| {
+                gog_product_rank(&left.game_type).cmp(&gog_product_rank(&right.game_type))
+            })
             .then_with(|| left.title.len().cmp(&right.title.len()))
             .then_with(|| left.id.cmp(&right.id))
     });
@@ -465,13 +482,15 @@ pub fn parse_products(body: &str) -> Result<Vec<OwnedGame>, String> {
     };
     let mut games = Vec::new();
     for entry in entries {
-        // Les packs et DLC partagent la liste des produits possédés : ils ne
-        // sont pas des jeux lançables et n'ont pas leur place dans la grille.
-        let kind = entry
+        // Les DLC ne sont pas des jeux lançables. Les packs sont conservés
+        // seulement comme repli : s'ils doublonnent un vrai jeu, la
+        // déduplication garde le jeu, seul à posséder des builds de contenu.
+        let game_type = entry
             .get("game_type")
             .and_then(Value::as_str)
-            .unwrap_or("game");
-        if kind == "dlc" {
+            .unwrap_or("game")
+            .to_string();
+        if game_type == "dlc" {
             continue;
         }
         let id = match entry.get("id") {
@@ -492,6 +511,7 @@ pub fn parse_products(body: &str) -> Result<Vec<OwnedGame>, String> {
             id,
             title: clean_gog_title(&title),
             cover_url: None,
+            game_type,
         });
     }
     games.sort_by_key(|left| left.title.to_lowercase());
@@ -568,10 +588,20 @@ fn filtered_products(token: &str) -> Result<Vec<OwnedGame>, String> {
             if title.is_empty() || id.is_empty() || is_movie {
                 continue;
             }
+            let game_type = entry
+                .get("gameType")
+                .or_else(|| entry.get("game_type"))
+                .and_then(Value::as_str)
+                .unwrap_or("game")
+                .to_string();
+            if game_type == "dlc" {
+                continue;
+            }
             games.push(OwnedGame {
                 id,
                 title: clean_gog_title(&title),
                 cover_url: None,
+                game_type,
             });
         }
         let total_pages = root.get("totalPages").and_then(Value::as_u64).unwrap_or(1);
@@ -1349,12 +1379,14 @@ mod tests {
                 OwnedGame {
                     id: "2".into(),
                     title: "alpha".into(),
-                    cover_url: None
+                    cover_url: None,
+                    game_type: "game".into()
                 },
                 OwnedGame {
                     id: "1".into(),
                     title: "Zebra".into(),
-                    cover_url: None
+                    cover_url: None,
+                    game_type: "game".into()
                 }
             ]
         );
@@ -1365,7 +1397,8 @@ mod tests {
             vec![OwnedGame {
                 id: "9".into(),
                 title: "Page Game".into(),
-                cover_url: None
+                cover_url: None,
+                game_type: "game".into()
             }]
         );
         assert!(parse_products("nope").is_err());
@@ -1399,12 +1432,29 @@ mod tests {
     }
 
     #[test]
+    fn une_fiche_pack_ne_masque_pas_le_jeu_installable() {
+        // Cas réel : Call of Juarez: Gunslinger possède une fiche « jeu » avec
+        // builds et une fiche « pack » Amazon Prime sans builds. Le pack a un
+        // identifiant plus petit et était conservé en premier par le tri.
+        let body = r#"[
+          {"id": 1662043288, "title": "Call of Juarez: Gunslinger - Amazon Prime", "game_type": "pack"},
+          {"id": 2015389384, "title": "Call of Juarez: Gunslinger", "game_type": "game"}
+        ]"#;
+        let games = parse_products(body).unwrap();
+        assert_eq!(games.len(), 1);
+        assert_eq!(games[0].id, "2015389384");
+        assert_eq!(games[0].title, "Call of Juarez: Gunslinger");
+        assert_eq!(games[0].game_type, "game");
+    }
+
+    #[test]
     fn conversion_produit_une_entree_gog_sans_etat_d_installation() {
         let games = to_games(
             &[OwnedGame {
                 id: "42".into(),
                 title: "Game".into(),
                 cover_url: None,
+                game_type: "game".into(),
             }],
             99,
         );

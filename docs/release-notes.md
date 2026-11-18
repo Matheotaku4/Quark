@@ -1,17 +1,18 @@
-## Quark 1.8.2 — Les sauvegardes personnalisées survivent aux synchros
+## Quark 1.8.3 — GOG installe le bon jeu, l'accueil reste dans la bibliothèque
 
-### Correction
+### Corrections
 
-- **Epic et Steam : les dossiers de sauvegarde choisis ne disparaissent plus.** `merge_epic` et `merge_sync` repartaient de la fiche rafraîchie, dont `custom_save_paths` est vide, puis remplaçaient l'ancienne fiche. Les chemins personnalisés sont désormais fusionnés avec ceux déjà stockés, sans doublon, avant l'écriture.
-- **La fusion résiste aussi aux synchros partielles.** Steam conserve les chemins même quand la liste possédée n'est pas disponible et que seuls les jeux locaux sont fusionnés. Les installations Epic vérifiées gardent la même union de chemins.
-- **Deux tests de régression** couvrent `merge_epic` et `merge_sync` avec un dossier personnalisé existant et une fiche rafraîchie sans chemin.
+- **GOG : un pack ne masque plus le jeu installable.** Amazon Prime expose Call of Juarez: Gunslinger sous deux fiches de même titre : le jeu (`2015389384`), qui possède des builds Windows generation 2, et le pack (`1662043288`), qui n'en a aucun. La déduplication gardait le pack parce que son identifiant était plus petit, puis gogdl échouait avec « Game doesn't support content system api ». Elle conserve désormais la fiche `game` en priorité et ne se rabat sur le pack que s'il est la seule entrée.
+- **L'accueil reste dans la bibliothèque.** L'onglet Accueil est retiré de la barre haute. Une entrée **Accueil** se trouve sous **Filtres**, dans la colonne de gauche, et cette colonne garde la liste des jeux visible pendant que le carrousel occupe le panneau central. `Échap` revient à la liste.
+- **Un test de régression** reproduit les deux fiches réelles de Call of Juarez: Gunslinger et vérifie que l'identifiant du jeu installable est conservé.
 
 ### Vérifications
 
 - `cargo fmt --check` : OK.
-- `cargo test --locked` : 333 tests réussis.
+- `cargo test --locked` : 334 tests réussis.
 - `cargo clippy --all-targets --locked -- -D warnings` : OK.
+- Rendu hors écran de l'accueil en français et en anglais : la colonne Filtres/Accueil et la liste restent visibles.
 
-### Limites connues
+### Limite connue
 
-- La correction est couverte par des tests unitaires de fusion ; aucune synchronisation Epic ou Steam réelle n'a été effectuée dans cet environnement, faute de comptes configurés.
+- Si un compte ne possède que la fiche « pack » et aucune fiche de jeu correspondante, gogdl ne peut toujours pas installer ce contenu sans builds. Quark conserve alors le pack pour ne pas perdre l'entrée de bibliothèque.

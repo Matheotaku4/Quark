@@ -20,11 +20,12 @@ impl QuarkApp {
         // la fiche en pleine page ; elle remplace la grille et sa colonne.
         let grid_only = view == ViewMode::Grid && !self.grid_detail;
         let detail_open = grid_only && self.overlay.is_some() && !self.home;
-        // L'accueil est une page autonome : il n'a pas de colonne de filtres.
-        // La bibliothèque garde la sienne, sauf quand elle est entièrement vide
-        // et que la fiche peut utiliser toute la largeur.
+        // L'accueil partage la colonne de la bibliothèque : filtres et liste de
+        // jeux restent visibles pendant qu'il occupe le panneau central.
+        // La colonne disparaît seulement quand la bibliothèque est vide ou
+        // qu'une fiche occupe toute la largeur.
         let empty_library = self.lib.games.is_empty();
-        if !self.home && !empty_library && !detail_open {
+        if !empty_library && !detail_open {
             egui::SidePanel::left("quark_library_list")
                 .exact_width(self.lib.settings.sidebar_width.clamp(220.0, 340.0))
                 .resizable(false)
@@ -328,8 +329,8 @@ impl QuarkApp {
         let mut remove_marked = false;
         let mut clear_marked = false;
 
-        // « Accueil » ouvre la liste, comme dans Steam : une vraie ligne, sur la
-        // même grille que les jeux, avec le « + » d'ajout à droite.
+        // En-tête de la colonne : la liste et les filtres restent visibles sur
+        // l'accueil comme sur la fiche.
         ui.add_space(14.0);
         ui.horizontal(|ui| {
             ui.add_space(16.0);
@@ -349,9 +350,18 @@ impl QuarkApp {
             });
         });
         ui.add_space(10.0);
-        // L'accueil a son onglet dans la barre haute : la colonne ne garde que
-        // le panneau Filtres, qui réunit aussi les vues, le tri et le regroupement.
+        // Le panneau Filtres réunit aussi les vues, le tri et le regroupement.
+        // L'accueil se trouve juste en dessous, dans la même colonne.
         self.filter_menu(ui, 16.0);
+        ui.horizontal(|ui| {
+            ui.add_space(16.0);
+            if widgets::ghost_button(ui, "Accueil", &pal, Icon::Home).clicked() {
+                self.tab = crate::app::Tab::Library;
+                self.home = true;
+                self.overlay = None;
+                self.detail_from_home = false;
+            }
+        });
         if marked_count > 0 {
             // Barre de sélection : supprimer plusieurs jeux d'un coup.
             ui.horizontal(|ui| {
