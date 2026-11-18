@@ -6188,8 +6188,12 @@ impl QuarkApp {
             .find(|game| game.key == key)
         {
             if provider == crate::providers::Provider::Epic {
-                let group = crate::providers::legendary::merge_epic(
+                // La fiche courante est encore `Installing` : `merge_epic`
+                // conserverait cet état transitoire et le jeu ne serait jamais
+                // ajouté à la bibliothèque. La liste vérifiée fait autorité.
+                let group = crate::providers::legendary::merge_epic_with_verified_installs(
                     std::slice::from_ref(record),
+                    std::slice::from_ref(&installed),
                     std::slice::from_ref(&installed),
                 );
                 if let Some(updated) = group.into_iter().find(|game| game.key == key) {
@@ -6327,6 +6331,20 @@ impl QuarkApp {
             let result = (|| {
                 std::fs::create_dir_all(&destination)
                     .map_err(|_| "impossible de préparer la destination GOG choisie".to_string())?;
+                // Un pack Amazon Prime n'a aucun build de contenu : gogdl
+                // échouerait après avoir été lancé. On le refuse avant, avec
+                // une action compréhensible. Un pack résolu par la synchro est
+                // déjà remplacé par l'identifiant du jeu de base.
+                if matches!(
+                    crate::providers::gog::has_windows_content_builds(&key.product_id),
+                    Ok(false)
+                ) {
+                    return Err(format!(
+                        "GOG ne fournit aucun build Windows téléchargeable par gogdl pour « {title} ». \
+                         S'il s'agit d'un pack Amazon Prime, resynchronise la bibliothèque GOG pour \
+                         le résoudre vers le jeu de base ; sinon, installe-le depuis GOG Galaxy."
+                    ));
+                }
                 let mut operation = crate::providers::operations::InstallOperation::new(
                     key.clone(),
                     destination.clone(),
@@ -6346,6 +6364,10 @@ impl QuarkApp {
                     .and_then(|output| {
                         crate::providers::gog::folder_from_info(&output.stdout).ok()
                     });
+                // Même précaution que Heroic : un manifeste gogdl pointant vers
+                // une installation supprimée fait sortir gogdl en 0 sans rien
+                // télécharger (« Nothing to do »).
+                crate::providers::gog::clear_gogdl_install_manifest(&key.product_id)?;
                 let output = adapter.run_install_streaming(
                     crate::providers::gog::GogAdapter::install_args(
                         &key.product_id,
@@ -6368,7 +6390,9 @@ impl QuarkApp {
                 )
                 .ok_or_else(|| {
                     format!(
-                        "gogdl a terminé mais aucun dossier de jeu n'a été trouvé dans {}",
+                        "gogdl a terminé sans créer de dossier de jeu dans {}. Vérifie la \
+                         connexion GOG et réessaie ; si le problème persiste, utilise \
+                         l'installateur hors ligne de GOG Galaxy.",
                         destination.display()
                     )
                 })?;

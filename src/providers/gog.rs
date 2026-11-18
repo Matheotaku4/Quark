@@ -20,6 +20,93 @@ pub fn auth_config_path() -> PathBuf {
     crate::config::data_dir().join("gogdl-auth.json")
 }
 
+const CONTENT_SYSTEM_URL: &str = "https://content-system.gog.com";
+
+/// Vrai quand gogdl trouve un build Windows pour ce produit. Un pack Amazon
+/// Prime n'en publie aucun : lancer gogdl dans ce cas ne télécharge rien et
+/// finit par l'erreur « Game doesn't support content system api ».
+pub fn has_windows_content_builds(product_id: &str) -> Result<bool, String> {
+    if product_id.is_empty()
+        || !product_id
+            .chars()
+            .all(|character| character.is_ascii_digit())
+    {
+        return Err("identifiant GOG invalide".to_string());
+    }
+    let response = crate::artwork::http()
+        .get(format!(
+            "{CONTENT_SYSTEM_URL}/products/{product_id}/os/windows/builds"
+        ))
+        .query(&[("generation", "2")])
+        .send()
+        .map_err(|_| "GOG injoignable pendant la vérification du téléchargement".to_string())?;
+    if !response.status().is_success() {
+        return Err(format!(
+            "GOG a répondu {} pendant la vérification du téléchargement",
+            response.status().as_u16()
+        ));
+    }
+    let body = crate::net::text(response, crate::net::MAX_JSON, "builds GOG")
+        .map_err(|_| "réponse GOG illisible".to_string())?;
+    Ok(parse_windows_build_count(&body)? > 0)
+}
+
+fn parse_windows_build_count(body: &str) -> Result<u64, String> {
+    let root: serde_json::Value =
+        serde_json::from_str(body).map_err(|_| "réponse GOG illisible".to_string())?;
+    Ok(root
+        .get("total_count")
+        .and_then(serde_json::Value::as_u64)
+        .unwrap_or(0))
+}
+
+/// gogdl garde un manifeste par jeu sous `heroic_gogdl/manifests`. S'il pointe
+/// vers une installation qui n'existe plus, gogdl répond « Nothing to do » et
+/// sort en 0 sans rien télécharger. Heroic supprime ce manifeste avant une
+/// nouvelle installation ; Quark fait de même.
+fn gogdl_base_config_dir() -> PathBuf {
+    if let Some(path) = std::env::var_os("GOGDL_CONFIG_PATH").map(PathBuf::from) {
+        return path;
+    }
+    std::env::var_os("XDG_CONFIG_HOME")
+        .map(PathBuf::from)
+        .filter(|path| path.is_absolute())
+        .or_else(dirs::config_dir)
+        .unwrap_or_else(|| crate::config::home_dir().join(".config"))
+}
+
+fn gogdl_manifest_path_in(config_dir: &Path, product_id: &str) -> PathBuf {
+    config_dir
+        .join("heroic_gogdl")
+        .join("manifests")
+        .join(product_id)
+}
+
+/// Supprime l'état de téléchargement gogdl avant une installation neuve. Sans
+/// cela, un ancien manifeste fait croire à gogdl que les fichiers existent
+/// encore et aucun dossier n'est créé.
+pub fn clear_gogdl_install_manifest(product_id: &str) -> Result<(), String> {
+    clear_gogdl_manifest_in(&gogdl_base_config_dir(), product_id)
+}
+
+fn clear_gogdl_manifest_in(config_dir: &Path, product_id: &str) -> Result<(), String> {
+    if product_id.is_empty()
+        || !product_id
+            .chars()
+            .all(|character| character.is_ascii_digit())
+    {
+        return Err("identifiant GOG invalide".to_string());
+    }
+    let path = gogdl_manifest_path_in(config_dir, product_id);
+    match std::fs::remove_file(&path) {
+        Ok(()) => Ok(()),
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(()),
+        Err(_) => {
+            Err("impossible de réinitialiser le manifeste de téléchargement gogdl".to_string())
+        }
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct GogAdapter {
     pub executable: PathBuf,
@@ -451,6 +538,44 @@ mod tests {
         let merged = merge_gog(&[existing], &[refreshed]);
         assert_eq!(merged.len(), 1);
         assert_eq!(merged[0].install_state, InstallState::Installing);
+    }
+
+    #[test]
+    fn un_ancien_manifeste_gogdl_est_supprime_avant_une_installation() {
+        let root =
+            std::env::temp_dir().join(format!("quark-gogdl-manifest-{}", std::process::id()));
+        let manifests = root.join("heroic_gogdl").join("manifests");
+        std::fs::create_dir_all(&manifests).unwrap();
+        let manifest = gogdl_manifest_path_in(&root, "2015389384");
+        std::fs::write(&manifest, "{}").unwrap();
+        assert_eq!(manifest, manifests.join("2015389384"));
+        clear_gogdl_manifest_in(&root, "2015389384").unwrap();
+        assert!(!manifest.exists());
+        // Une installation neuve n'a pas de manifeste : ce n'est pas une erreur.
+        clear_gogdl_manifest_in(&root, "2015389384").unwrap();
+        assert!(clear_gogdl_manifest_in(&root, "../jeu").is_err());
+        let _ = std::fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn les_builds_windows_sont_lus_avant_de_lancer_gogdl() {
+        assert_eq!(
+            parse_windows_build_count(r#"{"total_count":5,"items":[]}"#).unwrap(),
+            5
+        );
+        assert_eq!(
+            parse_windows_build_count(r#"{"total_count":0}"#).unwrap(),
+            0
+        );
+        assert_eq!(parse_windows_build_count("{}").unwrap(), 0);
+        assert!(parse_windows_build_count("pas du json").is_err());
+    }
+
+    #[test]
+    #[ignore = "nécessite le réseau GOG"]
+    fn le_vrai_pack_na_pas_de_builds_et_le_jeu_en_a() {
+        assert!(!has_windows_content_builds("1662043288").unwrap());
+        assert!(has_windows_content_builds("2015389384").unwrap());
     }
 
     #[test]

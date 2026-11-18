@@ -6,7 +6,7 @@ titles you own, launches Windows games through Proton (or umu-launcher), and sta
 the way with an AMOLED interface, a store page, save snapshots and an in-game
 overlay.
 
-This is the **1.8.3** documentation. Older release notes are kept on the GitHub
+This is the **1.8.4** documentation. Older release notes are kept on the GitHub
 releases page; `docs/release-notes.md` only describes the release currently
 being published.
 
@@ -28,15 +28,16 @@ The wiki is published from the versioned source in [`wiki/`](wiki/) by the
 | --- | --- |
 | ![Onboarding](docs/images/onboarding-fr.png) | ![What's new](docs/images/whats-new-fr.png) |
 
-## What's new in 1.8.3
+## What's new in 1.8.4
 
-- **GOG : un pack ne masque plus le jeu installable.** Amazon Prime expose Call of Juarez: Gunslinger sous deux fiches de même titre ; le pack n'a aucun build de contenu et faisait échouer gogdl avec « Game doesn't support content system api ». La déduplication garde désormais la fiche `game`, celle qui possède les builds Windows, et ne conserve le pack que s'il est seul.
-- **L'accueil reste dans la bibliothèque.** L'onglet Accueil quitte la barre haute : il se trouve sous **Filtres**, et la colonne avec la liste des jeux reste visible pendant que le carrousel occupe le panneau central. `Échap` revient à la liste.
-- **Un test de régression** reproduit les deux fiches réelles de Call of Juarez: Gunslinger et vérifie que l'identifiant du jeu installable est conservé.
+- **GOG : un pack Amazon Prime seul est résolu vers le jeu de base.** Le compte peut ne renvoyer que l'identifiant du pack (`1662043288`), sans la fiche du jeu (`2015389384`). Quark interroge le catalogue GOG, exige un titre exact et une fiche `game` Windows, puis remplace le pack par ce jeu installable. Un pack sans correspondance reste affiché mais n'est plus envoyé à gogdl.
+- **GOG : plus d'installation vide.** Comme Heroic, Quark supprime le manifeste gogdl avant une installation neuve : un ancien manifeste faisait répondre « Nothing to do » et gogdl sortait sans rien télécharger. Quark vérifie aussi les builds Windows avant de lancer l'outil et affiche une erreur explicite si le titre n'est pas téléchargeable.
+- **Epic : l'installation terminée est vraiment enregistrée.** La fusion avec la fiche encore `Installing` réappliquait cet état transitoire : le jeu restait bloqué sur « Installation… » et n'arrivait pas dans la bibliothèque. La liste vérifiée de Legendary fait désormais autorité.
+- **Tests** : 338 tests unitaires, plus 2 tests réseau GOG exécutés séparément ; gogdl 1.4.0 confirme que le pack n'a aucun build et que le jeu en a cinq.
 
 ## Table of contents
 
-1. [What's new in 1.8.3](#whats-new-in-183)
+1. [What's new in 1.8.4](#whats-new-in-184)
 2. [What Quark does](#what-quark-does)
 3. [Installation](#installation)
 4. [First launch](#first-launch)
@@ -96,8 +97,8 @@ Download `quark-<version>-linux-x86_64.tar.gz` and its `.sha256` file from the
 then verify and unpack it:
 
 ```bash
-sha256sum -c quark-1.8.3-linux-x86_64.tar.gz.sha256
-tar -xzf quark-1.8.3-linux-x86_64.tar.gz
+sha256sum -c quark-1.8.4-linux-x86_64.tar.gz.sha256
+tar -xzf quark-1.8.4-linux-x86_64.tar.gz
 ./quark/quark
 ```
 

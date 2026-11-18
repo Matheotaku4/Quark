@@ -1457,6 +1457,33 @@ Empty,,1.0,False\n";
     }
 
     #[test]
+    fn une_installation_epic_verifiee_remplace_l_etat_installing() {
+        let root =
+            std::env::temp_dir().join(format!("quark-epic-installing-{}", std::process::id()));
+        let install_path = root.join("Game");
+        std::fs::create_dir_all(&install_path).unwrap();
+        let existing = ProviderGame {
+            key: ProviderGameKey {
+                provider: Provider::Epic,
+                product_id: "app_123".into(),
+            },
+            title: "Jeu Epic".into(),
+            install_state: InstallState::Installing,
+            ..Default::default()
+        };
+        let mut installed = existing.clone();
+        installed.install_state = InstallState::Installed;
+        installed.install_path = Some(install_path.clone());
+        installed.install_root = Some(root.clone());
+        let merged =
+            merge_epic_with_verified_installs(&[existing], &[installed.clone()], &[installed]);
+        assert_eq!(merged.len(), 1);
+        assert_eq!(merged[0].install_state, InstallState::Installed);
+        assert_eq!(merged[0].install_path.as_ref(), Some(&install_path));
+        let _ = std::fs::remove_dir_all(root);
+    }
+
+    #[test]
     fn epic_merge_combines_owned_and_installed_records_without_duplicate_provider_ids() {
         let owned = parse_owned_json(
             r#"[{"app_name":"app_1","app_title":"Owned Game"},{"app_name":"app_2","app_title":"Installed Game"}]"#,

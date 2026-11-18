@@ -5,41 +5,29 @@ games and your Steam, Epic Games and GOG libraries together, launches Windows
 games through Proton or umu-launcher, and adds an in-game overlay, screenshots,
 achievements and verified local saves.
 
-This documentation describes **Quark 1.8.3**. It is also versioned in the
+This documentation describes **Quark 1.8.4**. It is also versioned in the
 repository under [`wiki/`](https://github.com/Matheotaku4/Quark/tree/main/wiki).
 
 ![Quark home](https://raw.githubusercontent.com/Matheotaku4/Quark/main/docs/images/home-en.png)
 
-## What's new in 1.8.3
+## What's new in 1.8.4
 
-- **A GOG pack no longer hides the installable game.** Amazon Prime lists Call of
-  Juarez: Gunslinger twice under the same title, and the pack has no content
-  builds, so gogdl failed with “Game doesn't support content system api”.
-  Deduplication now keeps the `game` entry with the Windows builds and only
-  falls back to the pack when it is the only entry.
-- **Home stays inside the library.** The Home tab is gone from the top bar: Home
-  sits under **Filters**, and the game list and filters remain visible while the
-  carousel fills the central pane. `Escape` returns to the list.
-- **A regression test** reproduces both real Call of Juarez: Gunslinger entries
-  and checks that the installable game ID wins.
-- **Custom save folders survive library syncs.** An Epic or Steam refresh now
-  keeps the folders chosen in a game page instead of replacing them with an
-  empty list. Known paths are merged without duplicates, including when Steam's
-  owned-games list is unavailable.
-- **Two regression tests** cover `merge_epic` and `merge_sync` with an existing
-  custom folder and a refreshed record without paths.
-- **A contextual game page.** Opening a game from the grid shows the list-style
-  page; **Back** or `Escape` returns to Home or the grid depending on where you
-  came from, restoring the carousel slide.
-- **One global search.** `Ctrl+F`, `Ctrl+K`, `/` or the magnifier opens the same
-  palette for local games, owned store games and settings. Accents are ignored
-  and a real substring is required.
-- **Settings by task.** A search field above the settings navigation finds an
-  action such as **cloud saves** or **overlay** and opens the right page.
-- **Coherent async states.** News, loading, error and missing-artwork states
-  share the same skeletons and status cards, with a logo fallback.
-- **Five languages at three widths.** The main screens are checked in French,
-  English, German, Spanish and Portuguese at 900, 1024 and 1360 px.
+- **A lone Amazon Prime pack resolves to the base game.** GOG can return only
+  the pack ID (`1662043288`) without the game record (`2015389384`). Quark
+  searches the GOG catalogue, requires an exact Windows `game` match, and
+  replaces the pack with that installable app ID. A pack with no exact match is
+  kept visible but is no longer sent to gogdl.
+- **No more empty GOG installs.** Like Heroic, Quark deletes the gogdl manifest
+  before a fresh install. A stale manifest made gogdl answer “Nothing to do”
+  and exit successfully without downloading anything. Quark also checks the
+  Windows content builds first and shows a clear error when the title cannot be
+  downloaded by gogdl.
+- **A finished Epic install is now recorded.** Merging with the still-`Installing`
+  library record preserved that transient state, so the game stayed on
+  “Installing…” and never reached the library. Legendary's verified installed
+  list now takes precedence.
+- **Tests:** 338 unit tests, plus 2 live GOG network tests run separately;
+  gogdl 1.4.0 confirms the pack has no build and the base game has five.
 
 ## Where to start
 

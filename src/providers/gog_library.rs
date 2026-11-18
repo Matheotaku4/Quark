@@ -19,6 +19,7 @@ pub const CLIENT_SECRET: &str = "9d85c43b1482497dbbce61f6e4aa173a433796eeae2ca8c
 const AUTH_URL: &str = "https://auth.gog.com";
 const EMBED_URL: &str = "https://embed.gog.com";
 const API_URL: &str = "https://api.gog.com";
+const CATALOG_URL: &str = "https://catalog.gog.com/v1/catalog";
 const GAMEPLAY_URL: &str = "https://gameplay.gog.com";
 const LOCALE: &str = "en-US";
 /// L'API produits accepte une liste d'identifiants ; 40 reste sous la limite
@@ -443,6 +444,107 @@ fn dedupe_gog_titles(games: &mut Vec<OwnedGame>) {
     });
 }
 
+/// Lit la réponse du catalogue GOG et retient le jeu de base dont le titre
+/// correspond exactement au pack. Les packs Amazon Prime ne sont pas des jeux
+/// téléchargeables par gogdl ; le catalogue publie, lui, la fiche `game` avec
+/// les builds Windows. Un pack sans correspondance exacte reste un pack : on
+/// ne devine jamais un autre jeu.
+fn parse_catalog_game(body: &str, expected_title: &str) -> Option<OwnedGame> {
+    let root: Value = serde_json::from_str(body).ok()?;
+    let expected = title_key(expected_title);
+    let products = root.get("products")?.as_array()?;
+    products.iter().find_map(|entry| {
+        if entry.get("productType").and_then(Value::as_str) != Some("game") {
+            return None;
+        }
+        let title = entry.get("title").and_then(Value::as_str)?.trim();
+        if title.is_empty() || title_key(title) != expected {
+            return None;
+        }
+        let windows = entry
+            .get("operatingSystems")
+            .and_then(Value::as_array)
+            .is_some_and(|systems| {
+                systems.iter().any(|system| {
+                    system
+                        .as_str()
+                        .is_some_and(|value| value.eq_ignore_ascii_case("windows"))
+                })
+            });
+        if !windows {
+            return None;
+        }
+        let id = match entry.get("id")? {
+            Value::Number(number) => number.to_string(),
+            Value::String(text) => text.clone(),
+            _ => return None,
+        };
+        if id.is_empty() || !id.chars().all(|character| character.is_ascii_digit()) {
+            return None;
+        }
+        let cover_url = entry
+            .get("coverVertical")
+            .and_then(Value::as_str)
+            .map(str::trim)
+            .filter(|url| url.starts_with("https://") || url.starts_with("http://"))
+            .map(str::to_string);
+        Some(OwnedGame {
+            id,
+            title: clean_gog_title(title),
+            cover_url,
+            game_type: "game".into(),
+        })
+    })
+}
+
+/// Résout un pack Amazon Prime vers sa fiche de jeu installable. Le compte GOG
+/// ne publie parfois que l'identifiant du pack ; gogdl refuse alors de
+/// télécharger (« Game doesn't support content system api »).
+fn resolve_pack_game(pack: &OwnedGame) -> Option<OwnedGame> {
+    if pack.game_type != "pack" {
+        return None;
+    }
+    let response = client()
+        .get(CATALOG_URL)
+        .query(&[
+            ("countryCode", "US"),
+            ("locale", LOCALE),
+            ("limit", "10"),
+            ("query", &format!("like:{}", pack.title)),
+        ])
+        .timeout(http_timeout())
+        .send()
+        .ok()?;
+    if !response.status().is_success() {
+        return None;
+    }
+    let body = crate::net::text(response, crate::net::MAX_JSON, "catalogue GOG").ok()?;
+    parse_catalog_game(&body, &pack.title).or_else(|| {
+        // Le titre du pack est nettoyé avant la recherche ; le catalogue peut
+        // néanmoins retourner la fiche avec le suffixe d'origine.
+        parse_catalog_game(&body, &clean_gog_title(&pack.title))
+    })
+}
+
+/// Résout tous les packs d'une bibliothèque, puis refusionne les doublons : un
+/// compte qui possède à la fois le pack et le jeu ne doit garder qu'une entrée.
+fn resolve_pack_entries(mut games: Vec<OwnedGame>) -> Vec<OwnedGame> {
+    games = games
+        .into_iter()
+        .map(|game| {
+            if game.game_type == "pack" {
+                resolve_pack_game(&game).unwrap_or(game)
+            } else {
+                game
+            }
+        })
+        .collect();
+    games.sort_by_key(|left| left.title.to_lowercase());
+    games.dedup_by(|left, right| left.id == right.id);
+    dedupe_gog_titles(&mut games);
+    games
+}
+
 /// Identifiants des jeux possédés (`{"owned": [...]}`).
 pub fn parse_owned_ids(body: &str) -> Result<Vec<String>, String> {
     let root: Value =
@@ -632,7 +734,7 @@ pub fn library(token: &str) -> Result<Vec<OwnedGame>, String> {
             if games.is_empty() {
                 return Err(error);
             }
-            return Ok(games);
+            return Ok(resolve_pack_entries(games));
         }
     };
     let mut games = Vec::with_capacity(ids.len());
@@ -654,6 +756,7 @@ pub fn library(token: &str) -> Result<Vec<OwnedGame>, String> {
     games.sort_by_key(|left| left.title.to_lowercase());
     games.dedup_by(|left, right| left.id == right.id);
     dedupe_gog_titles(&mut games);
+    games = resolve_pack_entries(games);
     if games.is_empty() {
         return Err("aucune fiche GOG exploitable pour ce compte".to_string());
     }
@@ -1445,6 +1548,51 @@ mod tests {
         assert_eq!(games[0].id, "2015389384");
         assert_eq!(games[0].title, "Call of Juarez: Gunslinger");
         assert_eq!(games[0].game_type, "game");
+    }
+
+    #[test]
+    fn le_catalogue_resout_un_pack_amazon_prime_vers_le_jeu_windows() {
+        // Réponse réelle du catalogue pour « Call of Juarez: Gunslinger ».
+        let body = r#"{
+          "products": [
+            {"id": "2015389384", "title": "Call of Juarez: Gunslinger", "productType": "game", "operatingSystems": ["windows"], "coverVertical": "https://images.gog-statics.com/cover.jpg"},
+            {"id": "1662043288", "title": "Call of Juarez: Gunslinger - Amazon Prime", "productType": "pack", "operatingSystems": ["windows"]}
+          ]
+        }"#;
+        let game = parse_catalog_game(body, "Call of Juarez: Gunslinger").unwrap();
+        assert_eq!(game.id, "2015389384");
+        assert_eq!(game.game_type, "game");
+        assert_eq!(game.title, "Call of Juarez: Gunslinger");
+        assert_eq!(
+            game.cover_url.as_deref(),
+            Some("https://images.gog-statics.com/cover.jpg")
+        );
+        // Un pack de bundle ne doit jamais être confondu avec un jeu.
+        assert!(parse_catalog_game(body, "Amazon Prime Bundle").is_none());
+        // Pas de correspondance exacte : on ne devine pas un autre épisode.
+        assert!(parse_catalog_game(body, "Call of Juarez").is_none());
+    }
+
+    #[test]
+    #[ignore = "nécessite le réseau GOG"]
+    fn le_vrai_pack_amazon_prime_est_resolu_vers_le_jeu_installable() {
+        let pack = OwnedGame {
+            id: "1662043288".into(),
+            title: "Call of Juarez: Gunslinger".into(),
+            cover_url: None,
+            game_type: "pack".into(),
+        };
+        let games = resolve_pack_entries(vec![pack.clone()]);
+        assert_eq!(games.len(), 1);
+        assert_eq!(games[0].id, "2015389384");
+        assert_eq!(games[0].game_type, "game");
+        // Pack et jeu dans la même bibliothèque : une seule fiche, le jeu.
+        let mut direct = pack;
+        direct.id = "2015389384".into();
+        direct.game_type = "game".into();
+        let games = resolve_pack_entries(vec![games[0].clone(), direct]);
+        assert_eq!(games.len(), 1);
+        assert_eq!(games[0].id, "2015389384");
     }
 
     #[test]
