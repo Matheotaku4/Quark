@@ -5,13 +5,14 @@ games and your Steam, Epic Games and GOG libraries together, launches Windows
 games through Proton or umu-launcher, and adds an in-game overlay, screenshots,
 achievements and verified local saves.
 
-This documentation describes **Quark 1.8.0**. It is also versioned in the
+This documentation describes **Quark 1.8.1**. It is also versioned in the
 repository under [`wiki/`](https://github.com/Matheotaku4/Quark/tree/main/wiki).
 
 ![Quark home](https://raw.githubusercontent.com/Matheotaku4/Quark/main/docs/images/home-en.png)
 
-## What's new in 1.8.0
+## What's new in 1.8.1
 
+- **A maintenance release.** No visible change: the carousel return (displayed slide, reordered recent games, explicit fallback) is now covered by a permanent regression test.
 - **A home page of its own.** Home has a dedicated tab, a full-width hero and a
   recent-games carousel, without the library sidebar.
 - **A full-page game page.** Opening a game from the grid replaces the library;

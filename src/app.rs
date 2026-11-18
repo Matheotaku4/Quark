@@ -1017,7 +1017,13 @@ impl QuarkApp {
     /// Construit l'application. Seul le contexte egui est nécessaire : il vient
     /// de la fenêtre réelle ou du rendu hors écran (`quark --ui`).
     pub fn new(ctx: &egui::Context) -> Self {
-        let lib = Library::load();
+        Self::from_library(ctx, Library::load())
+    }
+
+    /// Construit l'application autour d'une bibliothèque déjà chargée. Les
+    /// tests s'en servent pour travailler sur une bibliothèque en mémoire,
+    /// sans dépendre de la configuration de l'utilisateur.
+    fn from_library(ctx: &egui::Context, lib: Library) -> Self {
         i18n::set_language(lib.settings.ui_language);
         let onboarding_open = !lib.settings.onboarding_done;
         let whats_new_open =
@@ -7530,7 +7536,41 @@ impl QuarkApp {
 
 #[cfg(test)]
 mod tests {
-    use super::{StartPage, Tab, removal_targets, startup_route};
+    use super::{QuarkApp, StartPage, Tab, removal_targets, startup_route};
+    use crate::config::{Game, Library};
+
+    /// Application minimale pour les tests de navigation : la bibliothèque est
+    /// construite en mémoire, aucune assertion ne dépend du disque.
+    fn test_app(games: Vec<Game>) -> QuarkApp {
+        let ctx = eframe::egui::Context::default();
+        let mut app = QuarkApp::from_library(
+            &ctx,
+            Library {
+                games,
+                ..Library::default()
+            },
+        );
+        // Aucune écriture de configuration ne doit partir d'un test.
+        app.snapshot_mode = true;
+        app.tab = Tab::Library;
+        app.selected = None;
+        app.overlay = None;
+        app.home = false;
+        app.detail_from_home = false;
+        app.detail_return_carousel = None;
+        app.carousel = 0;
+        app
+    }
+
+    fn played(id: &str, at: i64) -> Game {
+        Game {
+            id: id.to_string(),
+            name: id.to_string(),
+            exe: format!("/tmp/{id}"),
+            last_played: Some(at),
+            ..Game::default()
+        }
+    }
 
     #[test]
     fn la_page_d_ouverture_choisit_le_bon_onglet_et_l_accueil() {
@@ -7538,6 +7578,70 @@ mod tests {
         assert_eq!(startup_route(StartPage::Library), (Tab::Library, false));
         assert_eq!(startup_route(StartPage::Store), (Tab::Store, false));
         assert_eq!(startup_route(StartPage::MyGames), (Tab::MyGames, false));
+    }
+
+    #[test]
+    fn le_retour_de_la_fiche_retrouve_la_vignette_affichee() {
+        let mut app = test_app(vec![played("a", 300), played("b", 200), played("c", 100)]);
+        app.home = true;
+        // La vignette visible est « b » ; la fiche ouverte est celle de « c ».
+        app.carousel = 1;
+        app.open_game_page("c", true);
+        assert!(!app.home);
+        assert_eq!(app.detail_return_carousel.as_deref(), Some("b"));
+        // Une session enregistrée entre-temps réordonne les jeux récents :
+        // « c » passe devant, « b » se retrouve en troisième position.
+        app.lib.get_mut("c").unwrap().last_played = Some(400);
+        app.close_game_page();
+        assert!(app.home);
+        assert_eq!(app.carousel, 2);
+        assert!(app.detail_return_carousel.is_none());
+    }
+
+    #[test]
+    fn le_retour_repasse_sur_la_premiere_vignette_quand_le_jeu_a_disparu() {
+        let mut app = test_app(vec![played("a", 300), played("b", 200)]);
+        app.home = true;
+        app.carousel = 1;
+        app.open_game_page("a", true);
+        app.lib.remove("b");
+        app.close_game_page();
+        assert!(app.home);
+        assert_eq!(app.carousel, 0);
+    }
+
+    #[test]
+    fn une_seconde_ouverture_depuis_la_palette_garde_la_vignette_de_depart() {
+        let mut app = test_app(vec![played("a", 300), played("b", 200), played("c", 100)]);
+        app.home = true;
+        app.carousel = 1;
+        app.open_game_page("a", true);
+        // La palette rouvre un autre jeu depuis la fiche : l'origine reste
+        // l'accueil et la vignette de départ ne doit pas être remplacée.
+        app.open_game_page("c", true);
+        assert_eq!(app.detail_return_carousel.as_deref(), Some("b"));
+        app.close_game_page();
+        assert_eq!(app.carousel, 1);
+    }
+
+    #[test]
+    fn ouvrir_depuis_la_bibliotheque_ne_ramene_pas_a_l_accueil() {
+        let mut app = test_app(vec![played("a", 300), played("b", 200)]);
+        app.carousel = 1;
+        app.open_game_page("a", false);
+        assert!(app.detail_return_carousel.is_none());
+        app.close_game_page();
+        assert!(!app.home);
+        assert_eq!(app.carousel, 1);
+    }
+
+    #[test]
+    fn le_carrousel_reboucle_et_ignore_une_liste_vide() {
+        let mut app = test_app(Vec::new());
+        app.show_slide(8, 3);
+        assert_eq!(app.carousel, 2);
+        app.show_slide(4, 0);
+        assert_eq!(app.carousel, 2);
     }
 
     #[test]

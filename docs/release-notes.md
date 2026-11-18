@@ -1,21 +1,20 @@
-## Quark 1.8.0 — Accueil, fiche jeu et recherche globale
+## Quark 1.8.1 — Version de maintenance
 
-### Nouveautés
+### Ce qui change
 
-- **Un accueil autonome.** L'accueil possède désormais son propre onglet, un hero plein largeur et un carrousel de jeux récents, sans colonne latérale.
-- **La fiche jeu en pleine page.** Depuis la grille, la fiche remplace la bibliothèque et un bouton **Retour** la referme. Le retour est contextuel : il ramène à l'accueil ou à la grille selon l'origine, avec la vignette du carrousel restaurée.
-- **Une recherche globale unique.** `Ctrl+F`, `Ctrl+K`, `/` ou la loupe ouvrent la même palette. Elle cherche les jeux locaux, les jeux possédés dans les boutiques et les réglages, sans accents et avec une sous-chaîne réelle.
-- **Les réglages par tâche.** Un champ au-dessus de la navigation trouve une action (« sauvegardes cloud », « overlay », « espace disque ») et ouvre directement la bonne page. Les résultats sont cliquables et traduits dans les cinq langues.
-- **Des états asynchrones cohérents.** Actualités, chargements, erreurs et artworks manquants partagent les mêmes squelettes et cartes d'état ; le logo dispose d'un repli même quand la texture est vide.
-- **Cinq langues aux trois largeurs.** Les écrans principaux sont vérifiés en français, anglais, allemand, espagnol et portugais à 900, 1024 et 1360 px, avec des points de rupture partagés.
+- **Le carrousel est couvert par un test permanent.** Le parcours qui mémorise la vignette réellement affichée, retrouve le jeu après un réordonnancement des récents et revient à l'accueil est désormais vérifié par la suite de tests, au lieu d'un contrôle manuel. Le repli sur la première vignette et l'ouverture depuis la bibliothèque sont couverts aussi.
+- **Aucun changement visible.** L'interface, les réglages et le format de `config.json` sont identiques à 1.8.0 ; aucune migration n'est nécessaire.
+
+### Corrections
+
+- Aucune correction supplémentaire n'a été nécessaire après la campagne de QA : les cinq findings CodeRabbit et l'affinage du marqueur du carrousel sont déjà livrés dans 1.8.0.
 
 ### Vérifications
 
 - `cargo fmt --check` : OK.
-- `cargo test --locked` : 322 tests réussis.
+- `cargo test --locked` : 327 tests réussis.
 - `cargo clippy --all-targets --locked -- -D warnings` : OK.
-- QA visuelle : 90 rendus hors écran (6 vues × 5 langues × 3 largeurs), plus vérification du clic sur un résultat de réglage.
-- Captures du site et de la documentation FR/EN régénérées avec la recherche globale.
+- Campagne 1.8.0 : 90 rendus (6 vues × 5 langues × 3 largeurs), 674 rendus au total, sans échec.
 
 ### Limites connues
 
