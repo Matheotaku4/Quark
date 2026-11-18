@@ -192,6 +192,13 @@ pub fn merge_sync(
             if record.install_exe.is_none() {
                 record.install_exe = old.install_exe.clone();
             }
+            let mut custom_paths = old.custom_save_paths.clone();
+            for path in &record.custom_save_paths {
+                if !custom_paths.contains(path) {
+                    custom_paths.push(path.clone());
+                }
+            }
+            record.custom_save_paths = custom_paths;
             if record.last_synced.is_none() {
                 record.last_synced = old.last_synced;
             }
@@ -637,6 +644,33 @@ mod tests {
                 .any(|game| game.key == steam.key && game.install_path == steam.install_path)
         );
         assert!(merged.iter().any(|game| game.key == epic.key));
+    }
+
+    #[test]
+    fn une_synchro_steam_preserve_les_dossiers_de_sauvegarde_personnalises() {
+        let save = PathBuf::from("/home/joueur/sauvegardes/portal-2");
+        let existing = ProviderGame {
+            key: ProviderGameKey {
+                provider: Provider::Steam,
+                product_id: "620".into(),
+            },
+            title: "Portal 2".into(),
+            owned: true,
+            custom_save_paths: vec![save.clone()],
+            install_state: InstallState::Installed,
+            last_synced: Some(1),
+            ..Default::default()
+        };
+        let refreshed = parse_owned(
+            r#"{"response":{"game_count":1,"games":[{"appid":620,"name":"Portal 2"}]}}"#,
+        )
+        .unwrap();
+        // La fusion doit tenir que la liste possédée soit disponible ou non.
+        for owned in [Some(refreshed.as_slice()), None] {
+            let merged = merge_sync(std::slice::from_ref(&existing), &[], owned, &[]);
+            assert_eq!(merged.len(), 1);
+            assert_eq!(merged[0].custom_save_paths, vec![save.clone()]);
+        }
     }
 
     #[test]

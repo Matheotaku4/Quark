@@ -6,7 +6,7 @@ titles you own, launches Windows games through Proton (or umu-launcher), and sta
 the way with an AMOLED interface, a store page, save snapshots and an in-game
 overlay.
 
-This is the **1.8.1** documentation. Older release notes are kept on the GitHub
+This is the **1.8.2** documentation. Older release notes are kept on the GitHub
 releases page; `docs/release-notes.md` only describes the release currently
 being published.
 
@@ -28,20 +28,14 @@ The wiki is published from the versioned source in [`wiki/`](wiki/) by the
 | --- | --- |
 | ![Onboarding](docs/images/onboarding-fr.png) | ![What's new](docs/images/whats-new-fr.png) |
 
-## What's new in 1.8.1
+## What's new in 1.8.2
 
-- **Correctifs boutiques et navigation.** En vue grille, un clic ouvre la fiche en mode liste et Retour ramène aux jaquettes. Mes jeux ne réserve plus une colonne vide quand aucun transfert n'est actif. Epic ne bloque plus un jeu déjà installé en « Installation… ». GOG lit les sorties `gogdl` entourées de journaux et retrouve le dossier après téléchargement. Les sessions GOG publient leur temps de jeu et synchronisent leurs sauvegardes automatiquement.
-- **Un test carrousel permanent.** La vignette réellement affichée, le réordonnancement des récents et le repli explicite sont couverts par la suite de tests.
-- **Un accueil autonome.** L'accueil a son propre onglet, un hero plein largeur et un carrousel de jeux récents, sans colonne latérale.
-- **La fiche jeu contextuelle.** Depuis la grille, elle s'ouvre en mode liste (colonne + panneau) ; **Retour** ou `Échap` ramène à l'accueil ou à la grille selon l'origine, avec la vignette du carrousel restaurée.
-- **Une recherche globale unique.** `Ctrl+F`, `Ctrl+K`, `/` ou la loupe ouvrent la même palette : jeux locaux, jeux possédés dans les boutiques et réglages. La recherche ignore les accents et exige une sous-chaîne réelle.
-- **Les réglages par tâche.** Un champ au-dessus de la navigation trouve une action (« sauvegardes cloud », « overlay », « espace disque ») et ouvre directement la bonne page.
-- **Des états asynchrones cohérents.** Les actualités, les chargements, les erreurs et les artworks manquants partagent les mêmes squelettes et cartes d'état ; le logo dispose d'un repli si la texture est vide.
-- **Cinq langues aux trois largeurs.** Les écrans principaux sont vérifiés en français, anglais, allemand, espagnol et portugais à 900, 1024 et 1360 px.
+- **Les dossiers de sauvegarde personnalisés survivent aux synchros.** Une synchronisation Epic ou Steam conserve les chemins choisis dans la fiche de jeu au lieu de repartir avec une liste vide. Les chemins connus sont fusionnés sans doublon, y compris quand la liste possédée de Steam est indisponible.
+- **Deux tests de régression** vérifient `merge_epic` et `merge_sync` avec un dossier personnalisé existant et une fiche rafraîchie sans chemin.
 
 ## Table of contents
 
-1. [What's new in 1.8.1](#whats-new-in-181)
+1. [What's new in 1.8.2](#whats-new-in-182)
 2. [What Quark does](#what-quark-does)
 3. [Installation](#installation)
 4. [First launch](#first-launch)
@@ -101,8 +95,8 @@ Download `quark-<version>-linux-x86_64.tar.gz` and its `.sha256` file from the
 then verify and unpack it:
 
 ```bash
-sha256sum -c quark-1.8.1-linux-x86_64.tar.gz.sha256
-tar -xzf quark-1.8.1-linux-x86_64.tar.gz
+sha256sum -c quark-1.8.2-linux-x86_64.tar.gz.sha256
+tar -xzf quark-1.8.2-linux-x86_64.tar.gz
 ./quark/quark
 ```
 

@@ -33,6 +33,6 @@ git clone https://github.com/Matheotaku4/Quark.wiki.git /tmp/quark-wiki
 rsync -av --exclude README.md wiki/ /tmp/quark-wiki/
 cd /tmp/quark-wiki
 git add -A
-git commit -m "Quark 1.8.1 documentation"
+git commit -m "Quark 1.8.2 documentation"
 git push
 ```

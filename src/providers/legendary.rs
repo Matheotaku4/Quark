@@ -1102,6 +1102,13 @@ pub fn merge_epic_with_verified_installs(
                 game.install_state = previous.install_state;
                 game.install_path = previous.install_path.clone();
             }
+            let mut custom_paths = previous.custom_save_paths.clone();
+            for path in &game.custom_save_paths {
+                if !custom_paths.contains(path) {
+                    custom_paths.push(path.clone());
+                }
+            }
+            game.custom_save_paths = custom_paths;
             if game.quark_game_id.is_none() {
                 game.quark_game_id = previous.quark_game_id.clone();
             }
@@ -1376,6 +1383,27 @@ Empty,,1.0,False\n";
         assert!(merged.iter().any(|game| game.key == steam.key));
         assert!(merged.iter().any(|game| game.key.product_id == "new"));
         assert!(!merged.iter().any(|game| game.key.product_id == "old"));
+    }
+
+    #[test]
+    fn une_synchro_epic_preserve_les_dossiers_de_sauvegarde_personnalises() {
+        let save = PathBuf::from("/home/joueur/sauvegardes/jeu-epic");
+        let existing = ProviderGame {
+            key: ProviderGameKey {
+                provider: Provider::Epic,
+                product_id: "app_123".into(),
+            },
+            title: "Example Game".into(),
+            owned: true,
+            custom_save_paths: vec![save.clone()],
+            install_state: InstallState::NotInstalled,
+            ..Default::default()
+        };
+        let refreshed =
+            parse_owned_json(r#"[{"app_name":"app_123","app_title":"Example Game"}]"#, 20).unwrap();
+        let merged = merge_epic(&[existing], &refreshed);
+        assert_eq!(merged.len(), 1);
+        assert_eq!(merged[0].custom_save_paths, vec![save]);
     }
 
     #[test]

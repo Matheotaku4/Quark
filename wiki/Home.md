@@ -5,15 +5,19 @@ games and your Steam, Epic Games and GOG libraries together, launches Windows
 games through Proton or umu-launcher, and adds an in-game overlay, screenshots,
 achievements and verified local saves.
 
-This documentation describes **Quark 1.8.1**. It is also versioned in the
+This documentation describes **Quark 1.8.2**. It is also versioned in the
 repository under [`wiki/`](https://github.com/Matheotaku4/Quark/tree/main/wiki).
 
 ![Quark home](https://raw.githubusercontent.com/Matheotaku4/Quark/main/docs/images/home-en.png)
 
-## What's new in 1.8.1
+## What's new in 1.8.2
 
-- **Store and navigation fixes.** In grid view, clicking a game opens the list-style page and Back returns to the tiles. My Games no longer reserves an empty transfers column. Epic no longer leaves an already installed game on “Installing…”. GOG reads gogdl output wrapped in log lines and finds the install folder after download. GOG sessions now publish playtime and sync saves automatically.
-- **A permanent carousel test.** The displayed slide, reordered recent games and explicit fallback are covered by the test suite.
+- **Custom save folders survive library syncs.** An Epic or Steam refresh now
+  keeps the folders chosen in a game page instead of replacing them with an
+  empty list. Known paths are merged without duplicates, including when Steam's
+  owned-games list is unavailable.
+- **Two regression tests** cover `merge_epic` and `merge_sync` with an existing
+  custom folder and a refreshed record without paths.
 - **A home page of its own.** Home has a dedicated tab, a full-width hero and a
   recent-games carousel, without the library sidebar.
 - **A contextual game page.** Opening a game from the grid shows the list-style
