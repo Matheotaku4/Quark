@@ -1,6 +1,6 @@
 //! Onglet Bibliothèque : colonne de gauche (liste ou grille) + panneau du jeu.
 
-use crate::app::{NewsState, QuarkApp};
+use crate::app::{MediaState, QuarkApp};
 use crate::config::{self, AssetKind, Game, GameStatus, ViewMode};
 use crate::images::{draw_cover, hero_placeholder, rounded_cover, rounded_cover_tinted};
 use crate::news;
@@ -996,20 +996,20 @@ impl QuarkApp {
                 }
 
                 // -----------------------------------------------------------------
-                // Onglets de la fiche : actualités et succès, juste sous la bannière.
+                // Onglets de la fiche : médias, succès et historique, sous la bannière.
                 // -----------------------------------------------------------------
                 ui.add_space(18.0);
                 ui.horizontal(|ui| {
                     ui.add_space(23.0);
                     if widgets::detail_tab(
                         ui,
-                        "Actualités",
-                        self.detail_tab == crate::app::DetailTab::News,
+                        "Média",
+                        self.detail_tab == crate::app::DetailTab::Media,
                         &pal,
                     )
                     .clicked()
                     {
-                        self.detail_tab = crate::app::DetailTab::News;
+                        self.detail_tab = crate::app::DetailTab::Media;
                     }
                     ui.add_space(2.0);
                     if widgets::detail_tab(
@@ -1035,21 +1035,17 @@ impl QuarkApp {
                     }
                 });
                 match self.detail_tab {
-                    crate::app::DetailTab::News => {
-                        // Fenêtre large : les actualités à gauche, un aperçu du
-                        // jeu à droite (temps de jeu, dernière session, genres).
-                        // En dessous de 900 px, les actualités gardent toute la
-                        // largeur comme avant.
-                        // L'aperçu reste visible dès 1024 px, là où la
-                        // colonne de gauche laissait autrefois trop peu de
-                        // place pour les actualités et la carte côte à côte.
+                    crate::app::DetailTab::Media => {
+                        // Même disposition que la fiche Steam : la bande-annonce
+                        // en grand, puis les captures en grille. L'aperçu du jeu
+                        // reste à droite sur les fenêtres assez larges.
                         let side = self.lib.settings.overview_width.clamp(230.0, 340.0);
                         if width >= side + 340.0 {
                             let main_width = width - side - 32.0;
                             ui.horizontal_top(|ui| {
                                 ui.vertical(|ui| {
                                     ui.set_width(main_width);
-                                    self.news_section(ui, &game, &pal, main_width);
+                                    self.media_section(ui, &game, &pal, main_width);
                                 });
                                 ui.vertical(|ui| {
                                     ui.set_width(side);
@@ -1066,7 +1062,7 @@ impl QuarkApp {
                                 });
                             });
                         } else {
-                            self.news_section(ui, &game, &pal, width);
+                            self.media_section(ui, &game, &pal, width);
                         }
                     }
                     crate::app::DetailTab::Achievements => {
@@ -1909,31 +1905,26 @@ impl QuarkApp {
         }
     }
 
-    /// Actualités du jeu (flux public Steam), affichées sous la bannière.
+    /// Bande-annonce et captures du jeu (fiche publique Steam).
     ///
-    /// Un clic déplie le billet sur place : le texte et son image sont déjà
-    /// téléchargés, l'article se lit donc dans Quark au lieu d'ouvrir un
-    /// navigateur. Le lien Steam reste disponible en un bouton.
-    fn news_section(&mut self, ui: &mut egui::Ui, game: &Game, pal: &Palette, width: f32) {
-        let (loading, failure, items) = match self.news.get(&game.id) {
-            Some(NewsState::Loading) => (true, None, Vec::new()),
-            Some(NewsState::Failed(message)) => (false, Some(message.clone()), Vec::new()),
-            Some(NewsState::Loaded(items)) => (false, None, items.clone()),
-            None => (false, None, Vec::new()),
+    /// La bande-annonce occupe toute la largeur, puis les captures suivent en
+    /// grille, comme sur Steam. Un clic ouvre la vidéo ou l'image dans le
+    /// navigateur : egui n'embarque pas de décodeur vidéo.
+    fn media_section(&mut self, ui: &mut egui::Ui, game: &Game, pal: &Palette, width: f32) {
+        let (loading, failure, media) = match self.media.get(&game.id) {
+            Some(MediaState::Loading) => (true, None, None),
+            Some(MediaState::Failed(message)) => (false, Some(message.clone()), None),
+            Some(MediaState::Loaded(media)) => (false, None, Some(media.clone())),
+            None => (false, None, None),
         };
         let linked = game.steam_app_id.is_some();
         let mut reload = false;
         let mut open: Option<String> = None;
-        let mut expanded_change: Option<(egui::Id, bool)> = None;
 
         ui.add_space(26.0);
         ui.horizontal(|ui| {
             ui.add_space(32.0);
-            ui.label(
-                crate::i18n::rich("ACTUALITÉS")
-                    .size(12.0)
-                    .color(pal.text_faint),
-            );
+            ui.label(crate::i18n::rich("MÉDIA").size(12.0).color(pal.text_faint));
             if linked {
                 ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
                     ui.add_space(32.0);
@@ -1959,26 +1950,8 @@ impl QuarkApp {
                         ui,
                         pal,
                         Icon::Info,
-                        "Ce jeu n'est pas lié à la fiche Steam : pas d'actualités à afficher.",
+                        "Ce jeu n'est pas lié à la fiche Steam : aucun média à afficher.",
                         pal.text_faint,
-                    );
-                });
-            });
-            return;
-        }
-
-        if loading {
-            ui.horizontal(|ui| {
-                ui.add_space(32.0);
-                ui.vertical(|ui| {
-                    ui.set_max_width((width - 64.0).clamp(220.0, 680.0));
-                    ui.spinner();
-                    ui.add_space(6.0);
-                    widgets::skeleton_lines(ui, pal, ui.available_width(), 3);
-                    ui.label(
-                        crate::i18n::rich("Chargement des actualités\u{2026}")
-                            .size(12.0)
-                            .color(pal.text_dim),
                     );
                 });
             });
@@ -1994,7 +1967,7 @@ impl QuarkApp {
                         ui,
                         pal,
                         Icon::Info,
-                        format!("Actualités indisponibles · {message}"),
+                        format!("{} · {message}", crate::i18n::tr("Médias indisponibles")),
                         pal.danger,
                     );
                 });
@@ -2002,141 +1975,270 @@ impl QuarkApp {
             return;
         }
 
-        if items.is_empty() {
+        if loading || media.is_none() {
             ui.horizontal(|ui| {
                 ui.add_space(32.0);
                 ui.vertical(|ui| {
                     ui.set_max_width((width - 64.0).clamp(220.0, 680.0));
-                    widgets::status_note(
-                        ui,
-                        pal,
-                        Icon::Info,
-                        "Aucune actualité pour ce jeu.",
-                        pal.text_faint,
+                    ui.spinner();
+                    ui.add_space(6.0);
+                    widgets::skeleton_lines(ui, pal, ui.available_width(), 3);
+                    ui.label(
+                        crate::i18n::rich("Chargement des médias…")
+                            .size(12.0)
+                            .color(pal.text_dim),
                     );
                 });
             });
             return;
         }
 
+        let Some(media) = media else {
+            return;
+        };
         let card_width = (width - 64.0).max(220.0);
-        for (index, item) in items.iter().enumerate() {
-            let id = ui.make_persistent_id(("quark_news", index, item.url.as_str()));
-            // L'état de survol est lu du tour précédent (la carte n'est connue
-            // qu'après sa mise en page), mais c'est l'animation qui lisse le
-            // changement : le décalage d'une image reste invisible.
-            let was_hovered = ui.data(|data| data.get_temp::<bool>(id).unwrap_or(false));
-            let expanded = ui.data(|data| data.get_temp::<bool>(id.with("open")).unwrap_or(false));
-            let anim = ui
-                .ctx()
-                .animate_bool_with_time(id.with("hover"), was_hovered, 0.14);
+        ui.horizontal(|ui| {
+            ui.add_space(32.0);
+            ui.vertical(|ui| {
+                ui.set_width(card_width);
 
-            ui.horizontal(|ui| {
-                ui.add_space(32.0);
-                let frame = egui::Frame::new()
-                    .fill(theme::lerp_color(
-                        Color32::TRANSPARENT,
-                        pal.surface_hover,
-                        anim,
-                    ))
-                    .corner_radius(6.0)
-                    .inner_margin(egui::Margin::symmetric(12, 10));
-                // Le `Frame` hérite du layout horizontal de la rangée : sans ce
-                // `vertical`, les lignes se retrouvaient côte à côte.
-                let inner = frame.show(ui, |ui| {
-                    ui.vertical(|ui| {
-                        ui.set_width(card_width);
-                        ui.horizontal_top(|ui| {
-                            let text_width = card_width;
-                            ui.vertical(|ui| {
-                                ui.set_width(text_width);
-                                let mut meta = vec![item.feed.clone()];
-                                if !item.author.is_empty() {
-                                    meta.push(item.author.clone());
-                                }
-                                meta.push(config::human_ago(item.date));
-                                ui.label(
-                                    crate::i18n::rich(meta.join("  ·  "))
-                                        .size(12.0)
-                                        .color(pal.text_faint),
-                                );
-                                ui.add_space(4.0);
-                                ui.label(single_line(&item.title, 14.5, pal.text, text_width));
-                                if !expanded && !item.excerpt.is_empty() {
-                                    ui.add_space(4.0);
-                                    ui.label(paragraph(&item.excerpt, 12.0, pal.text_dim, 2));
+                if let Some(trailer) = media.trailers.first()
+                    && trailer_card(ui, pal, trailer, card_width)
+                {
+                    open = Some(trailer.video.clone());
+                }
+
+                if !media.screenshots.is_empty() {
+                    ui.add_space(22.0);
+                    ui.horizontal(|ui| {
+                        ui.label(crate::i18n::rich("PHOTOS").size(12.0).color(pal.text_faint));
+                        ui.add_space(6.0);
+                        ui.label(
+                            egui::RichText::new(media.screenshots.len().to_string())
+                                .size(11.5)
+                                .color(pal.text_faint),
+                        );
+                    });
+                    ui.add_space(8.0);
+                    let columns = (((card_width + MEDIA_GAP) / (220.0 + MEDIA_GAP)).floor()
+                        as usize)
+                        .clamp(1, 3);
+                    let tile_width = ((card_width - MEDIA_GAP * columns.saturating_sub(1) as f32)
+                        / columns as f32)
+                        .max(120.0);
+                    for chunk in media.screenshots.chunks(columns) {
+                        ui.scope(|ui| {
+                            ui.spacing_mut().item_spacing.x = MEDIA_GAP;
+                            ui.horizontal(|ui| {
+                                for photo in chunk {
+                                    if photo_tile(ui, pal, photo, tile_width) {
+                                        open = Some(photo.full.clone());
+                                    }
                                 }
                             });
                         });
-                        if expanded {
-                            if !item.body.is_empty() {
-                                ui.add_space(8.0);
-                                // `usize::MAX` = aucune limite de lignes : le
-                                // texte entier, dans l'application. (`0`
-                                // tronquerait à zéro ligne, donc à rien.)
-                                ui.label(paragraph(&item.body, 12.5, pal.text_dim, usize::MAX));
-                            }
-                            ui.add_space(8.0);
-                            ui.horizontal(|ui| {
-                                if widgets::ghost_button(ui, "Réduire", pal, Icon::None).clicked()
-                                {
-                                    expanded_change = Some((id.with("open"), false));
-                                }
-                                ui.add_space(6.0);
-                                if widgets::ghost_button(ui, "Lire sur Steam", pal, Icon::None)
-                                    .clicked()
-                                {
-                                    open = Some(item.url.clone());
-                                }
-                            });
-                        }
-                    });
-                });
+                        ui.add_space(MEDIA_GAP);
+                    }
+                }
 
-                // Liseré d'accent qui s'allume au survol.
-                if anim > 0.0 {
-                    let rect = inner.response.rect;
-                    ui.painter().rect_filled(
-                        Rect::from_min_size(rect.left_top(), Vec2::new(2.0, rect.height())),
-                        1.0,
-                        pal.accent.gamma_multiply(anim),
+                if media.trailers.is_empty() && media.screenshots.is_empty() {
+                    widgets::status_note(
+                        ui,
+                        pal,
+                        Icon::Info,
+                        "Aucun média pour ce jeu.",
+                        pal.text_faint,
                     );
                 }
-
-                // Déplié, la carte ne se referme plus au clic : le texte et les
-                // boutons restent utilisables.
-                let response = if expanded {
-                    ui.interact(inner.response.rect, id, Sense::click())
-                } else {
-                    ui.interact(inner.response.rect, id, Sense::click())
-                        .on_hover_cursor(egui::CursorIcon::PointingHand)
-                };
-                let hovered = response.hovered();
-                if hovered != was_hovered {
-                    ui.data_mut(|data| data.insert_temp(id, hovered));
-                    // Une seule image de plus : l'animation prend le relais.
-                    ui.ctx().request_repaint();
-                }
-                if !expanded && response.clicked() {
-                    expanded_change = Some((id.with("open"), true));
-                }
+                ui.add_space(18.0);
             });
-            ui.add_space(4.0);
-        }
-
-        if let Some((id, value)) = expanded_change {
-            ui.data_mut(|data| data.insert_temp(id, value));
-            ui.ctx().request_repaint();
-        }
+        });
 
         if reload {
-            self.reload_news(ui.ctx());
+            self.reload_media(ui.ctx());
         }
         if let Some(url) = open
             && let Err(err) = news::open_in_browser(&url)
         {
             self.toast_error(format!("Ouverture du lien impossible : {err}"));
         }
+    }
+}
+
+/// Espace entre deux captures de la grille Média.
+const MEDIA_GAP: f32 = 8.0;
+
+/// Vignette 16:9 de la bande-annonce, avec un bouton de lecture au centre.
+/// Le retour indique un clic : la vidéo s'ouvre dans le navigateur.
+fn trailer_card(
+    ui: &mut egui::Ui,
+    pal: &Palette,
+    trailer: &crate::media::Trailer,
+    width: f32,
+) -> bool {
+    let height = (width * 9.0 / 16.0).clamp(180.0, 440.0);
+    let (rect, response) = ui.allocate_exact_size(Vec2::new(width, height), Sense::click());
+    let painter = ui.painter_at(rect);
+    painter.rect_filled(rect, 10.0, pal.surface);
+    let painted = paint_remote_cover(
+        &painter,
+        ui.ctx(),
+        &trailer.thumbnail,
+        rect,
+        Vec2::new(960.0, 540.0),
+    );
+    if !painted {
+        painter.rect_filled(rect, 10.0, pal.surface_hover);
+    }
+    // Dégradé bas : le titre reste lisible sur n'importe quelle vignette.
+    vertical_veil(
+        &painter,
+        Rect::from_min_max(
+            Pos2::new(rect.left(), rect.bottom() - 110.0),
+            rect.right_bottom(),
+        ),
+        0,
+        205,
+    );
+
+    let center = rect.center();
+    painter.circle_filled(center, 35.0, Color32::from_black_alpha(175));
+    painter.circle_stroke(
+        center,
+        35.0,
+        egui::Stroke::new(1.5_f32, Color32::from_white_alpha(220)),
+    );
+    let play = vec![
+        center + Vec2::new(-8.0, -13.0),
+        center + Vec2::new(-8.0, 13.0),
+        center + Vec2::new(14.0, 0.0),
+    ];
+    painter.add(egui::Shape::convex_polygon(
+        play,
+        Color32::WHITE,
+        egui::Stroke::NONE,
+    ));
+
+    let title = if trailer.title.trim().is_empty() {
+        crate::i18n::tr("Bande-annonce")
+    } else {
+        trailer.title.trim().to_string()
+    };
+    painter.text(
+        Pos2::new(rect.left() + 18.0, rect.bottom() - 16.0),
+        Align2::LEFT_BOTTOM,
+        title,
+        FontId::proportional(15.5),
+        Color32::WHITE,
+    );
+    painter.text(
+        Pos2::new(rect.left() + 18.0, rect.bottom() - 38.0),
+        Align2::LEFT_BOTTOM,
+        crate::i18n::tr("Lire la bande-annonce"),
+        FontId::proportional(11.5),
+        Color32::from_white_alpha(205),
+    );
+    if response.hovered() {
+        painter.rect_stroke(
+            rect,
+            10.0,
+            egui::Stroke::new(1.5_f32, pal.accent),
+            egui::StrokeKind::Inside,
+        );
+    }
+    response
+        .on_hover_cursor(egui::CursorIcon::PointingHand)
+        .clicked()
+}
+
+/// Une capture de la grille Média, recadrée en 16:9 comme sur Steam.
+fn photo_tile(ui: &mut egui::Ui, pal: &Palette, photo: &crate::media::Photo, width: f32) -> bool {
+    let height = width * 9.0 / 16.0;
+    let (rect, response) = ui.allocate_exact_size(Vec2::new(width, height), Sense::click());
+    let painter = ui.painter_at(rect);
+    painter.rect_filled(rect, 7.0, pal.surface);
+    let painted = paint_remote_cover(
+        &painter,
+        ui.ctx(),
+        &photo.thumbnail,
+        rect,
+        Vec2::new(640.0, 360.0),
+    );
+    if !painted {
+        painter.rect_filled(rect, 7.0, pal.surface_hover);
+    }
+    painter.rect_stroke(
+        rect,
+        7.0,
+        egui::Stroke::new(
+            if response.hovered() { 1.5_f32 } else { 1.0_f32 },
+            if response.hovered() {
+                pal.accent
+            } else {
+                pal.border
+            },
+        ),
+        egui::StrokeKind::Inside,
+    );
+    response
+        .on_hover_cursor(egui::CursorIcon::PointingHand)
+        .clicked()
+}
+
+/// Charge une image distante par le loader HTTP d'egui et la recadre en
+/// « cover » dans `rect`. Pendant le téléchargement, le cadre garde son fond.
+fn paint_remote_cover(
+    painter: &egui::Painter,
+    ctx: &egui::Context,
+    url: &str,
+    rect: Rect,
+    size: Vec2,
+) -> bool {
+    if url.is_empty() || rect.width() <= 0.0 || rect.height() <= 0.0 {
+        return false;
+    }
+    let hint = egui::load::SizeHint::Size {
+        width: size.x.max(1.0) as u32,
+        height: size.y.max(1.0) as u32,
+        maintain_aspect_ratio: false,
+    };
+    match ctx.try_load_texture(url, egui::TextureOptions::LINEAR, hint) {
+        Ok(egui::load::TexturePoll::Ready { texture, .. }) => {
+            painter.image(
+                texture.id,
+                rect,
+                cover_uv(texture.size, rect),
+                Color32::WHITE,
+            );
+            true
+        }
+        Ok(egui::load::TexturePoll::Pending { .. }) => {
+            ctx.request_repaint_after(std::time::Duration::from_millis(120));
+            false
+        }
+        _ => false,
+    }
+}
+
+/// Recadrage « cover » : l'image remplit le rectangle sans être déformée.
+fn cover_uv(size: Vec2, rect: Rect) -> Rect {
+    if size.x <= 0.0 || size.y <= 0.0 || rect.width() <= 0.0 || rect.height() <= 0.0 {
+        return Rect::from_min_max(Pos2::ZERO, Pos2::new(1.0, 1.0));
+    }
+    let target = rect.width() / rect.height();
+    let image = size.x / size.y;
+    if image > target {
+        let width = target / image;
+        Rect::from_min_max(
+            Pos2::new((1.0 - width) / 2.0, 0.0),
+            Pos2::new((1.0 + width) / 2.0, 1.0),
+        )
+    } else {
+        let height = image / target;
+        Rect::from_min_max(
+            Pos2::new(0.0, (1.0 - height) / 2.0),
+            Pos2::new(1.0, (1.0 + height) / 2.0),
+        )
     }
 }
 

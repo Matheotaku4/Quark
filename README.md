@@ -6,7 +6,7 @@ titles you own, launches Windows games through Proton (or umu-launcher), and sta
 the way with an AMOLED interface, a store page, save snapshots and an in-game
 overlay.
 
-This is the **1.8.4** documentation. Older release notes are kept on the GitHub
+This is the **1.8.5** documentation. Older release notes are kept on the GitHub
 releases page; `docs/release-notes.md` only describes the release currently
 being published.
 
@@ -28,16 +28,16 @@ The wiki is published from the versioned source in [`wiki/`](wiki/) by the
 | --- | --- |
 | ![Onboarding](docs/images/onboarding-fr.png) | ![What's new](docs/images/whats-new-fr.png) |
 
-## What's new in 1.8.4
+## What's new in 1.8.5
 
-- **GOG : un pack Amazon Prime seul est résolu vers le jeu de base.** Le compte peut ne renvoyer que l'identifiant du pack (`1662043288`), sans la fiche du jeu (`2015389384`). Quark interroge le catalogue GOG, exige un titre exact et une fiche `game` Windows, puis remplace le pack par ce jeu installable. Un pack sans correspondance reste affiché mais n'est plus envoyé à gogdl.
-- **GOG : plus d'installation vide.** Comme Heroic, Quark supprime le manifeste gogdl avant une installation neuve : un ancien manifeste faisait répondre « Nothing to do » et gogdl sortait sans rien télécharger. Quark vérifie aussi les builds Windows avant de lancer l'outil et affiche une erreur explicite si le titre n'est pas téléchargeable.
-- **Epic : l'installation terminée est vraiment enregistrée.** La fusion avec la fiche encore `Installing` réappliquait cet état transitoire : le jeu restait bloqué sur « Installation… » et n'arrivait pas dans la bibliothèque. La liste vérifiée de Legendary fait désormais autorité.
-- **Tests** : 338 tests unitaires, plus 2 tests réseau GOG exécutés séparément ; gogdl 1.4.0 confirme que le pack n'a aucun build et que le jeu en a cinq.
+- **L'onglet Actualités devient Média.** La fiche jeu affiche maintenant la bande-annonce du jeu, puis ses captures, à la place du flux d'actualités Steam.
+- **Une disposition proche de Steam.** La bande-annonce occupe toute la largeur avec un bouton de lecture, suivie d'une grille de captures 16:9. Un clic ouvre la vidéo ou l'image en grand dans le navigateur.
+- **Le journal des jeux documente les connexions boutiques.** Chaque session commence par l'état des sessions GOG (gogdl) et Epic (connexion directe et Legendary), la présence des outils et la boutique du jeu lancé. Aucun jeton n'est écrit.
+- **Tests** : 342 tests unitaires, plus 3 tests réseau exécutés séparément (médias Steam, résolution du pack GOG et builds Windows du jeu).
 
 ## Table of contents
 
-1. [What's new in 1.8.4](#whats-new-in-184)
+1. [What's new in 1.8.5](#whats-new-in-185)
 2. [What Quark does](#what-quark-does)
 3. [Installation](#installation)
 4. [First launch](#first-launch)
@@ -97,8 +97,8 @@ Download `quark-<version>-linux-x86_64.tar.gz` and its `.sha256` file from the
 then verify and unpack it:
 
 ```bash
-sha256sum -c quark-1.8.4-linux-x86_64.tar.gz.sha256
-tar -xzf quark-1.8.4-linux-x86_64.tar.gz
+sha256sum -c quark-1.8.5-linux-x86_64.tar.gz.sha256
+tar -xzf quark-1.8.5-linux-x86_64.tar.gz
 ./quark/quark
 ```
 
@@ -210,7 +210,7 @@ to close.
 ### Game page
 
 The page shows the hero banner, ProtonDB/native badges, the **Play** button with
-playtime, news, achievements and history tabs. The information button stays on
+playtime, media, achievements and history tabs. The information button stays on
 the banner; per-game settings, customization, the session log and removal live
 in a single **···** menu (removal still asks for confirmation). **History**
 summarises the game's sessions, shows the last twelve weeks and lists its latest

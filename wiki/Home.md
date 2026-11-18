@@ -5,29 +5,23 @@ games and your Steam, Epic Games and GOG libraries together, launches Windows
 games through Proton or umu-launcher, and adds an in-game overlay, screenshots,
 achievements and verified local saves.
 
-This documentation describes **Quark 1.8.4**. It is also versioned in the
+This documentation describes **Quark 1.8.5**. It is also versioned in the
 repository under [`wiki/`](https://github.com/Matheotaku4/Quark/tree/main/wiki).
 
 ![Quark home](https://raw.githubusercontent.com/Matheotaku4/Quark/main/docs/images/home-en.png)
 
-## What's new in 1.8.4
+## What's new in 1.8.5
 
-- **A lone Amazon Prime pack resolves to the base game.** GOG can return only
-  the pack ID (`1662043288`) without the game record (`2015389384`). Quark
-  searches the GOG catalogue, requires an exact Windows `game` match, and
-  replaces the pack with that installable app ID. A pack with no exact match is
-  kept visible but is no longer sent to gogdl.
-- **No more empty GOG installs.** Like Heroic, Quark deletes the gogdl manifest
-  before a fresh install. A stale manifest made gogdl answer “Nothing to do”
-  and exit successfully without downloading anything. Quark also checks the
-  Windows content builds first and shows a clear error when the title cannot be
-  downloaded by gogdl.
-- **A finished Epic install is now recorded.** Merging with the still-`Installing`
-  library record preserved that transient state, so the game stayed on
-  “Installing…” and never reached the library. Legendary's verified installed
-  list now takes precedence.
-- **Tests:** 338 unit tests, plus 2 live GOG network tests run separately;
-  gogdl 1.4.0 confirms the pack has no build and the base game has five.
+- **News becomes Media.** The game page now shows the trailer first, then the
+  game's screenshots, instead of the Steam news feed.
+- **A Steam-like layout.** The trailer spans the content width with a play
+  button, followed by a 16:9 screenshot grid. Clicking opens the video or the
+  full image in the browser.
+- **Game logs now document store connections.** Every session starts with the
+  GOG (gogdl) and Epic (direct session and Legendary) connection state, tool
+  presence and the launched game's store. No token is ever written.
+- **Tests:** 342 unit tests, plus 3 live network tests run separately (Steam
+  media, GOG pack resolution and the game's Windows builds).
 
 ## Where to start
 

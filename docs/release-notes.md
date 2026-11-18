@@ -1,21 +1,22 @@
-## Quark 1.8.4 — Les packs GOG et les installations Epic vont au bout
+## Quark 1.8.5 — Média façon Steam et journaux de connexion
 
-### Corrections
+### Nouveautés
 
-- **Un pack Amazon Prime seul est résolu vers le jeu de base.** Le compte GOG peut ne renvoyer que le pack (`1662043288`) sans la fiche du jeu (`2015389384`). Quark interroge maintenant le catalogue GOG, exige une correspondance exacte de titre et une fiche `game` Windows, puis utilise l'identifiant du jeu installable. Si aucun jeu ne correspond, le pack reste visible mais gogdl n'est plus lancé.
-- **GOG ne termine plus une installation sans avoir rien téléchargé.** gogdl conserve un manifeste par jeu ; quand il pointe vers un dossier supprimé, gogdl répond « Nothing to do », sort en 0 et ne crée aucun dossier. Comme Heroic, Quark supprime ce manifeste avant chaque installation neuve. Un contrôle public des builds Windows est aussi effectué avant l'appel à gogdl, avec un message explicite si le titre n'est pas téléchargeable.
-- **L'erreur « aucun dossier de jeu » est maintenant actionnable.** Elle rappelle de vérifier la connexion GOG et, en dernier recours, d'utiliser l'installateur hors ligne de GOG Galaxy.
-- **Une installation Epic terminée n'est plus bloquée sur « Installation… ».** La fiche était encore `Installing` au moment de la fusion ; `merge_epic` conservait cet état transitoire au lieu de prendre l'état `Installed` vérifié par Legendary. La liste vérifiée fait désormais autorité, ce qui marque le jeu installé et l'ajoute à la bibliothèque.
+- **L'onglet « Actualités » devient « Média ».** La fiche jeu charge la fiche publique Steam du jeu et affiche sa bande-annonce avant ses captures. Les jeux sans fiche Steam reliée affichent un message explicite au lieu d'un flux vide.
+- **Disposition proche de Steam.** La bande-annonce occupe la largeur disponible, avec un bouton de lecture sur sa vignette. Les captures suivent en grille 16:9 (trois colonnes sur une fenêtre large), avec un liseré d'accent au survol. Un clic ouvre la vidéo ou l'image complète dans le navigateur.
+- **Les connexions GOG et Epic entrent dans le journal du jeu.** Chaque session commence par l'état de la session gogdl, des sessions Epic directe et Legendary, la présence des outils et la boutique du jeu lancé. Les jetons et codes d'autorisation ne sont jamais journalisés.
+- **Cache et chargement.** Les médias sont chargés une fois par jeu, à l'ouverture de l'onglet Média, et le bouton « Actualiser » permet de réessayer après une erreur réseau.
 
 ### Vérifications
 
-- `cargo fmt --check` : OK.
-- `cargo test --locked` : 338 tests réussis, 2 tests réseau GOG ignorés par défaut.
-- `cargo test --locked -- --ignored` : 2 tests réseau GOG réussis (résolution réelle du pack vers `2015389384`, builds Windows du jeu présents et absents du pack).
+- `cargo fmt --all -- --check` : OK.
+- `cargo test --locked` : 342 tests réussis, 3 tests réseau ignorés par défaut.
+- `cargo test --locked -- --ignored` : 3 tests réseau réussis (médias réels de The Witcher 3, résolution du pack GOG et builds Windows).
 - `cargo clippy --all-targets --locked -- -D warnings` : OK.
-- gogdl 1.4.0 réel : `info 1662043288` sort en erreur « Game doesn't support content system api » ; `info 2015389384` sort en 0 avec `folder_name: "Call of Juarez Gunslinger"` et cinq builds Windows.
+- Rendu hors écran de la nouvelle fiche Média en 1360×1800 : bande-annonce, bouton de lecture, titre et grille de six captures visibles.
 
 ### Limites connues
 
-- Aucun compte GOG ou Epic n'est configuré dans cet environnement : le téléchargement complet et l'installation réelle n'ont pas pu être exécutés. Les corrections sont couvertes par les tests unitaires, les tests réseau GOG et les commandes réelles de gogdl.
-- La résolution d'un pack dépend d'un titre exact dans le catalogue. Un pack de bundle ou un titre localisé sans correspondance exacte est conservé et bloqué par le contrôle des builds, avec le message explicite prévu.
+- Steam sert de plus en plus ses bandes-annonces en HLS/DASH. Quark affiche la vignette et ouvre alors la fiche Steam, qui joue la vidéo, au lieu de fabriquer un lien mort. Les anciens trailers MP4/WebM s'ouvrent directement.
+- L'onglet Média s'appuie sur la fiche Steam : un jeu GOG, Epic ou local non relié à Steam n'a pas de galerie pour l'instant.
+- Les diagnostics de connexion indiquent la présence des sessions et des outils, pas leur validité côté serveur : un jeton expiré reste marqué « connecté » jusqu'à la prochaine requête de la boutique.

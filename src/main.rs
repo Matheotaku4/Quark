@@ -15,6 +15,7 @@ mod howlongtobeat;
 mod i18n;
 mod icon;
 mod images;
+mod media;
 mod net;
 mod news;
 mod overlay;
@@ -657,7 +658,14 @@ fn launch_from_cli(query: &str) -> Result<(), String> {
     let game = matches[0];
     let runtimes = proton::detect_runtimes();
     let resolved = proton::resolve(game, &lib.settings, &runtimes)?;
-    let mut session = session::start(game, &resolved)
+    let key = lib
+        .provider_library
+        .games
+        .iter()
+        .find(|record| record.quark_game_id.as_deref() == Some(game.id.as_str()))
+        .map(|record| &record.key);
+    let diagnostics = providers::connection_diagnostics(key);
+    let mut session = session::start(game, &resolved, &diagnostics)
         .map_err(|err| format!("Lancement de {} impossible : {err}", game.name))?;
     println!("{} lancé · {}", game.name, resolved.label());
     println!("journal : {}", session.log.display());

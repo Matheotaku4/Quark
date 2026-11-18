@@ -8,7 +8,7 @@ use crate::config::{
 use crate::disk::{self, DiskReport};
 use crate::howlongtobeat::{self, Report as HltbReport};
 use crate::i18n;
-use crate::news::{self, NewsItem};
+use crate::media::{self, GameMedia};
 use crate::proton::{self, ProtonRuntime};
 use crate::protondb::{self, Report};
 use crate::session::Session;
@@ -225,17 +225,17 @@ impl AddGame {
     }
 }
 
-/// État des actualités d'un jeu (mises en cache par identifiant de jeu).
-pub enum NewsState {
+/// État des médias d'un jeu (mis en cache par identifiant de jeu).
+pub enum MediaState {
     Loading,
-    Loaded(Vec<NewsItem>),
+    Loaded(GameMedia),
     Failed(String),
 }
 
-/// Chargement d'actualités en cours.
-pub struct NewsJob {
+/// Chargement des médias en cours.
+pub struct MediaJob {
     pub game_id: String,
-    pub rx: Receiver<Result<Vec<NewsItem>, String>>,
+    pub rx: Receiver<Result<GameMedia, String>>,
 }
 
 /// Note ProtonDB d'un jeu (mise en cache par appid).
@@ -642,7 +642,7 @@ pub struct SaveBackgroundJob {
 /// Onglets de la fiche d'un jeu, sous la bannière.
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub enum DetailTab {
-    News,
+    Media,
     Achievements,
     /// Sessions et heures de jeu du jeu affiché.
     History,
@@ -803,10 +803,10 @@ pub struct QuarkApp {
     /// Couleur d'accent de chaque jeu, déduite de sa couverture (une seule
     /// analyse par image).
     pub accents: HashMap<PathBuf, egui::Color32>,
-    /// Actualités par jeu (chargées une fois, mises en cache).
-    pub news: HashMap<String, NewsState>,
-    /// Chargement d'actualités en cours.
-    pub news_job: Option<NewsJob>,
+    /// Médias par jeu (chargés une fois, mis en cache).
+    pub media: HashMap<String, MediaState>,
+    /// Chargement des médias en cours.
+    pub media_job: Option<MediaJob>,
     /// État de la vérification des mises à jour.
     pub update: UpdateState,
     pub update_rx: Option<Receiver<UpdateMessage>>,
@@ -1139,8 +1139,8 @@ impl QuarkApp {
             textures: crate::images::TextureCache::default(),
             thumbnails: crate::images::ThumbnailCache::default(),
             accents: HashMap::new(),
-            news: HashMap::new(),
-            news_job: None,
+            media: HashMap::new(),
+            media_job: None,
             update: UpdateState::Idle,
             update_rx: None,
             update_auto: false,
@@ -1220,7 +1220,7 @@ impl QuarkApp {
             achievements: HashMap::new(),
             achievements_job: None,
             achievements_open: None,
-            detail_tab: DetailTab::News,
+            detail_tab: DetailTab::Media,
             provider_playtime: HashMap::new(),
             playtime_job: None,
             gog_playtime_rx: None,
@@ -1359,13 +1359,13 @@ impl QuarkApp {
         self.poll_update(ctx);
         self.poll_artwork_plan(ctx);
         self.poll_asset_job(ctx);
-        self.poll_news();
+        self.poll_media();
         self.poll_picker(ctx);
         self.poll_customize_plan(ctx);
         self.poll_search();
         self.poll_scan();
         self.auto_search(ctx);
-        self.ensure_news(ctx);
+        self.ensure_media(ctx);
         self.ensure_protondb(ctx);
         self.poll_protondb();
         self.ensure_hltb(ctx);
@@ -1502,7 +1502,7 @@ impl QuarkApp {
         }
 
         if self.job.is_some()
-            || self.news_job.is_some()
+            || self.media_job.is_some()
             || self.protondb_job.is_some()
             || self.hltb_job.is_some()
             || !self.running.is_empty()
@@ -2138,87 +2138,93 @@ impl QuarkApp {
     }
 
     // -----------------------------------------------------------------------
-    // Actualités (flux Steam du jeu, sous la bannière)
+    // Médias (bande-annonce et captures Steam, sous la bannière)
     // -----------------------------------------------------------------------
 
-    /// Charge les actualités du jeu sélectionné, une seule fois par jeu.
-    fn ensure_news(&mut self, ctx: &egui::Context) {
+    /// Charge les médias du jeu sélectionné, une seule fois par jeu et seulement
+    /// quand l'onglet Média est ouvert.
+    fn ensure_media(&mut self, ctx: &egui::Context) {
+        if self.detail_tab != DetailTab::Media {
+            return;
+        }
         let Some(id) = self.selected.clone() else {
             return;
         };
-        if self.news.contains_key(&id) {
+        if self.media.contains_key(&id) {
             return;
         }
-        if self.news_job.as_ref().is_some_and(|job| job.game_id == id) {
+        if self.media_job.as_ref().is_some_and(|job| job.game_id == id) {
             return;
         }
         let Some(app_id) = self.lib.get(&id).and_then(|game| game.steam_app_id) else {
             return;
         };
-        self.start_news(ctx, &id, app_id);
+        self.start_media(ctx, &id, app_id);
     }
 
-    pub fn start_news(&mut self, ctx: &egui::Context, game_id: &str, app_id: u32) {
+    pub fn start_media(&mut self, ctx: &egui::Context, game_id: &str, app_id: u32) {
         // Un seul jeu chargé à la fois : le précédent perd sa place (mais garde
         // ce qu'il avait déjà obtenu).
-        if let Some(previous) = self.news_job.take()
+        if let Some(previous) = self.media_job.take()
             && previous.game_id != game_id
-            && matches!(self.news.get(&previous.game_id), Some(NewsState::Loading))
+            && matches!(self.media.get(&previous.game_id), Some(MediaState::Loading))
         {
-            self.news.remove(&previous.game_id);
+            self.media.remove(&previous.game_id);
         }
+        let language = self.lib.settings.language.clone();
+        let country = self.lib.settings.country.clone();
         let (tx, rx) = channel();
         let repaint = ctx.clone();
         std::thread::spawn(move || {
             let client = artwork::http();
-            let result = news::fetch(&client, app_id, news::COUNT);
+            let result = media::fetch(&client, app_id, &language, &country);
             let _ = tx.send(result);
             repaint.request_repaint();
         });
-        self.news.insert(game_id.to_string(), NewsState::Loading);
-        self.news_job = Some(NewsJob {
+        self.media.insert(game_id.to_string(), MediaState::Loading);
+        self.media_job = Some(MediaJob {
             game_id: game_id.to_string(),
             rx,
         });
         ctx.request_repaint_after(Duration::from_millis(200));
     }
 
-    fn poll_news(&mut self) {
+    fn poll_media(&mut self) {
         let received = self
-            .news_job
+            .media_job
             .as_ref()
             .map(|job| (job.game_id.clone(), job.rx.try_recv()));
         let Some((id, result)) = received else {
             return;
         };
         match result {
-            Ok(Ok(items)) => {
-                self.news_job = None;
-                self.news.insert(id, NewsState::Loaded(items));
+            Ok(Ok(media)) => {
+                self.media_job = None;
+                self.media.insert(id, MediaState::Loaded(media));
             }
             Ok(Err(message)) => {
-                self.news_job = None;
-                self.news.insert(id, NewsState::Failed(message));
+                self.media_job = None;
+                self.media.insert(id, MediaState::Failed(message));
             }
             Err(TryRecvError::Empty) => {}
             Err(TryRecvError::Disconnected) => {
-                self.news_job = None;
-                self.news
-                    .insert(id, NewsState::Failed("flux interrompu".to_string()));
+                self.media_job = None;
+                self.media
+                    .insert(id, MediaState::Failed("chargement interrompu".to_string()));
             }
         }
     }
 
-    /// Relance le chargement des actualités du jeu sélectionné.
-    pub fn reload_news(&mut self, ctx: &egui::Context) {
+    /// Relance le chargement des médias du jeu sélectionné.
+    pub fn reload_media(&mut self, ctx: &egui::Context) {
         let Some(id) = self.selected.clone() else {
             return;
         };
         let Some(app_id) = self.lib.get(&id).and_then(|game| game.steam_app_id) else {
             return;
         };
-        self.news.remove(&id);
-        self.start_news(ctx, &id, app_id);
+        self.media.remove(&id);
+        self.start_media(ctx, &id, app_id);
     }
 
     pub fn start_asset_job(&mut self, ctx: &egui::Context, game_id: &str, hit: SearchHit) {
@@ -2943,7 +2949,10 @@ impl QuarkApp {
                 if let Some(identity) = save_identity.clone() {
                     self.start_background_save(identity, crate::saves::BackupPhase::BeforeLaunch);
                 }
-                match crate::session::start(&game, &resolved) {
+                let diagnostics = crate::providers::connection_diagnostics(
+                    provider_record.as_ref().map(|record| &record.key),
+                );
+                match crate::session::start(&game, &resolved, &diagnostics) {
                     Ok(mut session) => {
                         session.save_identity = save_identity;
                         let started = session.started;

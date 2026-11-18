@@ -84,12 +84,13 @@ The game page shows:
 
 - the banner, logo or title and the ProtonDB/Linux badges;
 - the **Play/Stop** button, playtime and last session;
-- the **News**, **Achievements** and **History** tabs;
+- the **Media**, **Achievements** and **History** tabs;
 - the **Logs**, **Information**, **Customize** and **Game settings** actions;
 - a star button to add or remove the game from the **Favorites** strip.
 
-**History** summarizes sessions, shows the last twelve weeks and lists recent
-play sessions. Playtime published by Epic or GOG replaces local playtime when
+**Media** shows the Steam trailer first, then a 16:9 screenshot grid; clicking
+a thumbnail opens the video or the full image in the browser. **History**
+summarizes sessions, shows the last twelve weeks and lists recent play sessions. Playtime published by Epic or GOG replaces local playtime when
 the store provides it; Steam Cloud remains managed by Steam.
 
 **Customize** replaces or removes the cover, hero, logo and icon from

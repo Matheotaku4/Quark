@@ -116,6 +116,68 @@ pub fn json_object_with_key(text: &str, key: &str) -> Option<serde_json::Value> 
     None
 }
 
+/// Lignes de diagnostic sur les connexions GOG et Epic, ajoutées au journal de
+/// session avant chaque lancement. Aucun jeton ni code d'autorisation n'y est
+/// écrit : seulement la présence des sessions et des outils, et la boutique du
+/// jeu lancé quand elle est connue.
+pub fn connection_diagnostics(key: Option<&ProviderGameKey>) -> Vec<String> {
+    let mut lines = Vec::new();
+    if let Some(key) = key {
+        let boutique = match key.provider {
+            Provider::Steam => "Steam",
+            Provider::Epic => "Epic Games",
+            Provider::Gog => "GOG",
+            Provider::Itch => "itch.io",
+        };
+        lines.push(format!("{boutique} · produit {}", key.product_id));
+    }
+    lines.push(format!(
+        "GOG · session gogdl {}",
+        if gog::GogAdapter::is_logged_in() {
+            "connectée"
+        } else {
+            "absente"
+        }
+    ));
+    let gogdl = tools::ManagedToolId::Gogdl.installed_path();
+    lines.push(format!(
+        "GOG · gogdl {} ({})",
+        gogdl.display(),
+        if gogdl.is_file() {
+            "présent"
+        } else {
+            "absent"
+        }
+    ));
+    lines.push(format!(
+        "Epic · session directe {}",
+        if epic_account::connected_account().is_some() {
+            "connectée"
+        } else {
+            "absente"
+        }
+    ));
+    lines.push(format!(
+        "Epic · session Legendary {}",
+        if legendary::LegendaryAdapter::is_logged_in() {
+            "connectée"
+        } else {
+            "absente"
+        }
+    ));
+    let legendary = tools::ManagedToolId::Legendary.installed_path();
+    lines.push(format!(
+        "Epic · legendary {} ({})",
+        legendary.display(),
+        if legendary.is_file() {
+            "présent"
+        } else {
+            "absent"
+        }
+    ));
+    lines
+}
+
 pub fn session_written(before: Option<&[u8]>, after: Option<&[u8]>) -> bool {
     match (before, after) {
         (_, None) => false,
@@ -126,7 +188,7 @@ pub fn session_written(before: Option<&[u8]>, after: Option<&[u8]>) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use super::{install_size_from_json, session_written};
+    use super::{connection_diagnostics, install_size_from_json, session_written};
 
     #[test]
     fn la_taille_d_installation_est_lue_dans_les_formes_connues() {
@@ -144,6 +206,30 @@ mod tests {
         );
         assert_eq!(install_size_from_json(r#"{"title":"sans taille"}"#), None);
         assert_eq!(install_size_from_json("pas du json"), None);
+    }
+
+    #[test]
+    fn les_diagnostics_de_connexion_n_exposent_aucun_secret() {
+        for (provider, product_id, label) in [
+            (super::Provider::Gog, "2015389384", "GOG"),
+            (super::Provider::Epic, "app_123", "Epic"),
+        ] {
+            let key = super::ProviderGameKey {
+                provider,
+                product_id: product_id.to_string(),
+            };
+            let lines = connection_diagnostics(Some(&key)).join("\n");
+            assert!(lines.contains(label));
+            assert!(lines.contains(product_id));
+            assert!(lines.contains("GOG"));
+            assert!(lines.contains("Epic"));
+            assert!(!lines.contains("access_token"));
+            assert!(!lines.contains("refresh_token"));
+            assert!(!lines.contains("authorizationCode"));
+        }
+        let lines = connection_diagnostics(None).join("\n");
+        assert!(lines.contains("GOG"));
+        assert!(lines.contains("Epic"));
     }
 
     #[test]

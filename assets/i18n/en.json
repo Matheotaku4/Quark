@@ -776,5 +776,14 @@
   "Espace disque et cache": "Disk space and cache",
   "Chercher un réglage…": "Find a setting…",
   "Installations et transferts en cours": "Ongoing installs and transfers",
-  "Apparence et comportement de Quark": "Quark appearance and behavior"
+  "Apparence et comportement de Quark": "Quark appearance and behavior",
+  "MÉDIA": "MEDIA",
+  "Média": "Media",
+  "PHOTOS": "SCREENSHOTS",
+  "Bande-annonce": "Trailer",
+  "Lire la bande-annonce": "Play trailer",
+  "Chargement des médias…": "Loading media…",
+  "Ce jeu n'est pas lié à la fiche Steam : aucun média à afficher.": "This game isn't linked to a Steam page: no media to show.",
+  "Aucun média pour ce jeu.": "No media for this game.",
+  "Médias indisponibles": "Media unavailable"
 }

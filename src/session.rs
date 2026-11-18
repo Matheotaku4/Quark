@@ -92,7 +92,11 @@ impl Session {
 }
 
 /// Démarre le jeu, journal ouvert et redirigé.
-pub fn start(game: &Game, resolved: &Resolved) -> Result<Session, String> {
+///
+/// `diagnostics` contient les lignes de connexion boutique (GOG, Epic) : elles
+/// sont écrites dans l'en-tête pour qu'un lancement raté puisse être expliqué
+/// sans sortir de Quark. Aucun jeton ne doit y figurer.
+pub fn start(game: &Game, resolved: &Resolved, diagnostics: &[String]) -> Result<Session, String> {
     let log = config::session_log(&game.id);
     if let Some(dir) = log.parent() {
         std::fs::create_dir_all(dir)
@@ -128,6 +132,9 @@ pub fn start(game: &Game, resolved: &Resolved) -> Result<Session, String> {
     );
     if let Some(prefix) = &resolved.prefix {
         let _ = writeln!(file, "[quark] préfixe {}", prefix.display());
+    }
+    for line in diagnostics {
+        let _ = writeln!(file, "[quark] {line}");
     }
     for (name, _value) in &resolved.spec.env {
         // Les valeurs peuvent contenir des identifiants (API_KEY, AUTH,

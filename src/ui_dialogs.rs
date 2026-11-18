@@ -4218,7 +4218,7 @@ impl QuarkApp {
             let uninstall_files = self.remove_with_files && !linked.is_empty();
             for id in &ids {
                 self.lib.remove(id);
-                self.news.remove(id);
+                self.media.remove(id);
                 let _ = std::fs::remove_dir_all(config::artwork_root().join(id));
                 // Plus rien à télécharger pour ce jeu, et le job en cours est ignoré.
                 self.job_queue.retain(|(queued, _)| queued != id);
