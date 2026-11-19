@@ -1220,7 +1220,12 @@ impl QuarkApp {
                                                     .color(pal.text_faint),
                                             );
                                         } else {
+                                            let wine_prefix = game.wine_prefix_path(&settings);
                                             let installed = crate::providers::legendary::LegendaryAdapter::eos_overlay_installed_path()
+                                                .is_some()
+                                                || crate::providers::legendary::LegendaryAdapter::eos_overlay_installed_for_prefix(
+                                                    &wine_prefix,
+                                                )
                                                 .is_some();
                                             let action = if installed {
                                                 "Activer l'overlay Epic pour ce jeu"
@@ -2098,6 +2103,40 @@ impl QuarkApp {
                     error.as_deref(),
                     card_width,
                 );
+
+                // Le volume agit sur le flux PulseAudio/PipeWire du décodeur :
+                // la vidéo continue, aucun redémarrage n'est nécessaire.
+                if self.media_player.as_ref().is_some_and(|player| {
+                    player.volume_supported()
+                        && matches!(
+                            player.state(),
+                            crate::video::PlaybackState::Starting
+                                | crate::video::PlaybackState::Playing
+                                | crate::video::PlaybackState::Paused
+                        )
+                }) {
+                    ui.add_space(8.0);
+                    ui.horizontal(|ui| {
+                        ui.set_max_width(card_width);
+                        ui.label(crate::i18n::rich("Volume").size(11.5).color(pal.text_dim));
+                        let mut volume = self.media_volume;
+                        ui.spacing_mut().slider_width = 150.0;
+                        if ui
+                            .add(egui::Slider::new(&mut volume, 0.0..=1.0).show_value(false))
+                            .changed()
+                        {
+                            self.media_volume = volume;
+                            if let Some(player) = self.media_player.as_mut() {
+                                player.set_volume(volume);
+                            }
+                        }
+                        ui.label(
+                            crate::i18n::raw(format!("{} %", (volume * 100.0).round() as i32))
+                                .size(11.0)
+                                .color(pal.text_faint),
+                        );
+                    });
+                }
 
                 if let Some(message) = error.as_deref() {
                     ui.add_space(8.0);

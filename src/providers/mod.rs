@@ -116,11 +116,23 @@ pub fn json_object_with_key(text: &str, key: &str) -> Option<serde_json::Value> 
     None
 }
 
+/// Un dossier d'installation ne suffit pas à lui seul : pour GOG, le manifeste
+/// et l'exécutable qu'il déclare doivent encore être présents. Toute bascule
+/// vers « installé » (sonde, reprise, synchronisation) passe par ici.
+pub fn install_directory_is_complete(key: &ProviderGameKey, path: &std::path::Path) -> bool {
+    path.is_dir()
+        && (key.provider != Provider::Gog || gog::is_complete_install(path, &key.product_id))
+}
+
 /// Lignes de diagnostic sur les connexions GOG et Epic, ajoutées au journal de
 /// session avant chaque lancement. Aucun jeton ni code d'autorisation n'y est
 /// écrit : seulement la présence des sessions et des outils, et la boutique du
-/// jeu lancé quand elle est connue.
-pub fn connection_diagnostics(key: Option<&ProviderGameKey>) -> Vec<String> {
+/// jeu lancé quand elle est connue. Le préfixe Wine permet de reconnaître un
+/// overlay EOS installé par le launcher Epic dans le préfixe du jeu.
+pub fn connection_diagnostics(
+    key: Option<&ProviderGameKey>,
+    wine_prefix: Option<&std::path::Path>,
+) -> Vec<String> {
     let mut lines = Vec::new();
     if let Some(key) = key {
         let boutique = match key.provider {
@@ -163,6 +175,16 @@ pub fn connection_diagnostics(key: Option<&ProviderGameKey>) -> Vec<String> {
             "connectée"
         } else {
             "absente"
+        }
+    ));
+    let overlay = legendary::LegendaryAdapter::eos_overlay_installed_path().or_else(|| {
+        wine_prefix.and_then(legendary::LegendaryAdapter::eos_overlay_installed_for_prefix)
+    });
+    lines.push(format!(
+        "Epic · overlay EOS {}",
+        match overlay {
+            Some(path) => format!("installé ({})", path.display()),
+            None => "absent (à installer dans Paramètres → Boutiques & outils)".to_string(),
         }
     ));
     let legendary = tools::ManagedToolId::Legendary.installed_path();
@@ -218,7 +240,7 @@ mod tests {
                 provider,
                 product_id: product_id.to_string(),
             };
-            let lines = connection_diagnostics(Some(&key)).join("\n");
+            let lines = connection_diagnostics(Some(&key), None).join("\n");
             assert!(lines.contains(label));
             assert!(lines.contains(product_id));
             assert!(lines.contains("GOG"));
@@ -227,9 +249,25 @@ mod tests {
             assert!(!lines.contains("refresh_token"));
             assert!(!lines.contains("authorizationCode"));
         }
-        let lines = connection_diagnostics(None).join("\n");
+        let lines = connection_diagnostics(None, None).join("\n");
         assert!(lines.contains("GOG"));
         assert!(lines.contains("Epic"));
+    }
+
+    #[test]
+    fn un_overlay_installe_dans_le_prefixe_est_diagnostique_present() {
+        let prefix = std::env::temp_dir().join(format!(
+            "quark-overlay-prefix-{}-{}",
+            std::process::id(),
+            crate::config::now_ts()
+        ));
+        let overlay =
+            prefix.join("drive_c/Program Files (x86)/Epic Games/Launcher/Portal/Extras/Overlay");
+        std::fs::create_dir_all(&overlay).unwrap();
+        std::fs::write(overlay.join("EOSOVH-Win64-Shipping.dll"), b"dll").unwrap();
+        let lines = connection_diagnostics(None, Some(&prefix)).join("\n");
+        assert!(lines.contains("overlay EOS installé"), "{lines}");
+        let _ = std::fs::remove_dir_all(&prefix);
     }
 
     #[test]

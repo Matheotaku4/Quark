@@ -13,7 +13,7 @@ use eframe::egui::{ColorImage, Context, TextureHandle, TextureOptions};
 use std::io::Read;
 use std::path::PathBuf;
 use std::process::{Child, Command, Stdio};
-use std::sync::mpsc::{Receiver, TryRecvError, sync_channel};
+use std::sync::mpsc::{self, Receiver, Sender, TryRecvError, sync_channel};
 use std::time::{Duration, Instant};
 
 /// Taille du flux vidéo : assez nette pour la grande vue de la fiche, sans
@@ -22,6 +22,11 @@ pub const WIDTH: usize = 960;
 pub const HEIGHT: usize = 540;
 const FRAME_BYTES: usize = WIDTH * HEIGHT * 4;
 const START_TIMEOUT: Duration = Duration::from_secs(25);
+/// Le premier tampon HLS peut mettre quelques secondes à arriver.
+const STARTUP_REPAINT: Duration = Duration::from_millis(100);
+/// Sans réveil régulier, egui ne repeint qu'à la prochaine entrée (souris,
+/// clavier) : la lecture s'arrêtait dès que la souris ne bougeait plus.
+const PLAYING_REPAINT: Duration = Duration::from_millis(16);
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum PlaybackState {
@@ -46,6 +51,10 @@ pub struct MediaPlayer {
     state: PlaybackState,
     started: Instant,
     url: String,
+    volume: f32,
+    volume_tx: Option<Sender<f32>>,
+    volume_supported: bool,
+    volume_synced: bool,
 }
 
 impl MediaPlayer {
@@ -56,8 +65,7 @@ impl MediaPlayer {
              gstreamer1.0-plugins-good et gstreamer1.0-libav."
                 .to_string()
         })?;
-        let audio =
-            std::env::var("QUARK_GST_AUDIO_SINK").unwrap_or_else(|_| "autoaudiosink".to_string());
+        let (audio, volume_supported) = audio_sink();
         let args = playback_args(url, &audio);
         let mut child = Command::new(&binary)
             .args(&args)
@@ -107,6 +115,12 @@ impl MediaPlayer {
             }
         });
 
+        let (volume_tx, volume_rx) = mpsc::channel();
+        if volume_supported {
+            let pid = child.id();
+            std::thread::spawn(move || volume_worker(pid, volume_rx));
+        }
+
         Ok(Self {
             child,
             rx,
@@ -114,6 +128,10 @@ impl MediaPlayer {
             state: PlaybackState::Starting,
             started: Instant::now(),
             url: url.to_string(),
+            volume: 1.0,
+            volume_tx: volume_supported.then_some(volume_tx),
+            volume_supported,
+            volume_synced: false,
         })
     }
 
@@ -164,11 +182,14 @@ impl MediaPlayer {
             self.terminate();
         }
         if received_frame {
+            if !self.volume_synced {
+                self.send_volume();
+                self.volume_synced = true;
+            }
             ctx.request_repaint();
-        } else if matches!(self.state, PlaybackState::Starting) {
-            // Le premier tampon HLS peut mettre quelques secondes à arriver :
-            // continuer à interroger le processus sans bloquer l'interface.
-            ctx.request_repaint_after(Duration::from_millis(100));
+        }
+        if let Some(delay) = poll_interval(&self.state) {
+            ctx.request_repaint_after(delay);
         }
     }
 
@@ -198,6 +219,27 @@ impl MediaPlayer {
 
     pub fn state(&self) -> &PlaybackState {
         &self.state
+    }
+
+    pub fn volume_supported(&self) -> bool {
+        self.volume_supported
+    }
+
+    /// Applique le volume au flux PulseAudio/PipeWire du décodeur, sans
+    /// redémarrer la vidéo.
+    pub fn set_volume(&mut self, volume: f32) {
+        let volume = volume.clamp(0.0, 1.0);
+        if (volume - self.volume).abs() < f32::EPSILON {
+            return;
+        }
+        self.volume = volume;
+        self.send_volume();
+    }
+
+    fn send_volume(&self) {
+        if let Some(tx) = &self.volume_tx {
+            let _ = tx.send(self.volume);
+        }
     }
 
     pub fn url(&self) -> &str {
@@ -246,14 +288,125 @@ fn gst_launch() -> Option<PathBuf> {
         let path = PathBuf::from(path);
         return path.is_file().then_some(path);
     }
+    command_in_path("gst-launch-1.0")
+}
+
+fn command_in_path(name: &str) -> Option<PathBuf> {
     let paths = std::env::var_os("PATH")?;
     std::env::split_paths(&paths)
-        .map(|directory| directory.join("gst-launch-1.0"))
+        .map(|directory| directory.join(name))
         .find(|candidate| candidate.is_file())
 }
 
-/// Ne remonte que les vraies erreurs de GStreamer, pas ses avertissements de
-/// greffons optionnels.
+/// Choisit la sortie audio et indique si son volume peut être réglé en cours
+/// de lecture. `pulsesink` fonctionne aussi sous PipeWire (pipewire-pulse), où
+/// `pactl` retrouve le flux par le PID du décodeur.
+fn audio_sink() -> (String, bool) {
+    let pulse = pulse_server_available() && command_in_path("pactl").is_some();
+    if let Ok(sink) = std::env::var("QUARK_GST_AUDIO_SINK") {
+        let supported = pulse && (sink == "autoaudiosink" || sink.contains("pulse"));
+        return (sink, supported);
+    }
+    if pulse {
+        ("pulsesink".to_string(), true)
+    } else {
+        ("autoaudiosink".to_string(), false)
+    }
+}
+
+fn pulse_server_available() -> bool {
+    std::env::var_os("PULSE_SERVER").is_some()
+        || std::env::var_os("XDG_RUNTIME_DIR")
+            .map(PathBuf::from)
+            .is_some_and(|dir| dir.join("pulse/native").exists())
+}
+
+/// Applique les changements de volume dans un fil dédié : `pactl` ne doit
+/// jamais bloquer le rendu. Les valeurs d'un glissement sont fusionnées.
+fn volume_worker(pid: u32, rx: Receiver<f32>) {
+    let mut sink_input = None;
+    while let Ok(mut volume) = rx.recv() {
+        std::thread::sleep(Duration::from_millis(50));
+        while let Ok(next) = rx.try_recv() {
+            volume = next;
+        }
+        let mut attempts = 0;
+        loop {
+            if let Some(index) = sink_input {
+                if set_sink_input_volume(index, volume) {
+                    break;
+                }
+                sink_input = None;
+            }
+            if let Some(index) = find_sink_input(pid) {
+                sink_input = Some(index);
+                continue;
+            }
+            attempts += 1;
+            if attempts >= 6 {
+                break;
+            }
+            std::thread::sleep(Duration::from_millis(150));
+        }
+    }
+}
+
+fn find_sink_input(pid: u32) -> Option<u32> {
+    let output = Command::new("pactl")
+        .args(["list", "sink-inputs"])
+        .env("LC_ALL", "C")
+        .stdin(Stdio::null())
+        .output()
+        .ok()?;
+    if !output.status.success() {
+        return None;
+    }
+    parse_sink_input(&String::from_utf8_lossy(&output.stdout), pid)
+}
+
+fn parse_sink_input(output: &str, pid: u32) -> Option<u32> {
+    let needle = format!("application.process.id = \"{pid}\"");
+    let mut current = None;
+    for line in output.lines() {
+        let line = line.trim();
+        if let Some(rest) = line.strip_prefix("Sink Input #") {
+            current = rest.parse::<u32>().ok();
+        } else if line == needle
+            && let Some(index) = current
+        {
+            return Some(index);
+        }
+    }
+    None
+}
+
+fn set_sink_input_volume(index: u32, volume: f32) -> bool {
+    Command::new("pactl")
+        .arg("set-sink-input-volume")
+        .arg(index.to_string())
+        .arg(format!("{}%", volume_percent(volume)))
+        .env("LC_ALL", "C")
+        .stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .status()
+        .is_ok_and(|status| status.success())
+}
+
+fn volume_percent(volume: f32) -> u32 {
+    (volume.clamp(0.0, 1.0) * 100.0).round() as u32
+}
+
+/// Intervalle de réveil de l'interface pendant la lecture. `None` quand rien
+/// ne doit être repeint : pause, fin ou erreur.
+fn poll_interval(state: &PlaybackState) -> Option<Duration> {
+    match state {
+        PlaybackState::Starting => Some(STARTUP_REPAINT),
+        PlaybackState::Playing => Some(PLAYING_REPAINT),
+        _ => None,
+    }
+}
+
 #[cfg(unix)]
 fn signal_stop() -> i32 {
     libc::SIGSTOP
@@ -274,6 +427,8 @@ fn signal_continue() -> i32 {
     0
 }
 
+/// Ne remonte que les vraies erreurs de GStreamer, pas ses avertissements de
+/// greffons optionnels.
 fn gstreamer_error(stderr: &str) -> Option<String> {
     let line = stderr
         .lines()
@@ -335,5 +490,41 @@ mod tests {
         assert!(sink.contains("height=540"));
         assert!(sink.contains("fdsink fd=1 sync=true"));
         assert!(args.contains(&"audio-sink=autoaudiosink".to_string()));
+    }
+
+    #[test]
+    fn la_lecture_se_repeint_sans_attendre_un_mouvement_de_souris() {
+        assert_eq!(
+            poll_interval(&PlaybackState::Playing),
+            Some(PLAYING_REPAINT)
+        );
+        assert_eq!(
+            poll_interval(&PlaybackState::Starting),
+            Some(STARTUP_REPAINT)
+        );
+        assert_eq!(poll_interval(&PlaybackState::Paused), None);
+        assert_eq!(poll_interval(&PlaybackState::Ended), None);
+    }
+
+    #[test]
+    fn le_flux_audio_est_retrouve_par_le_pid_du_decodeur() {
+        let output = r#"
+Sink Input #41
+	Driver: protocol-native.c
+	Properties:
+		application.name = "GStreamer"
+		application.process.id = "999"
+Sink Input #42
+	Driver: protocol-native.c
+	Properties:
+		application.name = "GStreamer"
+		application.process.id = "1234"
+		media.role = "video"
+"#;
+        assert_eq!(parse_sink_input(output, 1234), Some(42));
+        assert_eq!(parse_sink_input(output, 77), None);
+        assert_eq!(volume_percent(0.5), 50);
+        assert_eq!(volume_percent(1.0), 100);
+        assert_eq!(volume_percent(-1.0), 0);
     }
 }

@@ -809,6 +809,8 @@ pub struct QuarkApp {
     pub media_job: Option<MediaJob>,
     /// Bande-annonce actuellement lue dans la fiche, s'il y en a une.
     pub media_player: Option<crate::video::MediaPlayer>,
+    /// Volume des bandes-annonces, conservé d'une lecture à l'autre.
+    pub media_volume: f32,
     /// Erreur du dernier démarrage du lecteur intégré.
     pub media_error: Option<String>,
     /// Élément sélectionné dans la pellicule : bandes-annonces puis photos.
@@ -861,6 +863,12 @@ pub struct QuarkApp {
     pub save_background_jobs: Vec<SaveBackgroundJob>,
     /// Téléchargement de l'overlay Epic (EOS) en cours, s'il y en a un.
     pub eos_overlay_job: Option<EosOverlayJob>,
+    /// Jeu Epic dont le lancement attend le choix « installer l'overlay ».
+    pub eos_overlay_launch_offer: Option<String>,
+    /// Jeu à lancer dès que l'installation de l'overlay est terminée.
+    pub eos_overlay_launch_pending: Option<String>,
+    /// Jeu dont le prochain lancement doit ignorer l'absence d'overlay.
+    pub eos_overlay_launch_bypass: Option<String>,
     /// Synchronisation des sauvegardes cloud Epic/GOG en cours.
     pub cloud_sync: Option<CloudSyncJob>,
     pub cloud_sync_status: HashMap<crate::providers::ProviderGameKey, String>,
@@ -1152,6 +1160,7 @@ impl QuarkApp {
             media: HashMap::new(),
             media_job: None,
             media_player: None,
+            media_volume: 1.0,
             media_error: None,
             media_index: 0,
             media_scroll: 0.0,
@@ -1175,6 +1184,9 @@ impl QuarkApp {
             save_restore_rx: None,
             save_background_jobs: Vec::new(),
             eos_overlay_job: None,
+            eos_overlay_launch_offer: None,
+            eos_overlay_launch_pending: None,
+            eos_overlay_launch_bypass: None,
             cloud_sync: None,
             cloud_sync_status: HashMap::new(),
             save_candidates: HashMap::new(),
@@ -2268,7 +2280,10 @@ impl QuarkApp {
         self.stop_media_player();
         self.media_error = None;
         match crate::video::MediaPlayer::start(url) {
-            Ok(player) => self.media_player = Some(player),
+            Ok(mut player) => {
+                player.set_volume(self.media_volume);
+                self.media_player = Some(player);
+            }
             Err(error) => self.media_error = Some(error),
         }
     }
@@ -2865,6 +2880,31 @@ impl QuarkApp {
             ));
             return;
         }
+        // L'overlay EOS est global mais activé par préfixe. Sans lui, le jeu
+        // Epic se lance très bien, mais aucun overlay n'apparaît : on propose
+        // de l'installer d'abord, puis on reprend le lancement. Un clic sur
+        // « lancer sans » pose un bypass pour cette tentative seulement.
+        let epic_provider = provider_record
+            .as_ref()
+            .is_some_and(|record| record.key.provider == crate::providers::Provider::Epic);
+        if epic_provider {
+            let bypass = self.eos_overlay_launch_bypass.take().as_deref() == Some(id);
+            let wine_prefix = game.wine_prefix_path(&self.lib.settings);
+            let overlay_available =
+                crate::providers::legendary::LegendaryAdapter::eos_overlay_installed_path()
+                    .is_some()
+                    || crate::providers::legendary::LegendaryAdapter::eos_overlay_installed_for_prefix(
+                        &wine_prefix,
+                    )
+                    .is_some();
+            if !bypass && !overlay_available {
+                if self.eos_overlay_launch_pending.as_deref() != Some(id) {
+                    self.eos_overlay_launch_offer = Some(id.to_string());
+                    ctx.request_repaint();
+                }
+                return;
+            }
+        }
         // Un jeu Epic lancé directement par son exécutable n'a ni le jeton de
         // session ni les arguments `-epicapp`/`-EpicPortal`. Legendary les
         // calcule sans lancer le jeu (`launch --json`) ; sans eux, Epic répond
@@ -2933,13 +2973,21 @@ impl QuarkApp {
                         } else {
                             prefix.join("pfx")
                         };
-                        if crate::providers::legendary::LegendaryAdapter::eos_overlay_installed_path()
-                            .is_some()
-                        {
+                        let overlay_installed =
+                            crate::providers::legendary::LegendaryAdapter::eos_overlay_installed_path()
+                                .is_some()
+                                || crate::providers::legendary::LegendaryAdapter::eos_overlay_installed_for_prefix(
+                                    &wine_prefix,
+                                )
+                                .is_some();
+                        if overlay_installed {
                             if wine_prefix.join("user.reg").is_file() {
                                 match adapter.enable_eos_overlay(&wine_prefix) {
                                     Ok(()) => resolved.extras.push("overlay EOS".to_string()),
                                     Err(error) => {
+                                        resolved.warnings.push(format!(
+                                            "Overlay Epic non activé dans ce préfixe : {error}"
+                                        ));
                                         self.toast_error(format!("Overlay Epic : {error}"));
                                     }
                                 }
@@ -2948,11 +2996,20 @@ impl QuarkApp {
                                 // un préfixe neuf, il n'existe pas encore. Le
                                 // premier lancement le crée ; le suivant active
                                 // l'overlay avant le démarrage du jeu.
-                                self.toast_info(format!(
-                                    "{} : l'overlay Epic sera activé au prochain lancement (préfixe en cours de création)",
+                                let warning = format!(
+                                    "{} : overlay Epic activé au prochain lancement (préfixe Wine en cours de création)",
                                     game.name
-                                ));
+                                );
+                                resolved.warnings.push(warning.clone());
+                                self.toast_info(warning);
                             }
+                        } else {
+                            let warning = format!(
+                                "{} : overlay Epic non installé — Paramètres → Boutiques & outils → Installer l'overlay Epic (EOS)",
+                                game.name
+                            );
+                            resolved.warnings.push(warning.clone());
+                            self.toast_info(warning);
                         }
                     }
                     if !store_parameters.is_empty() {
@@ -2995,8 +3052,10 @@ impl QuarkApp {
                 if let Some(identity) = save_identity.clone() {
                     self.start_background_save(identity, crate::saves::BackupPhase::BeforeLaunch);
                 }
+                let diagnostics_prefix = game.wine_prefix_path(&self.lib.settings);
                 let diagnostics = crate::providers::connection_diagnostics(
                     provider_record.as_ref().map(|record| &record.key),
+                    Some(&diagnostics_prefix),
                 );
                 match crate::session::start(&game, &resolved, &diagnostics) {
                     Ok(mut session) => {
@@ -3763,6 +3822,7 @@ impl QuarkApp {
         self.confirm_remove_dialog(ctx);
         self.confirm_uninstall_dialog(ctx);
         self.install_dialog(ctx);
+        self.eos_overlay_launch_dialog(ctx);
         self.logs_dialog(ctx);
         self.achievements_dialog(ctx);
         self.save_backup_dialog(ctx);
@@ -4223,7 +4283,7 @@ impl QuarkApp {
         std::thread::spawn(move || {
             let missing = installed
                 .into_iter()
-                .filter(|(_, path)| !path.is_dir())
+                .filter(|(key, path)| !crate::providers::install_directory_is_complete(key, path))
                 .map(|(key, _)| key)
                 .collect::<Vec<_>>();
             let _ = tx.send(missing);
@@ -4849,6 +4909,37 @@ impl QuarkApp {
         self.start_eos_overlay_job(ctx, None);
     }
 
+    /// Overlay EOS présent globalement, ou dans le préfixe d'un jeu Epic lié.
+    /// Le journal et les Paramètres doivent voir un overlay installé par le
+    /// launcher Epic, pas seulement celui téléchargé par Quark.
+    pub fn eos_overlay_install(&self) -> Option<PathBuf> {
+        if let Some(path) =
+            crate::providers::legendary::LegendaryAdapter::eos_overlay_installed_path()
+        {
+            return Some(path);
+        }
+        for record in &self.lib.provider_library.games {
+            if record.key.provider != crate::providers::Provider::Epic {
+                continue;
+            }
+            let Some(game_id) = record.quark_game_id.as_deref() else {
+                continue;
+            };
+            let Some(game) = self.lib.get(game_id) else {
+                continue;
+            };
+            let prefix = game.wine_prefix_path(&self.lib.settings);
+            if let Some(path) =
+                crate::providers::legendary::LegendaryAdapter::eos_overlay_installed_for_prefix(
+                    &prefix,
+                )
+            {
+                return Some(path);
+            }
+        }
+        None
+    }
+
     fn start_eos_overlay_job(&mut self, ctx: &egui::Context, wine_prefix: Option<PathBuf>) {
         if self.eos_overlay_job.is_some() {
             self.toast_info("L'overlay Epic est déjà en cours d'installation");
@@ -4870,10 +4961,19 @@ impl QuarkApp {
                     match crate::providers::legendary::LegendaryAdapter::eos_overlay_installed_path(
                     ) {
                         Some(path) => path,
-                        None => adapter.install_eos_overlay_streaming(
-                            job_progress.clone(),
-                            Some(job_cancel),
-                        )?,
+                        None => match wine_prefix
+                            .as_ref()
+                            .and_then(|prefix| {
+                                crate::providers::legendary::LegendaryAdapter::eos_overlay_installed_for_prefix(
+                                    prefix,
+                                )
+                            }) {
+                            Some(path) => path,
+                            None => adapter.install_eos_overlay_streaming(
+                                job_progress.clone(),
+                                Some(job_cancel),
+                            )?,
+                        },
                     };
                 let enabled = match wine_prefix {
                     Some(wine_prefix) if wine_prefix.join("user.reg").is_file() => {
@@ -4912,14 +5012,28 @@ impl QuarkApp {
                     "Overlay Epic installé dans {}{suffix}",
                     installed.display()
                 ));
+                if let Some(id) = self.eos_overlay_launch_pending.take() {
+                    self.eos_overlay_launch_bypass = Some(id.clone());
+                    self.launch(ctx, &id);
+                }
             }
             Ok(Err(error)) => {
                 self.eos_overlay_job = None;
                 self.toast_error(format!("Overlay Epic : {error}"));
+                // L'installation ne doit jamais empêcher de jouer : on reprend
+                // le lancement demandé, cette fois sans overlay.
+                if let Some(id) = self.eos_overlay_launch_pending.take() {
+                    self.eos_overlay_launch_bypass = Some(id.clone());
+                    self.launch(ctx, &id);
+                }
             }
             Err(TryRecvError::Disconnected) => {
                 self.eos_overlay_job = None;
                 self.toast_error("Overlay Epic : installation interrompue");
+                if let Some(id) = self.eos_overlay_launch_pending.take() {
+                    self.eos_overlay_launch_bypass = Some(id.clone());
+                    self.launch(ctx, &id);
+                }
             }
             Err(TryRecvError::Empty) => {
                 ctx.request_repaint_after(Duration::from_millis(160));
@@ -5857,12 +5971,19 @@ impl QuarkApp {
         // Un jeu déjà présent sur le disque ne doit jamais repartir en
         // « Installation… » : c'est l'état local qui fait foi.
         if game.install_state == crate::providers::InstallState::Installed
-            && game.install_path.as_ref().is_some_and(|path| path.is_dir())
+            && game
+                .install_path
+                .as_ref()
+                .is_some_and(|path| crate::providers::install_directory_is_complete(key, path))
         {
             self.toast_info(format!("{} est déjà installé", game.title));
             return;
         }
-        if game.install_path.as_ref().is_some_and(|path| path.is_dir()) {
+        if game
+            .install_path
+            .as_ref()
+            .is_some_and(|path| crate::providers::install_directory_is_complete(key, path))
+        {
             if let Some(record) = self
                 .lib
                 .provider_library
@@ -5957,6 +6078,93 @@ impl QuarkApp {
             Err(TryRecvError::Empty) => {
                 ctx.request_repaint_after(Duration::from_millis(150));
             }
+        }
+    }
+
+    /// Propose d'installer l'overlay EOS avant de lancer un jeu Epic qui n'en
+    /// a pas encore. Le lancement effectif attend la fin du téléchargement.
+    pub(crate) fn eos_overlay_launch_dialog(&mut self, ctx: &egui::Context) {
+        let Some(id) = self.eos_overlay_launch_offer.clone() else {
+            return;
+        };
+        let Some(title) = self.lib.get(&id).map(|game| game.name.clone()) else {
+            self.eos_overlay_launch_offer = None;
+            return;
+        };
+        if ctx.input(|input| input.key_pressed(egui::Key::Escape)) {
+            self.eos_overlay_launch_offer = None;
+            return;
+        }
+        let pal = self.pal;
+        let prefix = self
+            .lib
+            .get(&id)
+            .map(|game| game.wine_prefix_path(&self.lib.settings));
+        let mut install = false;
+        let mut skip = false;
+        let mut cancel = false;
+        let modal = egui::Modal::new(egui::Id::new("quark_eos_overlay_launch")).show(ctx, |ui| {
+            ui.set_width(540.0);
+            ui.label(
+                crate::i18n::rich_with("Installer l'overlay Epic (EOS) pour « {} » ?", &[&title])
+                    .size(17.0)
+                    .color(pal.text),
+            );
+            ui.add_space(8.0);
+            ui.label(
+                crate::i18n::rich(
+                    "L'overlay Epic (EOS) n'est pas encore installé. Il est nécessaire pour \
+                     afficher le panneau Epic et les succès en jeu. L'installer maintenant ?",
+                )
+                .size(12.5)
+                .color(pal.text_dim),
+            );
+            ui.add_space(6.0);
+            ui.label(
+                crate::i18n::rich(if self.eos_overlay_job.is_some() {
+                    "Un téléchargement de l'overlay est déjà en cours ; le jeu démarrera à la fin."
+                } else {
+                    "Le jeu démarrera dès que l'overlay sera installé. Si le préfixe Wine existe \
+                     déjà, l'overlay y sera activé avant le lancement."
+                })
+                .size(11.5)
+                .color(pal.text_faint),
+            );
+            ui.add_space(16.0);
+            ui.horizontal(|ui| {
+                if widgets::accent_button(
+                    ui,
+                    Vec2::new(152.0, 30.0),
+                    "Installer et lancer",
+                    &pal,
+                    true,
+                    Icon::Download,
+                )
+                .clicked()
+                {
+                    install = true;
+                }
+                if widgets::ghost_button(ui, "Lancer sans overlay", &pal, Icon::Play).clicked() {
+                    skip = true;
+                }
+                if widgets::ghost_button(ui, "Annuler", &pal, Icon::None).clicked() {
+                    cancel = true;
+                }
+            });
+        });
+        if modal.should_close() {
+            cancel = true;
+        }
+        if cancel {
+            self.eos_overlay_launch_offer = None;
+        } else if install {
+            self.eos_overlay_launch_offer = None;
+            self.eos_overlay_launch_pending = Some(id.clone());
+            self.start_eos_overlay_job(ctx, prefix);
+        } else if skip {
+            self.eos_overlay_launch_offer = None;
+            self.eos_overlay_launch_bypass = Some(id.clone());
+            self.launch(ctx, &id);
         }
     }
 
@@ -6318,11 +6526,10 @@ impl QuarkApp {
             .find(|game| game.key == key)
         {
             title = record.title.clone();
-            if record
-                .install_path
-                .as_ref()
-                .is_some_and(|path| path.is_dir())
-            {
+            let still_installed = record.install_path.as_ref().is_some_and(|path| {
+                crate::providers::install_directory_is_complete(&record.key, path)
+            });
+            if still_installed {
                 record.install_state = crate::providers::InstallState::Installed;
             } else {
                 record.install_state = if cancelled {
@@ -6396,9 +6603,47 @@ impl QuarkApp {
         std::thread::spawn(move || {
             let adapter =
                 crate::providers::gog::GogAdapter::new(crate::providers::gog::auth_config_path());
+            let make_installed = |install_path: PathBuf| {
+                let executable = crate::providers::gog::find_executable(&install_path, &title);
+                crate::providers::ProviderGame {
+                    key: key.clone(),
+                    title: title.clone(),
+                    owned: true,
+                    install_root: Some(destination.clone()),
+                    install_path: Some(install_path),
+                    custom_save_paths: Vec::new(),
+                    cover_url: None,
+                    install_exe: executable,
+                    install_state: crate::providers::InstallState::Installed,
+                    quark_game_id: None,
+                    capabilities: crate::providers::GameCapabilities {
+                        achievements: crate::providers::CapabilityState::Supported,
+                        ..Default::default()
+                    },
+                    last_synced: Some(crate::config::now_ts()),
+                }
+            };
             let result = (|| {
                 std::fs::create_dir_all(&destination)
                     .map_err(|_| "impossible de préparer la destination GOG choisie".to_string())?;
+                let mut operation = crate::providers::operations::InstallOperation::new(
+                    key.clone(),
+                    destination.clone(),
+                );
+                operation.start();
+                // Le jeu peut déjà être présent alors que la fiche Quark a
+                // perdu son état (ancienne version, synchronisation, import).
+                // Ne relance jamais gogdl sur ce dossier : il supprimerait son
+                // manifeste de reprise et exigerait toute la taille libre.
+                if let Some(install_path) =
+                    crate::providers::gog::existing_install_path(&destination, "", &key.product_id)
+                        .filter(|path| {
+                            crate::providers::gog::find_executable(path, &title).is_some()
+                        })
+                {
+                    operation.complete_verified(install_path.clone())?;
+                    return Ok(make_installed(install_path));
+                }
                 // Un pack Amazon Prime n'a aucun build de contenu : gogdl
                 // échouerait après avoir été lancé. On le refuse avant, avec
                 // une action compréhensible. Un pack résolu par la synchro est
@@ -6413,11 +6658,6 @@ impl QuarkApp {
                          le résoudre vers le jeu de base ; sinon, installe-le depuis GOG Galaxy."
                     ));
                 }
-                let mut operation = crate::providers::operations::InstallOperation::new(
-                    key.clone(),
-                    destination.clone(),
-                );
-                operation.start();
                 // gogdl ajoute lui-même le nom de dossier du jeu : `info` le
                 // publie, ce qui évite de chercher au hasard après coup. Un
                 // `info` illisible ne doit pas bloquer le téléchargement : le
@@ -6432,9 +6672,20 @@ impl QuarkApp {
                     .and_then(|output| {
                         crate::providers::gog::folder_from_info(&output.stdout).ok()
                     });
+                if let Some(install_path) = crate::providers::gog::existing_install_path(
+                    &destination,
+                    folder.as_deref().unwrap_or_default(),
+                    &key.product_id,
+                )
+                .filter(|path| crate::providers::gog::find_executable(path, &title).is_some())
+                {
+                    operation.complete_verified(install_path.clone())?;
+                    return Ok(make_installed(install_path));
+                }
                 // Même précaution que Heroic : un manifeste gogdl pointant vers
                 // une installation supprimée fait sortir gogdl en 0 sans rien
-                // télécharger (« Nothing to do »).
+                // télécharger (« Nothing to do »). Il n'est supprimé qu'après
+                // avoir constaté qu'aucun dossier de jeu n'existe déjà.
                 crate::providers::gog::clear_gogdl_install_manifest(&key.product_id)?;
                 let output = adapter.run_install_streaming(
                     crate::providers::gog::GogAdapter::install_args(
@@ -6446,9 +6697,14 @@ impl QuarkApp {
                     progress.clone(),
                 )?;
                 if output.exit_code != Some(0) {
+                    // Ne jamais adopter le dossier après un échec : gogdl a pu
+                    // créer le manifeste et l'exécutable avant de s'arrêter,
+                    // et le jeu serait alors marqué installé alors qu'il est
+                    // incomplet. Seuls les dossiers complets constatés AVANT
+                    // le lancement de gogdl sont adoptés.
                     return Err(format!(
                         "gogdl a échoué pendant l'installation ({})",
-                        crate::providers::runner::failure_hint(&output)
+                        crate::providers::gog::install_failure_hint(&output)
                     ));
                 }
                 let install_path = crate::providers::gog::resolve_install_path(
@@ -6465,25 +6721,7 @@ impl QuarkApp {
                     )
                 })?;
                 operation.complete_verified(install_path.clone())?;
-                let executable = crate::providers::gog::find_executable(&install_path, &title);
-                let installed = crate::providers::ProviderGame {
-                    key: key.clone(),
-                    title,
-                    owned: true,
-                    install_root: Some(destination.clone()),
-                    install_path: Some(install_path),
-                    custom_save_paths: Vec::new(),
-                    cover_url: None,
-                    install_exe: executable,
-                    install_state: crate::providers::InstallState::Installed,
-                    quark_game_id: None,
-                    capabilities: crate::providers::GameCapabilities {
-                        achievements: crate::providers::CapabilityState::Supported,
-                        ..Default::default()
-                    },
-                    last_synced: Some(crate::config::now_ts()),
-                };
-                Ok(installed)
+                Ok(make_installed(install_path))
             })();
             let _ = tx.send((key, result));
             repaint.request_repaint();

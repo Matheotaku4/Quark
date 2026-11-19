@@ -35,13 +35,22 @@ pub struct CommandOutput {
 /// bornée, et sans les lignes qui pourraient citer une adresse de compte. Sans
 /// elle, un échec d'installation ne disait rien d'utile.
 pub fn failure_hint(output: &CommandOutput) -> String {
-    let line = output
+    let lines: Vec<&str> = output
         .stderr
         .lines()
         .chain(output.stdout.lines())
         .map(str::trim)
-        .filter(|line| !line.is_empty())
-        .rfind(|line| !line.contains('@'));
+        .filter(|line| !line.is_empty() && !line.contains('@'))
+        .collect();
+    // gogdl imprime ses tailles et sa progression sur stdout, parfois APRÈS
+    // l'erreur réelle à cause du buffering. La dernière ligne n'est donc pas
+    // forcément la cause : on privilégie une ligne qui annonce un échec.
+    let line = lines
+        .iter()
+        .rev()
+        .find(|line| is_failure_line(line))
+        .or_else(|| lines.iter().rev().find(|line| !is_progress_line(line)))
+        .copied();
     let Some(line) = line else {
         return match output.exit_code {
             Some(code) => format!("code de sortie {code}"),
@@ -54,6 +63,39 @@ pub fn failure_hint(output: &CommandOutput) -> String {
         hint.push('\u{2026}');
     }
     hint
+}
+
+/// Ligne qui explique un échec plutôt qu'une simple mesure de progression.
+fn is_failure_line(line: &str) -> bool {
+    let lower = line.to_ascii_lowercase();
+    [
+        "not enough disk space",
+        "no space left",
+        "disk full",
+        "espace insuffisant",
+        "permission denied",
+        "access denied",
+        "authentication failed",
+        "unauthorized",
+        "failed",
+        "failure",
+        "error",
+        "unable to",
+        "refus",
+        "aborted",
+    ]
+    .iter()
+    .any(|marker| lower.contains(marker))
+}
+
+/// Tuples `(4.63, 'GB') 4972730887` et barres `= Progress: …` de gogdl.
+fn is_progress_line(line: &str) -> bool {
+    let lower = line.to_ascii_lowercase();
+    line.starts_with('(')
+        || line.starts_with('=')
+        || lower.contains("progress:")
+        || lower.contains("eta:")
+        || lower.contains("running for")
 }
 
 /// Avancement d'un téléchargement de boutique, partagé entre le processus
@@ -574,6 +616,21 @@ mod tests {
             exit_code: Some(3),
         };
         assert_eq!(failure_hint(&silent), "code de sortie 3");
+    }
+
+    #[test]
+    fn un_texte_de_progression_gogdl_ne_masque_pas_l_erreur_de_disque() {
+        let output = CommandOutput {
+            stdout: "(4.631216532550752, 'GB') 4972730887\n\
+                     Unable to proceed, Not enough disk space\n\
+                     (4.631216532550752, 'GB') 4972730887\n"
+                .to_string(),
+            stderr: String::new(),
+            exit_code: Some(2),
+        };
+        let hint = failure_hint(&output);
+        assert!(hint.contains("Not enough disk space"), "{hint}");
+        assert!(!hint.contains("4.631216532550752"), "{hint}");
     }
 
     #[test]

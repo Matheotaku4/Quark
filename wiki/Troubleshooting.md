@@ -105,6 +105,18 @@ Since 1.2, settings fill the window and scroll. If the **Close** button is not
 visible, `Escape` closes the page. If content looks cut off, resize the window:
 the layout is responsive but some blocks need a minimum width.
 
+## Media and trailers
+
+- **The trailer stutters or only advances when the mouse moves**: fixed in
+  1.8.7. The player now schedules its own repaints instead of waiting for an
+  input event. On an older build, keep moving the pointer over the window or
+  update Quark.
+- **No volume slider under the trailer**: the slider controls the
+  PulseAudio/PipeWire stream of the GStreamer process and needs `pactl`
+  (`pulseaudio-utils` on Debian/Ubuntu, `libpulse` on Arch) plus a running
+  PulseAudio or PipeWire server. With a direct ALSA sink the trailer still
+  plays, but its volume must be changed with the system mixer.
+
 ## Legendary, gogdl and accounts
 
 - **Legendary not found**: check `python3`, then reinstall the tool in **Stores &
@@ -115,8 +127,27 @@ the layout is responsive but some blocks need a minimum width.
   private permissions.
 - **A store game does not appear**: run a synchronization and check that the
   account is connected and the game is owned.
-- **Download stuck**: cancel and start again; check disk space and the
-  installation folder.
+- **GOG installation fails with "Not enough disk space" while the game is
+  already installed**: Quark now recognizes the existing `goggame-<id>.info`
+  before starting gogdl and adopts the folder instead of downloading it again.
+  The folder must be complete: the executable declared in the manifest's
+  `playTasks` has to exist, and a gogdl/Galaxy resume marker blocks adoption.
+  Retry **Install** once; if the game is in another folder, point the
+  installation folder at it first. If a synchronization returns the game to
+  **Not installed**, the declared executable is missing: let gogdl repair the
+  installation instead of forcing it installed.
+- **No Epic overlay in game**: the overlay is a separate download. Launching
+  an Epic game now offers **Install and launch** when it is missing. The game
+  starts after the download, and the overlay is enabled in the prefix when it
+  already exists. An overlay installed inside the game prefix (Epic Games
+  Launcher, EOS artifacts or `OverlayPath`) is recognized too. You can also
+  install it from **Settings → Stores & tools → Install the Epic overlay
+  (EOS)**. A new Wine prefix activates it on the following launch. `Shift+F3`
+  opens it in game.
+- **Epic shows connected without a direct session**: Quark now distinguishes a
+  direct Epic session from a Legendary session. A Legendary connection is
+  enough to install and launch, but direct account actions require the direct
+  connection.
 
 ## Cloud saves
 

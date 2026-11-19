@@ -216,8 +216,10 @@ impl QuarkApp {
         pal: &Palette,
     ) {
         let epic_account = crate::providers::epic_account::connected_account();
-        let epic_logged_in =
-            epic_account.is_some() || crate::providers::legendary::LegendaryAdapter::is_logged_in();
+        let epic_direct = epic_account.is_some();
+        let legendary_connected = crate::providers::legendary::LegendaryAdapter::is_logged_in();
+        let epic_logged_in = epic_direct || legendary_connected;
+        let eos_overlay_installed = self.eos_overlay_install();
         let gog_logged_in = crate::providers::gog::GogAdapter::is_logged_in();
         let itch_logged_in = self.credentials.itch_api_key.is_some();
         let legendary_ready = ManagedToolId::Legendary.installed_path().is_file();
@@ -244,11 +246,25 @@ impl QuarkApp {
                 (Some((_, name)), _) if !name.is_empty() => {
                     format!("Connecté · {name} · session directe")
                 }
-                _ => epic_status(epic_logged_in, legendary_ready).to_string(),
+                _ => epic_status(epic_direct, legendary_connected, legendary_ready).to_string(),
             },
-            (!epic_active && !epic_logged_in).then_some("Se connecter"),
+            epic_connect_action(epic_active, epic_direct, legendary_connected),
         ) {
             open_login = Some(Provider::Epic);
+        }
+        if epic_logged_in && eos_overlay_installed.is_none() {
+            ui.horizontal_wrapped(|ui| {
+                ui.label(
+                    crate::i18n::rich("Overlay Epic (EOS) non installé.")
+                        .size(11.5)
+                        .color(pal.text_faint),
+                );
+                if widgets::ghost_button(ui, "Installer l'overlay Epic (EOS)", pal, Icon::Download)
+                    .clicked()
+                {
+                    self.install_eos_overlay_global(ctx);
+                }
+            });
         }
         if epic_active && let Some(login) = self.provider_login.as_mut() {
             action = login_form(
@@ -392,9 +408,25 @@ fn account_row(
     clicked
 }
 
-fn epic_status(logged_in: bool, tool_ready: bool) -> &'static str {
-    if logged_in {
-        "Connecté · session Epic directe enregistrée"
+/// Bouton de connexion Epic : une session Legendary déjà présente ne doit pas
+/// cacher l'absence de session directe.
+fn epic_connect_action(active: bool, direct: bool, legendary: bool) -> Option<&'static str> {
+    if active || direct {
+        None
+    } else if legendary {
+        Some("Connecter la session directe")
+    } else {
+        Some("Se connecter")
+    }
+}
+
+fn epic_status(direct: bool, legendary: bool, tool_ready: bool) -> &'static str {
+    if direct && legendary {
+        "Connecté · session directe + session Legendary"
+    } else if direct {
+        "Connecté · session directe ; Legendary reste requis pour installer"
+    } else if legendary {
+        "Connecté via Legendary · connexion directe absente"
     } else if tool_ready {
         "Non connecté · connexion directe avec un code Epic"
     } else {
@@ -491,4 +523,37 @@ fn login_form(
         });
     ui.add_space(4.0);
     action
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{epic_connect_action, epic_status};
+
+    #[test]
+    fn une_session_legendary_seule_n_est_pas_affichee_comme_une_session_directe() {
+        let status = epic_status(false, true, true);
+        assert!(status.contains("Legendary"));
+        assert!(status.contains("directe absente"));
+        assert!(!status.contains("Connecté · session directe"));
+    }
+
+    #[test]
+    fn les_deux_sessions_epic_sont_distinguées() {
+        assert!(epic_status(true, true, true).contains("directe + session Legendary"));
+        assert!(epic_status(true, false, true).contains("directe"));
+        assert!(epic_status(false, false, true).contains("Non connecté"));
+    }
+
+    #[test]
+    fn une_session_legendary_laisse_le_bouton_de_connexion_directe() {
+        assert_eq!(
+            epic_connect_action(false, false, true),
+            Some("Connecter la session directe")
+        );
+        assert_eq!(epic_connect_action(false, true, true), None);
+        assert_eq!(
+            epic_connect_action(false, false, false),
+            Some("Se connecter")
+        );
+    }
 }

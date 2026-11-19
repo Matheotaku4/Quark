@@ -282,21 +282,21 @@ fn dynamic_english(text: &str) -> String {
 pub fn release_summary() -> [&'static str; 6] {
     if !matches!(language(), UiLanguage::French) {
         [
-            "Home is now its own page, with a dedicated tab, a full-width hero and a carousel of recent games.",
-            "A game page opens full-width from the grid, and Back returns to Home or the library depending on where you came from.",
-            "One global search (Ctrl+F, Ctrl+K or the magnifier) covers local games, store games and settings.",
-            "Settings can be searched by task: type “cloud saves” and the right page opens directly.",
-            "Loading, error and missing-artwork states now share the same layout, without page jumps.",
-            "All five interface languages are checked at 900, 1024 and 1360 px, with the same visual landmarks.",
+            "Incomplete GOG folders can no longer be marked installed: the manifest and every declared launch file are checked.",
+            "An existing GOG game is adopted before gogdl runs again, and a disk-space failure is explained clearly.",
+            "The Epic overlay is offered at launch, enabled in the game prefix, and its real state appears in Settings and the session log.",
+            "A Legendary connection no longer prevents connecting the direct Epic session.",
+            "Trailer playback keeps running when the pointer stops moving.",
+            "A slider adjusts the trailer volume through PulseAudio or PipeWire without restarting the video.",
         ]
     } else {
         [
-            "L'accueil est désormais une page autonome avec son onglet, un hero plein écran et un carrousel de jeux récents.",
-            "La fiche d'un jeu s'ouvre en pleine page depuis la grille, avec un retour contextuel vers l'accueil ou la bibliothèque.",
-            "Une recherche globale unique (Ctrl+F, Ctrl+K ou la loupe) réunit les jeux locaux, les jeux de boutique et les réglages.",
-            "Les réglages se cherchent par tâche : tapez « sauvegardes cloud » et la bonne page s'ouvre directement.",
-            "Les chargements, erreurs et artworks manquants ont désormais des états communs, sans saut de mise en page.",
-            "Les cinq langues de l'interface sont vérifiées aux largeurs 900, 1024 et 1360 px, avec les mêmes repères visuels.",
+            "Les dossiers GOG incomplets ne peuvent plus être marqués installés : le manifeste et tous les fichiers de lancement déclarés sont vérifiés.",
+            "Un jeu GOG déjà présent est adopté avant de relancer gogdl, et une erreur de disque insuffisant est expliquée clairement.",
+            "L'overlay Epic est proposé au lancement, activé dans le préfixe du jeu et son état réel apparaît dans les Paramètres et le journal.",
+            "Une connexion Legendary seule n'empêche plus de connecter la session Epic directe.",
+            "La lecture d'une bande-annonce continue quand la souris ne bouge plus.",
+            "Un curseur règle le volume de la bande-annonce via PulseAudio ou PipeWire, sans redémarrer la vidéo.",
         ]
     }
 }
@@ -455,11 +455,11 @@ mod tests {
     fn le_resume_de_version_suit_la_langue() {
         let _guard = language_lock();
         set_language(UiLanguage::French);
-        assert!(release_summary()[0].starts_with("L'accueil est désormais"));
-        assert!(release_summary()[1].starts_with("La fiche d'un jeu"));
+        assert!(release_summary()[0].starts_with("Les dossiers GOG incomplets"));
+        assert!(release_summary()[1].starts_with("Un jeu GOG"));
         set_language(UiLanguage::English);
-        assert!(release_summary()[0].starts_with("Home is now"));
-        assert!(release_summary()[1].starts_with("A game page"));
+        assert!(release_summary()[0].starts_with("Incomplete GOG folders"));
+        assert!(release_summary()[1].starts_with("An existing GOG game"));
         assert!(release_title().starts_with("What's new"));
         set_language(UiLanguage::French);
     }

@@ -5,27 +5,28 @@ games and your Steam, Epic Games and GOG libraries together, launches Windows
 games through Proton or umu-launcher, and adds an in-game overlay, screenshots,
 achievements and verified local saves.
 
-This documentation describes **Quark 1.8.6**. It is also versioned in the
+This documentation describes **Quark 1.8.7**. It is also versioned in the
 repository under [`wiki/`](https://github.com/Matheotaku4/Quark/tree/main/wiki).
 
 ![Quark home](https://raw.githubusercontent.com/Matheotaku4/Quark/main/docs/images/home-en.png)
 
-## What's new in 1.8.6
+## What's new in 1.8.7
 
-- **Trailers play inside Quark.** The Media tab now plays Steam trailers (HLS,
-  DASH, MP4 and WebM) with sound. GStreamer runs in a separate process, so a
-  decoder failure cannot take the launcher down, and a missing player falls
-  back to the Steam page with a clear message.
-- **A Steam-like media strip.** The large view shows the selected trailer or
-  screenshot. Below it, a horizontal strip lists the trailer first, then the
-  screenshots. Clicking a screenshot replaces the trailer with the image;
-  clicking the trailer brings it back full size and starts playback.
-- **Horizontal navigation.** The strip scrolls with the wheel, by dragging or
-  with the previous/next arrows. The selected item keeps an accent border.
-- **Game logs document store connections.** Every session starts with the GOG
-  (gogdl) and Epic (direct session and Legendary) connection state, tool
-  presence and the launched game's store. No token is ever written.
-- **Tests:** 344 unit tests, plus 4 live network tests run separately (a real
+- **Incomplete GOG folders are never marked installed.** Adoption checks the
+  manifest, every launch file it declares and the absence of gogdl/Galaxy
+  resume markers; library sync, crash recovery and the periodic probe use the
+  same rule.
+- **Existing GOG installs are kept.** A complete folder is adopted before gogdl
+  runs again, and disk-space failures are explained instead of exposing a
+  progress tuple.
+- **The Epic overlay is offered at launch and detected in the prefix.** Quark
+  offers to install it before playing, enables it in the game prefix, and
+  reports the real state in Settings and the session log. A Legendary-only
+  session no longer hides the direct Epic sign-in button.
+- **Trailer playback keeps running when the pointer stops.** The player
+  schedules its own repaints, and a slider adjusts the PulseAudio/PipeWire
+  stream without restarting the video.
+- **Tests:** 359 unit tests, plus 4 live network tests run separately (a real
   HLS trailer, Steam media, GOG pack resolution and the game's Windows builds).
 
 ## Where to start

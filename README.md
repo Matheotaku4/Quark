@@ -6,7 +6,7 @@ titles you own, launches Windows games through Proton (or umu-launcher), and sta
 the way with an AMOLED interface, a store page, save snapshots and an in-game
 overlay.
 
-This is the **1.8.6** documentation. Older release notes are kept on the GitHub
+This is the **1.8.7** documentation. Older release notes are kept on the GitHub
 releases page; `docs/release-notes.md` only describes the release currently
 being published.
 
@@ -28,17 +28,17 @@ The wiki is published from the versioned source in [`wiki/`](wiki/) by the
 | --- | --- |
 | ![Onboarding](docs/images/onboarding-fr.png) | ![What's new](docs/images/whats-new-fr.png) |
 
-## What's new in 1.8.6
+## What's new in 1.8.7
 
-- **La bande-annonce se lit dans Quark.** L'onglet Média lit les trailers Steam (HLS, DASH, MP4, WebM) dans un lecteur intégré, avec le son. GStreamer tourne dans un processus séparé : Quark reste lançable et affiche un repli propre s'il manque.
-- **Une pellicule façon Steam.** La grande vue montre la vidéo ou la capture sélectionnée. En dessous, la liste horizontale place la vidéo en premier, puis les captures ; un clic sur une capture remplace la vidéo, un clic sur la vidéo la remet en grand et démarre la lecture.
-- **Navigation dans la pellicule.** Molette, glisser-déposer et flèches précédent/suivant font défiler la liste horizontalement. La capture ou la vidéo choisie reste entourée d'un liseré d'accent.
-- **Le journal des jeux documente les connexions boutiques.** Chaque session commence par l'état des sessions GOG (gogdl) et Epic (connexion directe et Legendary), la présence des outils et la boutique du jeu lancé. Aucun jeton n'est écrit.
-- **Tests** : 344 tests unitaires, plus 4 tests réseau exécutés séparément (bande-annonce HLS réelle, médias Steam, résolution du pack GOG et builds Windows du jeu).
+- **Les dossiers GOG incomplets ne sont plus jamais marqués installés.** L'adoption vérifie le manifeste, tous les fichiers de lancement qu'il déclare et l'absence de reprise gogdl/Galaxy ; la synchronisation, la reprise après fermeture et la sonde périodique appliquent la même règle.
+- **Les installations GOG existantes sont conservées.** Un dossier complet est adopté avant de relancer gogdl, et une erreur de disque insuffisant est expliquée clairement au lieu d'afficher un tuple de progression.
+- **L'overlay Epic est proposé au lancement et reconnu dans le préfixe.** Quark propose de l'installer avant de jouer, l'active dans le préfixe du jeu et affiche son état réel dans les Paramètres et le journal. Une connexion Legendary seule laisse le bouton de session Epic directe.
+- **La lecture des bandes-annonces ne s'arrête plus quand la souris est immobile.** Le lecteur planifie ses repeints, et un curseur règle le volume PulseAudio/PipeWire sans redémarrer la vidéo.
+- **Tests** : 359 tests unitaires, plus 4 tests réseau exécutés séparément (bande-annonce HLS réelle, médias Steam, résolution du pack GOG et builds Windows du jeu).
 
 ## Table of contents
 
-1. [What's new in 1.8.6](#whats-new-in-186)
+1. [What's new in 1.8.7](#whats-new-in-187)
 2. [What Quark does](#what-quark-does)
 3. [Installation](#installation)
 4. [First launch](#first-launch)
@@ -98,8 +98,8 @@ Download `quark-<version>-linux-x86_64.tar.gz` and its `.sha256` file from the
 then verify and unpack it:
 
 ```bash
-sha256sum -c quark-1.8.6-linux-x86_64.tar.gz.sha256
-tar -xzf quark-1.8.6-linux-x86_64.tar.gz
+sha256sum -c quark-1.8.7-linux-x86_64.tar.gz.sha256
+tar -xzf quark-1.8.7-linux-x86_64.tar.gz
 ./quark/quark
 ```
 
@@ -121,7 +121,9 @@ X11 or Wayland, OpenGL and the usual font/GL libraries of your distribution.
 For inline trailers, install GStreamer with `gst-launch-1.0` and the HLS/H.264
 plugins (`gstreamer1.0-tools`, `gstreamer1.0-plugins-good` and
 `gstreamer1.0-libav` on Debian/Ubuntu). Without them, the Media tab shows the
-thumbnail and offers the Steam page instead.
+thumbnail and offers the Steam page instead. The trailer volume slider also
+needs `pactl` and a PulseAudio or PipeWire server; without it, the slider stays
+hidden.
 
 ### Build from source
 
@@ -562,7 +564,9 @@ their existing GitHub releases.
 - GOG cloud saves need an explicit save folder; gogdl cannot infer it from the
   installation path. Epic can compute its path with Legendary.
 - Inline trailer playback needs GStreamer and its HLS/H.264 plugins; the archive
-  does not bundle them. The media gallery remains limited to Steam-linked games.
+  does not bundle them. The volume slider additionally needs `pactl` and a
+  PulseAudio or PipeWire server. The media gallery remains limited to
+  Steam-linked games.
 - Epic installation and launch still go through Legendary. The direct session
   removes the Legendary requirement for the library, not for those two actions.
 - itch.io installs only archives (`.zip`, `.tar`, `.tar.gz`, `.tgz`). An upload

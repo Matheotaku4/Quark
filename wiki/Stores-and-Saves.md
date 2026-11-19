@@ -60,6 +60,20 @@ opens its actions.
 - The download icon in the top bar lists every transfer.
 - A cancelled installation must not be considered complete: check its state in
   **My games** before launching.
+- Before starting gogdl, Quark looks for an existing `goggame-<id>.info` in the
+  chosen installation folder. A game left by an earlier attempt or by GOG
+  Galaxy is adopted instead of downloaded again, but only when the manifest is
+  complete: the executable declared in its `playTasks` must exist (matching
+  case-insensitively), and no gogdl/Galaxy resume marker may be left. A folder
+  with only `setup.exe` or `__redist` files is never considered installed.
+
+For the Epic overlay, launching a game without it offers to install it before
+the game starts. An overlay already present in the game prefix (Epic Games
+Launcher, EOS artifacts or `OverlayPath`) is detected and enabled without a new
+download. You can also open **Settings → Stores & tools** and install it once;
+Quark then enables it in the game prefix before each launch. The first launch of
+a new prefix enables it on the next launch, because Wine must create `user.reg`
+first.
 
 ## Epic and GOG cloud saves
 

@@ -77,7 +77,9 @@ pub fn recover_interrupted_installs(games: &mut [ProviderGame]) -> usize {
                 | InstallState::Updating
                 | InstallState::Repairing
         ) {
-            let installed = game.install_path.as_ref().is_some_and(|path| path.is_dir());
+            let installed = game.install_path.as_ref().is_some_and(|path| {
+                crate::providers::install_directory_is_complete(&game.key, path)
+            });
             game.install_state = if installed {
                 InstallState::Installed
             } else {
@@ -328,6 +330,24 @@ mod tests {
         assert!(!game.exists());
         let _ = std::fs::remove_dir_all(&root);
         assert!(remove_install_directory(&game, &root).is_err());
+    }
+
+    #[test]
+    fn une_reprise_gog_exige_un_manifeste_complet() {
+        let root = std::env::temp_dir().join(format!(
+            "quark-install-recover-gog-{}-{}",
+            std::process::id(),
+            crate::config::now_ts()
+        ));
+        std::fs::create_dir_all(&root).unwrap();
+        let mut incomplete = record(Provider::Gog, "123", "Jeu GOG");
+        incomplete.install_state = InstallState::Installing;
+        incomplete.install_path = Some(root.clone());
+        let mut games = vec![incomplete];
+        assert_eq!(recover_interrupted_installs(&mut games), 1);
+        assert_eq!(games[0].install_state, InstallState::NotInstalled);
+        assert!(games[0].install_path.is_none());
+        let _ = std::fs::remove_dir_all(&root);
     }
 
     #[cfg(unix)]

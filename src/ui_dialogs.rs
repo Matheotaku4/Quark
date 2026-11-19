@@ -2166,7 +2166,7 @@ impl QuarkApp {
                                             .size(12.0)
                                             .color(pal.text_dim),
                                     );
-                                } else if let Some(path) = crate::providers::legendary::LegendaryAdapter::eos_overlay_installed_path() {
+                                } else if let Some(path) = self.eos_overlay_install() {
                                     ui.label(
                                         crate::i18n::rich(format!(
                                             "Installé · {}",

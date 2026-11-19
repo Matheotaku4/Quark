@@ -665,7 +665,8 @@ fn launch_from_cli(query: &str) -> Result<(), String> {
         .iter()
         .find(|record| record.quark_game_id.as_deref() == Some(game.id.as_str()))
         .map(|record| &record.key);
-    let diagnostics = providers::connection_diagnostics(key);
+    let wine_prefix = game.wine_prefix_path(&lib.settings);
+    let diagnostics = providers::connection_diagnostics(key, Some(&wine_prefix));
     let mut session = session::start(game, &resolved, &diagnostics)
         .map_err(|err| format!("Lancement de {} impossible : {err}", game.name))?;
     println!("{} lancé · {}", game.name, resolved.label());

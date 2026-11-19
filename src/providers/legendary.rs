@@ -3,7 +3,7 @@
 use super::model::{CapabilityState, InstallState, Provider, ProviderGame, ProviderGameKey};
 use super::runner::{CommandOutput, ProviderCommand};
 use super::tools::ManagedToolId;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::time::Duration;
 
 /// Page de connexion manuelle de `legendary auth --disable-webview` : elle
@@ -168,7 +168,8 @@ impl LegendaryAdapter {
     }
 
     /// Dossier de l'overlay déjà installé, lu dans l'état que Legendary écrit
-    /// à côté de sa configuration.
+    /// à côté de sa configuration. Un dossier vide ne suffit pas : Legendary
+    /// considère l'overlay installé seulement si sa DLL est présente.
     pub fn eos_overlay_installed_path() -> Option<PathBuf> {
         #[derive(serde::Deserialize)]
         struct OverlayInstall {
@@ -177,12 +178,33 @@ impl LegendaryAdapter {
         let config = config_dir().join("overlay_install.json");
         if let Ok(bytes) = std::fs::read(&config)
             && let Ok(state) = serde_json::from_slice::<OverlayInstall>(&bytes)
-            && state.install_path.is_dir()
+            && is_eos_overlay_dir(&state.install_path)
         {
             return Some(state.install_path);
         }
         let fallback = Self::eos_overlay_default_path();
-        fallback.is_dir().then_some(fallback)
+        is_eos_overlay_dir(&fallback).then_some(fallback)
+    }
+
+    /// Overlay installé **dans le préfixe Wine du jeu** (Epic Games Launcher,
+    /// EOS managed artifacts, ou chemin écrit par `eos-overlay enable`).
+    /// Sans cela, un overlay installé par le launcher était annoncé absent.
+    pub fn eos_overlay_installed_for_prefix(wine_prefix: &Path) -> Option<PathBuf> {
+        let candidates = [
+            wine_prefix
+                .join("drive_c/Program Files (x86)/Epic Games/Launcher/Portal/Extras/Overlay"),
+            wine_prefix.join("drive_c/Program Files/Epic Games/Launcher/Portal/Extras/Overlay"),
+            wine_prefix.join(
+                "drive_c/Program Files (x86)/Epic Games/Epic Online Services/managedArtifacts/98bc04bc842e4906993fd6d6644ffb8d",
+            ),
+            wine_prefix.join(
+                "drive_c/Program Files/Epic Games/Epic Online Services/managedArtifacts/98bc04bc842e4906993fd6d6644ffb8d",
+            ),
+        ];
+        if let Some(path) = candidates.into_iter().find(|path| is_eos_overlay_dir(path)) {
+            return Some(path);
+        }
+        registry_overlay_path(wine_prefix).filter(|path| is_eos_overlay_dir(path))
     }
 
     pub fn eos_overlay_install_args(path: &std::path::Path) -> Vec<String> {
@@ -230,15 +252,21 @@ impl LegendaryAdapter {
                 super::runner::failure_hint(&output)
             ));
         }
-        Ok(path)
+        let installed = Self::eos_overlay_installed_path().unwrap_or(path);
+        if !is_eos_overlay_dir(&installed) {
+            return Err("Legendary a terminé sans installer la DLL de l'overlay Epic".to_string());
+        }
+        Ok(installed)
     }
 
     pub fn enable_eos_overlay(&self, wine_prefix: &std::path::Path) -> Result<(), String> {
-        if Self::eos_overlay_installed_path().is_none() {
-            return Err("overlay Epic non installé".to_string());
-        }
         if !wine_prefix.join("user.reg").is_file() {
             return Err("préfixe Wine pas encore initialisé".to_string());
+        }
+        if Self::eos_overlay_installed_path().is_none()
+            && Self::eos_overlay_installed_for_prefix(wine_prefix).is_none()
+        {
+            return Err("overlay Epic non installé".to_string());
         }
         let output = self.run(Self::eos_overlay_enable_args(wine_prefix), None)?;
         if output.exit_code != Some(0) {
@@ -1174,6 +1202,40 @@ fn ensure_success(output: &CommandOutput) -> Result<(), String> {
     }
 }
 
+fn is_eos_overlay_dir(path: &Path) -> bool {
+    path.join("EOSOVH-Win64-Shipping.dll").is_file()
+}
+
+/// Lit `HKCU\\Software\\Epic Games\\EOS\\OverlayPath` dans `user.reg`.
+/// Legendary accepte ce chemin quand l'overlay a été installé par le launcher
+/// Epic hors du dossier géré par Quark.
+fn registry_overlay_path(prefix: &Path) -> Option<PathBuf> {
+    let contents = std::fs::read_to_string(prefix.join("user.reg")).ok()?;
+    for line in contents.lines() {
+        if !line.contains("OverlayPath") {
+            continue;
+        }
+        let Some((_, raw)) = line.split_once('=') else {
+            continue;
+        };
+        let raw = raw.trim().trim_matches('"').replace('\\', "/");
+        if raw.is_empty() {
+            continue;
+        }
+        let path = if let Some(rest) = raw.strip_prefix("C:") {
+            prefix.join("drive_c").join(rest.trim_start_matches('/'))
+        } else if let Some(rest) = raw.strip_prefix("Z:") {
+            PathBuf::from(rest)
+        } else {
+            PathBuf::from(&raw)
+        };
+        if is_eos_overlay_dir(&path) {
+            return Some(path);
+        }
+    }
+    None
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1720,5 +1782,48 @@ Empty,,1.0,False\n";
         assert_eq!(enable[0], "eos-overlay");
         assert_eq!(enable[1], "enable");
         assert_eq!(enable[3], "/tmp/prefix/pfx");
+    }
+
+    #[test]
+    fn un_overlay_installe_dans_le_prefixe_est_reconnu() {
+        let prefix = std::env::temp_dir().join(format!(
+            "quark-eos-prefix-{}-{}",
+            std::process::id(),
+            crate::config::now_ts()
+        ));
+        let overlay =
+            prefix.join("drive_c/Program Files (x86)/Epic Games/Launcher/Portal/Extras/Overlay");
+        std::fs::create_dir_all(&overlay).unwrap();
+        assert!(LegendaryAdapter::eos_overlay_installed_for_prefix(&prefix).is_none());
+        std::fs::write(overlay.join("EOSOVH-Win64-Shipping.dll"), b"dll").unwrap();
+        assert_eq!(
+            LegendaryAdapter::eos_overlay_installed_for_prefix(&prefix),
+            Some(overlay)
+        );
+        let _ = std::fs::remove_dir_all(&prefix);
+    }
+
+    #[test]
+    fn un_chemin_overlaypath_dans_user_reg_est_reconnu() {
+        let prefix = std::env::temp_dir().join(format!(
+            "quark-eos-registry-{}-{}",
+            std::process::id(),
+            crate::config::now_ts()
+        ));
+        let overlay = prefix.join("drive_c/Custom/Overlay");
+        std::fs::create_dir_all(&overlay).unwrap();
+        std::fs::write(overlay.join("EOSOVH-Win64-Shipping.dll"), b"dll").unwrap();
+        std::fs::write(
+            prefix.join("user.reg"),
+            r#"[Software\\Epic Games\\EOS]
+"OverlayPath"="C:\\Custom\\Overlay"
+"#,
+        )
+        .unwrap();
+        assert_eq!(
+            LegendaryAdapter::eos_overlay_installed_for_prefix(&prefix),
+            Some(overlay)
+        );
+        let _ = std::fs::remove_dir_all(&prefix);
     }
 }

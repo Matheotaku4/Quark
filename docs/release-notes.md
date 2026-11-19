@@ -1,4 +1,28 @@
-## Quark 1.8.6 — La bande-annonce se lit dans Quark
+# Quark 1.8.7 — corrections GOG, overlay Epic et lecteur vidéo
+
+### Correctifs
+
+- **Une installation GOG déjà présente n'est plus retéléchargée.** Avant de lancer gogdl, Quark cherche `goggame-<id>.info` dans le dossier choisi et adopte le jeu s'il contient aussi un exécutable. Le manifeste de reprise gogdl n'est supprimé qu'après cette vérification. Après un échec de gogdl, Quark n'adopte jamais le dossier : il pourrait être partiel.
+- **Les erreurs gogdl redeviennent lisibles.** Une erreur « Not enough disk space » est expliquée en français au lieu d'afficher le tuple de taille de la dernière ligne de progression.
+- **L'overlay Epic est proposé au lancement.** Si l'overlay EOS manque, Quark propose de l'installer avant de lancer le jeu, attend la fin du téléchargement puis active l'overlay dans le préfixe s'il existe déjà. Un bouton permet aussi de lancer sans overlay.
+- **L'overlay installé dans un préfixe est reconnu.** Quark vérifie la DLL EOS dans les dossiers du launcher Epic, les artefacts EOS et `OverlayPath` de `user.reg`, au lieu de regarder uniquement son propre dossier global. Il active alors l'overlay sans proposer un téléchargement inutile.
+- **L'overlay Epic est visible dans les diagnostics.** Le journal de session indique désormais `Epic · overlay EOS installé (<chemin>)` — y compris quand l'overlay vient du préfixe du jeu — ou `absent`, et un lancement sans overlay ajoute un avertissement explicite au lieu de rester silencieux.
+- **Le statut de l'overlay tient compte du préfixe.** La carte **Paramètres → Boutiques & outils** ne dit plus « non installé » quand la DLL EOS est présente dans le préfixe d'un jeu Epic lié ; elle affiche le chemin réellement détecté.
+- **Le statut Epic distingue les deux sessions.** Une connexion Legendary seule n'est plus présentée comme une session Epic directe ; l'interface indique « Connecté via Legendary · connexion directe absente », propose d'installer l'overlay EOS et laisse un bouton pour connecter la session directe.
+- **L'adoption GOG exige la preuve du manifeste.** Un dossier n'est repris que si son `goggame-<id>.info` est un JSON complet avec le bon identifiant, si l'exécutable déclaré par ses `playTasks` existe (casse comprise) et si aucun marqueur de reprise gogdl/Galaxy n'est présent. Un `setup.exe` ou un fichier de `__redist` ne suffit plus. La synchronisation de bibliothèque, la reprise après fermeture et la sonde périodique utilisent la même vérification : un dossier incomplet repasse immédiatement en « non installé ». Un échec de gogdl n'adopte jamais son dossier partiel.
+
+### Lecteur vidéo
+
+- **La lecture continue sans bouger la souris.** Le lecteur planifie lui-même ses repeints (environ 60 Hz) au lieu d'attendre un événement d'entrée : la vidéo ne s'arrête plus quand le pointeur est immobile.
+- **Volume réglable.** Un curseur sous la vidéo règle le flux PulseAudio/PipeWire du processus GStreamer via `pactl`, sans redémarrer la lecture. Le réglage est conservé d'une bande-annonce à l'autre. Sans `pactl` ou sans serveur PulseAudio/PipeWire, le curseur reste masqué et la lecture fonctionne comme avant.
+
+### Vérifications
+
+- `cargo fmt --all -- --check` : OK.
+- `cargo test --locked --offline` : 359 tests réussis, 4 tests réseau ignorés.
+- `cargo clippy --all-targets --locked -- -D warnings` : OK.
+
+# Quark 1.8.6 — La bande-annonce se lit dans Quark
 
 ### Nouveautés
 
