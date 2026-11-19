@@ -63,9 +63,11 @@ opens its actions.
 - Before starting gogdl, Quark looks for an existing `goggame-<id>.info` in the
   chosen installation folder. A game left by an earlier attempt or by GOG
   Galaxy is adopted instead of downloaded again, but only when the manifest is
-  complete: the executable declared in its `playTasks` must exist (matching
-  case-insensitively), and no gogdl/Galaxy resume marker may be left. A folder
-  with only `setup.exe` or `__redist` files is never considered installed.
+  complete: the primary executable and every `game`-category executable declared
+  in its `playTasks` must exist (matching case-insensitively), and no
+  gogdl/Galaxy resume marker may be left. Optional manuals, configuration tools
+  and URLTask entries do not block adoption. A folder with only `setup.exe` or
+  `__redist` files is never considered installed.
 
 For the Epic overlay, launching a game without it offers to install it before
 the game starts. An overlay already present in the game prefix (Epic Games

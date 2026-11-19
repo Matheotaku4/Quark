@@ -115,7 +115,10 @@ the layout is responsive but some blocks need a minimum width.
   PulseAudio/PipeWire stream of the GStreamer process and needs `pactl`
   (`pulseaudio-utils` on Debian/Ubuntu, `libpulse` on Arch) plus a running
   PulseAudio or PipeWire server. With a direct ALSA sink the trailer still
-  plays, but its volume must be changed with the system mixer.
+  plays, but its volume must be changed with the system mixer. If `pulsesink`
+  fails before the first frame, Quark retries with `autoaudiosink`; the trailer
+  plays, but the slider stays hidden because that output cannot be controlled
+  through `pactl`.
 
 ## Legendary, gogdl and accounts
 
@@ -130,8 +133,10 @@ the layout is responsive but some blocks need a minimum width.
 - **GOG installation fails with "Not enough disk space" while the game is
   already installed**: Quark now recognizes the existing `goggame-<id>.info`
   before starting gogdl and adopts the folder instead of downloading it again.
-  The folder must be complete: the executable declared in the manifest's
-  `playTasks` has to exist, and a gogdl/Galaxy resume marker blocks adoption.
+  The folder must be complete: the primary executable and every `game`-category
+  executable declared in the manifest's `playTasks` have to exist, and a
+  gogdl/Galaxy resume marker blocks adoption. Optional manuals, configuration
+  tools and URLTask entries do not block it.
   Retry **Install** once; if the game is in another folder, point the
   installation folder at it first. If a synchronization returns the game to
   **Not installed**, the declared executable is missing: let gogdl repair the

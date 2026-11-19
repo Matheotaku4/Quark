@@ -55,18 +55,33 @@ pub struct MediaPlayer {
     volume_tx: Option<Sender<f32>>,
     volume_supported: bool,
     volume_synced: bool,
+    audio_fallback: bool,
 }
 
 impl MediaPlayer {
     /// Démarre la lecture dans un processus GStreamer isolé.
     pub fn start(url: &str) -> Result<Self, String> {
+        let (audio, volume_supported) = audio_sink();
+        // `QUARK_GST_AUDIO_SINK` est un choix explicite : on ne le remplace
+        // jamais par le secours automatique.
+        let audio_fallback =
+            std::env::var_os("QUARK_GST_AUDIO_SINK").is_none() && audio == "pulsesink";
+        Self::start_with_sink(url, &audio, volume_supported, audio_fallback, None)
+    }
+
+    fn start_with_sink(
+        url: &str,
+        audio: &str,
+        volume_supported: bool,
+        audio_fallback: bool,
+        initial_volume: Option<f32>,
+    ) -> Result<Self, String> {
         let binary = gst_launch().ok_or_else(|| {
             "GStreamer est absent : installez gstreamer1.0-tools, \
              gstreamer1.0-plugins-good et gstreamer1.0-libav."
                 .to_string()
         })?;
-        let (audio, volume_supported) = audio_sink();
-        let args = playback_args(url, &audio);
+        let args = playback_args(url, audio, initial_volume);
         let mut child = Command::new(&binary)
             .args(&args)
             .stdin(Stdio::null())
@@ -132,6 +147,7 @@ impl MediaPlayer {
             volume_tx: volume_supported.then_some(volume_tx),
             volume_supported,
             volume_synced: false,
+            audio_fallback,
         })
     }
 
@@ -181,6 +197,28 @@ impl MediaPlayer {
             );
             self.terminate();
         }
+        let fallback = match &self.state {
+            PlaybackState::Failed(message) => should_try_audio_fallback(
+                self.audio_fallback,
+                self.texture.is_some(),
+                self.started.elapsed(),
+                message,
+            ),
+            PlaybackState::Ended => should_try_audio_fallback(
+                self.audio_fallback,
+                self.texture.is_some(),
+                self.started.elapsed(),
+                "",
+            ),
+            _ => false,
+        };
+        if fallback {
+            let error = match &self.state {
+                PlaybackState::Failed(message) => message.clone(),
+                _ => "flux vidéo interrompu".to_string(),
+            };
+            self.try_audio_fallback(&error);
+        }
         if received_frame {
             if !self.volume_synced {
                 self.send_volume();
@@ -208,9 +246,30 @@ impl MediaPlayer {
     }
 
     pub fn stop(&mut self) {
+        self.audio_fallback = false;
         self.terminate();
         self.texture = None;
         self.state = PlaybackState::Ended;
+    }
+
+    /// Relance une fois le pipeline avec `autoaudiosink` quand `pulsesink` n'a
+    /// pas ouvert le flux. GStreamer choisit alors PipeWire, ALSA ou une autre
+    /// sortie disponible ; le volume n'est plus réglable via `pactl`, donc le
+    /// curseur est masqué.
+    fn try_audio_fallback(&mut self, error: &str) {
+        self.audio_fallback = false;
+        match Self::start_with_sink(&self.url, "autoaudiosink", false, false, Some(self.volume)) {
+            Ok(mut player) => {
+                player.volume = self.volume;
+                let previous = std::mem::replace(self, player);
+                drop(previous);
+            }
+            Err(message) => {
+                self.state = PlaybackState::Failed(format!(
+                    "{error} · secours audio impossible : {message}"
+                ));
+            }
+        }
     }
 
     pub fn texture(&self) -> Option<&TextureHandle> {
@@ -269,18 +328,24 @@ impl Drop for MediaPlayer {
 
 /// Construit les arguments du pipeline : vidéo RGBA vers stdout, audio vers la
 /// sortie choisie par GStreamer.
-fn playback_args(url: &str, audio_sink: &str) -> Vec<String> {
+fn playback_args(url: &str, audio_sink: &str, volume: Option<f32>) -> Vec<String> {
     let sink = format!(
         "videoconvert ! videoscale ! video/x-raw,format=RGBA,width={WIDTH},height={HEIGHT} ! \
          fdsink fd=1 sync=true"
     );
-    vec![
+    let mut args = vec![
         "-q".to_string(),
         "playbin".to_string(),
         format!("uri={url}"),
         format!("video-sink={sink}"),
         format!("audio-sink={audio_sink}"),
-    ]
+    ];
+    // La sortie de secours n'a pas de contrôle de volume par `pactl` : on
+    // applique le volume courant au démarrage du pipeline.
+    if let Some(volume) = volume {
+        args.push(format!("volume={volume:.2}"));
+    }
+    args
 }
 
 fn gst_launch() -> Option<PathBuf> {
@@ -300,7 +365,9 @@ fn command_in_path(name: &str) -> Option<PathBuf> {
 
 /// Choisit la sortie audio et indique si son volume peut être réglé en cours
 /// de lecture. `pulsesink` fonctionne aussi sous PipeWire (pipewire-pulse), où
-/// `pactl` retrouve le flux par le PID du décodeur.
+/// `pactl` retrouve le flux par le PID du décodeur. En cas d'échec de
+/// `pulsesink` avant la première image, le lecteur retente avec
+/// `autoaudiosink` (voir `try_audio_fallback`).
 fn audio_sink() -> (String, bool) {
     let pulse = pulse_server_available() && command_in_path("pactl").is_some();
     if let Ok(sink) = std::env::var("QUARK_GST_AUDIO_SINK") {
@@ -407,6 +474,34 @@ fn poll_interval(state: &PlaybackState) -> Option<Duration> {
     }
 }
 
+/// Le secours n'est tenté qu'avant la première image : redémarrer une vidéo
+/// déjà commencée ferait perdre la position. Un échec précoce ou un message
+/// qui désigne la sortie audio est considéré comme récupérable.
+fn should_try_audio_fallback(
+    audio_fallback: bool,
+    has_texture: bool,
+    elapsed: Duration,
+    error: &str,
+) -> bool {
+    audio_fallback
+        && !has_texture
+        && (elapsed < Duration::from_secs(3) || looks_like_audio_failure(error))
+}
+
+fn looks_like_audio_failure(message: &str) -> bool {
+    let message = message.to_ascii_lowercase();
+    [
+        "pulse",
+        "alsa",
+        "pipewire",
+        "audio sink",
+        "audiosink",
+        "audio device",
+    ]
+    .iter()
+    .any(|marker| message.contains(marker))
+}
+
 #[cfg(unix)]
 fn signal_stop() -> i32 {
     libc::SIGSTOP
@@ -478,7 +573,7 @@ mod tests {
 
     #[test]
     fn le_pipeline_sort_des_images_rgba_et_garde_l_audio() {
-        let args = playback_args("https://video.test/master.m3u8", "autoaudiosink");
+        let args = playback_args("https://video.test/master.m3u8", "autoaudiosink", None);
         assert!(args.contains(&"playbin".to_string()));
         assert!(args.contains(&"uri=https://video.test/master.m3u8".to_string()));
         let sink = args
@@ -490,6 +585,50 @@ mod tests {
         assert!(sink.contains("height=540"));
         assert!(sink.contains("fdsink fd=1 sync=true"));
         assert!(args.contains(&"audio-sink=autoaudiosink".to_string()));
+        assert!(!args.iter().any(|arg| arg.starts_with("volume=")));
+        let fallback = playback_args("https://video.test/master.m3u8", "autoaudiosink", Some(0.4));
+        assert!(fallback.contains(&"volume=0.40".to_string()));
+    }
+
+    #[test]
+    fn le_secours_audio_est_limite_aux_echecs_precoces_de_pulsesink() {
+        assert!(looks_like_audio_failure(
+            "from element /GstPlayBin:playbin0/GstPulseSink:pulsesink0: Failed to connect: Connection refused"
+        ));
+        assert!(looks_like_audio_failure("no element \"pulsesink\""));
+        assert!(!looks_like_audio_failure(
+            "from element /GstPlayBin:playbin0/GstFdSink:fdsink0: broken pipe"
+        ));
+        assert!(should_try_audio_fallback(
+            true,
+            false,
+            Duration::from_secs(1),
+            "flux interrompu"
+        ));
+        assert!(!should_try_audio_fallback(
+            false,
+            false,
+            Duration::from_secs(1),
+            "pulse"
+        ));
+        assert!(!should_try_audio_fallback(
+            true,
+            true,
+            Duration::from_secs(1),
+            "pulse"
+        ));
+        assert!(!should_try_audio_fallback(
+            true,
+            false,
+            Duration::from_secs(10),
+            "flux interrompu"
+        ));
+        assert!(should_try_audio_fallback(
+            true,
+            false,
+            Duration::from_secs(10),
+            "pulsesink: Failed to connect"
+        ));
     }
 
     #[test]

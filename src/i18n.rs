@@ -282,21 +282,21 @@ fn dynamic_english(text: &str) -> String {
 pub fn release_summary() -> [&'static str; 6] {
     if !matches!(language(), UiLanguage::French) {
         [
-            "Incomplete GOG folders can no longer be marked installed: the manifest and every declared launch file are checked.",
-            "An existing GOG game is adopted before gogdl runs again, and a disk-space failure is explained clearly.",
-            "The Epic overlay is offered at launch, enabled in the game prefix, and its real state appears in Settings and the session log.",
-            "A Legendary connection no longer prevents connecting the direct Epic session.",
-            "Trailer playback keeps running when the pointer stops moving.",
-            "A slider adjusts the trailer volume through PulseAudio or PipeWire without restarting the video.",
+            "If `pulsesink` fails before the first frame, the trailer restarts once with `autoaudiosink`.",
+            "The audio fallback never overrides `QUARK_GST_AUDIO_SINK`, and it hides the volume slider when it cannot control the stream.",
+            "GOG adoption checks the primary executable and every game-category executable, including hidden tasks behind a launcher.",
+            "Optional manuals, configuration tools and URLTask entries no longer block adoption of a complete GOG folder.",
+            "Windows paths, double separators and case differences in manifests are still resolved.",
+            "Four real GOG manifests now cover multi-playTasks adoption in the tests.",
         ]
     } else {
         [
-            "Les dossiers GOG incomplets ne peuvent plus être marqués installés : le manifeste et tous les fichiers de lancement déclarés sont vérifiés.",
-            "Un jeu GOG déjà présent est adopté avant de relancer gogdl, et une erreur de disque insuffisant est expliquée clairement.",
-            "L'overlay Epic est proposé au lancement, activé dans le préfixe du jeu et son état réel apparaît dans les Paramètres et le journal.",
-            "Une connexion Legendary seule n'empêche plus de connecter la session Epic directe.",
-            "La lecture d'une bande-annonce continue quand la souris ne bouge plus.",
-            "Un curseur règle le volume de la bande-annonce via PulseAudio ou PipeWire, sans redémarrer la vidéo.",
+            "Si `pulsesink` échoue avant la première image, la bande-annonce redémarre une fois avec `autoaudiosink`.",
+            "Le secours audio ne remplace jamais `QUARK_GST_AUDIO_SINK` et masque le curseur de volume s'il ne peut pas régler le flux.",
+            "L'adoption GOG vérifie l'exécutable primaire et tous les exécutables de catégorie `game`, y compris les tâches cachées derrière un lanceur.",
+            "Les manuels, outils de configuration et `URLTask` optionnels n'empêchent plus d'adopter un dossier GOG complet.",
+            "Les chemins Windows, les doubles séparateurs et les différences de casse des manifestes restent reconnus.",
+            "Quatre manifestes GOG réels couvrent désormais l'adoption multi-playTasks dans les tests.",
         ]
     }
 }
@@ -455,11 +455,11 @@ mod tests {
     fn le_resume_de_version_suit_la_langue() {
         let _guard = language_lock();
         set_language(UiLanguage::French);
-        assert!(release_summary()[0].starts_with("Les dossiers GOG incomplets"));
-        assert!(release_summary()[1].starts_with("Un jeu GOG"));
+        assert!(release_summary()[0].starts_with("Si `pulsesink` échoue"));
+        assert!(release_summary()[1].starts_with("Le secours audio"));
         set_language(UiLanguage::English);
-        assert!(release_summary()[0].starts_with("Incomplete GOG folders"));
-        assert!(release_summary()[1].starts_with("An existing GOG game"));
+        assert!(release_summary()[0].starts_with("If `pulsesink` fails"));
+        assert!(release_summary()[1].starts_with("The audio fallback"));
         assert!(release_title().starts_with("What's new"));
         set_language(UiLanguage::French);
     }
