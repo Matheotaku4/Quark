@@ -235,7 +235,7 @@ impl MediaPlayer {
         } else if let Some(delay) = fallback_watch_interval(
             &self.state,
             self.audio_fallback,
-            self.texture.is_none(),
+            self.texture.is_some(),
             self.started.elapsed(),
         ) {
             ctx.request_repaint_after(delay);
