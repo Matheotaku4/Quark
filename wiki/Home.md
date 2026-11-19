@@ -25,7 +25,7 @@ repository under [`wiki/`](https://github.com/Matheotaku4/Quark/tree/main/wiki).
 - **Four multi-playTasks manifests covered.** Beneath a Steel Sky, Trails in the
   Sky SC, Prison Architect and The Witcher 3 exercise adoption, optional tasks,
   hidden tasks and launcher-primary installs.
-- **Tests:** 361 unit tests, plus 4 live network tests run separately (a real
+- **Tests:** 362 unit tests, plus 4 live network tests run separately (a real
   HLS trailer, Steam media, GOG pack resolution and the game's Windows builds).
 
 ## Where to start

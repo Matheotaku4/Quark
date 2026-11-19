@@ -33,7 +33,7 @@ The wiki is published from the versioned source in [`wiki/`](wiki/) by the
 - **Secours audio automatique.** Si `pulsesink` échoue avant la première image, le lecteur relance une fois GStreamer avec `autoaudiosink` (PipeWire, ALSA ou autre sortie disponible) au lieu d'afficher une erreur. Le secours ne remplace jamais `QUARK_GST_AUDIO_SINK`, ne redémarre pas une vidéo déjà commencée et masque le curseur de volume si la sortie de secours ne permet pas de régler le flux.
 - **Adoption GOG fidèle aux manifestes réels.** L'adoption exige l'exécutable de la tâche primaire et tous les exécutables de catégorie `game`, y compris les tâches cachées derrière un lanceur. Les manuels, outils de configuration et `URLTask` optionnels n'empêchent plus d'adopter une installation complète ; les chemins Windows, les doubles séparateurs et la casse restent reconnus.
 - **Quatre manifestes multi-playTasks testés.** Beneath a Steel Sky, Trails in the Sky SC, Prison Architect et The Witcher 3 couvrent l'adoption, les tâches optionnelles, les tâches cachées et les lanceurs primaires.
-- **Tests** : 361 tests unitaires, plus 4 tests réseau exécutés séparément (bande-annonce HLS réelle, médias Steam, résolution du pack GOG et builds Windows du jeu).
+- **Tests** : 362 tests unitaires, plus 4 tests réseau exécutés séparément (bande-annonce HLS réelle, médias Steam, résolution du pack GOG et builds Windows du jeu).
 
 ## Table of contents
 

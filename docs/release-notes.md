@@ -9,5 +9,5 @@
 ### Vérifications
 
 - `cargo fmt --all -- --check` : OK.
-- `cargo test --locked --offline` : 361 tests réussis, 4 tests réseau ignorés.
+- `cargo test --locked --offline` : 362 tests réussis, 4 tests réseau ignorés.
 - `cargo clippy --all-targets --locked -- -D warnings` : OK.

@@ -180,16 +180,16 @@ fn is_complete_gog_install(dir: &Path, product_id: &str) -> bool {
     if contains_partial_download(dir, 0) {
         return false;
     }
-    let required = required_play_task_paths(&json);
+    let (required, has_file_task) = required_play_task_paths(&json);
+    if !has_file_task {
+        // Manifests anciens sans tâche de fichier : on retombe sur un
+        // exécutable hors des dossiers d'installeurs redistribuables.
+        return contains_executable(dir, 0);
+    }
     if required.is_empty() {
-        // Manifeste sans tâche primaire ni catégorie `game` : le premier
-        // fichier déclaré reste la seule preuve fiable. Sans tâche de fichier
-        // du tout, on retombe sur un exécutable hors des dossiers
-        // d'installeurs redistribuables.
-        let Some(declared) = first_file_task_path(&json) else {
-            return contains_executable(dir, 0);
-        };
-        return resolve_relative(dir, declared).is_some_and(|path| path.is_file());
+        // Le manifeste ne déclare que des documents ou des outils : rien ne
+        // prouve que le jeu lui-même est installé.
+        return false;
     }
     // La tâche primaire et chaque exécutable de catégorie `game` doivent être
     // là : un seul absent prouve un téléchargement interrompu, même si un
@@ -222,46 +222,57 @@ fn matches_product_id(json: &serde_json::Value, product_id: &str) -> bool {
     })
 }
 
-/// Exécutables qu'une installation complète doit contenir : la tâche
-/// primaire (celle que GOG lance) et toutes les tâches de catégorie `game`,
-/// y compris les tâches cachées derrière un lanceur. Les manuels, outils de
-/// configuration et `URLTask` restent optionnels : un manifeste réel en
-/// contient souvent plusieurs, et leur absence ne rend pas le jeu injouable.
-fn required_play_task_paths(json: &serde_json::Value) -> Vec<&str> {
+/// Exécutables qu'une installation complète doit contenir. La tâche primaire
+/// (celle que GOG lance) et toutes les tâches de catégorie `game` sont
+/// toujours requises, y compris les tâches cachées derrière un lanceur. Si le
+/// manifeste n'en déclare aucune, tous les `FileTask` non documentaires, y
+/// compris ceux sans catégorie, doivent exister : un ancien manifeste peut
+/// lister plusieurs exécutables sans `isPrimary`. Les manuels, outils de
+/// configuration et `URLTask` restent optionnels.
+fn required_play_task_paths(json: &serde_json::Value) -> (Vec<&str>, bool) {
     let Some(tasks) = json.get("playTasks").and_then(serde_json::Value::as_array) else {
-        return Vec::new();
+        return (Vec::new(), false);
     };
-    let mut required: Vec<&str> = Vec::new();
+    let mut primary_or_game: Vec<&str> = Vec::new();
+    let mut other: Vec<&str> = Vec::new();
+    let mut has_file_task = false;
     for task in tasks {
         if !is_file_task(task) {
             continue;
         }
+        has_file_task = true;
         let Some(path) = task_path(task) else {
             continue;
         };
         let primary = task.get("isPrimary").and_then(serde_json::Value::as_bool) == Some(true);
-        let game = task
-            .get("category")
-            .and_then(serde_json::Value::as_str)
-            .is_some_and(|category| category.eq_ignore_ascii_case("game"));
-        if (primary || game)
-            && !required
-                .iter()
-                .any(|existing| existing.eq_ignore_ascii_case(path))
-        {
-            required.push(path);
+        let category = task.get("category").and_then(serde_json::Value::as_str);
+        let game = category.is_some_and(|category| category.eq_ignore_ascii_case("game"));
+        if primary || game {
+            push_unique_path(&mut primary_or_game, path);
+        } else if !category.is_some_and(is_optional_play_task) {
+            push_unique_path(&mut other, path);
         }
     }
-    required
+    if primary_or_game.is_empty() {
+        (other, has_file_task)
+    } else {
+        (primary_or_game, has_file_task)
+    }
 }
 
-fn first_file_task_path(json: &serde_json::Value) -> Option<&str> {
-    json.get("playTasks")
-        .and_then(serde_json::Value::as_array)
-        .into_iter()
-        .flatten()
-        .filter(|task| is_file_task(task))
-        .find_map(task_path)
+fn is_optional_play_task(category: &str) -> bool {
+    ["document", "tool"]
+        .iter()
+        .any(|optional| category.eq_ignore_ascii_case(optional))
+}
+
+fn push_unique_path<'a>(paths: &mut Vec<&'a str>, path: &'a str) {
+    if !paths
+        .iter()
+        .any(|existing| existing.eq_ignore_ascii_case(path))
+    {
+        paths.push(path);
+    }
 }
 
 fn is_file_task(task: &serde_json::Value) -> bool {
@@ -1143,6 +1154,38 @@ mod tests {
         assert!(is_complete_install(&prison, "1444483811"));
         std::fs::remove_file(prison.join("Prison Architect64.exe")).unwrap();
         assert!(!is_complete_install(&prison, "1444483811"));
+
+        // The Witcher 3 : chemin Windows à doubles séparateurs et URLTask.
+        // Un ancien manifeste sans tâche primaire ni catégorie : tous les
+        // chemins non documentaires comptent, pas seulement le premier.
+        let legacy = root.join("Ancien manifeste");
+        std::fs::create_dir_all(legacy.join("Game")).unwrap();
+        std::fs::write(
+            legacy.join("goggame-123.info"),
+            r#"{
+                "gameId": "123",
+                "playTasks": [
+                    {"type": "FileTask", "path": "setup.exe"},
+                    {"type": "FileTask", "path": "Game/game.exe"},
+                    {"category": "document", "type": "FileTask", "path": "Manual.pdf"}
+                ]
+            }"#,
+        )
+        .unwrap();
+        std::fs::write(legacy.join("setup.exe"), b"exe").unwrap();
+        assert!(!is_complete_install(&legacy, "123"));
+        std::fs::write(legacy.join("Game/game.exe"), b"exe").unwrap();
+        assert!(is_complete_install(&legacy, "123"));
+        std::fs::remove_file(legacy.join("Game/game.exe")).unwrap();
+        std::fs::write(legacy.join("Manual.pdf"), b"pdf").unwrap();
+        assert!(!is_complete_install(&legacy, "123"));
+        // Un manifeste qui ne déclare qu'un document ne prouve pas le jeu.
+        std::fs::write(
+            legacy.join("goggame-123.info"),
+            r#"{"gameId":"123","playTasks":[{"category":"document","type":"FileTask","path":"Manual.pdf"}]}"#,
+        )
+        .unwrap();
+        assert!(!is_complete_install(&legacy, "123"));
 
         // The Witcher 3 : chemin Windows à doubles séparateurs et URLTask.
         let witcher = root.join("The Witcher 3");

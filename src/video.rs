@@ -27,6 +27,10 @@ const STARTUP_REPAINT: Duration = Duration::from_millis(100);
 /// Sans réveil régulier, egui ne repeint qu'à la prochaine entrée (souris,
 /// clavier) : la lecture s'arrêtait dès que la souris ne bougeait plus.
 const PLAYING_REPAINT: Duration = Duration::from_millis(16);
+/// Après la fin du processus, le diagnostic stderr peut arriver juste après
+/// `Ended` : on continue à interroger le canal pendant cette courte fenêtre
+/// pour laisser sa chance au secours audio.
+const AUDIO_FALLBACK_WATCH: Duration = Duration::from_secs(5);
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum PlaybackState {
@@ -227,6 +231,13 @@ impl MediaPlayer {
             ctx.request_repaint();
         }
         if let Some(delay) = poll_interval(&self.state) {
+            ctx.request_repaint_after(delay);
+        } else if let Some(delay) = fallback_watch_interval(
+            &self.state,
+            self.audio_fallback,
+            self.texture.is_none(),
+            self.started.elapsed(),
+        ) {
             ctx.request_repaint_after(delay);
         }
     }
@@ -474,6 +485,22 @@ fn poll_interval(state: &PlaybackState) -> Option<Duration> {
     }
 }
 
+/// Tant que le secours audio n'a pas été tenté, un `Ended` sans image peut
+/// précéder de quelques millisecondes l'erreur `pulsesink` sur stderr. On
+/// maintient donc un réveil court après la fin, borné dans le temps.
+fn fallback_watch_interval(
+    state: &PlaybackState,
+    audio_fallback: bool,
+    has_texture: bool,
+    elapsed: Duration,
+) -> Option<Duration> {
+    (audio_fallback
+        && !has_texture
+        && matches!(state, PlaybackState::Ended)
+        && elapsed < AUDIO_FALLBACK_WATCH)
+        .then_some(STARTUP_REPAINT)
+}
+
 /// Le secours n'est tenté qu'avant la première image : redémarrer une vidéo
 /// déjà commencée ferait perdre la position. Un échec précoce ou un message
 /// qui désigne la sortie audio est considéré comme récupérable.
@@ -525,10 +552,19 @@ fn signal_continue() -> i32 {
 /// Ne remonte que les vraies erreurs de GStreamer, pas ses avertissements de
 /// greffons optionnels.
 fn gstreamer_error(stderr: &str) -> Option<String> {
-    let line = stderr
+    let errors: Vec<&str> = stderr
         .lines()
+        .filter(|line| line.trim_start().starts_with("ERROR"))
+        .collect();
+    // GStreamer peut ajouter « pipeline doesn't want to preroll » après
+    // l'erreur de l'élément audio : on préfère cette dernière pour que le
+    // secours reconnaisse `pulsesink`.
+    let line = errors
+        .iter()
         .rev()
-        .find(|line| line.trim_start().starts_with("ERROR"))?;
+        .copied()
+        .find(|line| looks_like_audio_failure(line))
+        .or_else(|| errors.last().copied())?;
     let line = line.trim();
     let line = line.strip_prefix("ERROR: ").unwrap_or(line);
     Some(line.chars().take(240).collect())
@@ -629,6 +665,41 @@ mod tests {
             Duration::from_secs(10),
             "pulsesink: Failed to connect"
         ));
+        // gst-launch ajoute souvent une erreur générique après celle du sink.
+        let stderr = "ERROR: from element /GstPlayBin:playbin0/GstPulseSink:pulsesink0: Failed to connect: Connection refused\n\
+                      ERROR: pipeline doesn't want to preroll.";
+        let error = gstreamer_error(stderr).expect("erreur audio");
+        assert!(error.contains("pulsesink"), "{error}");
+        assert!(should_try_audio_fallback(
+            true,
+            false,
+            Duration::from_secs(4),
+            &error
+        ));
+    }
+
+    #[test]
+    fn le_secours_audio_reste_a_l_ecoute_apres_la_fin() {
+        assert_eq!(
+            fallback_watch_interval(&PlaybackState::Ended, true, false, Duration::from_secs(1)),
+            Some(STARTUP_REPAINT)
+        );
+        assert_eq!(
+            fallback_watch_interval(&PlaybackState::Ended, true, false, Duration::from_secs(6)),
+            None
+        );
+        assert_eq!(
+            fallback_watch_interval(&PlaybackState::Ended, false, false, Duration::from_secs(1)),
+            None
+        );
+        assert_eq!(
+            fallback_watch_interval(&PlaybackState::Ended, true, true, Duration::from_secs(1)),
+            None
+        );
+        assert_eq!(
+            fallback_watch_interval(&PlaybackState::Playing, true, false, Duration::from_secs(1)),
+            None
+        );
     }
 
     #[test]
