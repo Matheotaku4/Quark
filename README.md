@@ -6,7 +6,7 @@ titles you own, launches Windows games through Proton (or umu-launcher), and sta
 the way with an AMOLED interface, a store page, save snapshots and an in-game
 overlay.
 
-This is the **1.8.7** documentation. Older release notes are kept on the GitHub
+This is the **1.8.8** documentation. Older release notes are kept on the GitHub
 releases page; `docs/release-notes.md` only describes the release currently
 being published.
 
@@ -28,17 +28,16 @@ The wiki is published from the versioned source in [`wiki/`](wiki/) by the
 | --- | --- |
 | ![Onboarding](docs/images/onboarding-fr.png) | ![What's new](docs/images/whats-new-fr.png) |
 
-## What's new in 1.8.7
+## What's new in 1.8.8
 
-- **Les dossiers GOG incomplets ne sont plus jamais marqués installés.** L'adoption vérifie le manifeste, tous les fichiers de lancement qu'il déclare et l'absence de reprise gogdl/Galaxy ; la synchronisation, la reprise après fermeture et la sonde périodique appliquent la même règle.
-- **Les installations GOG existantes sont conservées.** Un dossier complet est adopté avant de relancer gogdl, et une erreur de disque insuffisant est expliquée clairement au lieu d'afficher un tuple de progression.
-- **L'overlay Epic est proposé au lancement et reconnu dans le préfixe.** Quark propose de l'installer avant de jouer, l'active dans le préfixe du jeu et affiche son état réel dans les Paramètres et le journal. Une connexion Legendary seule laisse le bouton de session Epic directe.
-- **La lecture des bandes-annonces ne s'arrête plus quand la souris est immobile.** Le lecteur planifie ses repeints, et un curseur règle le volume PulseAudio/PipeWire sans redémarrer la vidéo.
-- **Tests** : 359 tests unitaires, plus 4 tests réseau exécutés séparément (bande-annonce HLS réelle, médias Steam, résolution du pack GOG et builds Windows du jeu).
+- **Secours audio automatique.** Si `pulsesink` échoue avant la première image, le lecteur relance une fois GStreamer avec `autoaudiosink` (PipeWire, ALSA ou autre sortie disponible) au lieu d'afficher une erreur. Le secours ne remplace jamais `QUARK_GST_AUDIO_SINK`, ne redémarre pas une vidéo déjà commencée et masque le curseur de volume si la sortie de secours ne permet pas de régler le flux.
+- **Adoption GOG fidèle aux manifestes réels.** L'adoption exige l'exécutable de la tâche primaire et tous les exécutables de catégorie `game`, y compris les tâches cachées derrière un lanceur. Les manuels, outils de configuration et `URLTask` optionnels n'empêchent plus d'adopter une installation complète ; les chemins Windows, les doubles séparateurs et la casse restent reconnus.
+- **Quatre manifestes multi-playTasks testés.** Beneath a Steel Sky, Trails in the Sky SC, Prison Architect et The Witcher 3 couvrent l'adoption, les tâches optionnelles, les tâches cachées et les lanceurs primaires.
+- **Tests** : 362 tests unitaires, plus 4 tests réseau exécutés séparément (bande-annonce HLS réelle, médias Steam, résolution du pack GOG et builds Windows du jeu).
 
 ## Table of contents
 
-1. [What's new in 1.8.7](#whats-new-in-187)
+1. [What's new in 1.8.8](#whats-new-in-188)
 2. [What Quark does](#what-quark-does)
 3. [Installation](#installation)
 4. [First launch](#first-launch)
@@ -98,8 +97,8 @@ Download `quark-<version>-linux-x86_64.tar.gz` and its `.sha256` file from the
 then verify and unpack it:
 
 ```bash
-sha256sum -c quark-1.8.7-linux-x86_64.tar.gz.sha256
-tar -xzf quark-1.8.7-linux-x86_64.tar.gz
+sha256sum -c quark-1.8.8-linux-x86_64.tar.gz.sha256
+tar -xzf quark-1.8.8-linux-x86_64.tar.gz
 ./quark/quark
 ```
 
@@ -123,7 +122,8 @@ plugins (`gstreamer1.0-tools`, `gstreamer1.0-plugins-good` and
 `gstreamer1.0-libav` on Debian/Ubuntu). Without them, the Media tab shows the
 thumbnail and offers the Steam page instead. The trailer volume slider also
 needs `pactl` and a PulseAudio or PipeWire server; without it, the slider stays
-hidden.
+hidden. If `pulsesink` cannot open the stream, Quark retries once with
+`autoaudiosink`; the trailer plays but the slider stays hidden.
 
 ### Build from source
 
@@ -565,8 +565,9 @@ their existing GitHub releases.
   installation path. Epic can compute its path with Legendary.
 - Inline trailer playback needs GStreamer and its HLS/H.264 plugins; the archive
   does not bundle them. The volume slider additionally needs `pactl` and a
-  PulseAudio or PipeWire server. The media gallery remains limited to
-  Steam-linked games.
+  PulseAudio or PipeWire server. If `pulsesink` fails before the first frame,
+  Quark retries with `autoaudiosink`; the slider is then hidden. The media
+  gallery remains limited to Steam-linked games.
 - Epic installation and launch still go through Legendary. The direct session
   removes the Legendary requirement for the library, not for those two actions.
 - itch.io installs only archives (`.zip`, `.tar`, `.tar.gz`, `.tgz`). An upload

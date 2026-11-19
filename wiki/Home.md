@@ -5,28 +5,27 @@ games and your Steam, Epic Games and GOG libraries together, launches Windows
 games through Proton or umu-launcher, and adds an in-game overlay, screenshots,
 achievements and verified local saves.
 
-This documentation describes **Quark 1.8.7**. It is also versioned in the
+This documentation describes **Quark 1.8.8**. It is also versioned in the
 repository under [`wiki/`](https://github.com/Matheotaku4/Quark/tree/main/wiki).
 
 ![Quark home](https://raw.githubusercontent.com/Matheotaku4/Quark/main/docs/images/home-en.png)
 
-## What's new in 1.8.7
+## What's new in 1.8.8
 
-- **Incomplete GOG folders are never marked installed.** Adoption checks the
-  manifest, every launch file it declares and the absence of gogdl/Galaxy
-  resume markers; library sync, crash recovery and the periodic probe use the
-  same rule.
-- **Existing GOG installs are kept.** A complete folder is adopted before gogdl
-  runs again, and disk-space failures are explained instead of exposing a
-  progress tuple.
-- **The Epic overlay is offered at launch and detected in the prefix.** Quark
-  offers to install it before playing, enables it in the game prefix, and
-  reports the real state in Settings and the session log. A Legendary-only
-  session no longer hides the direct Epic sign-in button.
-- **Trailer playback keeps running when the pointer stops.** The player
-  schedules its own repaints, and a slider adjusts the PulseAudio/PipeWire
-  stream without restarting the video.
-- **Tests:** 359 unit tests, plus 4 live network tests run separately (a real
+- **Automatic audio fallback.** If `pulsesink` fails before the first frame,
+  the player retries once with `autoaudiosink` (PipeWire, ALSA or another
+  available output) instead of showing an error. The fallback never overrides
+  `QUARK_GST_AUDIO_SINK`, never restarts a video that already started, and
+  hides the volume slider when the fallback output cannot be controlled.
+- **GOG adoption matches real manifests.** Adoption requires the primary task's
+  executable and every game-category executable, including hidden tasks behind
+  a launcher. Optional manuals, configuration tools and URLTask entries no
+  longer block a complete install; Windows paths, double separators and case
+  differences are still resolved.
+- **Four multi-playTasks manifests covered.** Beneath a Steel Sky, Trails in the
+  Sky SC, Prison Architect and The Witcher 3 exercise adoption, optional tasks,
+  hidden tasks and launcher-primary installs.
+- **Tests:** 362 unit tests, plus 4 live network tests run separately (a real
   HLS trailer, Steam media, GOG pack resolution and the game's Windows builds).
 
 ## Where to start
