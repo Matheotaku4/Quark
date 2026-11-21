@@ -1,6 +1,6 @@
 # Quark Wiki
 
-Quark is a game launcher for Linux, written in Rust with egui. It brings local
+Quark is a game launcher for Linux, written in Rust with a Tauri 2 interface. It brings local
 games and your Steam, Epic Games and GOG libraries together, launches Windows
 games through Proton or umu-launcher, and adds an in-game overlay, screenshots,
 achievements and verified local saves.
