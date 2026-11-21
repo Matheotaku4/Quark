@@ -6,6 +6,7 @@
 //! langue choisie est appliquée immédiatement à toute l'interface.
 
 use crate::config::UiLanguage;
+#[cfg(feature = "egui_ui")]
 use eframe::egui::RichText;
 use std::collections::HashMap;
 use std::sync::LazyLock;
@@ -116,6 +117,7 @@ pub fn tr(text: &str) -> String {
 }
 
 /// Raccourci pour les textes construits dans l'interface.
+#[cfg(feature = "egui_ui")]
 pub fn rich(text: impl Into<String>) -> RichText {
     RichText::new(tr(&text.into()))
 }
@@ -124,6 +126,7 @@ pub fn rich(text: impl Into<String>) -> RichText {
 /// affiché tel quel, sans passer par le catalogue ni par les règles dynamiques,
 /// pour qu'un titre ne soit jamais réécrit (« Tout seul » ne devient pas
 /// « All seul »).
+#[cfg(feature = "egui_ui")]
 pub fn raw(text: impl Into<String>) -> RichText {
     RichText::new(text.into())
 }
@@ -152,6 +155,7 @@ pub fn tr_with(template: &str, values: &[&str]) -> String {
 }
 
 /// Variante de [`tr_with`] qui renvoie un `RichText`.
+#[cfg(feature = "egui_ui")]
 pub fn rich_with(template: &str, values: &[&str]) -> RichText {
     RichText::new(tr_with(template, values))
 }
