@@ -3,31 +3,12 @@ name = "quark"
 version = "1.8.8"
 edition = "2024"
 
-[[bin]]
-name = "quark"
-path = "src/main.rs"
-required-features = ["egui_ui"]
-
-[features]
-# L'interface egui historique. Le cœur (`src/lib.rs`) reste compilable sans
-# elle : l'application Tauri s'en sert avec `default-features = false`.
-default = ["egui_ui"]
-egui_ui = ["dep:eframe", "dep:egui_extras", "dep:rfd", "dep:x11-dl", "dep:ksni"]
-
 [dependencies]
 dirs = "7.0.0"
-eframe = { version = "0.32", optional = true, default-features = false, features = ["glow", "x11", "wayland", "default_fonts"] }
-egui_extras = { version = "0.32", optional = true, features = ["file", "image", "http"] }
-# Décodage des artworks : egui_extras dépend d'`image` sans codec, on les
-# active ici pour pouvoir décoder les JPEG/PNG servis par Steam et SteamGridDB.
+# Décodage des artworks servis par Steam et SteamGridDB.
 image = { version = "0.25", default-features = false, features = ["png", "jpeg", "webp"] }
 reqwest = { version = "0.13.5", default-features = false, features = ["blocking", "form", "json", "query", "rustls"] }
-# Sélecteur de fichiers natif : XDG Desktop Portal (GTK ou KDE du bureau), sans
-# dépendance GTK à la compilation.
-rfd = { version = "0.15", optional = true }
 libc = "0.2"
-# Capture d'écran et raccourci global F12 sous X11 (XWayland compris).
-x11-dl = { version = "2.21", optional = true }
 ring = "0.17"
 flate2 = "1.1"
 tar = "0.4"
@@ -38,4 +19,3 @@ serde_json = "1.0.154"
 # pas seulement le JSON que Quark y écrit. `serde_yaml` étant archivé, on prend
 # le fork maintenu, d'API identique.
 serde_yaml_ng = "0.10"
-ksni = { version = "0.3", optional = true, default-features = false, features = ["blocking", "async-io"] }

@@ -51,12 +51,12 @@ jobs:
 
       - uses: Swatinem/rust-cache@v2
 
-      - name: Dépendances système (X11, Wayland, GL)
+      - name: Dépendances système Tauri (WebKitGTK, GTK)
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
-            build-essential pkg-config libx11-dev libxkbcommon-dev \
-            libwayland-dev libgl1-mesa-dev
+            build-essential pkg-config libwebkit2gtk-4.1-dev libgtk-3-dev \
+            librsvg2-dev libssl-dev
 
       - name: Version
         id: version
@@ -68,78 +68,17 @@ jobs:
           if [[ "$value" == *-* ]]; then echo "prerelease=true" >> "$GITHUB_OUTPUT"; else echo "prerelease=false" >> "$GITHUB_OUTPUT"; fi
 
       - name: Compilation
-        run: cargo build --release --locked
+        run: cargo build --release --locked --manifest-path quark-tauri/Cargo.toml
 
       - name: Paquet
         run: |
           mkdir -p dist/quark
-          cp target/release/quark dist/quark/
+          cp quark-tauri/target/release/quark-tauri dist/quark/quark
           cp README.md dist/quark/
           cp assets/quark.desktop dist/quark/
           cp assets/quark.png dist/quark/
           tar -czf "quark-${{ steps.version.outputs.value }}-linux-x86_64.tar.gz" -C dist quark
           sha256sum "quark-${{ steps.version.outputs.value }}-linux-x86_64.tar.gz" > "quark-${{ steps.version.outputs.value }}-linux-x86_64.tar.gz.sha256"
-
-      - name: Aperçus de l'interface (rendu hors écran, aucun écran requis)
-        run: |
-          mkdir -p dist/renders
-          export HOME="$PWD/dist/home"
-          for spec in \
-            "list:--view list" \
-            "grid:--view grid" \
-            "store:--tab store" \
-            "my-games:--tab my-games --providers-demo" \
-            "dialog-settings-providers:--dialog settings-providers --providers-demo" \
-            "info:--view list --info" \
-            "running:--view list --running" \
-            "hover-row:--view list --hover 160,340" \
-            "hover-tile:--view grid --hover 150,300" \
-            "dialog-settings:--dialog settings" \
-            "dialog-settings-ingame:--dialog settings-ingame" \
-            "dialog-settings-defaults:--dialog settings-defaults" \
-            "dialog-install:--dialog install --providers-demo" \
-            "dialog-updates:--dialog updates" \
-            "dialog-game:--dialog game" \
-            "dialog-game-dll:--dialog game-dll" \
-            "dialog-logs:--dialog logs" \
-            "dialog-add:--dialog add" \
-            "dialog-artwork:--dialog artwork" \
-            "dialog-customize:--dialog customize" \
-            "dialog-scan:--dialog scan" \
-            "dialog-remove:--dialog remove" \
-            "keyboard:--view list --key down" \
-            "marked:--view list --marked" \
-            "dialog-remove-many:--marked --dialog remove" \
-            "home:--home" \
-            "home-hero:--home --hero-bg --blur 18" \
-            "home-theme:--home --theme catppuccin-mocha" \
-            "settings-en:--dialog settings --lang en" \
-            "onboarding:--dialog onboarding" \
-            "onboarding-settings:--dialog onboarding-settings" \
-            "whats-new:--dialog whats-new" \
-            "grid-overlay:--view grid --dialog overlay" \
-            "settings-stats:--dialog settings-stats" \
-            "settings-disk:--dialog settings-disk" \
-            "dialog-steam:--dialog steam" \
-            "palette:--dialog command" \
-            "palette-search:--dialog command-search" \
-            "history:--dialog history" \
-            "views:--view list --dialog saved-views" \
-            "filters:--view list --click 58,239" \
-            "group-genre:--view list --group genre" \
-            "wide:--size 2560x900 --view list" \
-            "small:--size 1024x640 --view list"; do
-            name="${spec%%:*}"
-            opts="${spec#*:}"
-            ./target/release/quark --ui "dist/renders/ui-$name.png" --demo $opts
-          done
-
-      - name: Publication des aperçus
-        uses: actions/upload-artifact@v4
-        with:
-          name: quark-ui-renders
-          path: dist/renders/*.png
-          if-no-files-found: error
 
       - name: Publication de la release
         uses: softprops/action-gh-release@v2

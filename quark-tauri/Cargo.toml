@@ -8,8 +8,8 @@ publish = false
 [workspace]
 
 [dependencies]
-# Cœur métier partagé avec l'interface egui historique.
-quark = { path = "..", default-features = false }
+# Cœur métier partagé, sans dépendance graphique.
+quark = { path = ".." }
 tauri = { version = "2", features = [] }
 tauri-runtime = "2"
 serde = { version = "1", features = ["derive"] }

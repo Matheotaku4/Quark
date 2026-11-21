@@ -1,8 +1,8 @@
 //! Bande-annonce et captures d'un jeu, lues dans la fiche publique Steam.
 //!
 //! La fiche jeu affiche les mêmes médias que la page Steam : la bande-annonce
-//! en premier, puis les captures. Les images sont chargées par le loader HTTP
-//! d'egui ; seules les URL sont conservées ici, jamais les octets.
+//! en premier, puis les captures. Seules les URL sont conservées ici, jamais
+//! les octets.
 
 use reqwest::blocking::Client;
 use serde::Deserialize;

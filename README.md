@@ -1,10 +1,9 @@
 # Quark
 
-A lightweight game launcher for Linux, written in Rust with egui. Quark keeps a
+A lightweight game launcher for Linux, written in Rust with a Tauri 2 interface. Quark keeps a
 single library for local games and for the Steam, Epic Games, GOG and itch.io
 titles you own, launches Windows games through Proton (or umu-launcher), and stays out of
-the way with an AMOLED interface, a store page, save snapshots and an in-game
-overlay.
+the way with a modern dark interface, a fast library and a detailed game page.
 
 This is the **1.8.8** documentation. Older release notes are kept on the GitHub
 releases page; `docs/release-notes.md` only describes the release currently
@@ -18,22 +17,12 @@ being published.
 The wiki is published from the versioned source in [`wiki/`](wiki/) by the
 `.github/workflows/wiki.yml` workflow.
 
-![Quark home](docs/images/home-fr.png)
-
-| Library | Settings |
-| --- | --- |
-| ![Library](docs/images/library-fr.png) | ![Settings](docs/images/settings-fr.png) |
-
-| Welcome guide | What's new |
-| --- | --- |
-| ![Onboarding](docs/images/onboarding-fr.png) | ![What's new](docs/images/whats-new-fr.png) |
-
 ## What's new in 1.8.8
 
 - **Secours audio automatique.** Si `pulsesink` échoue avant la première image, le lecteur relance une fois GStreamer avec `autoaudiosink` (PipeWire, ALSA ou autre sortie disponible) au lieu d'afficher une erreur. Le secours ne remplace jamais `QUARK_GST_AUDIO_SINK`, ne redémarre pas une vidéo déjà commencée et masque le curseur de volume si la sortie de secours ne permet pas de régler le flux.
 - **Adoption GOG fidèle aux manifestes réels.** L'adoption exige l'exécutable de la tâche primaire et tous les exécutables de catégorie `game`, y compris les tâches cachées derrière un lanceur. Les manuels, outils de configuration et `URLTask` optionnels n'empêchent plus d'adopter une installation complète ; les chemins Windows, les doubles séparateurs et la casse restent reconnus.
 - **Quatre manifestes multi-playTasks testés.** Beneath a Steel Sky, Trails in the Sky SC, Prison Architect et The Witcher 3 couvrent l'adoption, les tâches optionnelles, les tâches cachées et les lanceurs primaires.
-- **Tests** : 362 tests unitaires, plus 4 tests réseau exécutés séparément (bande-annonce HLS réelle, médias Steam, résolution du pack GOG et builds Windows du jeu).
+- **Tests** : 310 tests unitaires du cœur, plus 4 tests réseau exécutés séparément (bande-annonce HLS réelle, médias Steam, résolution du pack GOG et builds Windows du jeu).
 
 ## Table of contents
 
@@ -115,7 +104,7 @@ update-desktop-database ~/.local/share/applications 2>/dev/null || true
 
 `~/.local/bin` must be in your `PATH` for the `Exec=quark` entry to work; if it
 is not, use the absolute path of the binary in the desktop file. Quark needs
-X11 or Wayland, OpenGL and the usual font/GL libraries of your distribution.
+WebKitGTK 4.1 (`libwebkit2gtk-4.1-0`), GTK 3 and an X11 or Wayland session.
 `python3` is required by Legendary and gogdl (both are Python zipapps).
 For inline trailers, install GStreamer with `gst-launch-1.0` and the HLS/H.264
 plugins (`gstreamer1.0-tools`, `gstreamer1.0-plugins-good` and
@@ -129,16 +118,17 @@ hidden. If `pulsesink` cannot open the stream, Quark retries once with
 
 ```bash
 git clone https://github.com/Matheotaku4/Quark.git
-cd Quark
+cd Quark/quark-tauri
 cargo build --release --locked
-./target/release/quark
+./target/release/quark-tauri
 ```
 
-On Debian/Ubuntu, the CI installs:
+On Debian/Ubuntu, the Tauri build needs WebKitGTK, GTK and the usual Rust
+build tools:
 
 ```bash
-sudo apt-get install build-essential pkg-config libx11-dev libxkbcommon-dev \
-  libwayland-dev libgl1-mesa-dev
+sudo apt-get install build-essential pkg-config libwebkit2gtk-4.1-dev \
+  libgtk-3-dev librsvg2-dev libssl-dev
 ```
 
 ## First launch
@@ -505,18 +495,9 @@ does not send telemetry.
 
 ```text
 src/
-  app.rs              application state, jobs and background workers
+  lib.rs              core library consumed by the Tauri application
   config.rs           library, settings, Game and Installation models
   i18n.rs             multilingual catalogues and dynamic labels
-  theme.rs            the 13 palettes
-  ui_command.rs       global search palette (Ctrl+K/Ctrl+F)
-  ui_home.rs          home carousel and random hero background
-  ui_library.rs       library, game page and installation selector
-  ui_my_games.rs      owned/installed store games and install actions
-  ui_dialogs.rs       settings, add-game, game settings and save dialogs
-  ui_onboarding.rs    first-run guide and what's-new summary
-  ui_providers.rs     store accounts and synchronization UI
-  overlay_dll.rs      embedded Windows d3d11.dll/dxgi.dll proxy and installation
   providers/          Steam, Epic (direct library + Legendary), GOG (gogdl),
                       itch.io (API key),
                       achievements, cloud_saves, artwork and managed tools
@@ -524,36 +505,42 @@ src/
   proton.rs           runtime detection, prefix resolution and launch options
   session.rs          process groups, logs and screenshots
   saves/              Ludusavi integration and snapshot validation
-  overlay.rs          in-game panel, global shortcuts and X11 capture
-  snapshot.rs         off-screen PNG renderer for the CI previews
+  overlay_dll.rs      embedded Windows d3d11.dll/dxgi.dll proxy and installation
+quark-tauri/
+  src/main.rs         Tauri commands, session manager and quarkimg:// protocol
+  src/themes.rs       theme definitions exposed to the webview
+  ui/                 HTML, CSS and JavaScript interface
+  icons/              window and application icons
+  tauri.conf.json     window, security and bundle configuration
 assets/i18n/         French source plus English, Spanish, German and Portuguese
 assets/overlay/       prebuilt Windows FPS overlay embedded in Quark
-docs/images/          README and wiki screenshots
 docs/
   release-notes.md    notes for the current release only
 site/                 static landing page published by GitHub Pages
-  index.html          presentation, screenshots and install steps
-  assets/             site screenshots, logo and Archivo fonts
 wiki/                 GitHub Wiki source: guides, Proton variables, help
 .github/workflows/
   rust.yml            tests and checks
-  release.yml         build, previews and GitHub release
+  release.yml         build and GitHub release
   pages.yml           publish site/ to GitHub Pages
 ```
 
 ## Development and tests
 
 ```bash
+cargo fmt --all --check
+cargo clippy --all-targets --locked -- -D warnings
+cargo test --locked
+
+cd quark-tauri
 cargo fmt --check
-cargo test --offline
-cargo build --release --locked --offline
+cargo clippy --all-targets --locked -- -D warnings
+cargo build --release --locked
 ```
 
-The release workflow builds on Ubuntu 22.04, renders the interface off-screen
-with `--ui --demo`, publishes the PNG previews as a workflow artifact and
-creates the GitHub release from `docs/release-notes.md`. The release notes file
-contains only the version currently being published; previous notes stay on
-their existing GitHub releases.
+The release workflow builds the Tauri binary on Ubuntu 22.04 and creates the
+GitHub release from `docs/release-notes.md`. The release notes file contains
+only the version currently being published; previous notes stay on their
+existing GitHub releases.
 
 ## Known limitations
 
