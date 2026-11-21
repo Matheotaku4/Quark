@@ -3,6 +3,9 @@
 # Rendus de controle de l'interface (quark --ui)
 artifacts/
 
+# Sysroot local de compilation (paquets extraits, jamais poussé)
+/.apt/
+
 # Outils de travail locaux
 __pycache__/
 .quark-toolchain/
