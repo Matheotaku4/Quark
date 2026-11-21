@@ -134,8 +134,14 @@ ni la lecture vidéo, ni l'overlay X11.
 - Ne pas committer `.apt/` (816 Mo) ni `target/` (12 Go) ; `.apt/` est désormais
   dans `.gitignore`.
 - Ne pas ressusciter la branche Slint : la décision egui est assumée.
-- Les branches distantes `ui/empty-states`, `ui/game-detail` et
-  `ui/navigation-home` existent déjà ; ne pas les supprimer sans accord.
+- Le dépôt distant ne publie que `main`. Les références locales
+  `origin/ui/*` sont périmées (ces branches n'existent plus côté GitHub) : ne
+  pas s'en servir comme point de départ.
+- `remote.origin.fetch` est **vide** dans ce clone : `git fetch` n'actualise pas
+  `origin/main` (il ne remplit que `FETCH_HEAD`, et `origin/main` reste bloqué
+  sur `41c664d`). Pour l'état réel : `git ls-remote --heads origin` ; pour lire
+  une version distante : `git fetch origin main` puis
+  `git show FETCH_HEAD:<fichier>`.
 - Les rendus de contrôle vont dans `artifacts/` (ignoré par Git).
 - Style du dépôt : messages de commit en français, `cargo fmt --check` avant de
   pousser, `docs/release-notes.md` ne décrit que la version en cours.
