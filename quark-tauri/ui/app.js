@@ -109,6 +109,7 @@ async function boot() {
   let saved = null; try { saved = localStorage.getItem("quark.sel"); } catch {}
   app.sel = game(saved) ? saved : filtered()[0]?.id ?? null; app.open = app.cfg.view !== "grid";
   renderAll();
+  animSheet();
   if (!app.cfg.onboarding_done) onboardingModal();
   else if (app.cfg.last_seen_version !== app.data.version) whatsNewModal();
   invoke("list_runtimes").then((r) => (app.runtimes = r)).catch(() => (app.runtimes = []));
@@ -119,6 +120,8 @@ async function boot() {
     const { id, secs, game: g } = e.payload; app.running.delete(id); g && setGame(g);
     const n = game(id); n && toast(t("toast.stopped", { name: n.name }) + ` · ${hm(secs)}`); renderList(); app.sel === id && app.view === "library" && renderSheet();
   });
+  await listen("quark://notice", (e) => toast(e.payload.message, !!e.payload.error));
+  await listen("quark://screenshot-saved", (e) => toast(t("toast.screenshot", { path: e.payload.path })));
   setInterval(tick, 1000);
   setInterval(() => run(async () => { setRunning(await invoke("running_games")); renderList(); }), 15000);
 }

@@ -242,5 +242,13 @@ function renderSheet() {
   el.innerHTML = renderGame(g); renderOverview(g); renderTab(g); loadExtras(g);
 }
 function renderAll() { renderTop(); renderSide(); renderList(); renderSheet(); }
-function select(id) { app.sel = id; app.open = true; try { localStorage.setItem("quark.sel", id); } catch {} renderList(); renderSheet(); $("#sheet").scrollTop = 0; }
-function setView(v) { app.view = v; renderAll(); $("#sheet").scrollTop = 0; if (v === "mygames" || v === "settings") providersLoad(); }
+function animSheet() {
+  const sheet = $("#sheet");
+  sheet.classList.remove("anim");
+  void sheet.offsetWidth;
+  sheet.classList.add("anim");
+  clearTimeout(app.animT);
+  app.animT = setTimeout(() => sheet.classList.remove("anim"), 280);
+}
+function select(id) { app.sel = id; app.open = true; try { localStorage.setItem("quark.sel", id); } catch {} renderList(); renderSheet(); $("#sheet").scrollTop = 0; animSheet(); }
+function setView(v) { app.view = v; renderAll(); $("#sheet").scrollTop = 0; animSheet(); if (v === "mygames" || v === "settings") providersLoad(); }

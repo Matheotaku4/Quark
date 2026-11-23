@@ -1103,6 +1103,12 @@ pub struct Settings {
     pub notify_install_done: bool,
     /// Notifie la fin d'une sauvegarde Ludusavi.
     pub notify_save_done: bool,
+    /// Dossier racine des sauvegardes Ludusavi. Vide = `data_dir/save-backups`.
+    /// Les sauvegardes restent rangées dans un sous-dossier par jeu.
+    pub save_backup_dir: Option<String>,
+    /// Dossiers supplémentaires analysés par Ludusavi pour chaque jeu.
+    /// Chaque chemin est ajouté aux dossiers personnalisés du jeu.
+    pub save_search_dirs: Vec<String>,
     /// Notifie la fin d'une session de jeu.
     pub notify_session_done: bool,
     /// Synchronise les sauvegardes cloud Epic/GOG après installation et à la
@@ -1178,6 +1184,8 @@ impl Default for Settings {
             overlay_show_progress: true,
             notify_install_done: true,
             notify_save_done: true,
+            save_backup_dir: None,
+            save_search_dirs: Vec::new(),
             notify_session_done: true,
             cloud_saves: true,
             carousel_auto: true,

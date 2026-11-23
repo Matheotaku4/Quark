@@ -136,13 +136,40 @@ fn save_identity(library: &config::Library, game_id: &str) -> Result<SaveIdentit
         .ok_or_else(|| "Chemin d'installation introuvable.".to_string())?;
     let wine_prefix = Some(game.wine_prefix_path(&library.settings))
         .filter(|prefix| prefix.join("drive_c").is_dir());
+    let mut custom_paths = record.custom_save_paths.clone();
+    for raw in &library.settings.save_search_dirs {
+        let raw = raw.trim();
+        if raw.is_empty() {
+            continue;
+        }
+        let path = PathBuf::from(config::expand_tilde(raw));
+        if !path.is_absolute() {
+            return Err(format!("Dossier de recherche Ludusavi non absolu : {raw}"));
+        }
+        if !custom_paths.contains(&path) {
+            custom_paths.push(path);
+        }
+    }
     Ok(SaveIdentity {
         provider_key: record.key.clone(),
         install_path: Some(install_path),
         wine_prefix,
         ludusavi_title: record.title.clone(),
-        custom_paths: record.custom_save_paths.clone(),
+        custom_paths,
     })
+}
+
+fn save_manager(settings: &config::Settings) -> SaveManager {
+    let mut manager = SaveManager::new();
+    if let Some(root) = settings
+        .save_backup_dir
+        .as_deref()
+        .map(str::trim)
+        .filter(|root| !root.is_empty())
+    {
+        manager.root = PathBuf::from(config::expand_tilde(root));
+    }
+    manager
 }
 
 fn preview_dto(preview: BackupPreview) -> SavePreviewDto {
@@ -303,14 +330,15 @@ pub async fn save_preview(
     state: State<'_, AppState>,
     id: String,
 ) -> Result<SavePreviewDto, String> {
-    let identity = {
+    let (identity, settings) = {
         let library = lock(&state.library);
-        save_identity(&library, &id)?
+        (save_identity(&library, &id)?, library.settings.clone())
     };
-    let result =
-        tauri::async_runtime::spawn_blocking(move || SaveManager::new().preview(&identity))
-            .await
-            .map_err(|error| error.to_string())??;
+    let result = tauri::async_runtime::spawn_blocking(move || {
+        save_manager(&settings).preview(&identity)
+    })
+    .await
+    .map_err(|error| error.to_string())??;
     Ok(preview_dto(result))
 }
 
@@ -319,14 +347,15 @@ pub async fn save_backups(
     state: State<'_, AppState>,
     id: String,
 ) -> Result<Vec<SaveBackupDto>, String> {
-    let identity = {
+    let (identity, settings) = {
         let library = lock(&state.library);
-        save_identity(&library, &id)?
+        (save_identity(&library, &id)?, library.settings.clone())
     };
-    let result =
-        tauri::async_runtime::spawn_blocking(move || SaveManager::new().backups(&identity))
-            .await
-            .map_err(|error| error.to_string())??;
+    let result = tauri::async_runtime::spawn_blocking(move || {
+        save_manager(&settings).backups(&identity)
+    })
+    .await
+    .map_err(|error| error.to_string())??;
     Ok(result
         .into_iter()
         .map(|backup: BackupInfo| SaveBackupDto {
@@ -343,16 +372,16 @@ pub async fn save_backup(
     id: String,
     phase: String,
 ) -> Result<SaveBackupResultDto, String> {
-    let identity = {
+    let (identity, settings) = {
         let library = lock(&state.library);
-        save_identity(&library, &id)?
+        (save_identity(&library, &id)?, library.settings.clone())
     };
     let phase = match phase.as_str() {
         "after" => BackupPhase::AfterExit,
         _ => BackupPhase::BeforeLaunch,
     };
     let result = tauri::async_runtime::spawn_blocking(move || {
-        SaveManager::new().backup(&identity, phase, true)
+        save_manager(&settings).backup(&identity, phase, true)
     })
     .await
     .map_err(|error| error.to_string())??;
@@ -370,12 +399,12 @@ pub async fn save_restore_preview(
     id: String,
     backup_id: String,
 ) -> Result<SavePreviewDto, String> {
-    let identity = {
+    let (identity, settings) = {
         let library = lock(&state.library);
-        save_identity(&library, &id)?
+        (save_identity(&library, &id)?, library.settings.clone())
     };
     let result = tauri::async_runtime::spawn_blocking(move || {
-        SaveManager::new().restore_preview(&identity, &backup_id)
+        save_manager(&settings).restore_preview(&identity, &backup_id)
     })
     .await
     .map_err(|error| error.to_string())??;
@@ -389,12 +418,12 @@ pub async fn save_restore(
     backup_id: String,
     expected_paths: Vec<String>,
 ) -> Result<(), String> {
-    let identity = {
+    let (identity, settings) = {
         let library = lock(&state.library);
-        save_identity(&library, &id)?
+        (save_identity(&library, &id)?, library.settings.clone())
     };
     tauri::async_runtime::spawn_blocking(move || {
-        SaveManager::new().restore(&identity, &backup_id, true, &expected_paths)
+        save_manager(&settings).restore(&identity, &backup_id, true, &expected_paths)
     })
     .await
     .map_err(|error| error.to_string())?

@@ -3172,6 +3172,7 @@ name = "quark-tauri"
 version = "1.8.8"
 dependencies = [
  "base64 0.22.1",
+ "image",
  "quark",
  "rfd",
  "serde",
@@ -3180,6 +3181,7 @@ dependencies = [
  "tauri-build",
  "tauri-plugin-global-shortcut",
  "tauri-runtime",
+ "x11-dl",
 ]
 
 [[package]]

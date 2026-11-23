@@ -18,6 +18,9 @@ async function providersLoad(force) {
     app.pv.error = null;
   } catch (e) {
     app.pv.error = String(e);
+    // Évite une boucle infinie : renderSheet relance providersLoad tant que
+    // data reste nul.
+    app.pv.data ||= { games: [], accounts: [], tools: [], error: String(e) };
   }
   app.pv.loading = false;
   if (app.view === "mygames" || app.view === "settings") renderSheet();
@@ -38,7 +41,6 @@ function pvButton(label, action, cls = "sec", attrs = "") {
 
 function providerCard(g) {
   const installed = pvInstalled(g);
-  const cover = g.coverUrl ? `background-image:url('${esc(g.coverUrl)}')` : "";
   const linked = g.quarkGameId;
   const actions = [];
   if (g.installState === "installing") actions.push(`<span class="pvwait">${esc(t("pv.installing"))}</span>`);
@@ -53,7 +55,7 @@ function providerCard(g) {
     actions.push(pvButton(t("pv.install"), "install", "pri", `data-provider="${g.provider}" data-product="${esc(g.productId)}"`));
   }
   return `<article class="pcard" style="--pc:${PV_COLOR[g.provider] || "var(--accent)"}">
-    <div class="pcover" style="${cover}">${g.coverUrl ? "" : `<b>${esc(g.title.slice(0, 1).toUpperCase())}</b>`}
+    <div class="pcover">${g.coverUrl ? `<img loading="lazy" decoding="async" src="${esc(g.coverUrl)}" alt="">` : `<b>${esc(g.title.slice(0, 1).toUpperCase())}</b>`}
       <span class="pvsrc">${esc(PV_LABEL[g.provider] || g.provider)}</span>
       <span class="pvstate ${installed ? "on" : ""}">${esc(pvStateLabel(g.installState))}</span>
     </div>
@@ -84,10 +86,8 @@ function renderMyGames() {
   const chips = [["", t("pv.all")], ["steam", "Steam"], ["epic", "Epic Games"], ["gog", "GOG"], ["itch", "itch.io"]];
   return `<div class="mygames">
     <div class="pvhero"><div><span class="pill">${esc(t("pv.mygames"))}</span><h2>${esc(t("pv.title"))}</h2><p>${esc(t("pv.subtitle"))}</p></div>
-      <div class="pvactions"><button class="btn sec" data-pv="sync-all">${ic("refresh")}${esc(t("pv.syncAll"))}</button><button class="btn" data-pv="steam-import">${ic("plus")}${esc(t("pv.importSteam"))}</button></div></div>
+      <div class="pvactions"><button class="btn sec" data-pv="accounts">${ic("gear")}${esc(t("pv.accounts"))}</button><button class="btn sec" data-pv="sync-all">${ic("refresh")}${esc(t("pv.syncAll"))}</button><button class="btn" data-pv="steam-import">${ic("plus")}${esc(t("pv.importSteam"))}</button></div></div>
     ${data.error ? `<div class="sline err">${esc(data.error)}</div>` : ""}
-    <div class="accounts">${data.accounts.map(accountBadge).join("")}</div>
-    <div class="pvtools">${data.tools.map(toolRow).join("")}</div>
     <div class="pvfilters"><input type="search" id="pv-q" value="${esc(app.pv.q)}" placeholder="${esc(t("pv.search"))}" autocomplete="off">
       <div class="pchips">${chips.map(([id, label]) => `<button data-pvprov="${id}" class="${app.pv.provider === id ? "on" : ""}">${esc(label)}</button>`).join("")}</div>
       <select id="pv-state">${["all", "installed", "missing"].map((id) => `<option value="${id}" ${app.pv.state === id ? "selected" : ""}>${esc(t("pv.filter." + id))}</option>`).join("")}</select>
@@ -98,7 +98,15 @@ function renderMyGames() {
 
 function bindMyGames() {
   const q = $("#pv-q");
-  if (q) q.oninput = () => { app.pv.q = q.value; renderSheet(); const n = $("#pv-q"); n && (n.focus(), n.setSelectionRange(n.value.length, n.value.length)); };
+  if (q) q.oninput = () => {
+    app.pv.q = q.value;
+    clearTimeout(app.pv.searchT);
+    app.pv.searchT = setTimeout(() => {
+      renderSheet();
+      const n = $("#pv-q");
+      n && (n.focus(), n.setSelectionRange(n.value.length, n.value.length));
+    }, 110);
+  };
   const s = $("#pv-state"); if (s) s.onchange = () => { app.pv.state = s.value; renderSheet(); };
   $$("[data-pvprov]").forEach((b) => (b.onclick = () => { app.pv.provider = b.dataset.pvprov; renderSheet(); }));
 }
@@ -124,6 +132,7 @@ function bindProvidersSettings(root) {
 async function providerAction(action, data) {
   const p = data.provider || data.pvprov || "";
   if (action === "reload") return providersLoad(true);
+  if (action === "accounts") { app.stab = "providers"; app.view = "settings"; renderAll(); return; }
   if (action === "sync-all") return run(async () => { for (const k of ["steam", "epic", "gog", "itch"]) { const a = app.pv.data?.accounts.find((x) => x.id === k); if (a?.connected || k === "steam") await invoke("provider_sync", { provider: k }).catch(() => null); } await providersLoad(true); toast(t("pv.synced")); });
   if (action === "sync") return run(async () => { app.pv.loading = true; renderSheet(); await invoke("provider_sync", { provider: p }); await providersLoad(true); toast(t("pv.synced")); });
   if (action === "connect") return providerLogin(p);

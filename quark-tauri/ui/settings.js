@@ -23,7 +23,7 @@ function tabsDef() {
       card(L("Zone de notification", "Notification area"), swk("tray_icon", L("Garder Quark dans la zone de notification", "Keep Quark in the tray"), L("Quark reste accessible dans la zone de notification.", "Keep Quark available from the notification area."))),
     ],
     ingame: () => [
-      card("Overlay", swk("overlay", L("Activer l'overlay", "Enable overlay")), textk("overlay_hotkey", L("Raccourci global", "Global shortcut"), "", "Shift+Backspace", false), swk("overlay_fps", L("Afficher les FPS", "Show FPS")), swk("overlay_show_locked", L("Succès verrouillés", "Locked achievements")), swk("overlay_compact", L("Succès compacts", "Compact achievements")), swk("overlay_show_progress", L("Progression et rareté", "Progress and rarity"))),
+      card("Overlay", swk("overlay", L("Activer l'overlay", "Enable overlay")), textk("overlay_hotkey", L("Raccourci global", "Global shortcut"), L("Uniquement pendant une partie.", "Only while playing."), "Shift+Backspace", false), textk("screenshot_key", L("Capture d'écran", "Screenshot key"), L("Uniquement pendant une partie.", "Only while playing."), "F12", false), swk("overlay_fps", L("Afficher les FPS", "Show FPS")), swk("overlay_show_locked", L("Succès verrouillés", "Locked achievements")), swk("overlay_compact", L("Succès compacts", "Compact achievements")), swk("overlay_show_progress", L("Progression et rareté", "Progress and rarity"))),
 
       card("Notifications", swk("notify_install_done", L("Fin d'une installation", "Installation finished")), swk("notify_save_done", L("Sauvegarde Ludusavi terminée", "Ludusavi backup done")), swk("notify_session_done", L("Fin d'une session de jeu", "Game session ended"))),
       card(L("Sauvegardes cloud", "Cloud saves"), swk("cloud_saves", L("Synchronisation Epic/GOG", "Epic/GOG sync"), L("Après l'installation et à la sortie du jeu.", "After install and on exit."))),
@@ -41,6 +41,12 @@ function tabsDef() {
     ],
     artworks: () => [card(L("Sources d'illustrations", "Artwork sources"), textk("sgdb_api_key", L("Clé SteamGridDB (facultative)", "SteamGridDB key (optional)"), L("Stockée dans la configuration locale.", "Stored in the local configuration."), "", false),
       textk("language", L("Langue des métadonnées", "Metadata language"), "", "french", false), textk("country", L("Pays de la boutique", "Store country"), "", "FR", false)), card(L("Cache", "Cache"), `<button class="btn sec sm" data-open="${esc(app.data.dataDir)}">${ic("folder")}${esc(t("settings.openFolder"))}</button>`)],
+    saves: () => [
+      card(L("Ludusavi", "Ludusavi"),
+        `<p class="hint">${esc(L("Choisis où Quark range les sauvegardes et les dossiers supplémentaires que Ludusavi doit analyser pour chaque jeu.", "Choose where Quark stores backups and the extra folders Ludusavi should scan for every game."))}</p>`,
+        textk("save_backup_dir", L("Dossier des sauvegardes", "Backup folder"), L("Vide = ~/.local/share/quark/save-backups", "Empty = ~/.local/share/quark/save-backups"), "~/.local/share/quark/save-backups"),
+        `<div class="fl2" data-s="${esc(L("Dossiers de recherche Ludusavi", "Ludusavi search folders"))}"><span>${esc(L("Dossiers de recherche Ludusavi", "Ludusavi search folders"))}<small>${esc(L("Un chemin absolu par ligne. Ils s'ajoutent aux dossiers propres à chaque jeu.", "One absolute path per line. Added to each game's own folders."))}</small></span><textarea id="sv-search-dirs" rows="4" spellcheck="false" placeholder="~/.config/MyGame/Saves">${esc((app.cfg.save_search_dirs || []).join("\n"))}</textarea></div>`),
+    ],
     providers: () => [providersSettings()],
     stats: () => [renderStats()],
     disk: () => [card(L("Espace disque", "Disk usage"), `<div id="disk"><button class="btn sm" id="disk-go">${esc(L("Analyser", "Analyze"))}</button></div>`)],
@@ -49,7 +55,7 @@ function tabsDef() {
       `<div class="foot l"><button class="btn sec sm" id="ab-upd">${esc(t("x.updates"))}</button><button class="btn sec sm" data-open="${esc(app.data.configPath)}">${esc(t("settings.openFolder"))}</button><button class="btn sec sm" id="ab-reload">${esc(t("settings.reload"))}</button><button class="btn sec sm" id="ab-guide">${esc(L("Revoir le guide", "Review the guide"))}</button><button class="btn sec sm" data-open="https://github.com/Matheotaku4/Quark">GitHub</button></div>`)],
   };
 }
-const STABS = [["appearance", "Apparence", "Appearance"], ["ingame", "En jeu", "In game"], ["defaults", "Nouveaux jeux", "New games"], ["artworks", "Illustrations", "Artwork"], ["providers", "Boutiques & outils", "Stores & tools"], ["stats", "Statistiques", "Statistics"], ["disk", "Disque", "Disk"], ["about", "À propos", "About"]];
+const STABS = [["appearance", "Apparence", "Appearance"], ["ingame", "En jeu", "In game"], ["defaults", "Nouveaux jeux", "New games"], ["artworks", "Illustrations", "Artwork"], ["saves", "Sauvegardes", "Saves"], ["providers", "Boutiques & outils", "Stores & tools"], ["stats", "Statistiques", "Statistics"], ["disk", "Disque", "Disk"], ["about", "À propos", "About"]];
 
 function renderStats() {
   const day = (ts) => Math.floor(ts / 86400), today = day(Date.now() / 1000), per = new Map();
@@ -82,13 +88,25 @@ function bindSettings() {
   bindProvidersSettings(root);
   bindModel(root, app.cfg, (k) => {
     const top = k.split(".")[0], patch = { [top]: app.cfg[top] };
-    run(() => cfgSet(patch)).then(() => { if (k === "tray_icon") invoke("tray_visibility", { visible: !!app.cfg.tray_icon }).catch(() => {}); if (k === "overlay_hotkey") invoke("overlay_shortcut", { shortcut: app.cfg.overlay_hotkey }).catch((e) => toast(String(e), true)); if (k === "ui_language" || k === "ui_compact" || k === "game_actions") { renderAll(); } else if (k === "view") renderTop(); else if (k === "hero_background") applySettings(); });
+    run(() => cfgSet(patch)).then(() => { if (k === "tray_icon") invoke("tray_visibility", { visible: !!app.cfg.tray_icon }).catch(() => {}); if (k === "overlay") invoke("refresh_shortcuts").catch((e) => toast(String(e), true)); if (k === "ui_language" || k === "ui_compact" || k === "game_actions") { renderAll(); } else if (k === "view") renderTop(); else if (k === "hero_background") applySettings(); });
   });
+  $$('[data-k="overlay_hotkey"],[data-k="screenshot_key"]', root).forEach((el) =>
+    el.addEventListener("change", () => run(async () => {
+      await cfgSet({ overlay_hotkey: app.cfg.overlay_hotkey, screenshot_key: app.cfg.screenshot_key });
+      await invoke("refresh_shortcuts");
+    })),
+  );
   const sqEl = $("#sq"); sqEl.oninput = () => { app.sq = sqEl.value; const pos = sqEl.selectionStart; $("#sheet").innerHTML = renderSettings(); bindSettings(); const n = $("#sq"); n.focus(); n.setSelectionRange(pos, pos); };
   const commitEnv = () => run(() => cfgSet({ default_env: app.cfg.default_env }));
   $$("[data-de]", root).forEach((el) => (el.oninput = () => { app.cfg.default_env[+el.dataset.i][el.dataset.de] = el.value; })); $$("[data-de]", root).forEach((el) => (el.onchange = commitEnv));
   $$("[data-dedel]", root).forEach((b) => (b.onclick = async () => { app.cfg.default_env.splice(+b.dataset.dedel, 1); await commitEnv(); renderSheet(); }));
   const ea = $("#denv-add"); ea && (ea.onclick = () => { (app.cfg.default_env ||= []).push({ name: "", value: "" }); renderSheet(); });
+  const sdirs = $("#sv-search-dirs");
+  sdirs && (sdirs.onchange = () => run(async () => {
+    const dirs = sdirs.value.split("\n").map((line) => line.trim()).filter(Boolean);
+    await cfgSet({ save_search_dirs: dirs });
+    toast(t("toast.saved"));
+  }));
   const rr = $("#rt-redo"); rr && (rr.onclick = () => run(async () => { app.runtimes = await invoke("list_runtimes"); renderSheet(); }));
   const dg = $("#disk-go"); dg && (dg.onclick = () => run(async () => { dg.disabled = true; dg.textContent = t("log.loading"); const d = await invoke("disk_report"), m = Math.max(1, ...d.rows.map((r) => r.bytes));
     $("#disk").innerHTML = `<div class="kv"><span>Total</span><b>${esc(d.human)}</b></div>` + d.rows.map((r) => `<div class="drow"><div><b>${esc(r.label)}</b><small>${esc(r.detail || r.path)}</small></div><i style="width:${(r.bytes / m) * 140}px"></i><span>${esc(r.human)}</span><button class="ib sm" data-open="${esc(r.path)}">${ic("folder")}</button></div>`).join(""); }));

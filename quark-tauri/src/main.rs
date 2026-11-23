@@ -8,6 +8,7 @@
 mod extras;
 mod features;
 mod providers;
+mod screenshot;
 mod store;
 mod themes;
 
@@ -29,7 +30,7 @@ use tauri::http::{header, Response, StatusCode};
 use tauri::menu::{Menu, MenuItem};
 use tauri::tray::TrayIconBuilder;
 use tauri::{AppHandle, Emitter, Manager, RunEvent, State};
-use tauri_plugin_global_shortcut::{GlobalShortcutExt, ShortcutState};
+use tauri_plugin_global_shortcut::{GlobalShortcutExt, Shortcut, ShortcutState};
 use themes::THEMES;
 
 // ---------------------------------------------------------------------------
@@ -572,12 +573,38 @@ fn launch_game(app: AppHandle, state: State<'_, AppState>, id: String) -> Result
     }
     let mut resolved =
         proton::resolve_with(&game, &settings, &state.runtimes, proton::Tools::detect())?;
-    if settings.overlay_fps && !game.is_native() {
-        let _ = quark::overlay_dll::install_for_game(&game);
-        for (name, value) in quark::overlay_dll::launch_environment_for(&game, "top-right") {
-            quark::overlay_dll::set_env(&mut resolved.spec.env, &name, &value);
+    if settings.overlay_fps && proton::looks_windows(&game.exe_path()) {
+        match quark::overlay_dll::install_for_game(&game) {
+            Ok(quark::overlay_dll::InstallOutcome::Conflict(path)) => {
+                let _ = app.emit(
+                    "quark://notice",
+                    serde_json::json!({
+                        "message": format!(
+                            "{} : {} existe déjà, overlay FPS désactivé",
+                            game.name,
+                            path.display()
+                        ),
+                        "error": true
+                    }),
+                );
+            }
+            Ok(_) => {
+                for (name, value) in quark::overlay_dll::launch_environment_for(&game, "top-left")
+                {
+                    quark::overlay_dll::set_env(&mut resolved.spec.env, &name, &value);
+                }
+                quark::overlay_dll::enable_wine_override(&mut resolved.spec.env);
+            }
+            Err(error) => {
+                let _ = app.emit(
+                    "quark://notice",
+                    serde_json::json!({
+                        "message": format!("{} : overlay FPS indisponible ({error})", game.name),
+                        "error": true
+                    }),
+                );
+            }
         }
-        quark::overlay_dll::enable_wine_override(&mut resolved.spec.env);
     }
     if let Some(prefix) = &resolved.prefix {
         std::fs::create_dir_all(prefix).map_err(|error| format!("Préfixe Proton : {error}"))?;
@@ -1037,17 +1064,105 @@ fn overlay_toggle(app: AppHandle) {
     toggle_overlay(&app);
 }
 
-fn register_overlay_shortcut(app: &AppHandle, shortcut: &str) -> Result<(), String> {
-    let normalized = shortcut.replace("BackSpace", "Backspace");
+fn normalized_shortcut(shortcut: &str) -> String {
+    shortcut
+        .trim()
+        .replace("Retour arrière", "Backspace")
+        .replace("Retour arriere", "Backspace")
+        .replace("Maj", "Shift")
+        .replace("BackSpace", "Backspace")
+}
+
+fn configured_shortcut(shortcut: &str) -> Option<Shortcut> {
+    normalized_shortcut(shortcut).parse().ok()
+}
+
+fn shortcut_matches(actual: &Shortcut, configured: &str) -> bool {
+    configured_shortcut(configured).is_some_and(|shortcut| &shortcut == actual)
+}
+
+fn shortcut_matches_with_fallback(actual: &Shortcut, configured: &str, fallback: &str) -> bool {
+    shortcut_matches(actual, configured)
+        || (configured_shortcut(configured).is_none()
+            && !configured.trim().is_empty()
+            && shortcut_matches(actual, fallback))
+}
+
+fn register_one_shortcut(app: &AppHandle, raw: &str, fallback: &str) -> Result<(), String> {
+    let value = normalized_shortcut(raw);
+    if value.is_empty() {
+        return Ok(());
+    }
+    if value.parse::<Shortcut>().is_err() {
+        let fallback_value = normalized_shortcut(fallback);
+        let _ = app.global_shortcut().register(fallback_value.as_str());
+        return Err(format!(
+            "Raccourci invalide « {raw} », remplacé par {fallback}"
+        ));
+    }
     app.global_shortcut()
-        .register(normalized.as_str())
-        .map_err(|error| format!("Raccourci invalide : {error}"))
+        .register(value.as_str())
+        .map_err(|error| format!("Raccourci indisponible « {raw} » : {error}"))
+}
+
+fn register_shortcuts(app: &AppHandle, settings: &Settings) -> Result<(), String> {
+    let _ = app.global_shortcut().unregister_all();
+    let mut errors = Vec::new();
+    if settings.overlay {
+        if let Err(error) = register_one_shortcut(app, &settings.overlay_hotkey, "Shift+Backspace") {
+            errors.push(error);
+        }
+    }
+    if !settings.screenshot_key.trim().is_empty() {
+        if let Err(error) = register_one_shortcut(app, &settings.screenshot_key, "F12") {
+            errors.push(error);
+        }
+    }
+    if errors.is_empty() {
+        Ok(())
+    } else {
+        Err(errors.join(" · "))
+    }
 }
 
 #[tauri::command]
-fn overlay_shortcut(app: AppHandle, shortcut: String) -> Result<(), String> {
-    let _ = app.global_shortcut().unregister_all();
-    register_overlay_shortcut(&app, &shortcut)
+fn refresh_shortcuts(app: AppHandle) -> Result<(), String> {
+    let settings = {
+        let state = app.state::<AppState>();
+        let settings = lock(&state.library).settings.clone();
+        settings
+    };
+    register_shortcuts(&app, &settings)
+}
+
+fn capture_active_session(app: &AppHandle) {
+    let name = {
+        let state = app.state::<AppState>();
+        let sessions = lock(&state.sessions);
+        sessions
+            .values()
+            .next()
+            .map(|run| run.name.clone())
+            .unwrap_or_else(|| "jeu".to_string())
+    };
+    let path = screenshot::path_for(&name);
+    match screenshot::capture(&path) {
+        Ok(()) => {
+            let _ = app.emit(
+                "quark://screenshot-saved",
+                serde_json::json!({ "path": path.display().to_string(), "game": name }),
+            );
+        }
+        Err(error) => {
+            let _ = app.emit(
+                "quark://notice",
+                serde_json::json!({
+                    "message": format!("Capture d'écran impossible : {error}"),
+                    "error": true
+                }),
+            );
+        }
+    }
 }
 
 #[tauri::command]
@@ -1668,12 +1783,28 @@ fn main() {
     let app = tauri::Builder::default()
         .plugin(
             tauri_plugin_global_shortcut::Builder::new()
-                .with_handler(|app, _shortcut, event| {
-                    if event.state == ShortcutState::Pressed {
-                        let state = app.state::<AppState>();
-                        if lock(&state.library).settings.overlay {
-                            toggle_overlay(app);
-                        }
+                .with_handler(|app, shortcut, event| {
+                    if event.state != ShortcutState::Pressed {
+                        return;
+                    }
+                    let state = app.state::<AppState>();
+                    if lock(&state.sessions).is_empty() {
+                        return;
+                    }
+                    let settings = lock(&state.library).settings.clone();
+                    if shortcut_matches_with_fallback(shortcut, &settings.screenshot_key, "F12") {
+                        std::thread::spawn({
+                            let app = app.clone();
+                            move || capture_active_session(&app)
+                        });
+                    } else if settings.overlay
+                        && shortcut_matches_with_fallback(
+                            shortcut,
+                            &settings.overlay_hotkey,
+                            "Shift+Backspace",
+                        )
+                    {
+                        toggle_overlay(app);
                     }
                 })
                 .build(),
@@ -1714,7 +1845,7 @@ fn main() {
             win_start_resize,
             overlay_toggle,
             overlay_hide,
-            overlay_shortcut,
+            refresh_shortcuts,
             tray_visibility,
             features::get_settings_raw,
             features::patch_settings_raw,
@@ -1803,14 +1934,12 @@ fn main() {
                 };
                 let _ = tray.set_visible(visible);
             }
-            let hotkey = {
+            let settings = {
                 let state = app.state::<AppState>();
-                let hotkey = lock(&state.library).settings.overlay_hotkey.clone();
-                hotkey
+                let settings = lock(&state.library).settings.clone();
+                settings
             };
-            if register_overlay_shortcut(app.handle(), &hotkey).is_err() {
-                let _ = register_overlay_shortcut(app.handle(), "Shift+Backspace");
-            }
+            let _ = register_shortcuts(app.handle(), &settings);
             spawn_monitor(app.handle().clone());
             Ok(())
         })
