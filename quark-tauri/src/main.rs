@@ -5,6 +5,10 @@
 //! Aucun réseau n'est nécessaire au rendu ; les images d'artwork passent par
 //! le protocole local `quarkimg://`.
 
+mod extras;
+mod features;
+mod providers;
+mod store;
 mod themes;
 
 use base64::engine::general_purpose::URL_SAFE_NO_PAD;
@@ -14,7 +18,7 @@ use quark::config::{
     UiLanguage,
 };
 use quark::proton::{self, ProtonRuntime};
-use quark::providers;
+use quark::providers as core_providers;
 use quark::session::{self, Session};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -22,7 +26,10 @@ use std::path::{Path, PathBuf};
 use std::sync::{Mutex, MutexGuard};
 use std::time::Duration;
 use tauri::http::{header, Response, StatusCode};
+use tauri::menu::{Menu, MenuItem};
+use tauri::tray::TrayIconBuilder;
 use tauri::{AppHandle, Emitter, Manager, RunEvent, State};
+use tauri_plugin_global_shortcut::{GlobalShortcutExt, ShortcutState};
 use themes::THEMES;
 
 // ---------------------------------------------------------------------------
@@ -46,6 +53,21 @@ struct AppState {
 
 fn lock<T>(mutex: &Mutex<T>) -> MutexGuard<'_, T> {
     mutex.lock().unwrap_or_else(|poison| poison.into_inner())
+}
+
+fn tray_available() -> bool {
+    if std::env::var_os("DBUS_SESSION_BUS_ADDRESS").is_none() {
+        return false;
+    }
+    std::process::Command::new("ldconfig")
+        .arg("-p")
+        .output()
+        .ok()
+        .map(|output| {
+            let list = String::from_utf8_lossy(&output.stdout);
+            list.contains("libayatana-appindicator3.so.1") || list.contains("libappindicator3.so.1")
+        })
+        .unwrap_or(false)
 }
 
 // ---------------------------------------------------------------------------
@@ -104,6 +126,7 @@ struct InstallationDto {
     exe: String,
     path: Option<String>,
     installed: bool,
+    active: bool,
 }
 
 #[derive(Serialize)]
@@ -280,6 +303,7 @@ fn game_dto(
             exe: installation.exe.clone(),
             path: installation.path.clone(),
             installed: installation.installed,
+            active: active.is_some_and(|current| current.id == installation.id),
         })
         .collect::<Vec<_>>();
     let installed = game
@@ -546,13 +570,20 @@ fn launch_game(app: AppHandle, state: State<'_, AppState>, id: String) -> Result
             }
         ));
     }
-    let resolved =
+    let mut resolved =
         proton::resolve_with(&game, &settings, &state.runtimes, proton::Tools::detect())?;
+    if settings.overlay_fps && !game.is_native() {
+        let _ = quark::overlay_dll::install_for_game(&game);
+        for (name, value) in quark::overlay_dll::launch_environment_for(&game, "top-right") {
+            quark::overlay_dll::set_env(&mut resolved.spec.env, &name, &value);
+        }
+        quark::overlay_dll::enable_wine_override(&mut resolved.spec.env);
+    }
     if let Some(prefix) = &resolved.prefix {
         std::fs::create_dir_all(prefix).map_err(|error| format!("Préfixe Proton : {error}"))?;
     }
     let diagnostics =
-        providers::connection_diagnostics(None, Some(&game.wine_prefix_path(&settings)));
+        core_providers::connection_diagnostics(None, Some(&game.wine_prefix_path(&settings)));
     let session = session::start(&game, &resolved, &diagnostics)?;
     let label = resolved.label();
     lock(&state.sessions).insert(
@@ -741,6 +772,49 @@ fn add_game(state: State<'_, AppState>, name: String, exe: String) -> Result<Gam
 }
 
 #[tauri::command]
+fn remove_games(state: State<'_, AppState>, ids: Vec<String>) -> Result<usize, String> {
+    let running = lock(&state.sessions);
+    let mut library = lock(&state.library);
+    let before = library.games.len();
+    library
+        .games
+        .retain(|game| !ids.contains(&game.id) || running.contains_key(&game.id));
+    let removed = before - library.games.len();
+    persist(&state, &mut library)?;
+    Ok(removed)
+}
+
+#[tauri::command]
+fn activate_installation(
+    state: State<'_, AppState>,
+    id: String,
+    installation_id: String,
+) -> Result<GameDto, String> {
+    let mut library = lock(&state.library);
+    let settings = library.settings.clone();
+    {
+        let game = library
+            .get_mut(&id)
+            .ok_or_else(|| "Jeu introuvable".to_string())?;
+        if !game.activate_installation(&installation_id) {
+            return Err("Installation introuvable.".to_string());
+        }
+    }
+    persist(&state, &mut library)?;
+    let game = library
+        .get(&id)
+        .ok_or_else(|| "Jeu introuvable".to_string())?;
+    let sessions = lock(&state.sessions);
+    let run = sessions.get(&id);
+    Ok(game_dto(
+        game,
+        &settings,
+        run.is_some(),
+        run.map(|run| run.label.clone()),
+    ))
+}
+
+#[tauri::command]
 fn remove_game(state: State<'_, AppState>, id: String) -> Result<(), String> {
     if lock(&state.sessions).contains_key(&id) {
         return Err("Arrêtez le jeu avant de le retirer.".to_string());
@@ -848,6 +922,19 @@ fn reload_library(state: State<'_, AppState>) -> Result<Bootstrap, String> {
 }
 
 #[tauri::command]
+async fn pick_folder() -> Option<String> {
+    tauri::async_runtime::spawn_blocking(|| {
+        rfd::FileDialog::new()
+            .set_title("Choisir un dossier")
+            .pick_folder()
+            .map(|path| path.display().to_string())
+    })
+    .await
+    .ok()
+    .flatten()
+}
+
+#[tauri::command]
 async fn pick_executable() -> Option<String> {
     tauri::async_runtime::spawn_blocking(|| {
         rfd::FileDialog::new()
@@ -916,9 +1003,77 @@ fn win_toggle_maximize(window: tauri::Window) {
     }
 }
 
+fn place_overlay(window: &tauri::WebviewWindow) {
+    if let Ok(Some(monitor)) = window.current_monitor() {
+        let size = window.outer_size().unwrap_or_default();
+        let (width, height) = if size.width > 0 && size.height > 0 {
+            (size.width as i32, size.height as i32)
+        } else {
+            (460, 356)
+        };
+        let margin = (18.0 * monitor.scale_factor()) as i32;
+        let area = monitor.size();
+        let origin = monitor.position();
+        let x = origin.x + area.width as i32 - width - margin;
+        let y = origin.y + area.height as i32 - height - margin;
+        let _ = window.set_position(tauri::PhysicalPosition::new(x, y));
+    }
+}
+
+fn toggle_overlay(app: &AppHandle) {
+    if let Some(window) = app.get_webview_window("overlay") {
+        if window.is_visible().unwrap_or(false) {
+            let _ = window.hide();
+        } else {
+            let _ = window.show();
+            place_overlay(&window);
+            let _ = app.emit("quark://overlay-open", ());
+        }
+    }
+}
+
+#[tauri::command]
+fn overlay_toggle(app: AppHandle) {
+    toggle_overlay(&app);
+}
+
+fn register_overlay_shortcut(app: &AppHandle, shortcut: &str) -> Result<(), String> {
+    let normalized = shortcut.replace("BackSpace", "Backspace");
+    app.global_shortcut()
+        .register(normalized.as_str())
+        .map_err(|error| format!("Raccourci invalide : {error}"))
+}
+
+#[tauri::command]
+fn overlay_shortcut(app: AppHandle, shortcut: String) -> Result<(), String> {
+    let _ = app.global_shortcut().unregister_all();
+    register_overlay_shortcut(&app, &shortcut)
+}
+
+#[tauri::command]
+fn overlay_hide(app: AppHandle) {
+    if let Some(window) = app.get_webview_window("overlay") {
+        let _ = window.hide();
+    }
+}
+
+#[tauri::command]
+fn tray_visibility(app: AppHandle, visible: bool) -> Result<(), String> {
+    if let Some(tray) = app.tray_by_id("quark-tray") {
+        tray.set_visible(visible)
+            .map_err(|error| error.to_string())?;
+    }
+    Ok(())
+}
+
 #[tauri::command]
 fn win_close(window: tauri::Window) {
-    let _ = window.close();
+    let state = window.app_handle().state::<AppState>();
+    if lock(&state.library).settings.tray_icon && tray_available() {
+        let _ = window.hide();
+    } else {
+        let _ = window.close();
+    }
 }
 
 #[tauri::command]
@@ -1308,8 +1463,12 @@ fn write_demo_art(root: &Path, name: &str, hue: u16) -> (PathBuf, PathBuf) {
 
 fn demo_library(root: &Path, with_games: bool) -> Library {
     let mut library = Library::default();
-    library.settings.onboarding_done = true;
-    library.settings.ui_language = UiLanguage::French;
+    library.settings.onboarding_done = std::env::var_os("QUARK_DEMO_ONBOARDING").is_none();
+    library.settings.last_seen_version = env!("CARGO_PKG_VERSION").to_string();
+    library.settings.ui_language = std::env::var("QUARK_DEMO_LANG")
+        .ok()
+        .and_then(|value| parse_language(&value))
+        .unwrap_or(UiLanguage::French);
     library.settings.theme = ThemeMode::Amoled;
     library.settings.ui_compact = false;
     library.settings.hero_background = true;
@@ -1319,7 +1478,13 @@ fn demo_library(root: &Path, with_games: bool) -> Library {
     let _ = std::fs::remove_dir_all(root);
     let _ = std::fs::create_dir_all(root);
     let now = config::now_ts();
-    for spec in DEMO {
+    let provider_cycle = [
+        quark::providers::model::Provider::Steam,
+        quark::providers::model::Provider::Epic,
+        quark::providers::model::Provider::Gog,
+        quark::providers::model::Provider::Itch,
+    ];
+    for (index, spec) in DEMO.iter().enumerate() {
         let mut game = Game::new(spec.name, "/bin/true");
         game.developer = spec.developer.to_string();
         game.genres = spec.genres.iter().map(|genre| genre.to_string()).collect();
@@ -1347,9 +1512,36 @@ fn demo_library(root: &Path, with_games: bool) -> Library {
             }
         }
         let (cover, hero) = write_demo_art(root, spec.name, hue_for(spec.name));
-        game.artwork.cover = Some(cover);
+        game.artwork.cover = Some(cover.clone());
         game.artwork.hero = Some(hero);
         game.normalize_installations();
+        let provider = provider_cycle[index % provider_cycle.len()];
+        let installed = index < 8;
+        let cover_url = asset_url(Some(&cover));
+        library
+            .provider_library
+            .games
+            .push(quark::providers::model::ProviderGame {
+                key: quark::providers::model::ProviderGameKey {
+                    provider,
+                    product_id: format!("demo-{index}"),
+                },
+                title: spec.name.to_string(),
+                owned: true,
+                install_root: installed.then(|| PathBuf::from("/bin")),
+                install_path: installed.then(|| PathBuf::from("/bin")),
+                install_exe: installed.then(|| PathBuf::from("/bin/true")),
+                install_state: if installed {
+                    quark::providers::model::InstallState::Installed
+                } else {
+                    quark::providers::model::InstallState::NotInstalled
+                },
+                cover_url,
+                quark_game_id: installed.then(|| game.id.clone()),
+                custom_save_paths: Vec::new(),
+                capabilities: quark::providers::model::GameCapabilities::default(),
+                last_synced: Some(now),
+            });
         library.games.push(game);
     }
     library
@@ -1390,6 +1582,11 @@ fn spawn_monitor(app: AppHandle) {
                         run.session.started.elapsed().as_secs().max(1),
                     ));
                 }
+            }
+        }
+        if !ended.is_empty() && lock(&state.sessions).is_empty() {
+            if let Some(window) = app.get_webview_window("overlay") {
+                let _ = window.hide();
             }
         }
         for (id, started, secs) in ended {
@@ -1469,6 +1666,18 @@ fn main() {
     };
 
     let app = tauri::Builder::default()
+        .plugin(
+            tauri_plugin_global_shortcut::Builder::new()
+                .with_handler(|app, _shortcut, event| {
+                    if event.state == ShortcutState::Pressed {
+                        let state = app.state::<AppState>();
+                        if lock(&state.library).settings.overlay {
+                            toggle_overlay(app);
+                        }
+                    }
+                })
+                .build(),
+        )
         .manage(state)
         .register_uri_scheme_protocol("quarkimg", |ctx, request| {
             let state = ctx.app_handle().state::<AppState>();
@@ -1488,27 +1697,119 @@ fn main() {
             update_game,
             add_game,
             remove_game,
+            remove_games,
+            activate_installation,
             open_folder,
             open_config_folder,
             read_log,
             save_settings,
             reload_library,
             pick_executable,
+            pick_folder,
             pick_artwork,
             win_minimize,
             win_toggle_maximize,
             win_close,
             win_start_drag,
             win_start_resize,
+            overlay_toggle,
+            overlay_hide,
+            overlay_shortcut,
+            tray_visibility,
+            features::get_settings_raw,
+            features::patch_settings_raw,
+            features::get_game_raw,
+            features::patch_game_raw,
+            features::list_runtimes,
+            features::fetch_news,
+            features::fetch_hltb,
+            features::fetch_protondb,
+            features::disk_report,
+            features::check_update,
+            features::open_url,
+            store::store_load,
+            store::store_refresh,
+            store::store_search,
+            providers::providers_data,
+            providers::provider_sync,
+            providers::provider_login,
+            providers::provider_disconnect,
+            providers::provider_save_credentials,
+            providers::provider_tool_install,
+            providers::provider_install,
+            providers::provider_uninstall,
+            providers::provider_adopt,
+            providers::steam_candidates,
+            providers::steam_import,
+            extras::game_achievements,
+            extras::game_playtime,
+            extras::game_media,
+            extras::save_preview,
+            extras::save_backups,
+            extras::save_backup,
+            extras::save_restore_preview,
+            extras::save_restore,
+            extras::save_add_folder,
+            extras::save_remove_folder,
+            extras::cloud_sync,
+            extras::artwork_fetch,
+            extras::game_remove_artwork,
         ])
         .setup(|app| {
+            let icon = tauri::image::Image::new_owned(
+                include_bytes!("../icons/icon.rgba").to_vec(),
+                128,
+                128,
+            );
             if let Some(window) = app.get_webview_window("main") {
-                let icon = tauri::image::Image::new_owned(
-                    include_bytes!("../icons/icon.rgba").to_vec(),
-                    128,
-                    128,
-                );
-                let _ = window.set_icon(icon);
+                let _ = window.set_icon(icon.clone());
+            }
+            if tray_available() {
+                let (show_label, quit_label) = {
+                    let state = app.state::<AppState>();
+                    let language = lock(&state.library).settings.ui_language;
+                    match language {
+                        UiLanguage::French => ("Afficher Quark", "Quitter Quark"),
+                        UiLanguage::English => ("Show Quark", "Quit Quark"),
+                        UiLanguage::Spanish => ("Mostrar Quark", "Salir de Quark"),
+                        UiLanguage::German => ("Quark anzeigen", "Quark beenden"),
+                        UiLanguage::Portuguese => ("Mostrar o Quark", "Sair do Quark"),
+                    }
+                };
+                let show = MenuItem::with_id(app, "show", show_label, true, None::<&str>)?;
+                let quit = MenuItem::with_id(app, "quit", quit_label, true, None::<&str>)?;
+                let menu = Menu::with_items(app, &[&show, &quit])?;
+                let tray = TrayIconBuilder::with_id("quark-tray")
+                    .icon(icon)
+                    .tooltip("Quark")
+                    .menu(&menu)
+                    .show_menu_on_left_click(true)
+                    .on_menu_event(|app, event| match event.id.as_ref() {
+                        "show" => {
+                            if let Some(window) = app.get_webview_window("main") {
+                                let _ = window.show();
+                                let _ = window.unminimize();
+                                let _ = window.set_focus();
+                            }
+                        }
+                        "quit" => app.exit(0),
+                        _ => {}
+                    })
+                    .build(app)?;
+                let visible = {
+                    let state = app.state::<AppState>();
+                    let visible = lock(&state.library).settings.tray_icon;
+                    visible
+                };
+                let _ = tray.set_visible(visible);
+            }
+            let hotkey = {
+                let state = app.state::<AppState>();
+                let hotkey = lock(&state.library).settings.overlay_hotkey.clone();
+                hotkey
+            };
+            if register_overlay_shortcut(app.handle(), &hotkey).is_err() {
+                let _ = register_overlay_shortcut(app.handle(), "Shift+Backspace");
             }
             spawn_monitor(app.handle().clone());
             Ok(())

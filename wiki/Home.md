@@ -2,7 +2,7 @@
 
 Quark is a game launcher for Linux, written in Rust with a Tauri 2 interface. It brings local
 games and your Steam, Epic Games and GOG libraries together, launches Windows
-games through Proton or umu-launcher, and adds an in-game overlay, screenshots,
+games through Proton or umu-launcher, and adds an in-game overlay,
 achievements and verified local saves.
 
 This documentation describes **Quark 1.8.8**. It is also versioned in the
@@ -38,7 +38,7 @@ repository under [`wiki/`](https://github.com/Matheotaku4/Quark/tree/main/wiki).
 | Use Steam, Epic, GOG, accounts and cloud saves | [Stores and saves](Stores-and-Saves) |
 | Configure Proton, umu, Wine, variables and launch options | [Proton, Wine and launch options](Proton-Wine-and-Launch-Options) |
 | Change themes, language, hero background or startup page | [Themes and appearance](Themes-and-Appearance) |
-| Use the overlay, screenshots and achievements | [Overlay and achievements](Overlay-and-Achievements) |
+| Use the overlay and achievements | [Overlay and achievements](Overlay-and-Achievements) |
 | Find every settings page | [Settings](Settings) |
 | Fix a game that will not start, a missing text or a save issue | [Troubleshooting](Troubleshooting) |
 
@@ -53,8 +53,8 @@ repository under [`wiki/`](https://github.com/Matheotaku4/Quark/tree/main/wiki).
 - **Proton without command lines.** Per-game runtime, prefix, GameMode,
   MangoHud, gamescope, PRIME, a free wrapper command, environment variables,
   anti-cheat runtimes and umu-launcher.
-- **A real overlay.** `Shift+Backspace` opens a panel above the game and `F12`
-  takes a screenshot. Epic and GOG achievements share the same view.
+- **A real overlay.** `Shift+Backspace` opens a compact panel above the game.
+  Epic and GOG achievements share the same view.
 - **Saves.** Epic/GOG cloud synchronization and Ludusavi snapshots verified
   before and after a session.
 - **A configurable interface.** Thirteen dark themes, five interface languages, list or
@@ -73,7 +73,6 @@ repository under [`wiki/`](https://github.com/Matheotaku4/Quark/tree/main/wiki).
 | `Enter` | Launch the selected game |
 | Arrow keys | Move through the library |
 | `Shift+Backspace` | Open or close the in-game overlay |
-| `F12` | Screenshot the running game |
 | `Ctrl+Q` | Quit Quark |
 
 ## About this documentation

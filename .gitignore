@@ -21,4 +21,4 @@ tools/overlay-dll/target
 
 # Compilation et schémas générés de l’interface Tauri
 /quark-tauri/target/
-/quark-tauri/gen/schemas/
+/quark-tauri/gen/

@@ -22,6 +22,22 @@
         "transparent": false,
         "theme": "Dark",
         "backgroundColor": "#000000"
+      },
+      {
+        "label": "overlay",
+        "url": "overlay.html",
+        "title": "Quark Overlay",
+        "width": 460,
+        "height": 320,
+        "resizable": false,
+        "decorations": false,
+        "transparent": true,
+        "alwaysOnTop": true,
+        "skipTaskbar": true,
+        "focus": false,
+        "shadow": false,
+        "visible": false,
+        "backgroundColor": "#00000000"
       }
     ],
     "security": {

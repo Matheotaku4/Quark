@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="fr" data-theme="amoled">
+<html lang="fr">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -7,88 +7,40 @@
   <title>Quark</title>
   <link rel="stylesheet" href="styles.css">
 </head>
-<body>
-  <div class="resize-handles" aria-hidden="true">
-    <div class="resize-handle n" data-resize="n"></div>
-    <div class="resize-handle s" data-resize="s"></div>
-    <div class="resize-handle e" data-resize="e"></div>
-    <div class="resize-handle w" data-resize="w"></div>
-    <div class="resize-handle ne" data-resize="ne"></div>
-    <div class="resize-handle nw" data-resize="nw"></div>
-    <div class="resize-handle se" data-resize="se"></div>
-    <div class="resize-handle sw" data-resize="sw"></div>
-  </div>
-
-  <header class="titlebar" id="titlebar">
-    <div class="brand" aria-label="Quark">
-      <img class="brand-mark" src="quark.png" alt="">
-      <span class="brand-name">Quark</span>
-    </div>
-    <div class="titlebar-search">
-      <span class="search-icon" aria-hidden="true"></span>
-      <input id="global-search" type="search" autocomplete="off" spellcheck="false" aria-label="Rechercher">
-      <kbd>Ctrl K</kbd>
-    </div>
-    <div class="titlebar-right">
-      <button class="running-pill hidden" id="running-pill" type="button"></button>
-      <span class="demo-pill hidden" id="demo-pill"></span>
-      <div class="window-controls">
-        <button class="win-btn" id="win-min" type="button" aria-label="Réduire"></button>
-        <button class="win-btn" id="win-max" type="button" aria-label="Agrandir"></button>
-        <button class="win-btn win-close" id="win-close" type="button" aria-label="Fermer"></button>
-      </div>
-    </div>
+<body data-view="library">
+  <div id="bg"></div>
+  <header id="top">
+    <div class="brand"><img src="quark.png" alt=""><b>QUARK</b></div>
+    <nav id="top-tabs"></nav>
+    <div id="top-right"></div>
   </header>
-
-  <div class="app-shell">
-    <nav class="rail" aria-label="Navigation">
-      <div class="rail-top">
-        <button class="rail-btn active" id="rail-library" type="button" data-view="library" aria-label="Bibliothèque"></button>
-        <button class="rail-btn" id="rail-settings" type="button" data-view="settings" aria-label="Paramètres"></button>
-      </div>
-      <div class="rail-bottom">
-        <div class="rail-avatar" title="Quark">Q</div>
-      </div>
-    </nav>
-
-    <section class="library-pane" id="library-pane" aria-label="Bibliothèque">
-      <header class="pane-head">
-        <div class="pane-title">
-          <h1 id="library-title">Bibliothèque</h1>
-          <div class="pane-sub">
-            <p id="library-count"></p>
-            <div class="sort-field">
-              <select id="sort-select" aria-label="Trier"></select>
-              <span class="select-chevron" aria-hidden="true"></span>
-            </div>
-          </div>
+  <div class="main">
+    <aside class="side">
+      <div class="side-top">
+        <div class="sh"><h2 id="lib-title"></h2><span id="count"></span></div>
+        <div class="srow">
+          <label class="search"><svg class="ic" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="m20 20-4.2-4.2"/></svg><input id="q" type="search" autocomplete="off" spellcheck="false"><kbd>/</kbd></label>
+          <details class="menu fl" id="fl-btn"><summary class="tb" aria-label="Filtres"><svg class="ic" viewBox="0 0 24 24"><path d="M4 5h16l-6 8v6l-4-2v-4z"/></svg></summary><div class="pop" id="fl-pop"></div></details>
         </div>
-        <button class="btn btn-primary btn-sm" id="add-game-btn" type="button"></button>
-      </header>
-      <div class="pane-tools">
-        <div class="search-field">
-          <span class="search-icon" aria-hidden="true"></span>
-          <input id="library-search" type="search" autocomplete="off" spellcheck="false">
-        </div>
-        <div class="chips" id="status-filters" role="tablist"></div>
       </div>
-      <div class="game-list" id="game-list" role="listbox" tabindex="0"></div>
-      <div class="list-empty hidden" id="list-empty"></div>
-    </section>
-
-    <main class="detail-pane" id="detail-pane" tabindex="-1"></main>
+      <div class="batchbar" id="batchbar" hidden></div>
+      <div class="list" id="list" tabindex="0"></div>
+      <footer class="side-foot"><select id="sort" aria-label="Trier"></select><select id="group" aria-label="Grouper"></select><span id="fl-label" hidden></span></footer>
+    </aside>
+    <main class="sheet" id="sheet" tabindex="-1"></main>
   </div>
-
-  <div class="modal-root" id="modal-root"></div>
-  <div class="toasts" id="toasts" aria-live="polite"></div>
-
-  <div class="splash" id="splash">
-    <div class="splash-glow"></div>
-    <img class="splash-mark" src="quark.png" alt="">
-    <div class="splash-name">Quark</div>
-    <div class="splash-spinner" aria-hidden="true"></div>
-  </div>
-
+  <div id="modal"></div>
+  <div id="toasts" aria-live="polite"></div>
+  <script src="i18n.js"></script>
+  <script src="i18n-extra.js"></script>
+  <script src="core.js"></script>
+  <script src="library.js"></script>
+  <script src="dialogs.js"></script>
+  <script src="settings.js"></script>
+  <script src="providers.js"></script>
+  <script src="onboarding.js"></script>
+  <script src="saves.js"></script>
+  <script src="store.js"></script>
   <script src="app.js"></script>
 </body>
 </html>
