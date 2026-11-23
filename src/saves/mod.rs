@@ -331,7 +331,7 @@ impl SaveManager {
         if output.exit_code != Some(0) {
             return identity.clone();
         }
-        let Some(title) = parse_find_title(&output.stdout, &identity.ludusavi_title) else {
+        let Some(title) = parse_find_title(&output.stdout, query) else {
             return identity.clone();
         };
         let mut resolved = identity.clone();
@@ -734,7 +734,7 @@ fn strip_install_suffix(title: &str) -> &str {
     };
     let suffix = &title[index + 2..];
     if title.ends_with(']')
-        && ["steam:", "epic:", "gog:"]
+        && ["steam:", "epic:", "gog:", "itch:"]
             .iter()
             .any(|prefix| suffix.starts_with(prefix))
     {
@@ -997,8 +997,24 @@ mod tests {
             strip_install_suffix("Midnight Ghost Hunt [epic:Anemone]"),
             "Midnight Ghost Hunt"
         );
+        assert_eq!(strip_install_suffix("Celeste [itch:12345]"), "Celeste");
         assert_eq!(strip_install_suffix("Celeste"), "Celeste");
         assert_eq!(strip_install_suffix("Titre [édition]"), "Titre [édition]");
+    }
+
+    #[test]
+    fn le_titre_nettoye_est_utilise_pour_valider_le_resultat_de_find() {
+        // `resolved_identity` interroge Ludusavi avec le titre sans suffixe.
+        // La validation doit donc comparer ce même titre nettoyé, pas le titre
+        // suffixé de l'identité.
+        let query = strip_install_suffix("Dying Light [epic:Anemone]");
+        assert_eq!(
+            parse_find_title(
+                r#"{"games":{"Dying Light":{},"Dying Light: Enhanced Edition":{}}}"#,
+                query
+            ),
+            Some("Dying Light".to_string())
+        );
     }
 
     #[test]

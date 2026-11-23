@@ -14,7 +14,7 @@ use quark::saves::{BackupInfo, BackupPhase, BackupPreview, SaveIdentity, SaveMan
 use quark::{artwork, media};
 use serde::Serialize;
 use std::path::PathBuf;
-use tauri::State;
+use tauri::{AppHandle, State};
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -368,6 +368,7 @@ pub async fn save_backups(
 
 #[tauri::command]
 pub async fn save_backup(
+    app: AppHandle,
     state: State<'_, AppState>,
     id: String,
     phase: String,
@@ -376,6 +377,7 @@ pub async fn save_backup(
         let library = lock(&state.library);
         (save_identity(&library, &id)?, library.settings.clone())
     };
+    let notify = settings.notify_save_done;
     let phase = match phase.as_str() {
         "after" => BackupPhase::AfterExit,
         _ => BackupPhase::BeforeLaunch,
@@ -385,6 +387,13 @@ pub async fn save_backup(
     })
     .await
     .map_err(|error| error.to_string())??;
+    if notify {
+        super::notify_desktop(
+            &app,
+            &quark::i18n::tr("Sauvegarde terminée"),
+            &result.title,
+        );
+    }
     Ok(SaveBackupResultDto {
         title: result.title,
         phase: format!("{:?}", result.phase).to_lowercase(),

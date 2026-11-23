@@ -28,7 +28,7 @@ use std::sync::{Mutex, MutexGuard};
 use std::time::Duration;
 use tauri::http::{header, Response, StatusCode};
 use tauri::menu::{Menu, MenuItem};
-use tauri::tray::TrayIconBuilder;
+use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
 use tauri::{AppHandle, Emitter, Manager, RunEvent, State};
 use tauri_plugin_global_shortcut::{GlobalShortcutExt, Shortcut, ShortcutState};
 use themes::THEMES;
@@ -69,6 +69,250 @@ fn tray_available() -> bool {
             list.contains("libayatana-appindicator3.so.1") || list.contains("libappindicator3.so.1")
         })
         .unwrap_or(false)
+}
+
+/// Notification bureau via le service XDG. La fenêtre au premier plan est
+/// ignorée : l'utilisateur voit déjà le résultat dans Quark.
+fn send_notification(title: &str, body: &str) {
+    let _ = std::process::Command::new("notify-send")
+        .args(["--app-name=Quark", "--urgency=normal", title, body])
+        .spawn();
+}
+
+fn notify_desktop(app: &AppHandle, title: &str, body: &str) {
+    let focused = app
+        .get_webview_window("main")
+        .and_then(|window| window.is_focused().ok())
+        .unwrap_or(false);
+    if !focused {
+        send_notification(title, body);
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Lancement depuis le terminal, sans interface
+// ---------------------------------------------------------------------------
+
+fn title_key(text: &str) -> String {
+    text.to_lowercase()
+        .chars()
+        .filter(|character| character.is_alphanumeric())
+        .collect()
+}
+
+fn cli_find_game<'a>(library: &'a Library, query: &str) -> Result<&'a Game, String> {
+    let wanted = title_key(query);
+    if wanted.is_empty() {
+        return Err("Indiquez le nom d'un jeu.".to_string());
+    }
+    let exact: Vec<&Game> = library
+        .games
+        .iter()
+        .filter(|game| title_key(&game.name) == wanted)
+        .collect();
+    if let [game] = exact.as_slice() {
+        return Ok(game);
+    }
+    let matches: Vec<&Game> = library
+        .games
+        .iter()
+        .filter(|game| title_key(&game.name).contains(&wanted))
+        .collect();
+    match matches.as_slice() {
+        [game] => Ok(game),
+        [] => Err(format!("Aucun jeu ne correspond à « {query} ».")),
+        many => {
+            let names = many
+                .iter()
+                .map(|game| format!("  - {}", game.name))
+                .collect::<Vec<_>>()
+                .join("\n");
+            Err(format!("Plusieurs jeux correspondent à « {query} » :\n{names}"))
+        }
+    }
+}
+
+fn process_alive(pid: i32) -> bool {
+    if pid <= 0 {
+        return false;
+    }
+    let Ok(stat) = std::fs::read_to_string(format!("/proc/{pid}/stat")) else {
+        return false;
+    };
+    // Un enfant adopté par init reste visible en état zombie : il est terminé.
+    // Le nom du processus peut contenir des espaces, d'où la lecture après « ) ».
+    stat.rsplit_once(')')
+        .is_none_or(|(_, rest)| !rest.trim_start().starts_with('Z'))
+}
+
+fn cli_record_session(id: &str, started: i64, pid: i32) -> Result<(), String> {
+    while process_alive(pid) {
+        std::thread::sleep(Duration::from_secs(2));
+    }
+    let mut library = Library::load();
+    let settings = library.settings.clone();
+    let secs = (config::now_ts() - started).max(1) as u64;
+    let name = library
+        .get(id)
+        .map(|game| game.name.clone())
+        .unwrap_or_else(|| "Quark".to_string());
+    if let Some(game) = library.get_mut(id) {
+        game.record_session(started, secs);
+    }
+    library.save()?;
+    if settings.notify_session_done {
+        let duration = if secs >= 3600 {
+            format!("{} h {:02}", secs / 3600, (secs % 3600) / 60)
+        } else {
+            format!("{} min", secs / 60)
+        };
+        send_notification(
+            &quark::i18n::tr("Partie terminée"),
+            &format!("{name} · {duration}"),
+        );
+    }
+    Ok(())
+}
+
+fn cli_launch(query: &str) -> Result<(), String> {
+    let library = Library::load();
+    let game = cli_find_game(&library, query)?.clone();
+    let settings = library.settings.clone();
+    drop(library);
+    let mut game = game;
+    game.normalize_installations();
+    if game.exe_missing() {
+        return Err(format!(
+            "{} : exécutable introuvable ({}).",
+            game.name,
+            if game.exe.trim().is_empty() {
+                "aucun chemin défini".to_string()
+            } else {
+                game.exe.clone()
+            }
+        ));
+    }
+    let mut resolved = proton::resolve_with(
+        &game,
+        &settings,
+        &proton::detect_runtimes(),
+        proton::Tools::detect(),
+    )?;
+    if settings.overlay_fps && proton::looks_windows(&game.exe_path()) {
+        if let Ok(
+            quark::overlay_dll::InstallOutcome::Installed(_)
+            | quark::overlay_dll::InstallOutcome::UpToDate(_),
+        ) = quark::overlay_dll::install_for_game(&game)
+        {
+            for (name, value) in quark::overlay_dll::launch_environment_for(&game, "top-left") {
+                quark::overlay_dll::set_env(&mut resolved.spec.env, &name, &value);
+            }
+            quark::overlay_dll::enable_wine_override(&mut resolved.spec.env);
+        }
+    }
+    if let Some(prefix) = &resolved.prefix {
+        std::fs::create_dir_all(prefix).map_err(|error| format!("Préfixe Proton : {error}"))?;
+    }
+    let diagnostics =
+        core_providers::connection_diagnostics(None, Some(&game.wine_prefix_path(&settings)));
+    let session = session::start(&game, &resolved, &diagnostics)?;
+    let pid = session.pid;
+    let started = session.started_ts;
+    let executable = std::env::current_exe()
+        .map_err(|error| format!("Binaire courant introuvable : {error}"))?;
+    std::process::Command::new(executable)
+        .arg("--record-session")
+        .arg(&game.id)
+        .arg(started.to_string())
+        .arg(pid.to_string())
+        .stdin(std::process::Stdio::null())
+        .stdout(std::process::Stdio::null())
+        .stderr(std::process::Stdio::null())
+        .spawn()
+        .map_err(|error| format!("Suivi de session impossible : {error}"))?;
+    println!("Lancement de {}…", game.name);
+    Ok(())
+}
+
+fn cli_list() -> Result<(), String> {
+    let library = Library::load();
+    let mut names: Vec<&str> = library.games.iter().map(|game| game.name.as_str()).collect();
+    names.sort_by_key(|name| name.to_lowercase());
+    for name in names {
+        println!("{name}");
+    }
+    Ok(())
+}
+
+#[cfg(test)]
+mod cli_tests {
+    use super::*;
+
+    fn library(names: &[&str]) -> Library {
+        Library {
+            games: names
+                .iter()
+                .map(|name| Game {
+                    id: name.to_lowercase().replace(' ', "-"),
+                    name: (*name).to_string(),
+                    ..Game::default()
+                })
+                .collect(),
+            ..Library::default()
+        }
+    }
+
+    #[test]
+    fn un_titre_est_reconnu_sans_la_ponctuation() {
+        let library = library(&["Half-Life 2"]);
+        assert_eq!(
+            cli_find_game(&library, "half life 2").unwrap().id,
+            "half-life-2"
+        );
+    }
+
+    #[test]
+    fn un_titre_ambigu_liste_les_candidats() {
+        let library = library(&["Portal", "Portal 2"]);
+        let error = cli_find_game(&library, "port").unwrap_err();
+        assert!(error.contains("Portal"));
+        assert!(error.contains("Portal 2"));
+    }
+}
+
+fn cli_main(args: &[String]) -> Option<i32> {
+    match args.first().map(String::as_str) {
+        Some("launch") => {
+            let query = args[1..].join(" ");
+            match cli_launch(&query) {
+                Ok(()) => Some(0),
+                Err(error) => {
+                    eprintln!("{error}");
+                    Some(1)
+                }
+            }
+        }
+        Some("list") => match cli_list() {
+            Ok(()) => Some(0),
+            Err(error) => {
+                eprintln!("{error}");
+                Some(1)
+            }
+        },
+        Some("--record-session") if args.len() >= 4 => {
+            let id = &args[1];
+            let started = args[2].parse::<i64>().unwrap_or_else(|_| config::now_ts());
+            let pid = args[3].parse::<i32>().unwrap_or(0);
+            match cli_record_session(id, started, pid) {
+                Ok(()) => Some(0),
+                Err(error) => {
+                    eprintln!("{error}");
+                    Some(1)
+                }
+            }
+        }
+        _ => None,
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -1148,6 +1392,7 @@ fn capture_active_session(app: &AppHandle) {
     let path = screenshot::path_for(&name);
     match screenshot::capture(&path) {
         Ok(()) => {
+            screenshot::play_shutter();
             let _ = app.emit(
                 "quark://screenshot-saved",
                 serde_json::json!({ "path": path.display().to_string(), "game": name }),
@@ -1716,11 +1961,27 @@ fn spawn_monitor(app: AppHandle) {
             let dto = library
                 .get(&id)
                 .map(|game| game_dto(game, &settings, false, None));
+            let name = dto
+                .as_ref()
+                .map(|game| game.name.clone())
+                .unwrap_or_default();
             drop(library);
             let _ = app.emit(
                 "quark://session-ended",
                 serde_json::json!({ "id": id, "secs": secs, "game": dto }),
             );
+            if settings.notify_session_done {
+                let duration = if secs >= 3600 {
+                    format!("{} h {:02}", secs / 3600, (secs % 3600) / 60)
+                } else {
+                    format!("{} min", secs / 60)
+                };
+                notify_desktop(
+                    &app,
+                    &quark::i18n::tr("Partie terminée"),
+                    &format!("{name} · {duration}"),
+                );
+            }
         }
     });
 }
@@ -1758,6 +2019,19 @@ fn finalize_sessions(app: &AppHandle) {
 
 fn main() {
     let args: Vec<String> = std::env::args().skip(1).collect();
+    if args
+        .iter()
+        .any(|arg| arg == "--help" || arg == "-h" || arg == "--version")
+    {
+        println!("Quark {}", env!("CARGO_PKG_VERSION"));
+        println!("Usage: quark [--demo | --demo-empty]");
+        println!("       quark launch <jeu>");
+        println!("       quark list");
+        return;
+    }
+    if let Some(code) = cli_main(&args) {
+        std::process::exit(code);
+    }
     let demo = args
         .iter()
         .any(|arg| arg == "--demo" || arg == "--demo-empty");
@@ -1857,6 +2131,7 @@ fn main() {
             features::fetch_protondb,
             features::disk_report,
             features::check_update,
+            features::install_update,
             features::open_url,
             store::store_load,
             store::store_refresh,
@@ -1914,7 +2189,27 @@ fn main() {
                     .icon(icon)
                     .tooltip("Quark")
                     .menu(&menu)
-                    .show_menu_on_left_click(true)
+                    .show_menu_on_left_click(false)
+                    .on_tray_icon_event(|tray, event| {
+                        if let TrayIconEvent::Click {
+                            button: MouseButton::Left,
+                            button_state: MouseButtonState::Up,
+                            ..
+                        } = event
+                        {
+                            let app = tray.app_handle();
+                            if let Some(window) = app.get_webview_window("main") {
+                                let focused = window.is_focused().unwrap_or(false);
+                                if window.is_visible().unwrap_or(false) && focused {
+                                    let _ = window.hide();
+                                } else {
+                                    let _ = window.show();
+                                    let _ = window.unminimize();
+                                    let _ = window.set_focus();
+                                }
+                            }
+                        }
+                    })
                     .on_menu_event(|app, event| match event.id.as_ref() {
                         "show" => {
                             if let Some(window) = app.get_webview_window("main") {

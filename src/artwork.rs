@@ -386,7 +386,7 @@ impl AssetPlan {
                 if let Some((_, previews)) = self.previews.iter_mut().find(|(k, _)| *k == kind) {
                     previews.push(preview);
                 } else {
-                    let mut aligned = vec![None; entry.1.len() - 1];
+                    let mut aligned = vec![None; entry.1.len().saturating_sub(1)];
                     aligned.push(preview);
                     self.previews.push((kind, aligned));
                 }
@@ -933,6 +933,25 @@ mod icon_tests {
         assert_eq!(
             chosen.preview(AssetKind::Cover, 0),
             Some("https://cdn/thumb-2.png")
+        );
+    }
+
+    #[test]
+    fn une_liste_d_urls_vide_ne_fait_pas_deborder_le_calcul_des_vignettes() {
+        let mut plan = AssetPlan::default();
+        // Plan incohérent : un type sans URL mais sans liste de vignettes.
+        plan.kinds.push((AssetKind::Cover, Vec::new()));
+        plan.add_with_preview(AssetKind::Cover, "https://cdn/cover.png".into(), None);
+        assert_eq!(
+            plan.candidates(AssetKind::Cover),
+            ["https://cdn/cover.png".to_string()]
+        );
+        assert_eq!(
+            plan.previews
+                .iter()
+                .find(|(kind, _)| *kind == AssetKind::Cover)
+                .map(|(_, previews)| previews.len()),
+            Some(1)
         );
     }
 

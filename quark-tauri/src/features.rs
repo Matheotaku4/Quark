@@ -270,6 +270,38 @@ pub async fn check_update() -> Result<UpdateDto, String> {
     .await
 }
 
+/// Télécharge la dernière release, vérifie son SHA-256 et son ELF, remplace le
+/// binaire courant puis relance Quark. `exec` ne revient pas en cas de succès.
+#[tauri::command]
+pub async fn install_update() -> Result<(), String> {
+    blocking(|| {
+        if !update::automatic_update_allowed() {
+            return Err(
+                "La mise à jour intégrée est désactivée pour cette exécution.".to_string(),
+            );
+        }
+        let client = artwork::http();
+        let release = update::latest(&client)?;
+        if !update::is_newer(&release.tag_name, update::current_version()) {
+            return Err("Quark est déjà à jour.".to_string());
+        }
+        let asset = release
+            .archive()
+            .ok_or_else(|| "La release ne publie pas d'archive Linux.".to_string())?;
+        let target = std::env::current_exe()
+            .map_err(|error| format!("Binaire courant introuvable : {error}"))?;
+        let directory = quark::config::data_dir().join("updates");
+        let staged = update::stage(&client, &release, asset, &directory, &target)?;
+        let installed = update::apply(&staged)?;
+        if let Err(error) = update::relaunch(&target) {
+            let _ = update::rollback(&installed);
+            return Err(error);
+        }
+        Ok(())
+    })
+    .await
+}
+
 /// Ouvre un lien ou un dossier avec l'application par défaut du bureau.
 #[tauri::command]
 pub fn open_url(target: String) -> Result<(), String> {

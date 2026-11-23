@@ -679,6 +679,13 @@ pub async fn provider_install(
                 "quark://provider-install",
                 serde_json::json!({ "provider": provider, "productId": product_id, "state": "installed" }),
             );
+            if settings.notify_install_done {
+                super::notify_desktop(
+                    &app,
+                    &quark::i18n::tr("Installation terminée"),
+                    &record.title,
+                );
+            }
             Ok(providers_dto(&state, None))
         }
         Err(error) => {

@@ -38,6 +38,29 @@ fn safe_name(name: &str) -> String {
     }
 }
 
+/// Bruit d'obturateur, comme le fait Steam. Silencieux si le système n'a pas
+/// de lecteur ou de sonnerie installée : la capture reste le résultat attendu.
+pub fn play_shutter() {
+    let attempts: [(&str, &[&str]); 2] = [
+        ("canberra-gtk-play", &["-i", "camera-shutter"]),
+        (
+            "paplay",
+            &["/usr/share/sounds/freedesktop/stereo/camera-shutter.oga"],
+        ),
+    ];
+    for (program, args) in attempts {
+        if std::process::Command::new(program)
+            .args(args)
+            .stdout(std::process::Stdio::null())
+            .stderr(std::process::Stdio::null())
+            .status()
+            .is_ok_and(|status| status.success())
+        {
+            return;
+        }
+    }
+}
+
 pub fn capture(path: &Path) -> Result<(), String> {
     if let Some(parent) = path.parent() {
         std::fs::create_dir_all(parent)

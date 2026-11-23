@@ -117,5 +117,12 @@ async function gameSettingsModal() {
 async function updatesModal() {
   modal(`<h2>${esc(t("x.updates"))}</h2><p class="desc" id="upd">${esc(t("log.loading"))}</p>${foot(t("settings.close"))}`); $("#ok").onclick = closeModal;
   const u = await run(() => invoke("check_update")); if (!u) return; app.upd = u; renderTop();
-  const el = $("#upd"); el && (el.innerHTML = u.newer ? `${esc(u.name || u.tag)} <b>(${esc(u.tag)})</b><br><button class="btn sm" data-open="${esc(u.url)}">${esc(t("x.updates"))} →</button>` : `Quark ${esc(u.current)} ✓`);
+  const el = $("#upd"); if (!el) return;
+  if (!u.newer) { el.innerHTML = `Quark ${esc(u.current)} ✓`; return; }
+  el.innerHTML = `${esc(u.name || u.tag)} <b>(${esc(u.tag)})</b><div class="foot l"><button class="btn sm" id="upd-install">${ic("down")}${esc(t("x.updateInstall"))}</button><button class="btn sec sm" data-open="${esc(u.url)}">${ic("ext")}${esc(t("x.updates"))}</button></div>`;
+  $("#upd-install").onclick = () => run(async () => {
+    const b = $("#upd-install"); if (!b) return;
+    b.disabled = true; b.textContent = t("x.updateInstalling");
+    await invoke("install_update");
+  });
 }

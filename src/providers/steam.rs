@@ -177,10 +177,14 @@ pub fn merge_sync(
             .iter()
             .find(|old| old.key.provider == Provider::Steam && old.key.product_id == *appid)
         {
-            if record.install_path.is_none() {
+            let old_path_alive = old.install_path.as_ref().is_some_and(|path| path.is_dir());
+            if record.install_path.is_none() && old_path_alive {
                 record.install_path = old.install_path.clone();
             }
-            if record.install_state != InstallState::Installed {
+            if record.install_state != InstallState::Installed
+                && old.install_state == InstallState::Installed
+                && old_path_alive
+            {
                 record.install_state = old.install_state;
             }
             if record.quark_game_id.is_none() {
@@ -213,7 +217,11 @@ pub fn merge_sync(
         match steam.get(appid) {
             Some(previous)
                 if previous.install_state == InstallState::Installed
-                    && record.install_state != InstallState::Installed => {}
+                    && record.install_state != InstallState::Installed
+                    && previous
+                        .install_path
+                        .as_ref()
+                        .is_some_and(|path| path.is_dir()) => {}
             _ => {
                 steam.insert(appid.clone(), record);
             }
@@ -671,6 +679,51 @@ mod tests {
             assert_eq!(merged.len(), 1);
             assert_eq!(merged[0].custom_save_paths, vec![save.clone()]);
         }
+    }
+
+    #[test]
+    fn une_synchro_steam_oublie_un_jeu_installe_qui_a_disparu_du_disque() {
+        let dir = std::env::temp_dir().join(format!(
+            "quark-steam-merge-{}-{:?}",
+            std::process::id(),
+            std::thread::current().id()
+        ));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        let existing = ProviderGame {
+            key: ProviderGameKey {
+                provider: Provider::Steam,
+                product_id: "620".into(),
+            },
+            title: "Portal 2".into(),
+            owned: true,
+            install_path: Some(dir.clone()),
+            install_root: None,
+            custom_save_paths: Vec::new(),
+            cover_url: None,
+            install_exe: None,
+            install_state: InstallState::Installed,
+            quark_game_id: None,
+            capabilities: Default::default(),
+            last_synced: Some(1),
+        };
+        let refreshed = parse_owned(
+            r#"{"response":{"game_count":1,"games":[{"appid":620,"name":"Portal 2"}]}}"#,
+        )
+        .unwrap();
+        let merged = merge_sync(
+            std::slice::from_ref(&existing),
+            &[],
+            Some(refreshed.as_slice()),
+            &[],
+        );
+        assert_eq!(merged[0].install_state, InstallState::Installed);
+        assert_eq!(merged[0].install_path.as_deref(), Some(dir.as_path()));
+
+        std::fs::remove_dir_all(&dir).unwrap();
+        let merged = merge_sync(&[existing], &[], Some(refreshed.as_slice()), &[]);
+        assert_eq!(merged[0].install_state, InstallState::Unknown);
+        assert!(merged[0].install_path.is_none());
     }
 
     #[test]

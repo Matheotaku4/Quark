@@ -252,6 +252,7 @@ Object.assign(I18N.es, {
   "x.allGenres": "Todos los géneros", "x.allTags": "Todas las etiquetas", "x.favOnly": "Solo favoritos", "x.reset": "Restablecer", "x.continue": "Continuar", "x.favorites": "Favoritos", "x.backlog": "Pendientes",
   "x.save": "Guardar", "x.general": "General", "x.proton": "Proton", "x.env": "Variables", "x.data": "Datos", "x.dll": "DLL overrides", "x.settingsTab": "Ajustes",
   "x.noEnv": "Ninguna variable.", "x.addVar": "Añadir una variable", "x.addDll": "Añadir una DLL", "x.noDll": "Sin overrides.", "x.native": "native", "x.builtin": "builtin",
+  "x.updateInstall": "Instalar y reiniciar", "x.updateInstalling": "Descargando y verificando…",
 });
 Object.assign(I18N.de, {
   "x.home": "Start", "x.store": "Shop", "x.mygames": "Meine Spiele", "x.inGame": "Läuft", "x.palette": "Zu einem Spiel oder einer Aktion springen…",
@@ -263,6 +264,7 @@ Object.assign(I18N.de, {
   "x.allGenres": "Alle Genres", "x.allTags": "Alle Tags", "x.favOnly": "Nur Favoriten", "x.reset": "Zurücksetzen", "x.continue": "Weiter", "x.favorites": "Favoriten", "x.backlog": "Warteliste",
   "x.save": "Speichern", "x.general": "Allgemein", "x.proton": "Proton", "x.env": "Variablen", "x.data": "Daten", "x.dll": "DLL overrides", "x.settingsTab": "Einstellungen",
   "x.noEnv": "Keine Variablen.", "x.addVar": "Variable hinzufügen", "x.addDll": "DLL hinzufügen", "x.noDll": "Keine Overrides.", "x.native": "native", "x.builtin": "builtin",
+  "x.updateInstall": "Installieren und neu starten", "x.updateInstalling": "Herunterladen und prüfen…",
 });
 Object.assign(I18N.pt, {
   "x.home": "Início", "x.store": "Loja", "x.mygames": "Meus jogos", "x.inGame": "Jogando", "x.palette": "Ir para um jogo ou ação…",
@@ -274,4 +276,5 @@ Object.assign(I18N.pt, {
   "x.allGenres": "Todos os gêneros", "x.allTags": "Todas as tags", "x.favOnly": "Somente favoritos", "x.reset": "Redefinir", "x.continue": "Continuar", "x.favorites": "Favoritos", "x.backlog": "Pendentes",
   "x.save": "Salvar", "x.general": "Geral", "x.proton": "Proton", "x.env": "Variáveis", "x.data": "Dados", "x.dll": "DLL overrides", "x.settingsTab": "Configurações",
   "x.noEnv": "Nenhuma variável.", "x.addVar": "Adicionar uma variável", "x.addDll": "Adicionar uma DLL", "x.noDll": "Nenhum override.", "x.native": "native", "x.builtin": "builtin",
+  "x.updateInstall": "Instalar e reiniciar", "x.updateInstalling": "Baixando e verificando…",
 });

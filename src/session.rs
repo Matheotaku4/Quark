@@ -356,9 +356,7 @@ pub fn read_log_tail(path: &Path, max_lines: usize) -> Result<(Vec<String>, bool
         // Première ligne probablement coupée au milieu d'un mot.
         lines.remove(0);
     }
-    if lines.len() > max_lines {
-        lines.drain(..lines.len() - max_lines);
-    }
+    lines.drain(..lines.len().saturating_sub(max_lines));
     Ok((lines, truncated))
 }
 

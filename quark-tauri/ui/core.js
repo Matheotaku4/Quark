@@ -12,6 +12,7 @@ Object.assign(I18N.fr, {
   "x.allGenres": "Tous les genres", "x.allTags": "Tous les tags", "x.favOnly": "Favoris uniquement", "x.reset": "Réinitialiser", "x.continue": "Continuer", "x.favorites": "Favoris", "x.backlog": "À jouer",
   "x.save": "Enregistrer", "x.general": "Général", "x.proton": "Proton", "x.env": "Variables", "x.data": "Données", "x.dll": "DLL overrides", "x.settingsTab": "Réglages",
   "x.noEnv": "Aucune variable.", "x.addVar": "Ajouter une variable", "x.addDll": "Ajouter une DLL", "x.noDll": "Aucun override.", "x.native": "native", "x.builtin": "builtin",
+  "x.updateInstall": "Installer et redémarrer", "x.updateInstalling": "Téléchargement et vérification…",
 });
 Object.assign(I18N.en, {
   "x.home": "Home", "x.store": "Store", "x.mygames": "My games", "x.inGame": "Playing", "x.palette": "Jump to a game or action…",
@@ -23,6 +24,7 @@ Object.assign(I18N.en, {
   "x.allGenres": "All genres", "x.allTags": "All tags", "x.favOnly": "Favorites only", "x.reset": "Reset", "x.continue": "Continue", "x.favorites": "Favorites", "x.backlog": "Backlog",
   "x.save": "Save", "x.general": "General", "x.proton": "Proton", "x.env": "Variables", "x.data": "Data", "x.dll": "DLL overrides", "x.settingsTab": "Settings",
   "x.noEnv": "No variables.", "x.addVar": "Add a variable", "x.addDll": "Add a DLL", "x.noDll": "No overrides.", "x.native": "native", "x.builtin": "builtin",
+  "x.updateInstall": "Install and restart", "x.updateInstalling": "Downloading and verifying…",
 });
 
 const app = { data: null, cfg: {}, lang: "fr", view: "library", sel: null, query: "", f: { status: "", genre: "", tag: "", fav: false }, running: new Map(), tab: "overview", marked: new Set(),
