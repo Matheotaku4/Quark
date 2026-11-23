@@ -121,14 +121,6 @@ function providersSettings() {
     <div class="card"><h3>${esc(t("pv.tools"))}</h3><p class="hint">${esc(t("pv.toolsHint"))}</p><div class="tools">${data.tools.map(toolRow).join("")}</div></div>`;
 }
 
-function bindProvidersSettings(root) {
-  const data = app.pv.data;
-  if (!data) return;
-  $$("[data-pv]", root).forEach((el) => {
-    if (el.tagName === "BUTTON") el.onclick = () => providerAction(el.dataset.pv, el.dataset);
-  });
-}
-
 async function providerAction(action, data) {
   const p = data.provider || data.pvprov || "";
   if (action === "reload") return providersLoad(true);

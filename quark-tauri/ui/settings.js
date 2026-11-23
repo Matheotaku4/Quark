@@ -85,7 +85,6 @@ function renderSettings() {
 }
 function bindSettings() {
   const root = $("#sheet");
-  bindProvidersSettings(root);
   bindModel(root, app.cfg, (k) => {
     const top = k.split(".")[0], patch = { [top]: app.cfg[top] };
     run(() => cfgSet(patch)).then(() => { if (k === "tray_icon") invoke("tray_visibility", { visible: !!app.cfg.tray_icon }).catch(() => {}); if (k === "overlay") invoke("refresh_shortcuts").catch((e) => toast(String(e), true)); if (k === "ui_language" || k === "ui_compact" || k === "game_actions") { renderAll(); } else if (k === "view") renderTop(); else if (k === "hero_background") applySettings(); });
