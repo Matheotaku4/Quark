@@ -144,6 +144,7 @@ const I18N = {
     "window.maximize": "Agrandir",
     "window.close": "Fermer",
     "source.local": "Locale",
+    "source.multiple": "Plusieurs",
   },
   en: {
     "nav.library": "Library",
@@ -285,6 +286,7 @@ const I18N = {
     "window.maximize": "Maximize",
     "window.close": "Close",
     "source.local": "Local",
+    "source.multiple": "Multiple",
   },
   es: {
     "nav.library": "Biblioteca",
@@ -426,6 +428,7 @@ const I18N = {
     "window.maximize": "Maximizar",
     "window.close": "Cerrar",
     "source.local": "Local",
+    "source.multiple": "Varios",
   },
   de: {
     "nav.library": "Bibliothek",
@@ -567,6 +570,7 @@ const I18N = {
     "window.maximize": "Maximieren",
     "window.close": "Schließen",
     "source.local": "Lokal",
+    "source.multiple": "Mehrere",
   },
   pt: {
     "nav.library": "Biblioteca",
@@ -708,5 +712,6 @@ const I18N = {
     "window.maximize": "Maximizar",
     "window.close": "Fechar",
     "source.local": "Local",
+    "source.multiple": "Vários",
   },
 };

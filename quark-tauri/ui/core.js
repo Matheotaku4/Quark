@@ -53,8 +53,24 @@ const IC = {
   filter: '<path d="M4 5h16l-6 8v6l-4-2v-4z"/>', caret: '<path d="m7 10 5 5 5-5"/>', refresh: '<path d="M21 12a9 9 0 1 1-2.6-6.4M21 3v6h-6"/>', back: '<path d="M15 6l-6 6 6 6"/>',
   ext: '<path d="M14 4h6v6M20 4l-9 9M10 6H6a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-4"/>',
   eye: '<path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z"/><circle cx="12" cy="12" r="3"/>',
+  home: '<path d="M4 11 12 4l8 7v8a2 2 0 0 1-2 2h-4v-6h-4v6H6a2 2 0 0 1-2-2z"/>',
 };
 const ic = (n, c = "") => `<svg class="ic ${c}" viewBox="0 0 24 24">${IC[n]}</svg>`;
+
+// WebKitGTK bascule bien la case mais n'émet pas toujours `change` :
+// on le rejoue pour que le modèle suive l'état affiché.
+document.addEventListener("click", (event) => {
+  const box = event.target.closest('input[type="checkbox"]');
+  if (!box || box.disabled) return;
+  box.dispatchEvent(new Event("change", { bubbles: true }));
+}, true);
+
+
+function renderSheetKeepScroll() {
+  const sheet = $("#sheet"), top = sheet.scrollTop;
+  renderSheet();
+  sheet.scrollTop = top;
+}
 
 const hm = (s) => (!s || s < 60 ? "0 min" : s < 3600 ? `${Math.floor(s / 60)} min` : `${new Intl.NumberFormat(locale(), { maximumFractionDigits: 1 }).format(s / 3600)} h`);
 const hrs = (v) => (v == null ? "—" : `${new Intl.NumberFormat(locale(), { maximumFractionDigits: 1 }).format(v)} h`);
@@ -72,7 +88,14 @@ const bytes = (n) => (n < 1024 ? `${n} B` : n < 1048576 ? `${(n / 1024).toFixed(
 
 function setGame(g) { const i = app.data.games.findIndex((x) => x.id === g.id); i >= 0 ? (app.data.games[i] = g) : app.data.games.push(g); }
 function setRunning(list) { app.running = new Map(list.map((r) => [r.id, { ...r, at: Date.now() }])); }
-async function run(fn) { try { return await fn(); } catch (e) { toast(String(e), true); } }
+const BACKEND_I18N = {
+  "Les succès sont disponibles pour les jeux de boutique installés.": "ach.storeOnly",
+  "Ce jeu n'a pas d'AppID Steam.": "x.noSteamId",
+  "Jeu introuvable.": "x.noGame",
+  "Aucune installation de boutique vérifiée.": "x.noStoreInstall",
+};
+const bt = (msg) => { const key = BACKEND_I18N[String(msg)]; return key ? t(key) : String(msg); };
+async function run(fn) { try { return await fn(); } catch (e) { toast(bt(e), true); } }
 function toast(msg, err) {
   const el = Object.assign(document.createElement("div"), { className: "toast" + (err ? " err" : ""), textContent: msg });
   $("#toasts").append(el); setTimeout(() => el.remove(), err ? 6000 : 2800);

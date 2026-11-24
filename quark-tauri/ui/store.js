@@ -1,4 +1,6 @@
 "use strict";
+const STORE_TITLES = { "Offres spéciales": "st.specials", "Meilleures ventes": "st.topSellers", "Nouveautés": "st.newReleases", "Prochainement": "st.comingSoon", "Populaires sur Steam": "st.popular" };
+const stTitle = (title) => { if (app.lang === "fr") return title; const key = STORE_TITLES[title]; return key ? t(key) : title; };
 // Boutique Steam : catalogue en cache, actualisation, recherche, « à la une », réductions, recommandations.
 
 app.store = { page: null, loading: false, error: null, q: "", results: null, searching: false, sErr: null, started: false };
@@ -42,7 +44,7 @@ function sectionCaption(s) {
 
 function renderStore() {
   const s = app.store, p = s.page, hero = p && heroOf(), deals = p ? dealsOf(8) : [], reco = p?.recommendations || [];
-  const chips = p ? [deals.length && ["st-deals", L("Top réductions", "Top deals")], reco.length && ["st-reco", L("Recommandé pour vous", "Recommended for you")], ...p.sections.map((x, n) => [`st-s${n}`, x.title])].filter(Boolean) : [];
+  const chips = p ? [deals.length && ["st-deals", L("Top réductions", "Top deals")], reco.length && ["st-reco", L("Recommandé pour vous", "Recommended for you")], ...p.sections.map((x, n) => [`st-s${n}`, stTitle(x.title)])].filter(Boolean) : [];
   return `<div class="store">
     <div class="sbar"><input type="text" id="store-q" placeholder="${esc(L("Rechercher un jeu sur Steam…", "Search Steam…"))}" value="${esc(s.q)}">
       <button class="btn sec" id="store-search" ${s.q.trim().length < 2 || s.searching ? "disabled" : ""}>${esc(L("Rechercher", "Search"))}</button>
@@ -59,7 +61,7 @@ function renderStore() {
         <aside class="ov"><h3>${esc(L("Les plus joués", "Most played"))}</h3>${leadersOf(5).map((i, n) => `<button class="lead" data-open="${esc(i.storeUrl)}"><span>${String(n + 1).padStart(2, "0")}</span><b>${esc(i.name)}</b>${i.playersPeak ? `<em>${esc(thousands(i.playersPeak))}</em>` : ""}</button>`).join("")}</aside></div>` : ""}
       ${deals.length ? `${sectionHead("st-deals", L("TOP RÉDUCTIONS", "TOP DEALS"), L("Les plus fortes remises du catalogue, mises à jour avec lui", "The biggest discounts in the catalog"))}<div class="rail2">${deals.map((i, n) => storeCard(i, n + 1)).join("")}</div>` : ""}
       ${reco.length ? `${sectionHead("st-reco", L("RECOMMANDÉ POUR VOUS", "RECOMMENDED FOR YOU"), L(`D'après ${p.recommendationSource} · aucune donnée de navigation n'est envoyée à Steam`, `Based on ${p.recommendationSource} · no browsing data is sent to Steam`))}${grid(reco)}` : ""}
-      ${p.sections.map((x, n) => `${sectionHead(`st-s${n}`, x.title, sectionCaption(x))}${grid(x.items)}`).join("")}`
+      ${p.sections.map((x, n) => `${sectionHead(`st-s${n}`, stTitle(x.title), sectionCaption(x))}${grid(x.items)}`).join("")}`
     : !s.loading ? `<div class="sline">${esc(s.error ? L("Le catalogue Steam est indisponible et aucun cache n'est encore enregistré.", "The Steam catalog is unavailable and nothing is cached yet.") : L("Le catalogue Steam apparaîtra ici.", "The Steam catalog will appear here."))}</div>` : ""}
   </div>`;
 }

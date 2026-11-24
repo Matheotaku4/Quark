@@ -7,6 +7,7 @@ const selk = (k, label, opts, hint, extra = "") => `<div class="sw" data-s="${es
 const rangek = (k, label, min, max, step, hint) => `<div class="sw" data-s="${esc(label + " " + (hint || ""))}"><span>${esc(label)}${hint ? `<small>${esc(hint)}</small>` : ""}</span><span class="rg"><input type="range" data-k="${k}" min="${min}" max="${max}" step="${step}" value="${getPath(app.cfg, k) ?? min}"><output>${getPath(app.cfg, k) ?? min}</output></span></div>`;
 const textk = (k, label, hint, ph = "", nullable = true, wide = true) => `<div class="fl2" data-s="${esc(label + " " + (hint || ""))}"><span>${esc(label)}${hint ? `<small>${esc(hint)}</small>` : ""}</span><input type="text" data-k="${k}" ${/gamescope_(width|height|fps)/.test(k) ? "data-num" : ""} ${nullable ? "data-nullable" : ""} value="${esc(getPath(app.cfg, k) ?? "")}" placeholder="${esc(ph)}"></div>`;
 const card = (title, ...rows) => `<div class="card"><h3>${esc(title)}</h3>${rows.join("")}</div>`;
+const STEAM_LANGS = [["english", "English"], ["french", "Français"], ["german", "Deutsch"], ["spanish", "Español"], ["portuguese", "Português"], ["italian", "Italiano"], ["russian", "Русский"], ["japanese", "日本語"], ["korean", "한국어"], ["schinese", "简体中文"], ["polish", "Polski"], ["turkish", "Türkçe"]];
 
 function tabsDef() {
   const c = app.cfg, runtimes = [["", L("Automatique", "Automatic")], ...(app.runtimes || []).map((r) => [r.key, r.name])];
@@ -40,7 +41,7 @@ function tabsDef() {
       card(L("Runtimes détectés", "Detected runtimes"), `<div class="chips">${(app.runtimes || []).map((r) => `<span>${esc(r.name)}</span>`).join("") || `<span class="dim">—</span>`}</div><button class="btn sec sm" id="rt-redo">${ic("refresh")}${esc(L("Détecter à nouveau", "Detect again"))}</button>`),
     ],
     artworks: () => [card(L("Sources d'illustrations", "Artwork sources"), textk("sgdb_api_key", L("Clé SteamGridDB (facultative)", "SteamGridDB key (optional)"), L("Stockée dans la configuration locale.", "Stored in the local configuration."), "", false),
-      textk("language", L("Langue des métadonnées", "Metadata language"), "", "french", false), textk("country", L("Pays de la boutique", "Store country"), "", "FR", false)), card(L("Cache", "Cache"), `<button class="btn sec sm" data-open="${esc(app.data.dataDir)}">${ic("folder")}${esc(t("settings.openFolder"))}</button>`)],
+      selk("language", L("Langue des métadonnées", "Metadata language"), STEAM_LANGS), textk("country", L("Pays de la boutique", "Store country"), "", "FR", false)), card(L("Cache", "Cache"), `<button class="btn sec sm" data-open="${esc(app.data.dataDir)}">${ic("folder")}${esc(t("settings.openFolder"))}</button>`)],
     saves: () => [
       card(L("Ludusavi", "Ludusavi"),
         `<p class="hint">${esc(L("Choisis où Quark range les sauvegardes et les dossiers supplémentaires que Ludusavi doit analyser pour chaque jeu.", "Choose where Quark stores backups and the extra folders Ludusavi should scan for every game."))}</p>`,

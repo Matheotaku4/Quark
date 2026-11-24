@@ -2,12 +2,31 @@
 // Mes jeux : bibliothèques Steam / Epic / GOG / itch.io, comptes et outils.
 
 Object.assign(app, {
-  pv: { data: null, q: "", provider: "", state: "all", loading: false, error: null, busy: "" },
+  pv: { data: null, q: "", provider: "", state: "all", loading: false, error: null, busy: "", shown: 24, obs: null },
 });
 
 const PV_LABEL = { steam: "Steam", epic: "Epic Games", gog: "GOG", itch: "itch.io" };
 const PV_COLOR = { steam: "#66c0f4", epic: "#d8d8d8", gog: "#b56cff", itch: "#fa5c5c" };
+const PROVIDER_DETAILS = {
+  "Clé Web API et SteamID64 facultatifs, pour la bibliothèque possédée et les succès.": "pv.steamHint",
+  "Legendary n'est pas installé": "pv.legendaryMissing",
+  "Legendary installé · compte non connecté": "pv.legendaryInstalled",
+  "Session Legendary": "pv.legendarySession",
+  "gogdl n'est pas installé": "pv.gogMissing",
+  "gogdl installé · compte non connecté": "pv.gogInstalled",
+  "Session gogdl": "pv.gogSession",
+  "Clé API personnelle enregistrée": "pv.itchSaved",
+  "Clé API personnelle, pour la bibliothèque possédée": "pv.itchHint",
+};
+const pd = (detail) => {
+  if (app.lang === "fr") return detail;
+  const key = PROVIDER_DETAILS[detail];
+  if (key) return t(key);
+  if (detail.startsWith("Connexion directe")) return t("pv.epicDirect") + detail.slice(18);
+  return detail;
+};
 const pvStateLabel = (s) => t("pv.state." + s);
+const PV_PAGE = 24;
 const pvInstalled = (g) => g.installState === "installed";
 
 async function providersLoad(force) {
@@ -16,6 +35,7 @@ async function providersLoad(force) {
   try {
     app.pv.data = await invoke("providers_data");
     app.pv.error = null;
+    app.pv.shown = PV_PAGE;
   } catch (e) {
     app.pv.error = String(e);
     // Évite une boucle infinie : renderSheet relance providersLoad tant que
@@ -23,7 +43,7 @@ async function providersLoad(force) {
     app.pv.data ||= { games: [], accounts: [], tools: [], error: String(e) };
   }
   app.pv.loading = false;
-  if (app.view === "mygames" || app.view === "settings") renderSheet();
+  if (app.view === "mygames" || app.view === "settings") renderSheetKeepScroll();
   return app.pv.data;
 }
 
@@ -55,7 +75,7 @@ function providerCard(g) {
     actions.push(pvButton(t("pv.install"), "install", "pri", `data-provider="${g.provider}" data-product="${esc(g.productId)}"`));
   }
   return `<article class="pcard" style="--pc:${PV_COLOR[g.provider] || "var(--accent)"}">
-    <div class="pcover">${g.coverUrl ? `<img loading="lazy" decoding="async" src="${esc(g.coverUrl)}" alt="">` : `<b>${esc(g.title.slice(0, 1).toUpperCase())}</b>`}
+    <div class="pcover">${g.coverUrl ? `<img loading="lazy" decoding="async" fetchpriority="low" referrerpolicy="no-referrer" src="${esc(g.coverUrl)}" alt="">` : `<b>${esc(g.title.slice(0, 1).toUpperCase())}</b>`}
       <span class="pvsrc">${esc(PV_LABEL[g.provider] || g.provider)}</span>
       <span class="pvstate ${installed ? "on" : ""}">${esc(pvStateLabel(g.installState))}</span>
     </div>
@@ -68,7 +88,7 @@ function providerCard(g) {
 
 function accountBadge(a) {
   return `<div class="account ${a.connected ? "on" : ""}">
-    <i class="pdot"></i><div><b>${esc(a.label)}</b><small>${esc(a.detail)}</small></div>
+    <i class="pdot"></i><div><b>${esc(a.label)}</b><small>${esc(pd(a.detail))}</small></div>
     ${a.connected ? pvButton(t("pv.disconnect"), "disconnect", "sec", `data-provider="${a.id}"`) : pvButton(t("pv.connect"), "connect", "sec", `data-provider="${a.id}"`)}
   </div>`;
 }
@@ -92,14 +112,16 @@ function renderMyGames() {
       <div class="pchips">${chips.map(([id, label]) => `<button data-pvprov="${id}" class="${app.pv.provider === id ? "on" : ""}">${esc(label)}</button>`).join("")}</div>
       <select id="pv-state">${["all", "installed", "missing"].map((id) => `<option value="${id}" ${app.pv.state === id ? "selected" : ""}>${esc(t("pv.filter." + id))}</option>`).join("")}</select>
       <button class="tb" data-pv="reload" title="${esc(t("pv.reload"))}">${ic("refresh")}</button></div>
-    ${games.length ? `<div class="pvgrid">${games.map(providerCard).join("")}</div>` : `<div class="none">${esc(data.games.length ? t("pv.noMatch") : t("pv.empty"))}</div>`}
+    ${games.length ? `<div class="pvgrid">${games.slice(0, app.pv.shown || PV_PAGE).map(providerCard).join("")}</div>${games.length > (app.pv.shown || PV_PAGE) ? `<div class="pvmore" id="pv-more">${esc(t("pv.more"))}</div>` : ""}` : `<div class="none">${esc(data.games.length ? t("pv.noMatch") : t("pv.empty"))}</div>`}
   </div>`;
 }
 
 function bindMyGames() {
+  const reset = () => { app.pv.shown = PV_PAGE; };
   const q = $("#pv-q");
   if (q) q.oninput = () => {
     app.pv.q = q.value;
+    reset();
     clearTimeout(app.pv.searchT);
     app.pv.searchT = setTimeout(() => {
       renderSheet();
@@ -107,8 +129,20 @@ function bindMyGames() {
       n && (n.focus(), n.setSelectionRange(n.value.length, n.value.length));
     }, 110);
   };
-  const s = $("#pv-state"); if (s) s.onchange = () => { app.pv.state = s.value; renderSheet(); };
-  $$("[data-pvprov]").forEach((b) => (b.onclick = () => { app.pv.provider = b.dataset.pvprov; renderSheet(); }));
+  const s = $("#pv-state"); if (s) s.onchange = () => { app.pv.state = s.value; reset(); renderSheet(); };
+  $$("[data-pvprov]").forEach((b) => (b.onclick = () => { app.pv.provider = b.dataset.pvprov; reset(); renderSheet(); }));
+  $$(".pcover img").forEach((img) => img.addEventListener("error", () => img.remove(), { once: true }));
+  app.pv.obs?.disconnect();
+  const more = $("#pv-more");
+  if (more) {
+    app.pv.obs = new IntersectionObserver((entries) => {
+      if (!entries.some((entry) => entry.isIntersecting)) return;
+      app.pv.obs?.disconnect();
+      app.pv.shown = (app.pv.shown || PV_PAGE) + PV_PAGE;
+      renderSheetKeepScroll();
+    }, { root: $("#sheet"), rootMargin: "500px" });
+    app.pv.obs.observe(more);
+  }
 }
 
 function providersSettings() {

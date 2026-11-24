@@ -30,12 +30,12 @@ function palette() {
 function palItems() {
   const q = norm(app.pal.q.trim());
   const games = app.data.games.filter((g) => !q || norm(g.name).includes(q)).sort((a, b) => (b.lastPlayed || 0) - (a.lastPlayed || 0)).slice(0, 8).map((g) => ({ label: g.name, hint: rel(g.lastPlayed), go: () => { app.view = "library"; renderAll(); select(g.id); }, play: g.id }));
-  const actions = [[t("add.title"), addModal], [t("settings.title"), () => setView("settings")], [t("x.home"), () => setView("home")], [t("nav.library"), () => setView("library")]].filter(([l]) => !q || norm(l).includes(q)).map(([label, go]) => ({ label, hint: "", go, action: true }));
+  const actions = [[t("add.title"), addModal, "plus"], [t("settings.title"), () => setView("settings"), "gear"], [t("x.home"), () => setView("home"), "home"], [t("nav.library"), () => setView("library"), "grid"]].filter(([l]) => !q || norm(l).includes(q)).map(([label, go, icon]) => ({ label, hint: "", go, icon, action: true }));
   return [...games, ...actions];
 }
 function palList() {
   const items = palItems(); app.pal.items = items;
-  $("#pres").innerHTML = items.length ? items.map((x, n) => `<button data-n="${n}" class="${n === app.pal.i ? "on" : ""}">${ic(x.action ? "plus" : "play")}<span>${esc(x.label)}</span><small>${esc(x.hint)}</small></button>`).join("") : `<div class="none">${esc(t("x.none"))}</div>`;
+  $("#pres").innerHTML = items.length ? items.map((x, n) => `<button data-n="${n}" class="${n === app.pal.i ? "on" : ""}">${ic(x.action ? x.icon : "play")}<span>${esc(x.label)}</span><small>${esc(x.hint)}</small></button>`).join("") : `<div class="none">${esc(t("x.none"))}</div>`;
 }
 function palGo(n, play) { const x = app.pal.items[n]; if (!x) return; closeModal(); x.go(); if (play && x.play) setTimeout(acts.play, 0); }
 

@@ -4,8 +4,9 @@
 
 const EXTRA_I18N = {
   fr: {
+    "x.dllFolder": "Dossier analysé", "x.dllChange": "Changer de dossier", "x.dllScan": "Analyser", "x.dllNone": "Aucune DLL trouvée dans ce dossier.", "x.dllActive": "Overrides actifs", "pv.more": "Charger plus",
     "x.media": "Médias", "x.noDescription": "Aucune description.", "x.noMedia": "Aucun média disponible.",
-    "x.trailer": "Bande-annonce", "art.auto": "Rechercher automatiquement", "x.save": "Enregistrer", "x.cancel": "Annuler", "x.close": "Fermer",
+    "x.trailer": "Bande-annonce", "x.trailerUnavailable": "Lecteur intégré indisponible : la bande-annonce peut être ouverte sur Steam.", "art.auto": "Rechercher automatiquement", "x.save": "Enregistrer", "x.cancel": "Annuler", "x.close": "Fermer",
     "notes.placeholder": "Vos notes sur ce jeu…", "launch.prefix": "Préfixe", "launch.options": "Options",
     "launch.env": "Variables d'environnement", "launch.anticheat": "Anti-triche",
     "pv.mygames": "Mes jeux", "pv.title": "Bibliothèque des boutiques", "pv.subtitle": "Steam, Epic Games, GOG et itch.io réunis au même endroit.",
@@ -51,8 +52,9 @@ const EXTRA_I18N = {
     "installs.title": "Installations", "installs.active": "Active", "installs.activate": "Utiliser cette installation",
   },
   en: {
+    "x.dllFolder": "Scanned folder", "x.dllChange": "Change folder", "x.dllScan": "Scan", "x.dllNone": "No DLL found in this folder.", "x.dllActive": "Active overrides", "pv.more": "Load more",
     "x.media": "Media", "x.noDescription": "No description.", "x.noMedia": "No media available.",
-    "x.trailer": "Trailer", "art.auto": "Search automatically", "x.save": "Save", "x.cancel": "Cancel", "x.close": "Close",
+    "x.trailer": "Trailer", "x.trailerUnavailable": "Built-in player unavailable: the trailer can be opened on Steam.", "art.auto": "Search automatically", "x.save": "Save", "x.cancel": "Cancel", "x.close": "Close",
     "notes.placeholder": "Your notes about this game…", "launch.prefix": "Prefix", "launch.options": "Options",
     "launch.env": "Environment variables", "launch.anticheat": "Anti-cheat",
     "pv.mygames": "My games", "pv.title": "Store library", "pv.subtitle": "Steam, Epic Games, GOG and itch.io in one place.",
@@ -98,8 +100,9 @@ const EXTRA_I18N = {
     "installs.title": "Installations", "installs.active": "Active", "installs.activate": "Use this installation",
   },
   es: {
+    "x.dllFolder": "Carpeta analizada", "x.dllChange": "Cambiar carpeta", "x.dllScan": "Analizar", "x.dllNone": "No se encontró ninguna DLL en esta carpeta.", "x.dllActive": "Overrides activos", "pv.more": "Cargar más",
     "x.media": "Medios", "x.noDescription": "Sin descripción.", "x.noMedia": "No hay medios disponibles.",
-    "x.trailer": "Tráiler", "art.auto": "Buscar automáticamente", "x.save": "Guardar", "x.cancel": "Cancelar", "x.close": "Cerrar",
+    "x.trailer": "Tráiler", "x.trailerUnavailable": "Reproductor integrado no disponible: el tráiler se puede abrir en Steam.", "art.auto": "Buscar automáticamente", "x.save": "Guardar", "x.cancel": "Cancelar", "x.close": "Cerrar",
     "notes.placeholder": "Tus notas sobre este juego…", "launch.prefix": "Prefijo", "launch.options": "Opciones",
     "launch.env": "Variables de entorno", "launch.anticheat": "Antitrampas",
     "pv.mygames": "Mis juegos", "pv.title": "Biblioteca de tiendas", "pv.subtitle": "Steam, Epic Games, GOG e itch.io en un solo lugar.",
@@ -145,8 +148,9 @@ const EXTRA_I18N = {
     "installs.title": "Instalaciones", "installs.active": "Activa", "installs.activate": "Usar esta instalación",
   },
   de: {
+    "x.dllFolder": "Analysierter Ordner", "x.dllChange": "Ordner wechseln", "x.dllScan": "Analysieren", "x.dllNone": "Keine DLL in diesem Ordner gefunden.", "x.dllActive": "Aktive Overrides", "pv.more": "Mehr laden",
     "x.media": "Medien", "x.noDescription": "Keine Beschreibung.", "x.noMedia": "Keine Medien verfügbar.",
-    "x.trailer": "Trailer", "art.auto": "Automatisch suchen", "x.save": "Speichern", "x.cancel": "Abbrechen", "x.close": "Schließen",
+    "x.trailer": "Trailer", "x.trailerUnavailable": "Integrierter Player nicht verfügbar: der Trailer kann auf Steam geöffnet werden.", "art.auto": "Automatisch suchen", "x.save": "Speichern", "x.cancel": "Abbrechen", "x.close": "Schließen",
     "notes.placeholder": "Deine Notizen zu diesem Spiel…", "launch.prefix": "Präfix", "launch.options": "Optionen",
     "launch.env": "Umgebungsvariablen", "launch.anticheat": "Anti-Cheat",
     "pv.mygames": "Meine Spiele", "pv.title": "Store-Bibliothek", "pv.subtitle": "Steam, Epic Games, GOG und itch.io an einem Ort.",
@@ -192,8 +196,9 @@ const EXTRA_I18N = {
     "installs.title": "Installationen", "installs.active": "Aktiv", "installs.activate": "Diese Installation verwenden",
   },
   pt: {
+    "x.dllFolder": "Pasta analisada", "x.dllChange": "Mudar de pasta", "x.dllScan": "Analisar", "x.dllNone": "Nenhuma DLL encontrada nesta pasta.", "x.dllActive": "Overrides ativos", "pv.more": "Carregar mais",
     "x.media": "Mídias", "x.noDescription": "Sem descrição.", "x.noMedia": "Nenhuma mídia disponível.",
-    "x.trailer": "Trailer", "art.auto": "Pesquisar automaticamente", "x.save": "Salvar", "x.cancel": "Cancelar", "x.close": "Fechar",
+    "x.trailer": "Trailer", "x.trailerUnavailable": "Reprodutor integrado indisponível: o trailer pode ser aberto na Steam.", "art.auto": "Pesquisar automaticamente", "x.save": "Salvar", "x.cancel": "Cancelar", "x.close": "Fechar",
     "notes.placeholder": "Suas notas sobre este jogo…", "launch.prefix": "Prefixo", "launch.options": "Opções",
     "launch.env": "Variáveis de ambiente", "launch.anticheat": "Antitrapaça",
     "pv.mygames": "Meus jogos", "pv.title": "Biblioteca das lojas", "pv.subtitle": "Steam, Epic Games, GOG e itch.io no mesmo lugar.",
@@ -278,3 +283,33 @@ Object.assign(I18N.pt, {
   "x.noEnv": "Nenhuma variável.", "x.addVar": "Adicionar uma variável", "x.addDll": "Adicionar uma DLL", "x.noDll": "Nenhum override.", "x.native": "native", "x.builtin": "builtin",
   "x.updateInstall": "Instalar e reiniciar", "x.updateInstalling": "Baixando e verificando…",
 });
+
+Object.assign(I18N.fr, { "ach.storeOnly": "Les succès sont disponibles pour les jeux de boutique installés.", "x.noSteamId": "Ce jeu n'a pas d'identifiant Steam.", "x.noGame": "Jeu introuvable.", "x.noStoreInstall": "Aucune installation de boutique vérifiée." });
+Object.assign(I18N.en, { "ach.storeOnly": "Achievements are available for installed store games.", "x.noSteamId": "This game has no Steam ID.", "x.noGame": "Game not found.", "x.noStoreInstall": "No verified store installation." });
+Object.assign(I18N.es, { "ach.storeOnly": "Los logros están disponibles para los juegos de tienda instalados.", "x.noSteamId": "Este juego no tiene identificador de Steam.", "x.noGame": "Juego no encontrado.", "x.noStoreInstall": "Ninguna instalación de tienda verificada." });
+Object.assign(I18N.de, { "ach.storeOnly": "Erfolge sind für installierte Store-Spiele verfügbar.", "x.noSteamId": "Dieses Spiel hat keine Steam-ID.", "x.noGame": "Spiel nicht gefunden.", "x.noStoreInstall": "Keine verifizierte Store-Installation." });
+Object.assign(I18N.pt, { "ach.storeOnly": "As conquistas estão disponíveis para jogos de loja instalados.", "x.noSteamId": "Este jogo não tem identificador Steam.", "x.noGame": "Jogo não encontrado.", "x.noStoreInstall": "Nenhuma instalação de loja verificada." });
+
+Object.assign(I18N.fr, { "pv.legendaryMissing": "Legendary n'est pas installé", "pv.legendaryInstalled": "Legendary installé · compte non connecté", "pv.legendarySession": "Session Legendary", "pv.epicDirect": "Connexion directe", "pv.gogMissing": "gogdl n'est pas installé", "pv.gogInstalled": "gogdl installé · compte non connecté", "pv.gogSession": "Session gogdl", "pv.itchSaved": "Clé API personnelle enregistrée", "pv.itchHint": "Clé API personnelle, pour la bibliothèque possédée" });
+Object.assign(I18N.en, { "pv.legendaryMissing": "Legendary is not installed", "pv.legendaryInstalled": "Legendary installed · no account connected", "pv.legendarySession": "Legendary session", "pv.epicDirect": "Direct connection", "pv.gogMissing": "gogdl is not installed", "pv.gogInstalled": "gogdl installed · no account connected", "pv.gogSession": "gogdl session", "pv.itchSaved": "Personal API key saved", "pv.itchHint": "Personal API key for your owned library" });
+Object.assign(I18N.es, { "pv.legendaryMissing": "Legendary no está instalado", "pv.legendaryInstalled": "Legendary instalado · cuenta no conectada", "pv.legendarySession": "Sesión de Legendary", "pv.epicDirect": "Conexión directa", "pv.gogMissing": "gogdl no está instalado", "pv.gogInstalled": "gogdl instalado · cuenta no conectada", "pv.gogSession": "Sesión de gogdl", "pv.itchSaved": "Clave API personal guardada", "pv.itchHint": "Clave API personal para tu biblioteca" });
+Object.assign(I18N.de, { "pv.legendaryMissing": "Legendary ist nicht installiert", "pv.legendaryInstalled": "Legendary installiert · kein Konto verbunden", "pv.legendarySession": "Legendary-Sitzung", "pv.epicDirect": "Direkte Verbindung", "pv.gogMissing": "gogdl ist nicht installiert", "pv.gogInstalled": "gogdl installiert · kein Konto verbunden", "pv.gogSession": "gogdl-Sitzung", "pv.itchSaved": "Persönlicher API-Schlüssel gespeichert", "pv.itchHint": "Persönlicher API-Schlüssel für deine Bibliothek" });
+Object.assign(I18N.pt, { "pv.legendaryMissing": "O Legendary não está instalado", "pv.legendaryInstalled": "Legendary instalado · conta não conectada", "pv.legendarySession": "Sessão do Legendary", "pv.epicDirect": "Conexão direta", "pv.gogMissing": "O gogdl não está instalado", "pv.gogInstalled": "gogdl instalado · conta não conectada", "pv.gogSession": "Sessão do gogdl", "pv.itchSaved": "Chave API pessoal salva", "pv.itchHint": "Chave API pessoal para sua biblioteca" });
+
+Object.assign(I18N.fr, { "x.logo": "Logo", "x.icon": "Icône", "art.search": "Rechercher une illustration" });
+Object.assign(I18N.en, { "x.logo": "Logo", "x.icon": "Icon", "art.search": "Search artwork" });
+Object.assign(I18N.es, { "x.logo": "Logotipo", "x.icon": "Icono", "art.search": "Buscar ilustración" });
+Object.assign(I18N.de, { "x.logo": "Logo", "x.icon": "Symbol", "art.search": "Artwork suchen" });
+Object.assign(I18N.pt, { "x.logo": "Logotipo", "x.icon": "Ícone", "art.search": "Pesquisar arte" });
+
+Object.assign(I18N.fr, { "st.specials": "Offres spéciales", "st.topSellers": "Meilleures ventes", "st.newReleases": "Nouveautés", "st.comingSoon": "Prochainement", "st.popular": "Populaires sur Steam" });
+Object.assign(I18N.en, { "st.specials": "Specials", "st.topSellers": "Top sellers", "st.newReleases": "New releases", "st.comingSoon": "Coming soon", "st.popular": "Popular on Steam" });
+Object.assign(I18N.es, { "st.specials": "Ofertas", "st.topSellers": "Más vendidos", "st.newReleases": "Novedades", "st.comingSoon": "Próximamente", "st.popular": "Populares en Steam" });
+Object.assign(I18N.de, { "st.specials": "Angebote", "st.topSellers": "Bestseller", "st.newReleases": "Neuerscheinungen", "st.comingSoon": "Demnächst", "st.popular": "Beliebt auf Steam" });
+Object.assign(I18N.pt, { "st.specials": "Ofertas", "st.topSellers": "Mais vendidos", "st.newReleases": "Novidades", "st.comingSoon": "Em breve", "st.popular": "Populares na Steam" });
+
+Object.assign(I18N.fr, { "pv.filter.all": "Tous les statuts" });
+Object.assign(I18N.en, { "pv.filter.all": "All statuses" });
+Object.assign(I18N.es, { "pv.filter.all": "Todos los estados" });
+Object.assign(I18N.de, { "pv.filter.all": "Alle Status" });
+Object.assign(I18N.pt, { "pv.filter.all": "Todos os estados" });

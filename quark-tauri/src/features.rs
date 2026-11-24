@@ -7,6 +7,7 @@ use quark::config::{Game, Settings};
 use quark::{artwork, disk, howlongtobeat, news, proton, protondb, update};
 use serde::Serialize;
 use serde_json::Value;
+use std::path::{Path, PathBuf};
 use tauri::State;
 
 /// Fusionne `patch` dans `target` clé par clé (les sous-objets sont remplacés
@@ -92,6 +93,111 @@ pub fn patch_game_raw(
         run.is_some(),
         run.map(|run| run.label.clone()),
     ))
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DllCandidateDto {
+    pub name: String,
+    pub path: String,
+    pub relative: String,
+}
+
+const DLL_SCAN_DEPTH: usize = 6;
+const DLL_SCAN_LIMIT: usize = 400;
+
+/// Liste les DLL visibles dans le dossier du jeu (ou dans un dossier choisi),
+/// sous-dossiers compris. Les noms sont dédoublonnés sans tenir compte de la
+/// casse : `WINEDLLOVERRIDES` ne peut cibler qu'un module à la fois.
+#[tauri::command]
+pub fn detect_game_dlls(
+    state: State<'_, AppState>,
+    id: String,
+    folder: Option<String>,
+) -> Result<Vec<DllCandidateDto>, String> {
+    let root = {
+        let library = lock(&state.library);
+        let game = library
+            .get(&id)
+            .ok_or_else(|| "Jeu introuvable".to_string())?;
+        folder
+            .as_deref()
+            .map(str::trim)
+            .filter(|path| !path.is_empty())
+            .map(PathBuf::from)
+            .or_else(|| {
+                game.dll_source
+                    .as_deref()
+                    .map(str::trim)
+                    .filter(|path| !path.is_empty())
+                    .map(PathBuf::from)
+            })
+            .or_else(|| game.exe_path().parent().map(Path::to_path_buf))
+            .ok_or_else(|| "Dossier du jeu introuvable.".to_string())?
+    };
+    if !root.is_dir() {
+        return Err(format!("Dossier introuvable : {}", root.display()));
+    }
+    Ok(scan_dlls(&root))
+}
+
+fn scan_dlls(root: &Path) -> Vec<DllCandidateDto> {
+    let mut out = Vec::new();
+    collect_dlls(root, root, 0, &mut out);
+    out.sort_by_key(|row| row.relative.to_lowercase());
+    out
+}
+
+fn collect_dlls(root: &Path, dir: &Path, depth: usize, out: &mut Vec<DllCandidateDto>) {
+    if out.len() >= DLL_SCAN_LIMIT {
+        return;
+    }
+    let Ok(entries) = std::fs::read_dir(dir) else {
+        return;
+    };
+    for entry in entries.flatten() {
+        if out.len() >= DLL_SCAN_LIMIT {
+            return;
+        }
+        let name = entry.file_name().to_string_lossy().to_string();
+        if name.starts_with('.') {
+            continue;
+        }
+        let path = entry.path();
+        let Ok(file_type) = entry.file_type() else {
+            continue;
+        };
+        if file_type.is_symlink() {
+            continue;
+        }
+        if file_type.is_dir() {
+            if depth < DLL_SCAN_DEPTH {
+                collect_dlls(root, &path, depth + 1, out);
+            }
+            continue;
+        }
+        if !path
+            .extension()
+            .is_some_and(|extension| extension.eq_ignore_ascii_case("dll"))
+        {
+            continue;
+        }
+        let Some(stem) = path.file_stem().map(|stem| stem.to_string_lossy().to_string()) else {
+            continue;
+        };
+        if stem.is_empty() || out.iter().any(|row| row.name.eq_ignore_ascii_case(&stem)) {
+            continue;
+        }
+        out.push(DllCandidateDto {
+            name: stem,
+            path: path.display().to_string(),
+            relative: path
+                .strip_prefix(root)
+                .unwrap_or(&path)
+                .display()
+                .to_string(),
+        });
+    }
 }
 
 #[derive(Serialize)]
@@ -315,5 +421,41 @@ pub fn open_url(target: String) -> Result<(), String> {
             .map_err(|error| format!("xdg-open : {error}"))
     } else {
         Err("Chemin introuvable".to_string())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn temp_dir(label: &str) -> PathBuf {
+        let path = std::env::temp_dir().join(format!(
+            "quark-dll-scan-{label}-{}-{}",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        std::fs::create_dir_all(&path).unwrap();
+        path
+    }
+
+    #[test]
+    fn les_dll_des_sous_dossiers_sont_trouvees_et_dedoublonnees() {
+        let root = temp_dir("nested");
+        std::fs::create_dir_all(root.join("Binaries/Win64")).unwrap();
+        std::fs::write(root.join("winmm.dll"), b"dll").unwrap();
+        std::fs::write(root.join("Binaries/Win64/winmm.DLL"), b"dll").unwrap();
+        std::fs::write(root.join("Binaries/Win64/steam_api64.dll"), b"dll").unwrap();
+        std::fs::write(root.join("Binaries/readme.txt"), b"txt").unwrap();
+
+        let found = scan_dlls(&root);
+        let names: Vec<_> = found.iter().map(|row| row.name.as_str()).collect();
+        assert_eq!(names, ["steam_api64", "winmm"]);
+        assert_eq!(found[1].relative, "winmm.dll");
+        assert!(found[0].relative.ends_with("steam_api64.dll"));
+
+        std::fs::remove_dir_all(root).unwrap();
     }
 }

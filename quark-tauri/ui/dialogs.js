@@ -45,9 +45,9 @@ function logModal() {
 
 // ---------- Personnaliser : illustrations, notes, tags ----------
 function customizeModal() {
-  const g = game(app.sel), art = (k, l, url) => `<div class="art"><div class="thumb" id="th-${k}" style="${url ? `background-image:url('${esc(url)}')` : ""}"></div><button class="btn sec sm" data-art="${k}">${esc(l)}</button></div>`;
-  modal(`<h2>${esc(t("x.customize"))}</h2><div class="arts">${art("cover", t("detail.changeCover"), g.coverUrl)}${art("hero", t("detail.changeHero"), g.heroUrl)}${art("logo", "Logo", g.logoUrl)}${art("icon", "Icône", g.iconUrl)}</div>
-    <div class="row2"><input type="text" id="art-q" value="${esc(g.name)}" placeholder="${esc(t("add.name"))}"><button class="btn sec sm" id="art-auto">${ic("search")}${esc(t("art.auto"))}</button></div>
+  const g = game(app.sel), art = (k, l, url) => `<div class="art"><div class="thumb${url ? " has" : ""}" id="th-${k}" style="${url ? `background-image:url('${esc(url)}')` : ""}">${url ? "" : `<span class="artph">${ic("image")}</span>`}</div><button class="btn sec sm" data-art="${k}">${esc(l)}</button></div>`;
+  modal(`<h2>${esc(t("x.customize"))}</h2><div class="arts">${art("cover", t("detail.changeCover"), g.coverUrl)}${art("hero", t("detail.changeHero"), g.heroUrl)}${art("logo", t("x.logo"), g.logoUrl)}${art("icon", t("x.icon"), g.iconUrl)}</div>
+    ${lab(t("art.search"), `<div class="row2"><input type="text" id="art-q" value="${esc(g.name)}"><button class="btn sec sm" id="art-auto">${ic("search")}${esc(t("art.auto"))}</button></div>`)}
     ${lab(t("add.name"), inp("c-name", g.name))}<div class="row2">${lab(t("overview.developer"), inp("c-dev", g.developer))}${lab(t("overview.released"), inp("c-rel", g.released))}</div>
     ${lab(t("overview.genres"), inp("c-gen", g.genres.join(", ")))}${lab(t("overview.tags"), inp("c-tags", g.tags.join(", ")))}
     ${lab(t("overview.about"), `<textarea id="c-desc">${esc(g.description)}</textarea>`)}${lab(t("tab.notes"), `<textarea id="c-notes" placeholder="${esc(t("notes.placeholder"))}">${esc(g.notes)}</textarea>`)}${foot(t("x.save"))}`, true);
@@ -69,10 +69,12 @@ function parseDll(value) { // « winmm=n,b;steam_api64=b » -> [{name,native,bui
   return out;
 }
 const dllValue = (l) => l.map((d) => `${d.name}=${[d.native && "n", d.builtin && "b"].filter(Boolean).join(",")}`).join(";");
+const dllEq = (left, right) => left.replace(/\.dll$/i, "").toLowerCase() === right.replace(/\.dll$/i, "").toLowerCase();
+const dirOf = (path) => path.replace(/[/\\][^/\\]*$/, "");
 async function gameSettingsModal() {
   const id = app.sel, raw = await run(() => invoke("get_game_raw", { id })); if (!raw) return;
   app.runtimes ||= await invoke("list_runtimes").catch(() => []);
-  const w = raw, st = { tab: "settings", sec: "general" };
+  const w = raw, st = { tab: "settings", sec: "general", dllFolder: w.dll_source || dirOf(w.exe), dlls: null, dllBusy: false, dllError: "" };
   const mode = () => (w.proton?.mode === "runtime" ? w.proton.runtime : w.proton?.mode || "default");
   const envList = () => (w.env ||= []);
   const sections = {
@@ -87,10 +89,36 @@ async function gameSettingsModal() {
     data: () => `${lab("Steam AppID", `<input type="text" ${bind("steam_app_id", "data-num data-nullable")} value="${w.steam_app_id ?? ""}">`)}${lab("SteamGridDB ID", `<input type="text" ${bind("sgdb_id", "data-num data-nullable")} value="${w.sgdb_id ?? ""}">`)}
       <div class="foot l"><button class="btn sec sm" id="open-px" ${game(id).prefix ? "" : "disabled"}>${ic("folder")}${esc(t("detail.openFolder"))} · ${esc(t("launch.prefix"))}</button></div>`,
   };
-  const dllView = () => { const l = parseDll(w.env?.find((e) => e.name === "WINEDLLOVERRIDES")?.value);
-    return `<div class="envs">${l.map((d, i) => `<div class="row2 dll"><b>${esc(d.name)}</b><label class="ck"><input type="checkbox" data-dn="${i}" ${d.native ? "checked" : ""}>${t("x.native")}</label><label class="ck"><input type="checkbox" data-db="${i}" ${d.builtin ? "checked" : ""}>${t("x.builtin")}</label><button class="ib sm" data-ddel="${i}">${ic("x")}</button></div>`).join("") || `<div class="dim">${esc(t("x.noDll"))}</div>`}</div>
+  const dllView = () => {
+    const l = parseDll(w.env?.find((e) => e.name === "WINEDLLOVERRIDES")?.value);
+    const found = st.dlls || [];
+    return `<div class="dllbar"><div><b>${esc(t("x.dllFolder"))}</b><small class="path">${esc(st.dllFolder || "—")}</small></div>
+        <button class="btn sec sm" id="dll-pick">${ic("folder")}${esc(t("x.dllChange"))}</button>
+        <button class="btn sec sm" id="dll-rescan">${ic("refresh")}${esc(t("x.dllScan"))}</button></div>
+      ${st.dllBusy ? `<div class="dim">${esc(t("log.loading"))}</div>` : st.dllError ? `<div class="sline err">${esc(st.dllError)}</div>` : found.length ? `<div class="dllgrid">${found.map((d) => {
+        const on = l.some((row) => dllEq(row.name, d.name));
+        return `<label class="dllrow"><input type="checkbox" data-dll="${esc(d.name)}" ${on ? "checked" : ""}><span><b>${esc(d.name)}.dll</b><small>${esc(d.relative)}</small></span></label>`;
+      }).join("")}</div>` : `<div class="dim">${esc(t("x.dllNone"))}</div>`}
+      <h4 class="dlltitle">${esc(t("x.dllActive"))}</h4>
+      <div class="envs">${l.map((d, i) => `<div class="row2 dll"><b>${esc(d.name)}</b><label class="ck"><input type="checkbox" data-dn="${i}" ${d.native ? "checked" : ""}>${t("x.native")}</label><label class="ck"><input type="checkbox" data-db="${i}" ${d.builtin ? "checked" : ""}>${t("x.builtin")}</label><button class="ib sm" data-ddel="${i}">${ic("x")}</button></div>`).join("") || `<div class="dim">${esc(t("x.noDll"))}</div>`}</div>
       <div class="row2"><input type="text" id="dll-new" placeholder="winmm, d3d11…"><button class="btn sec sm" id="dll-add">${ic("plus")}${esc(t("x.addDll"))}</button></div>`; };
   const setDll = (l) => { const e = envList(), i = e.findIndex((x) => x.name === "WINEDLLOVERRIDES"), v = dllValue(l); if (!l.length) { if (i >= 0) e.splice(i, 1); } else i >= 0 ? (e[i].value = v) : e.push({ name: "WINEDLLOVERRIDES", value: v }); };
+  const setDllChecked = (name, checked) => {
+    const l = parseDll(w.env?.find((e) => e.name === "WINEDLLOVERRIDES")?.value);
+    const index = l.findIndex((row) => dllEq(row.name, name));
+    if (checked && index < 0) l.push({ name, native: true, builtin: true });
+    if (!checked && index >= 0) l.splice(index, 1);
+    setDll(l);
+  };
+  async function refreshDlls() {
+    if (st.dllBusy) return;
+    st.dllBusy = true; st.dllError = "";
+    if (st.tab === "dll") draw();
+    try { st.dlls = await invoke("detect_game_dlls", { id, folder: st.dllFolder || null }); }
+    catch (e) { st.dlls = []; st.dllError = String(e); }
+    st.dllBusy = false;
+    if (st.tab === "dll") draw();
+  }
   const draw = () => {
     const secs = [["general", "x.general"], ["proton", "x.proton"], ["env", "x.env"], ["data", "x.data"]];
     modal(`<h2>${esc(w.name)}</h2><div class="tabs sm"><button data-t="settings" class="${st.tab === "settings" ? "on" : ""}">${esc(t("x.settingsTab"))}</button><button data-t="dll" class="${st.tab === "dll" ? "on" : ""}">${esc(t("x.dll"))}</button></div>
@@ -103,11 +131,21 @@ async function gameSettingsModal() {
     const l = parseDll(w.env?.find((e) => e.name === "WINEDLLOVERRIDES")?.value);
     $$("[data-dn]", root).forEach((c) => (c.onchange = () => { l[+c.dataset.dn].native = c.checked; setDll(l); })); $$("[data-db]", root).forEach((c) => (c.onchange = () => { l[+c.dataset.db].builtin = c.checked; setDll(l); }));
     $$("[data-ddel]", root).forEach((b) => (b.onclick = () => { l.splice(+b.dataset.ddel, 1); setDll(l); draw(); }));
+    $$("[data-dll]", root).forEach((c) => (c.onchange = () => { setDllChecked(c.dataset.dll, c.checked); draw(); }));
+    const dp = $("#dll-pick"); dp && (dp.onclick = () => run(async () => {
+      const picked = await invoke("pick_folder");
+      if (!picked) return;
+      st.dllFolder = picked; st.dlls = null; w.dll_source = picked;
+      await gameSet(id, { dll_source: picked });
+      await refreshDlls();
+    }));
+    const dr = $("#dll-rescan"); dr && (dr.onclick = () => refreshDlls());
     const da = $("#dll-add"); da && (da.onclick = () => { const n = $("#dll-new").value.split(",").map((x) => x.trim()).filter(Boolean); n.forEach((x) => l.push({ name: x, native: true, builtin: true })); setDll(l); draw(); });
+    if (st.tab === "dll" && st.dlls === null && !st.dllBusy) refreshDlls();
     const op = $("#open-px"); op && (op.onclick = () => run(() => invoke("open_url", { target: game(id).prefix })));
     $("#ok").onclick = () => run(async () => {
       envList(); w.env = w.env.filter((e) => e.name.trim());
-      await gameSet(id, { name: w.name, exe: w.exe, args: w.args, proton: w.proton, prefix: w.prefix, umu: w.umu, umu_game_id: w.umu_game_id, proton_log: w.proton_log, anticheat: w.anticheat, launch: w.launch, env: w.env, steam_app_id: w.steam_app_id, sgdb_id: w.sgdb_id });
+      await gameSet(id, { name: w.name, exe: w.exe, args: w.args, proton: w.proton, prefix: w.prefix, umu: w.umu, umu_game_id: w.umu_game_id, proton_log: w.proton_log, anticheat: w.anticheat, launch: w.launch, env: w.env, steam_app_id: w.steam_app_id, sgdb_id: w.sgdb_id, dll_source: w.dll_source });
       closeModal(); renderAll(); toast(t("toast.saved"));
     });
   };

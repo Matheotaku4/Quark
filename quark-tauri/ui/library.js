@@ -6,6 +6,13 @@ const ST_ORDER = ["playing", "backlog", "finished", "dropped", "none"];
 const SORTS = { name: (a, b) => a.name.localeCompare(b.name, locale()), recent: (a, b) => (b.lastPlayed || 0) - (a.lastPlayed || 0), added: (a, b) => b.addedAt - a.addedAt,
   playtime: (a, b) => b.playtimeSecs - a.playtimeSecs, favorites: (a, b) => (b.favorite - a.favorite) || (b.lastPlayed || 0) - (a.lastPlayed || 0) };
 
+function srcLabel(g) {
+  const raw = g.sourceLabel || "";
+  if (raw === "Locale" || raw === "Local") return t("source.local");
+  if (raw === "Plusieurs" || raw === "Multiple") return t("source.multiple");
+  return raw;
+}
+
 function renderTop() {
   $("#top-tabs").innerHTML = NAV.map(([k, l]) => `<button data-view="${k}" class="${app.view === k ? "on" : ""}">${esc(t(l))}</button>`).join("");
   const grid = app.cfg.view === "grid", upd = app.upd && app.upd.newer;
@@ -26,7 +33,7 @@ function filtered() {
 function groupOf(g) {
   switch (app.cfg.group_by) {
     case "status": return [g.status, t("status." + g.status)];
-    case "store": return [g.sourceLabel || "Local", g.sourceLabel || t("source.local")];
+    case "store": return [srcLabel(g), srcLabel(g)];
     case "genre": return [g.genres[0] || "—", g.genres[0] || "—"];
     case "year": return [(g.released || "").slice(0, 4) || "—", (g.released || "").slice(0, 4) || "—"];
     default: return ["", ""];
@@ -84,13 +91,13 @@ function renderGrid() {
 const iconBtn = (act, icn, color, title, on) => `<button class="ib${on ? " on" : ""}" data-act="${act}" style="--c:${color}" title="${esc(title)}">${ic(icn, on ? "on" : "")}</button>`;
 function renderGame(g) {
   const live = app.running.has(g.id), r = app.running.get(g.id), art = g.heroUrl || g.coverUrl;
-  const sub = [g.developer, g.released, g.genres.slice(0, 3).join(", "), g.sourceLabel, g.isNative ? "Linux" : ""].filter(Boolean);
+  const sub = [g.developer, g.released, g.genres.slice(0, 3).join(", "), srcLabel(g), g.isNative ? "Linux" : ""].filter(Boolean);
   const tabs = [["overview", "x.overview"], ["media", "x.media"], ["ach", "x.ach"], ["news", "x.news"], ["hist", "x.hist"], ["notes", "tab.notes"], ["launch", "tab.launch"], ["log", "tab.log"]];
   const placement = app.cfg.game_actions === "beside_play";
   const actions = `<div class="acts">${iconBtn("fav", "star", "#ffc94d", t(g.favorite ? "detail.unfavorite" : "detail.favorite"), g.favorite)}${iconBtn("gsettings", "gear", "var(--accent)", t("x.settingsGame"))}${iconBtn("customize", "edit", "#ffc94d", t("x.customize"))}${iconBtn("overlay", "eye", "#8ab4ff", t("overlay.show"))}${iconBtn("log", "log", "#4cd07d", t("x.logBtn"))}${iconBtn("remove", "trash", "var(--danger)", t("x.remove"))}</div>`;
   return `<div class="gp" style="${accent(g)}">
     <div class="gh">
-      <div class="gh-art" style="${art ? `background-image:url('${esc(art)}')` : ""}"></div><div class="gh-fade"></div>
+      <div class="gh-art" style="${art ? `background-image:url('${esc(art)}')` : ""}"></div>${art ? "" : `<span class="gh-mono">${esc(g.monogram)}</span>`}<div class="gh-fade"></div>
       <div class="gh-top">${document.body.classList.contains("grid") ? `<button class="btn sec sm back" data-act="back">${ic("back")}${esc(t("x.back"))}</button>` : ""}<span id="pdb"></span><span class="sp"></span>${placement ? "" : actions}</div>
       <div class="gh-main">
         ${g.logoUrl ? `<img class="logo" src="${esc(g.logoUrl)}" alt="${esc(g.name)}">` : `<h1>${esc(g.name)}</h1>`}
@@ -114,7 +121,7 @@ function weeks(g) {
 function renderOverview(g) {
   const live = app.running.has(g.id), row2 = (l, v) => (v ? `<div class="kv"><span>${esc(l)}</span><b>${v}</b></div>` : "");
   $("#ov").innerHTML = `<h3>${esc(t("x.overview"))}</h3>${row2(t("overview.playtime"), hm(g.playtimeSecs + (live ? elapsed(g.id) : 0)))}${row2(t("overview.lastPlayed"), esc(live ? t("detail.playingNow") : rel(g.lastPlayed)))}
-    ${row2(t("x.sessions"), g.sessions.length)}${row2(t("overview.genres"), esc(g.genres.join(" · ")))}${row2(t("overview.developer"), esc(g.developer))}${row2(t("overview.released"), esc(g.released))}${row2(t("overview.source"), esc(g.sourceLabel))}
+    ${row2(t("x.sessions"), g.sessions.length)}${row2(t("overview.genres"), esc(g.genres.join(" · ")))}${row2(t("overview.developer"), esc(g.developer))}${row2(t("overview.released"), esc(g.released))}${row2(t("overview.source"), esc(srcLabel(g)))}
     ${g.installations.length > 1 ? `<div class="hr"></div><h3>${esc(t("installs.title"))}</h3>${g.installations.map((i) => `<button class="instrow${i.active ? " on" : ""}" data-installation="${esc(i.id)}"><b>${esc(i.label)}</b><small>${esc(i.path || i.exe)}</small></button>`).join("")}` : ""}
     <div class="hr"></div><div id="hltb"><h3 class="blue">HowLongToBeat</h3><div class="dim">…</div></div>`;
 }
@@ -138,7 +145,7 @@ function renderOverviewTab(g) {
   $("#tabc").innerHTML = `<div class="sec0"><h3>${esc(t("overview.about"))}</h3>${about}${tags}</div>
     <div class="sec0"><h3>${esc(t("overview.details"))}</h3><div class="kv"><span>${esc(t("overview.developer"))}</span><b>${esc(g.developer || "—")}</b></div>
     <div class="kv"><span>${esc(t("overview.genres"))}</span><b>${esc(g.genres.join(" · ") || "—")}</b></div><div class="kv"><span>${esc(t("overview.released"))}</span><b>${esc(g.released || "—")}</b></div>
-    <div class="kv"><span>${esc(t("overview.added"))}</span><b>${esc(date(g.addedAt))}</b></div><div class="kv"><span>${esc(t("overview.source"))}</span><b>${esc(g.sourceLabel)}</b></div></div>`;
+    <div class="kv"><span>${esc(t("overview.added"))}</span><b>${esc(date(g.addedAt))}</b></div><div class="kv"><span>${esc(t("overview.source"))}</span><b>${esc(srcLabel(g))}</b></div></div>`;
 }
 
 function renderNotesTab(g) {
@@ -161,7 +168,12 @@ function renderLaunchTab(g) {
 async function loadLogTab(g) {
   const box = $("#tabc"); if (!box) return;
   box.innerHTML = `<div class="sec0"><div class="newshead"><h3>${esc(t("tab.log"))}</h3><button class="btn sec sm" id="log-refresh">${ic("refresh")}${esc(t("x.refresh"))}</button></div><pre class="logbox" id="log-out">${esc(t("log.loading"))}</pre></div>`;
-  const load = () => run(async () => { const txt = await invoke("read_log", { id: g.id }); const o = $("#log-out"); if (!o) return; o.textContent = txt.trim() ? txt.split("\n").slice(-300).join("\n") : t("log.empty"); o.scrollTop = o.scrollHeight; });
+  const load = async () => {
+    const o = $("#log-out"); if (!o) return;
+    try { const txt = await invoke("read_log", { id: g.id }); o.textContent = txt.trim() ? txt.split("\n").slice(-300).join("\n") : t("log.empty"); }
+    catch { o.textContent = t("log.empty"); }
+    o.scrollTop = o.scrollHeight;
+  };
   $("#log-refresh").onclick = load; load();
 }
 
@@ -174,10 +186,21 @@ async function loadMedia(g) {
   }
   if (app.sel !== g.id || app.tab !== "media" || !$("#tabc")) return;
   const m = cache[g.id];
-  if (m.err) { box.innerHTML = `<div class="none">${esc(m.err)}</div>`; return; }
+  if (m.err) { box.innerHTML = `<div class="none">${esc(bt(m.err))}</div>`; return; }
   const trailer = m.trailers[0];
-  box.innerHTML = `${trailer ? `<div class="trailerwrap"><video controls preload="metadata" poster="${esc(trailer.thumbnail)}" src="${esc(trailer.video)}"></video><div class="trailerbar"><b>${esc(trailer.title || t("x.trailer"))}</b><button class="btn sec sm" data-open="${esc(trailer.page)}">${ic("ext")}Steam</button></div></div>` : `<div class="none">${esc(t("x.noMedia"))}</div>`}
-    ${m.screenshots.length ? `<div class="shots">${m.screenshots.map((p) => `<button data-open="${esc(p.full)}"><img loading="lazy" src="${esc(p.thumbnail)}" alt=""></button>`).join("")}</div>` : ""}`;
+  box.innerHTML = `${trailer ? `<div class="trailerwrap"><button class="trailerplay" data-trailer="${esc(trailer.video)}" data-poster="${esc(trailer.thumbnail)}"><img src="${esc(trailer.thumbnail)}" alt=""><span class="tplay">${ic("play")}</span></button><div class="trailerbar"><b>${esc(trailer.title || t("x.trailer"))}</b><button class="btn sec sm" data-open="${esc(trailer.page)}">${ic("ext")}Steam</button></div><p class="trailerfail" hidden>${esc(t("x.trailerUnavailable"))}</p></div>` : `<div class="none">${esc(t("x.noMedia"))}</div>`}
+    ${m.screenshots.length ? `<div class="shots">${m.screenshots.map((p) => `<button data-open="${esc(p.full)}"><img loading="lazy" decoding="async" src="${esc(p.thumbnail)}" alt=""></button>`).join("")}</div>` : ""}`;
+  $$("[data-trailer]", box).forEach((btn) => btn.addEventListener("click", () => {
+    const video = document.createElement("video");
+    video.controls = video.autoplay = video.playsInline = true;
+    video.addEventListener("error", () => {
+      video.replaceWith(btn);
+      const fail = $(".trailerfail", box);
+      if (fail) fail.hidden = false;
+    }, { once: true });
+    video.poster = btn.dataset.poster; video.src = btn.dataset.trailer;
+    btn.replaceWith(video);
+  }));
 }
 
 async function loadAchievements(g) {
@@ -189,7 +212,7 @@ async function loadAchievements(g) {
   }
   if (app.sel !== g.id || app.tab !== "ach" || !$("#tabc")) return;
   const a = cache[g.id];
-  if (a.err) { box.innerHTML = `<div class="none">${esc(a.err)}</div>`; return; }
+  if (a.err) { box.innerHTML = `<div class="none">${esc(bt(a.err))}</div>`; return; }
   const pct = a.total ? Math.round((a.unlocked / a.total) * 100) : 0;
   box.innerHTML = `<div class="achhead"><h3>${esc(t("x.ach"))}<span>${a.unlocked} / ${a.total}</span></h3><div class="pbar"><i style="width:${pct}%"></i></div><small>${pct} % · ${esc(a.provider)}</small></div>
     <div class="achlist">${a.rows.map((r) => `<div class="ach ${r.unlocked ? "on" : ""}"><div class="achico">${r.iconUrl ? `<img src="${esc(r.iconUrl)}" alt="">` : ic(r.unlocked ? "star" : "x")}</div><div><b>${esc(r.name)}</b><small>${esc(r.description)}</small></div><div class="achmeta">${r.rarity != null ? `<em>${r.rarity.toFixed(1)} %</em>` : ""}<span>${r.unlocked ? "✓" : Math.round((r.progress || 0) * 100) + " %"}</span></div></div>`).join("")}</div>`;
@@ -201,7 +224,7 @@ async function loadNews(g, force) {
   if (app.sel !== g.id || app.tab !== "news" || !$("#tabc")) return;
   const d = c[g.id];
   $("#tabc").innerHTML = `<div class="newshead"><h3>${esc(t("x.news"))}</h3><button class="btn sec sm" data-act="news-refresh">${ic("refresh")}${esc(t("x.refresh"))}</button></div>` +
-    (d.err ? `<div class="none">${esc(d.err)}</div>` : d.length ? d.map((n, i) => `<details class="news"><summary><small>${esc(n.feed)}${n.author ? " · " + esc(n.author) : ""} · ${esc(rel(n.date))}</small><b>${esc(n.title)}</b><p>${esc(n.excerpt)}</p></summary>
+    (d.err ? `<div class="none">${esc(bt(d.err))}</div>` : d.length ? d.map((n, i) => `<details class="news"><summary><small>${esc(n.feed)}${n.author ? " · " + esc(n.author) : ""} · ${esc(rel(n.date))}</small><b>${esc(n.title)}</b><p>${esc(n.excerpt)}</p></summary>
       <div class="nbody">${esc(n.body)}</div><button class="btn sec sm" data-open="${esc(n.url)}">${ic("ext")}${esc(n.url ? "Steam" : "")}</button></details>`).join("") : `<div class="none">${esc(t("x.noNews"))}</div>`);
 }
 async function loadExtras(g) {
@@ -221,7 +244,7 @@ function renderHome() {
   if (!g) return `<div class="empty"><h2>${esc(t("empty.title"))}</h2><p>${esc(t("empty.subtitle"))}</p><button class="btn" data-act="add">${esc(t("empty.add"))}</button></div>`;
   const rail = (title, items) => (items.length ? `<section class="rail"><h3>${esc(title)}</h3><div class="cards">${items.slice(0, 12).map((x) => `<button class="tile sm" data-id="${x.id}" data-go="library" style="${accent(x)}"><div class="cover" style="${x.coverUrl ? `background-image:url('${esc(x.coverUrl)}')` : ""}">${x.coverUrl ? "" : `<b>${esc(x.monogram)}</b>`}</div><span class="meta"><b>${esc(x.name)}</b><small>${hm(x.playtimeSecs)}</small></span></button>`).join("")}</div></section>` : "");
   const by = (f) => games.filter(f);
-  return `<div class="home"><div class="gh big" style="${accent(g)}"><div class="gh-art" style="background-image:url('${esc(g.heroUrl || g.coverUrl || "")}')"></div><div class="gh-fade"></div>
+  return `<div class="home"><div class="gh big" style="${accent(g)}"><div class="gh-art" style="${g.heroUrl || g.coverUrl ? `background-image:url('${esc(g.heroUrl || g.coverUrl)}')` : ""}"></div>${g.heroUrl || g.coverUrl ? "" : `<span class="gh-mono">${esc(g.monogram)}</span>`}<div class="gh-fade"></div>
     <div class="gh-main">${g.logoUrl ? `<img class="logo" src="${esc(g.logoUrl)}" alt="">` : `<h1>${esc(g.name)}</h1>`}<div class="sub"><span>${esc(rel(g.lastPlayed))}</span><span>${hm(g.playtimeSecs)}</span></div>
       <div class="act"><button class="play" data-id="${g.id}" data-go="library" data-launch="1">${ic("play")}${esc(t("detail.play"))}</button><button class="btn sec" data-id="${g.id}" data-go="library">${esc(t("x.overview"))}</button></div></div>
     ${n > 1 ? `<div class="dots">${list.map((_, i) => `<button data-hi="${i}" class="${i === app.hi ? "on" : ""}"></button>`).join("")}</div>` : ""}</div>

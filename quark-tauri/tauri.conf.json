@@ -19,7 +19,7 @@
         "center": true,
         "resizable": true,
         "decorations": false,
-        "shadow": false,
+        "shadow": true,
         "transparent": false,
         "theme": "Dark",
         "backgroundColor": "#000000"

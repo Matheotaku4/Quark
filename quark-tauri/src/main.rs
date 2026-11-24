@@ -2159,6 +2159,7 @@ fn main() {
             features::patch_settings_raw,
             features::get_game_raw,
             features::patch_game_raw,
+            features::detect_game_dlls,
             features::list_runtimes,
             features::fetch_news,
             features::fetch_hltb,
