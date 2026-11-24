@@ -159,6 +159,7 @@ function wireWindow() {
 }
 
 async function boot() {
+  invoke("wayland_session").then((w) => document.documentElement.classList.toggle("wayland", !!w)).catch(() => {});
   wireWindow();
   app.data = await invoke("bootstrap_data");
   Object.assign(app.cfg, await invoke("get_settings_raw"));

@@ -764,6 +764,11 @@ fn bootstrap_data(state: State<'_, AppState>) -> Bootstrap {
 }
 
 #[tauri::command]
+fn wayland_session() -> bool {
+    is_wayland_session()
+}
+
+#[tauri::command]
 fn running_games(state: State<'_, AppState>) -> Vec<RunningDto> {
     running_dtos(&state)
 }
@@ -2124,6 +2129,7 @@ fn main() {
         })
         .invoke_handler(tauri::generate_handler![
             bootstrap_data,
+            wayland_session,
             running_games,
             get_game,
             launch_game,

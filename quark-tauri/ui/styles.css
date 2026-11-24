@@ -255,3 +255,8 @@ input[type=checkbox]{accent-color:var(--accent);width:15px;height:15px}
 .row{content-visibility:auto;contain-intrinsic-size:var(--row-h) 100%}
 .pcard{content-visibility:auto;contain-intrinsic-size:360px 210px}
 .tile{content-visibility:auto;contain-intrinsic-size:300px 180px}
+/* Wayland : surface opaque et sans coins arrondis, les dommages partiels de WebKitGTK laissent des pixels figés. */
+html.wayland,html.wayland body{background:var(--bg)}
+html.wayland #shell{border-radius:0}
+html.wayland .row,html.wayland .pcard,html.wayland .tile{content-visibility:visible}
+html.wayland .tplay{backdrop-filter:none}
