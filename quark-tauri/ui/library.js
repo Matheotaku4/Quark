@@ -94,7 +94,7 @@ function renderGame(g) {
   const sub = [g.developer, g.released, g.genres.slice(0, 3).join(", "), srcLabel(g), g.isNative ? "Linux" : ""].filter(Boolean);
   const tabs = [["overview", "x.overview"], ["media", "x.media"], ["ach", "x.ach"], ["news", "x.news"], ["hist", "x.hist"], ["notes", "tab.notes"], ["launch", "tab.launch"], ["log", "tab.log"]];
   const placement = app.cfg.game_actions === "beside_play";
-  const actions = `<div class="acts">${iconBtn("fav", "star", "#ffc94d", t(g.favorite ? "detail.unfavorite" : "detail.favorite"), g.favorite)}${iconBtn("gsettings", "gear", "var(--accent)", t("x.settingsGame"))}${iconBtn("customize", "edit", "#ffc94d", t("x.customize"))}${iconBtn("overlay", "eye", "#8ab4ff", t("overlay.show"))}${iconBtn("log", "log", "#4cd07d", t("x.logBtn"))}${iconBtn("remove", "trash", "var(--danger)", t("x.remove"))}</div>`;
+  const actions = `<div class="acts">${iconBtn("fav", "star", "#ffc94d", t(g.favorite ? "detail.unfavorite" : "detail.favorite"), g.favorite)}${iconBtn("gsettings", "gear", "var(--accent)", t("x.settingsGame"))}${iconBtn("customize", "edit", "#ffc94d", t("x.customize"))}${iconBtn("log", "log", "#4cd07d", t("x.logBtn"))}${iconBtn("remove", "trash", "var(--danger)", t("x.remove"))}</div>`;
   return `<div class="gp" style="${accent(g)}">
     <div class="gh">
       <div class="gh-art" style="${art ? `background-image:url('${esc(art)}')` : ""}"></div>${art ? "" : `<span class="gh-mono">${esc(g.monogram)}</span>`}<div class="gh-fade"></div>
@@ -125,7 +125,10 @@ function renderOverview(g) {
     ${g.installations.length > 1 ? `<div class="hr"></div><h3>${esc(t("installs.title"))}</h3>${g.installations.map((i) => `<button class="instrow${i.active ? " on" : ""}" data-installation="${esc(i.id)}"><b>${esc(i.label)}</b><small>${esc(i.path || i.exe)}</small></button>`).join("")}` : ""}
     <div class="hr"></div><div id="hltb"><h3 class="blue">HowLongToBeat</h3><div class="dim">…</div></div>`;
 }
+function stopMedia() { if (app.hls) { app.hls.destroy(); app.hls = null; } }
+
 function renderTab(g) {
+  stopMedia();
   const box = $("#tabc"); if (!box) return;
   if (app.tab === "news") return loadNews(g);
   if (app.tab === "media") return loadMedia(g);
@@ -190,17 +193,49 @@ async function loadMedia(g) {
   const trailer = m.trailers[0];
   box.innerHTML = `${trailer ? `<div class="trailerwrap"><button class="trailerplay" data-trailer="${esc(trailer.video)}" data-poster="${esc(trailer.thumbnail)}"><img src="${esc(trailer.thumbnail)}" alt=""><span class="tplay">${ic("play")}</span></button><div class="trailerbar"><b>${esc(trailer.title || t("x.trailer"))}</b><button class="btn sec sm" data-open="${esc(trailer.page)}">${ic("ext")}Steam</button></div><p class="trailerfail" hidden>${esc(t("x.trailerUnavailable"))}</p></div>` : `<div class="none">${esc(t("x.noMedia"))}</div>`}
     ${m.screenshots.length ? `<div class="shots">${m.screenshots.map((p) => `<button data-open="${esc(p.full)}"><img loading="lazy" decoding="async" src="${esc(p.thumbnail)}" alt=""></button>`).join("")}</div>` : ""}`;
-  $$("[data-trailer]", box).forEach((btn) => btn.addEventListener("click", () => {
-    const video = document.createElement("video");
-    video.controls = video.autoplay = video.playsInline = true;
-    video.addEventListener("error", () => {
-      video.replaceWith(btn);
-      const fail = $(".trailerfail", box);
-      if (fail) fail.hidden = false;
-    }, { once: true });
-    video.poster = btn.dataset.poster; video.src = btn.dataset.trailer;
-    btn.replaceWith(video);
-  }));
+}
+
+function loadHls() {
+  if (window.Hls) return Promise.resolve(true);
+  if (!app.hlsLoad) app.hlsLoad = new Promise((resolve) => {
+    const s = document.createElement("script");
+    s.src = "hls.min.js"; s.onload = () => { if (!window.Hls) app.hlsLoad = null; resolve(!!window.Hls); }; s.onerror = () => { app.hlsLoad = null; resolve(false); };
+    document.head.append(s);
+  });
+  return app.hlsLoad;
+}
+
+async function playTrailer(btn) {
+  const box = btn.closest(".trailerwrap"); if (!box) return;
+  const src = btn.dataset.trailer;
+  if (!src) return;
+  const hlsSrc = /\.m3u8(?:[?#]|$)/i.test(src);
+  if (hlsSrc && !(await loadHls())) { box.querySelector(".trailerfail")?.removeAttribute("hidden"); return; }
+  if (!btn.isConnected) return;
+  const video = document.createElement("video");
+  let hls = null, failed = false;
+  const fail = () => {
+    if (failed) return;
+    failed = true;
+    hls?.destroy(); app.hls = null;
+    video.replaceWith(btn);
+    const warn = $(".trailerfail", box);
+    if (warn) warn.hidden = false;
+  };
+  video.controls = video.autoplay = video.playsInline = true;
+  video.poster = btn.dataset.poster || "";
+  video.addEventListener("error", fail, { once: true });
+  if (hlsSrc && window.Hls && Hls.isSupported()) {
+    hls = app.hls = new Hls({ enableWorker: false, lowLatencyMode: false, backBufferLength: 30 });
+    hls.on(Hls.Events.ERROR, (_evt, data) => { if (data.fatal) fail(); });
+    hls.on(Hls.Events.MANIFEST_PARSED, () => video.play().catch(() => {}));
+    hls.loadSource(src);
+    hls.attachMedia(video);
+  } else {
+    video.src = src;
+  }
+  btn.replaceWith(video);
+  video.play().catch(() => {});
 }
 
 async function loadAchievements(g) {
@@ -254,6 +289,7 @@ const renderSoon = (name) => `<div class="empty"><h2>${esc(name)}</h2><p>${esc(t
 
 // ---------- orchestration ----------
 function renderSheet() {
+  stopMedia();
   const el = $("#sheet"), v = app.view;
   if (v === "settings") { el.innerHTML = renderSettings(); bindSettings(); return; }
   if (v === "home") { el.innerHTML = renderHome(); return; }
@@ -265,13 +301,9 @@ function renderSheet() {
   el.innerHTML = renderGame(g); renderOverview(g); renderTab(g); loadExtras(g);
 }
 function renderAll() { renderTop(); renderSide(); renderList(); renderSheet(); }
-function animSheet() {
-  const sheet = $("#sheet");
-  sheet.classList.remove("anim");
-  void sheet.offsetWidth;
-  sheet.classList.add("anim");
-  clearTimeout(app.animT);
-  app.animT = setTimeout(() => sheet.classList.remove("anim"), 280);
+function updateSelection() {
+  $$("#list .row").forEach((row) => row.classList.toggle("sel", row.dataset.id === app.sel));
+  const act = $(".row.sel", $("#list")); act && act.scrollIntoView({ block: "nearest" });
 }
-function select(id) { app.sel = id; app.open = true; try { localStorage.setItem("quark.sel", id); } catch {} renderList(); renderSheet(); $("#sheet").scrollTop = 0; animSheet(); }
-function setView(v) { app.view = v; renderAll(); $("#sheet").scrollTop = 0; animSheet(); if (v === "mygames" || v === "settings") providersLoad(); }
+function select(id) { app.sel = id; app.open = true; try { localStorage.setItem("quark.sel", id); } catch {} updateSelection(); renderSheet(); $("#sheet").scrollTop = 0; }
+function setView(v) { app.view = v; renderAll(); $("#sheet").scrollTop = 0; if (v === "mygames") providersLoad(); }

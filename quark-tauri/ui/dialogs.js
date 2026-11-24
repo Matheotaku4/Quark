@@ -124,7 +124,7 @@ async function gameSettingsModal() {
     modal(`<h2>${esc(w.name)}</h2><div class="tabs sm"><button data-t="settings" class="${st.tab === "settings" ? "on" : ""}">${esc(t("x.settingsTab"))}</button><button data-t="dll" class="${st.tab === "dll" ? "on" : ""}">${esc(t("x.dll"))}</button></div>
       ${st.tab === "settings" ? `<div class="pills">${secs.map(([k, l]) => `<button data-s="${k}" class="${st.sec === k ? "on" : ""}">${esc(t(l))}</button>`).join("")}</div><div class="gsbody">${sections[st.sec]()}</div>` : `<div class="gsbody">${dllView()}</div>`}${foot(t("x.save"))}`, true);
     const root = $("#modal"); wireBrowse(); bindModel(root, w);
-    $$("[data-t]", root).forEach((b) => (b.onclick = () => { st.tab = b.dataset.t; draw(); })); $$("[data-s]", root).forEach((b) => (b.onclick = () => { st.sec = b.dataset.s; draw(); }));
+    $$("[data-t]", root).forEach((b) => (b.onclick = () => { st.tab = b.dataset.t; draw(); $("#modal .modal").scrollTop = 0; })); $$("[data-s]", root).forEach((b) => (b.onclick = () => { st.sec = b.dataset.s; draw(); $("#modal .modal").scrollTop = 0; }));
     const pm = $("#pm"); pm && (pm.onchange = () => { w.proton = pm.value === "default" || pm.value === "native" ? { mode: pm.value } : { mode: "runtime", runtime: pm.value }; });
     $$("[data-ev]", root).forEach((el) => (el.oninput = () => (envList()[+el.dataset.i][el.dataset.ev] = el.value))); $$("[data-evdel]", root).forEach((b) => (b.onclick = () => { envList().splice(+b.dataset.evdel, 1); draw(); }));
     const ea = $("#env-add"); ea && (ea.onclick = () => { envList().push({ name: "", value: "" }); draw(); });

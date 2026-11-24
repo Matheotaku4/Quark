@@ -26,7 +26,7 @@ const pd = (detail) => {
   return detail;
 };
 const pvStateLabel = (s) => t("pv.state." + s);
-const PV_PAGE = 24;
+const PV_PAGE = 30;
 const pvInstalled = (g) => g.installState === "installed";
 
 async function providersLoad(force) {
@@ -43,7 +43,7 @@ async function providersLoad(force) {
     app.pv.data ||= { games: [], accounts: [], tools: [], error: String(e) };
   }
   app.pv.loading = false;
-  if (app.view === "mygames" || app.view === "settings") renderSheetKeepScroll();
+  if (app.view === "mygames") renderSheetKeepScroll();
   return app.pv.data;
 }
 
@@ -112,7 +112,7 @@ function renderMyGames() {
       <div class="pchips">${chips.map(([id, label]) => `<button data-pvprov="${id}" class="${app.pv.provider === id ? "on" : ""}">${esc(label)}</button>`).join("")}</div>
       <select id="pv-state">${["all", "installed", "missing"].map((id) => `<option value="${id}" ${app.pv.state === id ? "selected" : ""}>${esc(t("pv.filter." + id))}</option>`).join("")}</select>
       <button class="tb" data-pv="reload" title="${esc(t("pv.reload"))}">${ic("refresh")}</button></div>
-    ${games.length ? `<div class="pvgrid">${games.slice(0, app.pv.shown || PV_PAGE).map(providerCard).join("")}</div>${games.length > (app.pv.shown || PV_PAGE) ? `<div class="pvmore" id="pv-more">${esc(t("pv.more"))}</div>` : ""}` : `<div class="none">${esc(data.games.length ? t("pv.noMatch") : t("pv.empty"))}</div>`}
+    ${games.length ? `<div class="pvgrid">${games.slice(0, app.pv.shown || PV_PAGE).map(providerCard).join("")}${games.length > (app.pv.shown || PV_PAGE) ? `<div class="pvmore" id="pv-more">${esc(t("pv.more"))}</div>` : ""}</div>` : `<div class="none">${esc(data.games.length ? t("pv.noMatch") : t("pv.empty"))}</div>`}
   </div>`;
 }
 
@@ -131,18 +131,34 @@ function bindMyGames() {
   };
   const s = $("#pv-state"); if (s) s.onchange = () => { app.pv.state = s.value; reset(); renderSheet(); };
   $$("[data-pvprov]").forEach((b) => (b.onclick = () => { app.pv.provider = b.dataset.pvprov; reset(); renderSheet(); }));
-  $$(".pcover img").forEach((img) => img.addEventListener("error", () => img.remove(), { once: true }));
+  const grid = $(".pvgrid");
+  if (grid && !grid.dataset.bound) {
+    grid.dataset.bound = "1";
+    grid.addEventListener("error", (e) => { const img = e.target.closest?.("img"); if (img) img.remove(); }, true);
+  }
+  observeMoreGames();
+}
+
+function observeMoreGames() {
   app.pv.obs?.disconnect();
   const more = $("#pv-more");
-  if (more) {
-    app.pv.obs = new IntersectionObserver((entries) => {
-      if (!entries.some((entry) => entry.isIntersecting)) return;
-      app.pv.obs?.disconnect();
-      app.pv.shown = (app.pv.shown || PV_PAGE) + PV_PAGE;
-      renderSheetKeepScroll();
-    }, { root: $("#sheet"), rootMargin: "500px" });
-    app.pv.obs.observe(more);
-  }
+  if (!more) return;
+  app.pv.obs = new IntersectionObserver((entries) => {
+    if (!entries.some((entry) => entry.isIntersecting)) return;
+    app.pv.obs?.disconnect();
+    moreGames();
+  }, { root: $("#sheet"), rootMargin: "600px" });
+  app.pv.obs.observe(more);
+}
+
+function moreGames() {
+  const grid = $(".pvgrid"), more = $("#pv-more");
+  if (!grid || !more) return;
+  const games = pvGames(), from = app.pv.shown || PV_PAGE, next = games.slice(from, from + PV_PAGE);
+  if (!next.length) { more.remove(); return; }
+  more.insertAdjacentHTML("beforebegin", next.map(providerCard).join(""));
+  app.pv.shown = from + next.length;
+  if (app.pv.shown >= games.length) more.remove(); else observeMoreGames();
 }
 
 function providersSettings() {

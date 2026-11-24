@@ -88,7 +88,7 @@ function bindSettings() {
   const root = $("#sheet");
   bindModel(root, app.cfg, (k) => {
     const top = k.split(".")[0], patch = { [top]: app.cfg[top] };
-    run(() => cfgSet(patch)).then(() => { if (k === "tray_icon") invoke("tray_visibility", { visible: !!app.cfg.tray_icon }).catch(() => {}); if (k === "overlay") invoke("refresh_shortcuts").catch((e) => toast(String(e), true)); if (k === "ui_language" || k === "ui_compact" || k === "game_actions") { renderAll(); } else if (k === "view") renderTop(); else if (k === "hero_background") applySettings(); });
+    run(() => cfgSet(patch)).then(() => { if (k === "tray_icon") invoke("tray_visibility", { visible: !!app.cfg.tray_icon }).catch(() => {}); if (k === "overlay") invoke("refresh_shortcuts").catch((e) => toast(String(e), true)); if (k === "ui_language" || k === "ui_compact" || k === "game_actions") { renderAllKeepScroll(); } else if (k === "view") renderTop(); else if (k === "hero_background") applySettings(); });
   });
   $$('[data-k="overlay_hotkey"],[data-k="screenshot_key"]', root).forEach((el) =>
     el.addEventListener("change", () => run(async () => {
@@ -96,18 +96,18 @@ function bindSettings() {
       await invoke("refresh_shortcuts");
     })),
   );
-  const sqEl = $("#sq"); sqEl.oninput = () => { app.sq = sqEl.value; const pos = sqEl.selectionStart; $("#sheet").innerHTML = renderSettings(); bindSettings(); const n = $("#sq"); n.focus(); n.setSelectionRange(pos, pos); };
+  const sqEl = $("#sq"); sqEl.oninput = () => { app.sq = sqEl.value; const pos = sqEl.selectionStart, top = $("#sheet").scrollTop; $("#sheet").innerHTML = renderSettings(); bindSettings(); $("#sheet").scrollTop = top; const n = $("#sq"); n.focus(); n.setSelectionRange(pos, pos); };
   const commitEnv = () => run(() => cfgSet({ default_env: app.cfg.default_env }));
   $$("[data-de]", root).forEach((el) => (el.oninput = () => { app.cfg.default_env[+el.dataset.i][el.dataset.de] = el.value; })); $$("[data-de]", root).forEach((el) => (el.onchange = commitEnv));
-  $$("[data-dedel]", root).forEach((b) => (b.onclick = async () => { app.cfg.default_env.splice(+b.dataset.dedel, 1); await commitEnv(); renderSheet(); }));
-  const ea = $("#denv-add"); ea && (ea.onclick = () => { (app.cfg.default_env ||= []).push({ name: "", value: "" }); renderSheet(); });
+  $$("[data-dedel]", root).forEach((b) => (b.onclick = async () => { app.cfg.default_env.splice(+b.dataset.dedel, 1); await commitEnv(); renderSheetKeepScroll(); }));
+  const ea = $("#denv-add"); ea && (ea.onclick = () => { (app.cfg.default_env ||= []).push({ name: "", value: "" }); renderSheetKeepScroll(); });
   const sdirs = $("#sv-search-dirs");
   sdirs && (sdirs.onchange = () => run(async () => {
     const dirs = sdirs.value.split("\n").map((line) => line.trim()).filter(Boolean);
     await cfgSet({ save_search_dirs: dirs });
     toast(t("toast.saved"));
   }));
-  const rr = $("#rt-redo"); rr && (rr.onclick = () => run(async () => { app.runtimes = await invoke("list_runtimes"); renderSheet(); }));
+  const rr = $("#rt-redo"); rr && (rr.onclick = () => run(async () => { app.runtimes = await invoke("list_runtimes"); renderSheetKeepScroll(); }));
   const dg = $("#disk-go"); dg && (dg.onclick = () => run(async () => { dg.disabled = true; dg.textContent = t("log.loading"); const d = await invoke("disk_report"), m = Math.max(1, ...d.rows.map((r) => r.bytes));
     $("#disk").innerHTML = `<div class="kv"><span>Total</span><b>${esc(d.human)}</b></div>` + d.rows.map((r) => `<div class="drow"><div><b>${esc(r.label)}</b><small>${esc(r.detail || r.path)}</small></div><i style="width:${(r.bytes / m) * 140}px"></i><span>${esc(r.human)}</span><button class="ib sm" data-open="${esc(r.path)}">${ic("folder")}</button></div>`).join(""); }));
   const au = $("#ab-upd"); au && (au.onclick = updatesModal);

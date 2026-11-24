@@ -71,6 +71,11 @@ function renderSheetKeepScroll() {
   renderSheet();
   sheet.scrollTop = top;
 }
+function renderAllKeepScroll() {
+  const sheet = $("#sheet"), top = sheet.scrollTop;
+  renderAll();
+  sheet.scrollTop = top;
+}
 
 const hm = (s) => (!s || s < 60 ? "0 min" : s < 3600 ? `${Math.floor(s / 60)} min` : `${new Intl.NumberFormat(locale(), { maximumFractionDigits: 1 }).format(s / 3600)} h`);
 const hrs = (v) => (v == null ? "—" : `${new Intl.NumberFormat(locale(), { maximumFractionDigits: 1 }).format(v)} h`);
@@ -105,7 +110,18 @@ async function cfgSet(patch) { Object.assign(app.cfg, await invoke("patch_settin
 async function gameSet(id, patch) { const g = await invoke("patch_game_raw", { id, patch }); setGame(g); return g; }
 
 // ---------- fenêtres modales ----------
-function modal(html, wide) { $("#modal").innerHTML = `<div class="scrim" data-act="close-scrim"><div class="modal${wide ? " wide" : ""}">${html}</div></div>`; const i = $("#modal input[type=text]"); i && i.focus(); }
+function modal(html, wide) {
+  const root = $("#modal"), scrim = root.querySelector(".scrim");
+  if (scrim) {
+    const box = scrim.querySelector(".modal"), top = box.scrollTop;
+    box.className = `modal${wide ? " wide" : ""}`;
+    box.innerHTML = html;
+    box.scrollTop = top;
+    return;
+  }
+  root.innerHTML = `<div class="scrim" data-act="close-scrim"><div class="modal${wide ? " wide" : ""}">${html}</div></div>`;
+  const i = $("#modal input[type=text]"); i && i.focus();
+}
 function closeModal() { $("#modal").innerHTML = ""; app.pal = null; }
 const foot = (ok, cls = "") => `<div class="foot"><button class="btn sec" data-act="close">${esc(t("add.cancel"))}</button><button class="btn ${cls}" id="ok">${esc(ok)}</button></div>`;
 

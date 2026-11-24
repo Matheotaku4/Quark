@@ -21,6 +21,28 @@ const acts = {
   "batch-clear": () => { app.marked.clear(); renderList(); },
 };
 
+let ctxGame = null;
+function closeContextMenu() { const m = $("#ctxmenu"); ctxGame = null; if (m) { m.hidden = true; m.innerHTML = ""; } }
+function showContextMenu(event, g) {
+  event.preventDefault();
+  ctxGame = g.id;
+  app.sel = g.id; app.open = true; updateSelection();
+  const item = (action, icn, label) => `<button data-ctx="${action}">${ic(icn)}<span>${esc(label)}</span></button>`;
+  const m = $("#ctxmenu");
+  m.innerHTML = `<div class="ctxhead">${esc(g.name)}</div>
+    ${item("play", app.running.has(g.id) ? "stop" : "play", t(app.running.has(g.id) ? "detail.stop" : "detail.play"))}
+    ${item("gsettings", "gear", t("x.settingsGame"))}${item("customize", "edit", t("x.customize"))}
+    ${item("log", "log", t("x.logBtn"))}${item("open-folder", "folder", t("detail.openFolder"))}
+    <div class="ctxsep"></div>${item("fav", "star", t(g.favorite ? "detail.unfavorite" : "detail.favorite"))}
+    <div class="ctxsep"></div><small class="ctxlabel">${esc(t("status.label"))}</small>
+    ${ST_ORDER.map((s) => `<button data-ctx="status:${s}" class="${g.status === s ? "on" : ""}"><i class="ctxdot" style="background:${s === "none" ? "var(--text-faint)" : g.statusColor}"></i><span>${esc(t("status." + s))}</span></button>`).join("")}
+    <div class="ctxsep"></div>${item("remove", "trash", t("x.remove"))}`;
+  m.hidden = false;
+  const r = m.getBoundingClientRect();
+  m.style.left = `${Math.min(event.clientX, innerWidth - r.width - 8)}px`;
+  m.style.top = `${Math.min(event.clientY, innerHeight - r.height - 8)}px`;
+}
+
 // ---------- palette (Ctrl+K) ----------
 function palette() {
   app.pal = { q: "", i: 0 };
@@ -41,10 +63,38 @@ function palGo(n, play) { const x = app.pal.items[n]; if (!x) return; closeModal
 
 // ---------- événements ----------
 document.addEventListener("click", (e) => {
+  const trailer = e.target.closest("[data-trailer]");
+  if (trailer) { playTrailer(trailer); return; }
+  const ctx = e.target.closest("[data-ctx]");
+  if (ctx) {
+    const action = ctx.dataset.ctx, id = ctxGame;
+    closeContextMenu();
+    const g = game(id);
+    if (!g) return;
+    if (action.startsWith("status:")) return run(async () => { setGame(await invoke("set_status", { id: g.id, status: action.slice(7) })); renderList(); renderSheet(); });
+    if (action === "open-folder") return run(() => invoke("open_folder", { id: g.id }));
+    app.sel = g.id;
+    acts[action]?.();
+    return;
+  }
+  if (!e.target.closest("#ctxmenu")) closeContextMenu();
+  const row = e.target.closest("#list .row, #sheet .tile");
+  if (row && row.dataset.id) {
+    const now = Date.now(), prev = app.lastClick;
+    if (prev && prev.id === row.dataset.id && now - prev.at < 360) {
+      app.lastClick = null;
+      const id = row.dataset.id;
+      if (app.sel !== id) select(id);
+      setTimeout(acts.play, 0);
+      return;
+    }
+    app.lastClick = { id: row.dataset.id, at: now };
+  } else app.lastClick = null;
   const a = e.target.closest("[data-act]");
   if (a && a.dataset.act === "close-scrim") { if (e.target === a) closeModal(); }
   else if (a) { const d = a.closest("details"); d && (d.open = false); acts[a.dataset.act]?.(); }
-  const v = e.target.closest("[data-view]"); if (v) setView(v.dataset.view);
+  // Le body porte aussi data-view : sans ce test, chaque clic relance un rendu complet.
+  const v = e.target.closest("[data-view]"); if (v && v.dataset.view !== app.view) setView(v.dataset.view);
   const inst = e.target.closest("[data-installation]");
   if (inst) { e.preventDefault(); return run(async () => { const g = await invoke("activate_installation", { id: app.sel, installationId: inst.dataset.installation }); setGame(g); renderAll(); toast(t("toast.saved")); }); }
   const r = e.target.closest(".row, .tile"); if (r) {
@@ -62,7 +112,17 @@ document.addEventListener("click", (e) => {
   const pn = e.target.closest("#pres [data-n]"); if (pn) palGo(+pn.dataset.n);
   $$("details.menu[open]").forEach((d) => d.contains(e.target) || (d.open = false));
 });
-$("#q").addEventListener("input", (e) => { app.query = e.target.value; renderList(); if (document.body.classList.contains("grid")) renderSheet(); });
+document.addEventListener("contextmenu", (e) => {
+  const row = e.target.closest("#list .row, #sheet .tile");
+  if (!row || !row.dataset.id) return;
+  const g = game(row.dataset.id); if (g) showContextMenu(e, g);
+});
+let qTimer;
+$("#q").addEventListener("input", (e) => {
+  app.query = e.target.value;
+  clearTimeout(qTimer);
+  qTimer = setTimeout(() => { renderList(); if (document.body.classList.contains("grid")) renderSheet(); }, 90);
+});
 document.addEventListener("change", (e) => {
   const id = e.target.id; if (!id) return;
   if (id === "sort") run(() => cfgSet({ library_sort: e.target.value })).then(renderList);
@@ -79,7 +139,7 @@ document.addEventListener("keydown", (e) => {
   const typing = /INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName), lib = app.view === "library" && !$("#modal").firstChild;
   if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") { e.preventDefault(); palette(); }
   else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "a" && lib) { e.preventDefault(); app.marked = new Set(filtered().map((g) => g.id)); renderList(); }
-  else if (e.key === "Escape") { if ($("#modal").firstChild) closeModal(); else if (app.query) { app.query = $("#q").value = ""; $("#q").blur(); renderList(); } else if (app.view === "settings") setView("library"); }
+  else if (e.key === "Escape") { if (!$("#ctxmenu")?.hidden) closeContextMenu(); else if ($("#modal").firstChild) closeModal(); else if (app.query) { app.query = $("#q").value = ""; $("#q").blur(); renderList(); } else if (app.view === "settings") setView("library"); }
   else if (e.key === "/" && !typing && lib) { e.preventDefault(); $("#q").focus(); }
   else if (!typing && lib && !document.body.classList.contains("grid") && (e.key === "ArrowDown" || e.key === "ArrowUp")) {
     e.preventDefault(); const l = filtered(), i = l.findIndex((g) => g.id === app.sel), n = l[Math.max(0, Math.min(l.length - 1, i + (e.key === "ArrowDown" ? 1 : -1)))]; n && select(n.id);
@@ -109,20 +169,19 @@ async function boot() {
   let saved = null; try { saved = localStorage.getItem("quark.sel"); } catch {}
   app.sel = game(saved) ? saved : filtered()[0]?.id ?? null; app.open = app.cfg.view !== "grid";
   renderAll();
-  animSheet();
   if (!app.cfg.onboarding_done) onboardingModal();
   else if (app.cfg.last_seen_version !== app.data.version) whatsNewModal();
   invoke("list_runtimes").then((r) => (app.runtimes = r)).catch(() => (app.runtimes = []));
   if (app.cfg.auto_update) invoke("check_update").then((u) => { app.upd = u; renderTop(); }).catch(() => {});
-  await listen("quark://session-started", (e) => { app.running.set(e.payload.id, { id: e.payload.id, elapsed: 0, at: Date.now(), label: e.payload.label }); renderList(); app.sel === e.payload.id && renderSheet(); });
-  await listen("quark://session-stopping", (e) => { const r = app.running.get(e.payload.id); r && (r.stopping = true); app.sel === e.payload.id && renderSheet(); });
+  await listen("quark://session-started", (e) => { app.running.set(e.payload.id, { id: e.payload.id, elapsed: 0, at: Date.now(), label: e.payload.label }); app.view === "library" && renderList(); app.sel === e.payload.id && renderSheet(); });
+  await listen("quark://session-stopping", (e) => { const r = app.running.get(e.payload.id); r && (r.stopping = true); app.view === "library" && app.sel === e.payload.id && renderSheet(); });
   await listen("quark://session-ended", (e) => {
     const { id, secs, game: g } = e.payload; app.running.delete(id); g && setGame(g);
-    const n = game(id); n && toast(t("toast.stopped", { name: n.name }) + ` · ${hm(secs)}`); renderList(); app.sel === id && app.view === "library" && renderSheet();
+    const n = game(id); n && toast(t("toast.stopped", { name: n.name }) + ` · ${hm(secs)}`); app.view === "library" && renderList(); app.sel === id && app.view === "library" && renderSheet();
   });
   await listen("quark://notice", (e) => toast(e.payload.message, !!e.payload.error));
   await listen("quark://screenshot-saved", (e) => toast(t("toast.screenshot", { path: e.payload.path })));
   setInterval(tick, 1000);
-  setInterval(() => run(async () => { setRunning(await invoke("running_games")); renderList(); }), 15000);
+  setInterval(() => run(async () => { setRunning(await invoke("running_games")); if (app.view === "library") renderList(); }), 15000);
 }
 boot().catch((e) => { document.body.textContent = String(e); });
