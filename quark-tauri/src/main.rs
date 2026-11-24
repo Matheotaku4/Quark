@@ -2017,7 +2017,41 @@ fn finalize_sessions(app: &AppHandle) {
 // Point d'entrée
 // ---------------------------------------------------------------------------
 
+fn is_wayland_session() -> bool {
+    #[cfg(target_os = "linux")]
+    {
+        std::env::var_os("WAYLAND_DISPLAY").is_some()
+            || std::env::var("XDG_SESSION_TYPE")
+                .is_ok_and(|value| value.eq_ignore_ascii_case("wayland"))
+    }
+    #[cfg(not(target_os = "linux"))]
+    {
+        false
+    }
+}
+
+#[cfg(target_os = "linux")]
+fn configure_wayland_rendering() {
+    if !is_wayland_session() {
+        return;
+    }
+    // WebKitGTK's DMA-BUF renderer and accelerated compositing both rely on
+    // damage tracking that some Wayland compositors mishandle, leaving stale
+    // pixels until the cursor repaints them. Fall back to full-surface paints.
+    for key in [
+        "WEBKIT_DISABLE_DMABUF_RENDERER",
+        "WEBKIT_DISABLE_COMPOSITING_MODE",
+    ] {
+        if std::env::var_os(key).is_none() {
+            // SAFETY: called before GTK or any other thread starts.
+            unsafe { std::env::set_var(key, "1") };
+        }
+    }
+}
+
 fn main() {
+    #[cfg(target_os = "linux")]
+    configure_wayland_rendering();
     let args: Vec<String> = std::env::args().skip(1).collect();
     if args
         .iter()

@@ -19,9 +19,10 @@
         "center": true,
         "resizable": true,
         "decorations": false,
-        "transparent": true,
+        "shadow": false,
+        "transparent": false,
         "theme": "Dark",
-        "backgroundColor": "#00000000"
+        "backgroundColor": "#000000"
       },
       {
         "label": "overlay",

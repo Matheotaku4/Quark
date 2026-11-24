@@ -3,7 +3,7 @@
 html, body { background: transparent; overflow: hidden; }
 body { font: 13px/1.4 "Archivo", system-ui, sans-serif; color: var(--text); padding: 12px; user-select: none; }
 button { font: inherit; border: 0; background: none; color: inherit; cursor: pointer; }
-#panel { background: color-mix(in srgb, var(--bg) 88%, transparent); border: 1px solid #ffffff1c; border-radius: 16px; box-shadow: 0 24px 70px #000b; backdrop-filter: blur(18px); overflow: hidden; }
+#panel { background: color-mix(in srgb, var(--bg) 94%, transparent); border: 1px solid #ffffff1c; border-radius: 16px; box-shadow: 0 24px 70px #000b; overflow: hidden; }
 header { display: flex; align-items: center; justify-content: space-between; padding: 12px 14px 10px; border-bottom: 1px solid #ffffff12; }
 .brand { display: inline-flex; align-items: center; gap: 8px; font: 700 11px Archivo; letter-spacing: .18em; color: var(--dim); }
 .brand i { width: 10px; height: 10px; border-radius: 50%; border: 2px solid var(--accent); display: inline-block; }
