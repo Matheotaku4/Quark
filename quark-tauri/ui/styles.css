@@ -5,9 +5,9 @@
 body.compact{--row-h:44px}
 *{box-sizing:border-box;margin:0;padding:0}
 [hidden]{display:none!important}
-html,body{height:100%;overflow:hidden;background:transparent}
+html,body{height:100%;overflow:hidden;background:var(--bg)}
 body{color:var(--text);font:500 14px/1.45 Archivo,system-ui,sans-serif;-webkit-font-smoothing:antialiased;user-select:none}
-#shell{position:fixed;inset:0;display:flex;flex-direction:column;background:var(--bg);overflow:hidden;border-radius:14px;box-shadow:inset 0 0 0 1px #ffffff12}
+#shell{position:fixed;inset:0;display:flex;flex-direction:column;background:var(--bg);overflow:hidden;box-shadow:inset 0 0 0 1px #ffffff12}
 button,input,select,textarea{font:inherit;color:inherit;background:none;border:0;outline:0}
 button{cursor:pointer}
 .ic{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex:none}
@@ -211,7 +211,7 @@ input[type=checkbox]{accent-color:var(--accent);width:15px;height:15px}
 .abouttext{color:var(--text-dim);line-height:1.75;max-width:78ch;user-select:text}
 .notesbox{width:100%;min-height:230px;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px 14px;line-height:1.6;resize:vertical;user-select:text}
 .trailerwrap{background:#000;border-radius:14px;overflow:hidden;margin-bottom:16px}.trailerwrap video{display:block;width:100%;aspect-ratio:16/9;background:#000}
-.trailerplay{display:block;position:relative;width:100%;aspect-ratio:16/9;padding:0;border:0;background:#000;cursor:pointer}.trailerplay img{width:100%;height:100%;object-fit:cover;display:block;opacity:.82;transition:opacity .18s}.trailerplay:hover img{opacity:1}.tplay{position:absolute;inset:0;margin:auto;width:64px;height:64px;border-radius:50%;display:grid;place-items:center;background:#000a;border:1px solid #ffffff30;color:#fff;backdrop-filter:blur(6px)}.tplay .ic{width:26px;height:26px}
+.trailerplay{display:block;position:relative;width:100%;aspect-ratio:16/9;padding:0;border:0;background:#000;cursor:pointer}.trailerplay img{width:100%;height:100%;object-fit:cover;display:block;opacity:.82;transition:opacity .18s}.trailerplay:hover img{opacity:1}.tplay{position:absolute;inset:0;margin:auto;width:64px;height:64px;border-radius:50%;display:grid;place-items:center;background:#000a;border:1px solid #ffffff30;color:#fff}.tplay .ic{width:26px;height:26px}
 .trailerbar{display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:var(--surface)}
 .trailerfail{margin:0;padding:12px;background:var(--surface);color:var(--text-dim);font-size:13px}
 .shots{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px}.shots button{border-radius:10px;overflow:hidden;aspect-ratio:16/9;background:var(--surface)}.shots img{width:100%;height:100%;object-fit:cover;transition:filter .2s}.shots button:hover img{filter:brightness(1.12)}
@@ -252,11 +252,3 @@ input[type=checkbox]{accent-color:var(--accent);width:15px;height:15px}
 .ctxdot{width:7px;height:7px;border-radius:50%;flex:none}
 /* ---------- défilement ---------- */
 .list,.sheet{scrollbar-width:thin;scrollbar-color:var(--border) transparent}
-.row{content-visibility:auto;contain-intrinsic-size:var(--row-h) 100%}
-.pcard{content-visibility:auto;contain-intrinsic-size:360px 210px}
-.tile{content-visibility:auto;contain-intrinsic-size:300px 180px}
-/* Wayland : surface opaque et sans coins arrondis, les dommages partiels de WebKitGTK laissent des pixels figés. */
-html.wayland,html.wayland body{background:var(--bg)}
-html.wayland #shell{border-radius:0}
-html.wayland .row,html.wayland .pcard,html.wayland .tile{content-visibility:visible}
-html.wayland .tplay{backdrop-filter:none}

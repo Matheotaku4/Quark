@@ -20,9 +20,9 @@
         "resizable": true,
         "decorations": false,
         "shadow": false,
-        "transparent": true,
+        "transparent": false,
         "theme": "Dark",
-        "backgroundColor": "#00000000"
+        "backgroundColor": "#000000"
       },
       {
         "label": "overlay",
