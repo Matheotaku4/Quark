@@ -64,9 +64,26 @@ function batchRemoveModal() {
   });
 }
 
+function batchStatusModal() {
+  const ids = [...app.marked];
+  modal(`<h2>${esc(t("batch.status"))}</h2><div class="pills">${ST_ORDER.map((status) => `<button data-batch-status="${status}">${esc(t("status." + status))}</button>`).join("")}</div>${foot(t("x.close"))}`);
+  $("#ok").onclick = closeModal;
+  $$("[data-batch-status]").forEach((button) => (button.onclick = () => run(async () => {
+    for (const id of ids) setGame(await invoke("set_status", { id, status: button.dataset.batchStatus }));
+    app.marked.clear(); closeModal(); renderAll(); toast(t("toast.saved"));
+  })));
+}
+function batchFavorite() {
+  const ids = [...app.marked];
+  const enable = ids.some((id) => !game(id)?.favorite);
+  run(async () => {
+    for (const id of ids) setGame(await invoke("set_favorite", { id, favorite: enable }));
+    app.marked.clear(); renderAll(); toast(t("toast.saved"));
+  });
+}
 function renderBatch() {
   const bar = $("#batchbar"); if (!bar) return;
   bar.hidden = !app.marked.size;
   if (!app.marked.size) { bar.innerHTML = ""; return; }
-  bar.innerHTML = `<span>${esc(t("batch.selected", { n: app.marked.size }))}</span><button class="btn sec sm" data-act="batch-clear">${esc(t("batch.clear"))}</button><button class="btn red sm" data-act="batch-remove">${esc(t("batch.remove"))}</button>`;
+  bar.innerHTML = `<span>${esc(t("batch.selected", { n: app.marked.size }))}</span><button class="btn sec sm" data-act="batch-fav">${ic("star")}${esc(t("batch.favorite"))}</button><button class="btn sec sm" data-act="batch-status">${ic("tag")}${esc(t("batch.status"))}</button><button class="btn sec sm" data-act="batch-clear">${esc(t("batch.clear"))}</button><button class="btn red sm" data-act="batch-remove">${esc(t("batch.remove"))}</button>`;
 }

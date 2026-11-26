@@ -365,3 +365,41 @@ Object.assign(I18N.pt, {
   "pv.cancelling": "Cancelando…", "pv.cancelled": "Download cancelado.", "pv.preparing": "Preparando…",
   "pv.installFailed": "O download falhou.", "pv.installDone": "Instalação concluída.",
 });
+
+Object.assign(I18N.fr, {
+  "scan.title": "Scanner un dossier", "scan.placeholder": "Dossier contenant les jeux", "scan.hint": "Choisissez un dossier : Quark détecte les exécutables et ignore les doublons.",
+  "scan.scanning": "Analyse…", "scan.found": "{n} jeu(x) trouvé(s).", "scan.none": "Aucun exécutable trouvé.", "scan.add": "Ajouter la sélection", "scan.pickFirst": "Choisissez d'abord un dossier.", "scan.added": "{n} jeu(x) ajouté(s).",
+  "art.choose": "Choisir une image", "art.loading": "Recherche des illustrations…", "art.none": "Aucune illustration trouvée.", "art.cover": "Couverture", "art.hero": "Bannière", "art.logo": "Logo", "art.icon": "Icône",
+});
+Object.assign(I18N.en, {
+  "scan.title": "Scan a folder", "scan.placeholder": "Folder containing games", "scan.hint": "Pick a folder: Quark finds executables and skips duplicates.",
+  "scan.scanning": "Scanning…", "scan.found": "{n} game(s) found.", "scan.none": "No executable found.", "scan.add": "Add selected", "scan.pickFirst": "Pick a folder first.", "scan.added": "{n} game(s) added.",
+  "art.choose": "Choose an image", "art.loading": "Finding artwork…", "art.none": "No artwork found.", "art.cover": "Cover", "art.hero": "Banner", "art.logo": "Logo", "art.icon": "Icon",
+});
+Object.assign(I18N.es, {
+  "scan.title": "Escanear una carpeta", "scan.placeholder": "Carpeta con los juegos", "scan.hint": "Elige una carpeta: Quark detecta ejecutables y evita duplicados.",
+  "scan.scanning": "Analizando…", "scan.found": "{n} juego(s) encontrado(s).", "scan.none": "No se encontró ningún ejecutable.", "scan.add": "Añadir selección", "scan.pickFirst": "Elige primero una carpeta.", "scan.added": "{n} juego(s) añadido(s).",
+  "art.choose": "Elegir una imagen", "art.loading": "Buscando ilustraciones…", "art.none": "No se encontró ninguna ilustración.", "art.cover": "Portada", "art.hero": "Banner", "art.logo": "Logo", "art.icon": "Icono",
+});
+Object.assign(I18N.de, {
+  "scan.title": "Ordner scannen", "scan.placeholder": "Ordner mit den Spielen", "scan.hint": "Einen Ordner wählen: Quark findet Programme und überspringt Duplikate.",
+  "scan.scanning": "Wird analysiert…", "scan.found": "{n} Spiel(e) gefunden.", "scan.none": "Kein Programm gefunden.", "scan.add": "Auswahl hinzufügen", "scan.pickFirst": "Zuerst einen Ordner wählen.", "scan.added": "{n} Spiel(e) hinzugefügt.",
+  "art.choose": "Bild auswählen", "art.loading": "Illustrationen werden gesucht…", "art.none": "Keine Illustration gefunden.", "art.cover": "Cover", "art.hero": "Banner", "art.logo": "Logo", "art.icon": "Icon",
+});
+Object.assign(I18N.pt, {
+  "scan.title": "Digitalizar uma pasta", "scan.placeholder": "Pasta com os jogos", "scan.hint": "Escolha uma pasta: o Quark encontra executáveis e ignora duplicados.",
+  "scan.scanning": "A analisar…", "scan.found": "{n} jogo(s) encontrado(s).", "scan.none": "Nenhum executável encontrado.", "scan.add": "Adicionar seleção", "scan.pickFirst": "Escolha primeiro uma pasta.", "scan.added": "{n} jogo(s) adicionado(s).",
+  "art.choose": "Escolher uma imagem", "art.loading": "A procurar ilustrações…", "art.none": "Nenhuma ilustração encontrada.", "art.cover": "Capa", "art.hero": "Banner", "art.logo": "Logo", "art.icon": "Ícone",
+});
+
+Object.assign(I18N.fr, { "web.title": "Chercher un jeu", "web.placeholder": "Nom du jeu", "web.search": "Rechercher", "web.none": "Aucun résultat.", "web.use": "Utiliser ce nom" });
+Object.assign(I18N.en, { "web.title": "Find a game", "web.placeholder": "Game name", "web.search": "Search", "web.none": "No result.", "web.use": "Use this name" });
+Object.assign(I18N.es, { "web.title": "Buscar un juego", "web.placeholder": "Nombre del juego", "web.search": "Buscar", "web.none": "Sin resultados.", "web.use": "Usar este nombre" });
+Object.assign(I18N.de, { "web.title": "Spiel suchen", "web.placeholder": "Spielname", "web.search": "Suchen", "web.none": "Kein Ergebnis.", "web.use": "Namen übernehmen" });
+Object.assign(I18N.pt, { "web.title": "Procurar um jogo", "web.placeholder": "Nome do jogo", "web.search": "Pesquisar", "web.none": "Sem resultados.", "web.use": "Usar este nome" });
+
+Object.assign(I18N.fr, { "batch.favorite": "Favori", "batch.status": "Statut" });
+Object.assign(I18N.en, { "batch.favorite": "Favorite", "batch.status": "Status" });
+Object.assign(I18N.es, { "batch.favorite": "Favorito", "batch.status": "Estado" });
+Object.assign(I18N.de, { "batch.favorite": "Favorit", "batch.status": "Status" });
+Object.assign(I18N.pt, { "batch.favorite": "Favorito", "batch.status": "Estado" });

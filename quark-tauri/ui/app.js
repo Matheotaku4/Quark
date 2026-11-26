@@ -17,7 +17,7 @@ const acts = {
   "reset-filters": () => { app.f = { status: "", genre: "", tag: "", fav: false }; renderSide(); renderList(); renderSheet(); },
   "open-folder": () => run(() => invoke("open_folder", { id: app.sel })),
   overlay: () => invoke("overlay_toggle").catch((e) => toast(String(e), true)),
-  views: () => viewsModal(), "batch-remove": () => batchRemoveModal(),
+  views: () => viewsModal(), "batch-remove": () => batchRemoveModal(), "batch-status": () => batchStatusModal(), "batch-fav": () => batchFavorite(),
   "batch-clear": () => { app.marked.clear(); renderList(); },
 };
 
@@ -52,8 +52,9 @@ function palette() {
 function palItems() {
   const q = norm(app.pal.q.trim());
   const games = app.data.games.filter((g) => !q || norm(g.name).includes(q)).sort((a, b) => (b.lastPlayed || 0) - (a.lastPlayed || 0)).slice(0, 8).map((g) => ({ label: g.name, hint: rel(g.lastPlayed), go: () => { app.view = "library"; renderAll(); select(g.id); }, play: g.id }));
-  const actions = [[t("add.title"), addModal, "plus"], [t("settings.title"), () => setView("settings"), "gear"], [t("x.home"), () => setView("home"), "home"], [t("nav.library"), () => setView("library"), "grid"]].filter(([l]) => !q || norm(l).includes(q)).map(([label, go, icon]) => ({ label, hint: "", go, icon, action: true }));
-  return [...games, ...actions];
+  const providerGames = (app.pv?.data?.games || []).filter((g) => !q || norm(g.title).includes(q)).slice(0, 6).map((g) => ({ label: g.title, hint: PV_LABEL[g.provider] || g.provider, icon: "grid", action: true, go: () => { app.pv.q = g.title; app.pv.provider = ""; app.view = "mygames"; renderAll(); } }));
+  const actions = [[t("add.title"), addModal, "plus"], [t("settings.title"), () => setView("settings"), "gear"], [t("x.home"), () => setView("home"), "home"], [t("nav.library"), () => setView("library"), "grid"], ...(app.pal.q.trim().length >= 2 ? [[t("web.title"), () => webSearchModal(app.pal.q.trim()), "search"]] : [])].filter(([l]) => !q || norm(l).includes(q)).map(([label, go, icon]) => ({ label, hint: "", go, icon, action: true }));
+  return [...games, ...providerGames, ...actions];
 }
 function palList() {
   const items = palItems(); app.pal.items = items;
@@ -169,6 +170,7 @@ async function boot() {
   let saved = null; try { saved = localStorage.getItem("quark.sel"); } catch {}
   app.sel = game(saved) ? saved : filtered()[0]?.id ?? null; app.open = app.cfg.view !== "grid";
   renderAll();
+  providersLoad().catch(() => {});
   await QuarkDeck.init();
   if (!app.cfg.onboarding_done) onboardingModal();
   else if (app.cfg.last_seen_version !== app.data.version) whatsNewModal();

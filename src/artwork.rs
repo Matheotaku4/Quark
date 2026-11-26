@@ -825,6 +825,17 @@ pub fn fetch(
     apply_plan(client, &dir, &plan)
 }
 
+/// Télécharge une URL candidate et l'enregistre comme artwork du jeu.
+pub fn download_asset(
+    client: &Client,
+    game_id: &str,
+    kind: AssetKind,
+    url: &str,
+) -> Result<std::path::PathBuf, String> {
+    let (bytes, ext) = download_image(client, url)?;
+    save_image(&artwork_root().join(game_id), kind, &bytes, ext)
+}
+
 fn download_image(client: &Client, url: &str) -> Result<(Vec<u8>, &'static str), String> {
     let resp = client.get(url).send().map_err(|e| e.to_string())?;
     if !resp.status().is_success() {

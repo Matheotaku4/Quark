@@ -21,14 +21,54 @@ const fieldsFor = (g = {}) => `${lab(t("add.name"), inp("f-name", g.name))}
   ${lab(t("add.exe"), `<div class="row2">${inp("f-exe", g.exe, t("add.exePlaceholder"))}<button class="btn sec sm" id="browse">${esc(t("add.browse"))}</button></div>`)}${lab(t("add.args"), inp("f-args", g.args))}`;
 const wireBrowse = () => { const b = $("#browse"); b && (b.onclick = () => run(async () => { const p = await invoke("pick_executable"); if (p) $("#f-exe").value = p; })); };
 
-function addModal() {
-  modal(`<h2>${esc(t("add.title"))}</h2>${fieldsFor()}${foot(t("add.submit"))}`); wireBrowse();
+function addModal(initialName = "") {
+  modal(`<h2>${esc(t("add.title"))}</h2>${fieldsFor({ name: initialName })}<div class="row2"><button class="btn sec sm" id="scan-open">${ic("search")}${esc(t("scan.title"))}</button><button class="btn sec sm" id="web-open">${ic("ext")}${esc(t("web.title"))}</button></div>${foot(t("add.submit"))}`); wireBrowse();
+  const scan = $("#scan-open"); scan && (scan.onclick = scanModal);
+  const web = $("#web-open"); web && (web.onclick = webSearchModal);
   $("#ok").onclick = () => run(async () => {
     const exe = $("#f-exe").value.trim(); if (!exe) return toast(t("add.exeRequired"), true);
     let g = await invoke("add_game", { name: $("#f-name").value.trim(), exe });
     if ($("#f-args").value.trim()) g = await invoke("update_game", { id: g.id, args: $("#f-args").value });
     setGame(g); closeModal(); app.f = { status: "", genre: "", tag: "", fav: false }; app.query = ""; $("#q").value = ""; app.view = "library"; renderAll(); select(g.id); toast(t("toast.added"));
   });
+}
+
+// ---------- Scan d'un dossier de jeux ----------
+function scanModal() {
+  modal(`<h2>${esc(t("scan.title"))}</h2>
+    <div class="row2"><input type="text" id="scan-folder" placeholder="${esc(t("scan.placeholder"))}"><button class="btn sec sm" id="scan-pick">${ic("folder")}${esc(t("add.browse"))}</button></div>
+    <div class="dim" id="scan-state">${esc(t("scan.hint"))}</div><div class="scanlist" id="scan-list"></div>
+    <div class="foot"><button class="btn sec" data-act="close">${esc(t("x.close"))}</button><button class="btn" id="ok">${esc(t("scan.add"))}</button></div>`, true);
+  const input = $("#scan-folder"), list = $("#scan-list"), state = $("#scan-state");
+  const load = (folder) => run(async () => {
+    state.textContent = t("scan.scanning");
+    const hits = await invoke("scan_folder", { folder, maxDepth: 3, limit: 50 });
+    state.textContent = hits.length ? t("scan.found", { n: hits.length }) : t("scan.none");
+    list.innerHTML = hits.map((hit, index) => `<label class="scanrow"><input type="checkbox" data-scan="${index}" checked><span><b>${esc(hit.title)}</b><small>${esc(hit.exe)}</small></span></label>`).join("");
+  });
+  $("#scan-pick").onclick = () => run(async () => { const folder = await invoke("pick_folder"); if (!folder) return; input.value = folder; await load(folder); });
+  $("#ok").onclick = () => run(async () => {
+    const folder = input.value.trim(); if (!folder) return toast(t("scan.pickFirst"), true);
+    let hits = list.querySelectorAll("[data-scan]:checked"); if (!hits.length) return load(folder);
+    const ids = [...hits].map((el) => +el.dataset.scan);
+    const result = await invoke("scan_folder", { folder, maxDepth: 3, limit: 50 });
+    let added = 0;
+    for (const index of ids) { const hit = result[index]; if (!hit) continue; await invoke("add_game", { name: hit.title, exe: hit.exe }); added++; }
+    app.data = await invoke("bootstrap_data"); closeModal(); renderAll(); select(filtered()[0]?.id); toast(t("scan.added", { n: added }));
+  });
+}
+function webSearchModal(query = "") {
+  modal(`<h2>${esc(t("web.title"))}</h2><div class="row2"><input type="text" id="web-q" value="${esc(query)}" placeholder="${esc(t("web.placeholder"))}" autocomplete="off"><button class="btn sm" id="web-go">${ic("search")}${esc(t("web.search"))}</button></div><div class="scanlist" id="web-res"></div><div class="foot"><button class="btn sec" data-act="close">${esc(t("x.close"))}</button></div>`, true);
+  const go = () => run(async () => {
+    const q = $("#web-q").value.trim(); if (q.length < 2) return;
+    const list = $("#web-res"); list.innerHTML = `<div class="dim">${esc(t("log.loading"))}</div>`;
+    const hits = await invoke("site_search", { query: q });
+    list.innerHTML = hits.length ? hits.map((hit) => `<div class="webhit"><img src="${esc(hit.cover || "")}" alt="" loading="lazy"><div><b>${esc(hit.title)}</b><small>${esc(hit.site)} · ${esc(hit.detail)}</small></div><button class="btn sec sm" data-web-use="${esc(hit.title)}">${esc(t("web.use"))}</button><button class="btn sec sm" data-open="${esc(hit.url)}">${ic("ext")}</button></div>`).join("") : `<div class="dim">${esc(t("web.none"))}</div>`;
+    $$("[data-web-use]", list).forEach((button) => (button.onclick = () => { closeModal(); addModal(button.dataset.webUse); }));
+  });
+  $("#web-go").onclick = go;
+  $("#web-q").onkeydown = (e) => { if (e.key === "Enter") go(); };
+  if (query.trim().length >= 2) go();
 }
 function removeModal() {
   const g = game(app.sel); modal(`<h2>${esc(t("remove.title"))}</h2><p class="desc">${esc(g.name)}<br>${esc(t("remove.body"))}</p>${foot(t("remove.confirm"), "red")}`);
@@ -47,11 +87,25 @@ function logModal() {
 function customizeModal() {
   const g = game(app.sel), art = (k, l, url) => `<div class="art"><div class="thumb${url ? " has" : ""}" id="th-${k}" style="${url ? `background-image:url('${esc(url)}')` : ""}">${url ? "" : `<span class="artph">${ic("image")}</span>`}</div><button class="btn sec sm" data-art="${k}">${esc(l)}</button></div>`;
   modal(`<h2>${esc(t("x.customize"))}</h2><div class="arts">${art("cover", t("detail.changeCover"), g.coverUrl)}${art("hero", t("detail.changeHero"), g.heroUrl)}${art("logo", t("x.logo"), g.logoUrl)}${art("icon", t("x.icon"), g.iconUrl)}</div>
-    ${lab(t("art.search"), `<div class="row2"><input type="text" id="art-q" value="${esc(g.name)}"><button class="btn sec sm" id="art-auto">${ic("search")}${esc(t("art.auto"))}</button></div>`)}
+    ${lab(t("art.search"), `<div class="row2"><input type="text" id="art-q" value="${esc(g.name)}"><button class="btn sec sm" id="art-auto">${ic("search")}${esc(t("art.auto"))}</button><button class="btn sec sm" id="art-find">${esc(t("art.choose"))}</button></div>`)}
+    <div class="artgrid" id="art-grid"></div>
     ${lab(t("add.name"), inp("c-name", g.name))}<div class="row2">${lab(t("overview.developer"), inp("c-dev", g.developer))}${lab(t("overview.released"), inp("c-rel", g.released))}</div>
     ${lab(t("overview.genres"), inp("c-gen", g.genres.join(", ")))}${lab(t("overview.tags"), inp("c-tags", g.tags.join(", ")))}
     ${lab(t("overview.about"), `<textarea id="c-desc">${esc(g.description)}</textarea>`)}${lab(t("tab.notes"), `<textarea id="c-notes" placeholder="${esc(t("notes.placeholder"))}">${esc(g.notes)}</textarea>`)}${foot(t("x.save"))}`, true);
   $("#art-auto").onclick = () => run(async () => { $("#art-auto").disabled = true; try { const n = await invoke("artwork_fetch", { id: g.id, query: $("#art-q").value.trim() || null }); setGame(n); closeModal(); renderAll(); toast(t("toast.saved")); } finally { $("#art-auto").disabled = false; } });
+  $("#art-find").onclick = () => run(async () => {
+    const grid = $("#art-grid"); grid.innerHTML = `<div class="dim">${esc(t("art.loading"))}</div>`;
+    const result = await invoke("artwork_candidates", { id: g.id, query: $("#art-q").value.trim() || null });
+    grid.innerHTML = result.items.length ? result.items.map((item, index) => `<button class="artcand" data-cand="${index}" title="${esc(item.source)} · ${esc(item.title)}"><img src="${esc(item.preview || item.url)}" loading="lazy" alt=""><span>${esc(t("art." + item.kind))}</span></button>`).join("") : `<div class="dim">${esc(t("art.none"))}</div>`;
+    $$("[data-cand]", grid).forEach((button) => (button.onclick = () => run(async () => {
+      const item = result.items[+button.dataset.cand];
+      const n = await invoke("artwork_choose", { id: g.id, kind: item.kind, url: item.url });
+      setGame(n);
+      const url = { cover: n.coverUrl, hero: n.heroUrl, logo: n.logoUrl, icon: n.iconUrl }[item.kind];
+      const thumb = $("#th-" + item.kind); if (thumb && url) { thumb.style.backgroundImage = `url('${url}')`; thumb.classList.add("has"); }
+      renderAll(); toast(t("toast.saved"));
+    })));
+  });
   $$("[data-art]").forEach((b) => (b.onclick = () => run(async () => { const n = await invoke("pick_artwork", { id: g.id, kind: b.dataset.art }); setGame(n); const url = { cover: n.coverUrl, hero: n.heroUrl, logo: n.logoUrl, icon: n.iconUrl }[b.dataset.art]; if (url) $("#th-" + b.dataset.art).style.backgroundImage = `url('${url}')`; renderAll(); })));
   const list = (s) => s.split(",").map((x) => x.trim()).filter(Boolean);
   $("#ok").onclick = () => run(async () => {

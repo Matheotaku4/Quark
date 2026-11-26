@@ -459,3 +459,188 @@ mod tests {
         std::fs::remove_dir_all(root).unwrap();
     }
 }
+
+// ---------------------------------------------------------------------------
+// Ajout par scan, recherche de sites et choix d'illustrations
+// ---------------------------------------------------------------------------
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ScanHitDto {
+    exe: String,
+    title: String,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SiteHitDto {
+    site: String,
+    title: String,
+    url: String,
+    detail: String,
+    cover: Option<String>,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ArtworkCandidateDto {
+    source: String,
+    title: String,
+    kind: String,
+    url: String,
+    preview: Option<String>,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ArtworkCandidatesDto {
+    items: Vec<ArtworkCandidateDto>,
+    warnings: Vec<String>,
+}
+
+#[tauri::command]
+pub async fn scan_folder(folder: String, max_depth: u32, limit: u32) -> Result<Vec<ScanHitDto>, String> {
+    blocking(move || {
+        let root = Path::new(&folder);
+        if !root.is_dir() {
+            return Err("Dossier introuvable.".to_string());
+        }
+        let depth = max_depth.clamp(1, 8) as usize;
+        let limit = limit.clamp(1, 100) as usize;
+        Ok(quark::scan::scan(root, depth, limit)
+            .into_iter()
+            .map(|item| ScanHitDto {
+                exe: item.exe.display().to_string(),
+                title: item.title,
+            })
+            .collect())
+    })
+    .await
+}
+
+#[tauri::command]
+pub async fn site_search(query: String) -> Result<Vec<SiteHitDto>, String> {
+    blocking(move || {
+        let query = query.trim().to_string();
+        if query.len() < 2 {
+            return Ok(Vec::new());
+        }
+        let mut hits = Vec::new();
+        let mut errors = Vec::new();
+        std::thread::scope(|scope| {
+            let mut handles = Vec::new();
+            for site in quark::game_search::SearchSite::ALL {
+                let query = query.clone();
+                handles.push(scope.spawn(move || (site, quark::game_search::search(site, &query))));
+            }
+            for handle in handles {
+                match handle.join() {
+                    Ok((site, Ok(found))) => {
+                        for hit in found {
+                            hits.push(SiteHitDto {
+                                site: site.label().to_string(),
+                                title: hit.title,
+                                url: hit.url,
+                                detail: hit.detail,
+                                cover: hit.cover,
+                            });
+                        }
+                    }
+                    Ok((site, Err(error))) => errors.push(format!("{} : {error}", site.label())),
+                    Err(_) => errors.push("Recherche interrompue.".to_string()),
+                }
+            }
+        });
+        if hits.is_empty() && !errors.is_empty() {
+            return Err(errors.join(" · "));
+        }
+        Ok(hits)
+    })
+    .await
+}
+
+#[tauri::command]
+pub async fn artwork_candidates(
+    state: State<'_, AppState>,
+    id: String,
+    query: Option<String>,
+) -> Result<ArtworkCandidatesDto, String> {
+    let (name, settings) = {
+        let library = lock(&state.library);
+        let game = library
+            .get(&id)
+            .ok_or_else(|| "Jeu introuvable.".to_string())?;
+        (game.name.clone(), library.settings.clone())
+    };
+    blocking(move || {
+        let query = query
+            .map(|value| value.trim().to_string())
+            .filter(|value| !value.is_empty())
+            .unwrap_or(name);
+        let client = artwork::http();
+        let outcome = artwork::search(&client, &query, &settings);
+        let mut items = Vec::new();
+        let mut warnings = outcome.warnings.clone();
+        for hit in outcome.hits.iter().take(4) {
+            let plan = artwork::build_plan(&client, hit, &settings);
+            warnings.extend(plan.warnings.iter().cloned());
+            for kind in quark::config::AssetKind::ALL {
+                for (index, url) in plan.candidates(kind).iter().take(8).enumerate() {
+                    if items.iter().any(|item: &ArtworkCandidateDto| item.url == *url) {
+                        continue;
+                    }
+                    items.push(ArtworkCandidateDto {
+                        source: hit.source.label().to_string(),
+                        title: hit.title.clone(),
+                        kind: kind.stem().to_string(),
+                        url: url.clone(),
+                        preview: plan.preview(kind, index).map(str::to_string),
+                    });
+                }
+            }
+        }
+        warnings.sort();
+        warnings.dedup();
+        Ok(ArtworkCandidatesDto { items, warnings })
+    })
+    .await
+}
+
+#[tauri::command]
+pub async fn artwork_choose(
+    state: State<'_, AppState>,
+    id: String,
+    kind: String,
+    url: String,
+) -> Result<GameDto, String> {
+    let kind = match kind.as_str() {
+        "cover" => quark::config::AssetKind::Cover,
+        "hero" => quark::config::AssetKind::Hero,
+        "logo" => quark::config::AssetKind::Logo,
+        "icon" => quark::config::AssetKind::Icon,
+        _ => return Err("Type d'illustration inconnu.".to_string()),
+    };
+    let url = url.trim().to_string();
+    if !(url.starts_with("https://") || url.starts_with("http://")) {
+        return Err("Adresse d'image invalide.".to_string());
+    }
+    let game_id = id.clone();
+    let path = blocking(move || {
+        let client = artwork::http();
+        artwork::download_asset(&client, &game_id, kind, &url)
+    })
+    .await?;
+    let mut library = lock(&state.library);
+    let settings = library.settings.clone();
+    {
+        let game = library
+            .get_mut(&id)
+            .ok_or_else(|| "Jeu introuvable.".to_string())?;
+        game.artwork.set(kind, path);
+    }
+    persist(&state, &mut library)?;
+    let game = library
+        .get(&id)
+        .ok_or_else(|| "Jeu introuvable.".to_string())?;
+    Ok(game_dto(game, &settings, false, None))
+}
