@@ -20,6 +20,7 @@ function tabsDef() {
       card(t("nav.library"), selk("view", L("Affichage", "Layout"), [["list", L("Liste", "List")], ["grid", L("Grille", "Grid")]]), swk("ui_compact", t("settings.compact"), t("settings.compactHint")),
         rangek("sidebar_width", L("Largeur de la liste", "List width"), 240, 420, 10), rangek("grid_tile_width", L("Largeur des vignettes", "Tile width"), 120, 260, 10),
         selk("game_actions", L("Boutons d'action du jeu", "Game action buttons"), [["top_right", L("En haut à droite", "Top right")], ["beside_play", L("À côté de Jouer", "Beside Play")]])),
+      card(L("Mode Deck", "Deck mode"), selk("deck_mode", L("Manette et plein écran", "Gamepad and fullscreen"), [["auto", L("Automatique", "Automatic")], ["on", L("Toujours", "Always")], ["off", L("Désactivé", "Disabled")]], L("Auto : Steam Deck, gamescope ou première manette connectée.", "Auto: Steam Deck, gamescope or the first connected gamepad."))),
       card(t("x.home"), selk("home_sort", L("Tri du carrousel", "Carousel sort"), [["recent", t("sort.recent")], ["added", t("sort.added")], ["playtime", t("sort.playtime")], ["favorites", t("detail.favorite")]]), swk("carousel_auto", L("Défilement automatique", "Auto advance")), rangek("carousel_secs", L("Intervalle (s)", "Interval (s)"), 3, 30, 1)),
       card(L("Zone de notification", "Notification area"), swk("tray_icon", L("Garder Quark dans la zone de notification", "Keep Quark in the tray"), L("Quark reste accessible dans la zone de notification.", "Keep Quark available from the notification area."))),
     ],
@@ -88,7 +89,7 @@ function bindSettings() {
   const root = $("#sheet");
   bindModel(root, app.cfg, (k) => {
     const top = k.split(".")[0], patch = { [top]: app.cfg[top] };
-    run(() => cfgSet(patch)).then(() => { if (k === "tray_icon") invoke("tray_visibility", { visible: !!app.cfg.tray_icon }).catch(() => {}); if (k === "overlay") invoke("refresh_shortcuts").catch((e) => toast(String(e), true)); if (k === "ui_language" || k === "ui_compact" || k === "game_actions") { renderAllKeepScroll(); } else if (k === "view") renderTop(); else if (k === "hero_background") applySettings(); });
+    run(() => cfgSet(patch)).then(() => { if (k === "tray_icon") invoke("tray_visibility", { visible: !!app.cfg.tray_icon }).catch(() => {}); if (k === "overlay") invoke("refresh_shortcuts").catch((e) => toast(String(e), true)); if (k === "deck_mode") { QuarkDeck.mode(app.cfg.deck_mode); renderTop(); } else if (k === "ui_language" || k === "ui_compact" || k === "game_actions") { renderAllKeepScroll(); } else if (k === "view") renderTop(); else if (k === "hero_background") applySettings(); });
   });
   $$('[data-k="overlay_hotkey"],[data-k="screenshot_key"]', root).forEach((el) =>
     el.addEventListener("change", () => run(async () => {

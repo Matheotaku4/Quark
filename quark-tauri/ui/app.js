@@ -10,7 +10,7 @@ const acts = {
   }),
   fav: () => run(async () => { const g = game(app.sel); setGame(await invoke("set_favorite", { id: g.id, favorite: !g.favorite })); renderList(); renderSheet(); }),
   gsettings: () => gameSettingsModal(), customize: () => customizeModal(), log: () => logModal(), remove: () => removeModal(), add: () => addModal(),
-  settings: () => setView(app.view === "settings" ? "library" : "settings"), close: () => closeModal(), palette: () => palette(), updates: () => updatesModal(),
+  settings: () => setView(app.view === "settings" ? "library" : "settings"), close: () => closeModal(), palette: () => palette(), updates: () => updatesModal(), deck: () => QuarkDeck.toggle(),
   back: () => { app.open = false; renderSheet(); },
   "toggle-view": () => run(async () => { await cfgSet({ view: app.cfg.view === "grid" ? "list" : "grid" }); app.open = false; app.view = "library"; renderAll(); }),
   "news-refresh": () => { const g = game(app.sel); g && loadNews(g, true); },
@@ -169,6 +169,7 @@ async function boot() {
   let saved = null; try { saved = localStorage.getItem("quark.sel"); } catch {}
   app.sel = game(saved) ? saved : filtered()[0]?.id ?? null; app.open = app.cfg.view !== "grid";
   renderAll();
+  await QuarkDeck.init();
   if (!app.cfg.onboarding_done) onboardingModal();
   else if (app.cfg.last_seen_version !== app.data.version) whatsNewModal();
   invoke("list_runtimes").then((r) => (app.runtimes = r)).catch(() => (app.runtimes = []));
@@ -179,6 +180,7 @@ async function boot() {
     const { id, secs, game: g } = e.payload; app.running.delete(id); g && setGame(g);
     const n = game(id); n && toast(t("toast.stopped", { name: n.name }) + ` · ${hm(secs)}`); app.view === "library" && renderList(); app.sel === id && app.view === "library" && renderSheet();
   });
+  await listen("quark://gamepad", (e) => QuarkDeck.handle(e.payload.action, e.payload.pressed));
   await listen("quark://notice", (e) => toast(e.payload.message, !!e.payload.error));
   await listen("quark://screenshot-saved", (e) => toast(t("toast.screenshot", { path: e.payload.path })));
   setInterval(tick, 1000);

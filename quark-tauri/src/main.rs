@@ -50,6 +50,7 @@ struct AppState {
     sessions: Mutex<HashMap<String, Running>>,
     runtimes: Vec<ProtonRuntime>,
     demo: bool,
+    deck_demo: bool,
     demo_root: Option<PathBuf>,
 }
 
@@ -484,6 +485,7 @@ struct Bootstrap {
     version: String,
     memory_mb: Option<u64>,
     demo: bool,
+    deck: bool,
     load_error: Option<String>,
 }
 
@@ -725,6 +727,7 @@ fn bootstrap(state: &AppState) -> Bootstrap {
         version: env!("CARGO_PKG_VERSION").to_string(),
         memory_mb: config::resident_mb(),
         demo: state.demo,
+        deck: state.deck_demo,
         load_error: library.load_error.clone(),
     }
 }
@@ -2067,7 +2070,7 @@ fn main() {
         .any(|arg| arg == "--help" || arg == "-h" || arg == "--version")
     {
         println!("Quark {}", env!("CARGO_PKG_VERSION"));
-        println!("Usage: quark [--demo | --demo-empty]");
+        println!("Usage: quark [--demo | --demo-empty | --deck]");
         println!("       quark launch <jeu>");
         println!("       quark list");
         return;
@@ -2094,6 +2097,7 @@ fn main() {
             proton::detect_runtimes()
         },
         demo,
+        deck_demo: args.iter().any(|arg| arg == "--deck"),
         demo_root,
     };
 

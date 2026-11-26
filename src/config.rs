@@ -999,6 +999,18 @@ pub enum ProtonMode {
 
 impl ProtonMode {}
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[serde(rename_all = "lowercase")]
+pub enum DeckMode {
+    /// Détection Steam Deck, gamescope ou première manette.
+    #[default]
+    Auto,
+    /// Toujours actif.
+    On,
+    /// Toujours inactif.
+    Off,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(default)]
 pub struct Settings {
@@ -1009,6 +1021,8 @@ pub struct Settings {
     pub theme: ThemeMode,
     /// Langue de l'interface, indépendante de la langue des fiches Steam.
     pub ui_language: UiLanguage,
+    /// Mode Deck / manette : auto, toujours ou désactivé.
+    pub deck_mode: DeckMode,
     /// Le parcours de bienvenue a été terminé. Les configurations existantes
     /// sont marquées comme déjà accueillies lors de la migration.
     pub onboarding_done: bool,
@@ -1147,6 +1161,7 @@ impl Default for Settings {
             home_sort: HomeSort::Recent,
             theme: ThemeMode::Amoled,
             ui_language: UiLanguage::French,
+            deck_mode: DeckMode::Auto,
             onboarding_done: false,
             last_seen_version: String::new(),
             my_games_list: true,

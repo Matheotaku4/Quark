@@ -313,3 +313,29 @@ Object.assign(I18N.en, { "pv.filter.all": "All statuses" });
 Object.assign(I18N.es, { "pv.filter.all": "Todos los estados" });
 Object.assign(I18N.de, { "pv.filter.all": "Alle Status" });
 Object.assign(I18N.pt, { "pv.filter.all": "Todos os estados" });
+
+Object.assign(I18N.fr, {
+  "deck.mode": "Mode Deck", "deck.exit": "Quitter le mode Deck", "deck.quit": "Quitter Quark", "deck.menu": "Menu Deck",
+  "deck.hint.open": "Ouvrir", "deck.hint.back": "Retour", "deck.hint.play": "Jouer", "deck.hint.favorite": "Favori",
+  "deck.hint.tabs": "Onglets", "deck.hint.menu": "Menu",
+});
+Object.assign(I18N.en, {
+  "deck.mode": "Deck mode", "deck.exit": "Exit Deck mode", "deck.quit": "Quit Quark", "deck.menu": "Deck menu",
+  "deck.hint.open": "Open", "deck.hint.back": "Back", "deck.hint.play": "Play", "deck.hint.favorite": "Favorite",
+  "deck.hint.tabs": "Tabs", "deck.hint.menu": "Menu",
+});
+Object.assign(I18N.es, {
+  "deck.mode": "Modo Deck", "deck.exit": "Salir del modo Deck", "deck.quit": "Salir de Quark", "deck.menu": "Menú Deck",
+  "deck.hint.open": "Abrir", "deck.hint.back": "Atrás", "deck.hint.play": "Jugar", "deck.hint.favorite": "Favorito",
+  "deck.hint.tabs": "Pestañas", "deck.hint.menu": "Menú",
+});
+Object.assign(I18N.de, {
+  "deck.mode": "Deck-Modus", "deck.exit": "Deck-Modus verlassen", "deck.quit": "Quark beenden", "deck.menu": "Deck-Menü",
+  "deck.hint.open": "Öffnen", "deck.hint.back": "Zurück", "deck.hint.play": "Spielen", "deck.hint.favorite": "Favorit",
+  "deck.hint.tabs": "Tabs", "deck.hint.menu": "Menü",
+});
+Object.assign(I18N.pt, {
+  "deck.mode": "Modo Deck", "deck.exit": "Sair do modo Deck", "deck.quit": "Sair do Quark", "deck.menu": "Menu Deck",
+  "deck.hint.open": "Abrir", "deck.hint.back": "Voltar", "deck.hint.play": "Jogar", "deck.hint.favorite": "Favorito",
+  "deck.hint.tabs": "Abas", "deck.hint.menu": "Menu",
+});

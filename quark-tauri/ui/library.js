@@ -19,6 +19,7 @@ function renderTop() {
   $("#top-right").innerHTML = `<button class="tb" data-act="toggle-view" title="${esc(t("x.view"))}">${ic(grid ? "list" : "grid")}</button>
     <button class="tb" data-act="add" title="${esc(t("x.add"))}">${ic("plus")}</button><button class="tb" data-act="palette" title="${esc(t("x.search"))}">${ic("search")}</button>
     <button class="tb" data-act="updates" title="${esc(t("x.updates"))}">${ic("down")}${upd ? '<i class="pip"></i>' : ""}</button>
+    ${QuarkDeck.available() ? `<button class="tb${QuarkDeck.active() ? " on" : ""}" data-act="deck" title="${esc(t("deck.mode"))}">${ic("gamepad")}</button>` : ""}
     <button class="tb ${app.view === "settings" ? "on" : ""}" data-act="settings" title="${esc(t("settings.title"))}">${ic("gear")}</button><span class="vsep"></span>
     <button class="wb" data-win="win_minimize">${ic("min")}</button><button class="wb" data-win="win_toggle_maximize">${ic("max")}</button><button class="wb x" data-win="win_close">${ic("x")}</button>`;
   document.body.dataset.view = app.view; document.body.classList.toggle("grid", grid && app.view === "library");
@@ -300,10 +301,10 @@ function renderSheet() {
   if (!g) { el.innerHTML = `<div class="empty"><h2>${esc(t("empty.title"))}</h2><p>${esc(t("empty.subtitle"))}</p><button class="btn" data-act="add">${esc(t("empty.add"))}</button></div>`; return; }
   el.innerHTML = renderGame(g); renderOverview(g); renderTab(g); loadExtras(g);
 }
-function renderAll() { renderTop(); renderSide(); renderList(); renderSheet(); }
+function renderAll() { renderTop(); renderSide(); renderList(); renderSheet(); QuarkDeck.refocus(); }
 function updateSelection() {
   $$("#list .row").forEach((row) => row.classList.toggle("sel", row.dataset.id === app.sel));
   const act = $(".row.sel", $("#list")); act && act.scrollIntoView({ block: "nearest" });
 }
-function select(id) { app.sel = id; app.open = true; try { localStorage.setItem("quark.sel", id); } catch {} updateSelection(); renderSheet(); $("#sheet").scrollTop = 0; }
+function select(id) { app.sel = id; app.open = true; try { localStorage.setItem("quark.sel", id); } catch {} updateSelection(); renderSheet(); $("#sheet").scrollTop = 0; QuarkDeck.refocus(); }
 function setView(v) { app.view = v; renderAll(); $("#sheet").scrollTop = 0; if (v === "mygames") providersLoad(); }

@@ -252,3 +252,55 @@ input[type=checkbox]{accent-color:var(--accent);width:15px;height:15px}
 .ctxdot{width:7px;height:7px;border-radius:50%;flex:none}
 /* ---------- défilement ---------- */
 .list,.sheet{scrollbar-width:thin;scrollbar-color:var(--border) transparent}
+
+/* ---------- mode Deck / manette ---------- */
+body.deck #top{height:68px;padding-left:24px;gap:32px}
+body.deck .brand img{width:30px;height:30px}
+body.deck .brand{font-size:16px}
+body.deck #top-tabs button{font-size:14px;padding:0 20px}
+body.deck .tb{width:46px;height:46px;border-radius:12px}
+body.deck .tb .ic{width:22px;height:22px}
+body.deck .wb{display:none}
+body.deck .main{grid-template-columns:minmax(340px,38%) 1fr;padding-bottom:42px}
+body.deck .side{background:color-mix(in srgb,var(--panel) 96%,transparent)}
+body.deck .side-top{padding:20px 18px 10px}
+body.deck .sh h2{font-size:24px}
+body.deck .search{height:44px;font-size:15px}
+body.deck .list{padding:6px 10px 16px}
+body.deck .row{height:60px;grid-template-columns:46px 1fr 10px;padding:0 12px;border-radius:13px}
+body.deck .ico{width:46px;height:46px;border-radius:11px}
+body.deck .meta b{font-size:15px}
+body.deck .meta small{font-size:12.5px}
+body.deck .side-foot{padding:10px 12px}
+body.deck .side-foot select{font-size:13px;padding:8px}
+body.deck .gridwrap{padding:30px 38px}
+body.deck .gridwrap .grid{grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:28px 22px}
+body.deck .tile .cover{border-radius:16px}
+body.deck .tile .meta b{font-size:15px}
+body.deck .gh{height:360px}
+body.deck .gh-main{padding:0 48px 30px}
+body.deck h1{font-size:54px}
+body.deck .play{height:54px;padding:0 38px 0 30px;font-size:17px}
+body.deck .gb{grid-template-columns:1fr 340px;padding:10px 48px 60px}
+body.deck .rail{padding:8px 48px 24px}
+body.deck .cards{gap:20px}
+body.deck .tile.sm{width:180px}
+body.deck .snav button{font-size:14px;padding:13px 16px}
+body.deck .sw{padding:13px 0;font-size:14px}
+body.deck .sw select{font-size:13px;padding:8px 10px}
+body.deck .modal{width:min(620px,92vw);padding:30px;border-radius:20px}
+body.deck .modal.wide{width:min(760px,94vw)}
+body.deck .pal{width:min(680px,92vw)}
+body.deck .pal button{padding:13px 16px;font-size:15px}
+body.deck .btn{font-size:14px;padding:11px 20px}
+body.deck .btn.sm{font-size:13px;padding:8px 14px}
+body.deck .deck-hints{position:fixed;left:0;right:0;bottom:0;z-index:45;height:42px;display:flex;align-items:center;justify-content:center;gap:26px;background:color-mix(in srgb,var(--bg) 92%,transparent);border-top:1px solid var(--border);font-size:12px;color:var(--text-dim);backdrop-filter:blur(8px)}
+body.deck .deck-hints b{display:inline-grid;place-items:center;min-width:22px;height:22px;margin-right:6px;border-radius:50%;background:var(--surface-hover);color:var(--text);font-size:11px}
+.deck-focus{outline:3px solid var(--accent)!important;outline-offset:3px!important}
+body.deck .deck-menu{display:grid;gap:10px;margin-top:8px}
+body.deck .deck-menu .btn{justify-content:flex-start;font-size:16px;padding:15px 18px}
+body.deck .deck-menu .btn .ic{width:22px;height:22px}
+
+body.deck:not([data-view=library]) .main{grid-template-columns:1fr}
+body.deck :focus{outline:none}
+body.deck :focus-visible{outline:none}
