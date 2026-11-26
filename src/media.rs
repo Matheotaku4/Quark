@@ -1,8 +1,8 @@
 //! Bande-annonce et captures d'un jeu, lues dans la fiche publique Steam.
 //!
 //! La fiche jeu affiche les mêmes médias que la page Steam : la bande-annonce
-//! en premier, puis les captures. Les images sont chargées par le loader HTTP
-//! d'egui ; seules les URL sont conservées ici, jamais les octets.
+//! en premier, puis les captures. Seules les URL sont conservées ici, jamais
+//! les octets.
 
 use reqwest::blocking::Client;
 use serde::Deserialize;
@@ -123,21 +123,20 @@ fn parse(body: &str, app_id: u32) -> Result<GameMedia, String> {
         .movies
         .iter()
         .filter_map(|movie| {
-            // HLS/DASH d'abord : c'est le format des bandes-annonces récentes
-            // et il contient l'audio. Les anciens MP4/WebM restent acceptés.
-            let streaming = https_or_empty(&movie.hls_h264);
-            let streaming = if streaming.is_empty() {
-                https_or_empty(&movie.dash_h264)
-            } else {
-                streaming
-            };
+            // MP4/WebM d'abord : WebKitGTK les lit sans greffon HLS. Les
+            // bandes-annonces récentes n'exposent parfois que HLS/DASH, gardés
+            // en secours.
             let direct = first_url(&movie.mp4.max, &movie.mp4.small)
                 .or_else(|| first_url(&movie.webm.max, &movie.webm.small));
-            let video = if streaming.is_empty() {
-                direct?
-            } else {
-                streaming
+            let streaming = {
+                let hls = https_or_empty(&movie.hls_h264);
+                if hls.is_empty() {
+                    https_or_empty(&movie.dash_h264)
+                } else {
+                    hls
+                }
             };
+            let video = direct.or_else(|| (!streaming.is_empty()).then_some(streaming))?;
             let thumbnail = https_or_empty(&movie.thumbnail);
             if thumbnail.is_empty() {
                 return None;
@@ -229,6 +228,20 @@ mod tests {
         );
         assert_eq!(media.screenshots.len(), 2);
         assert_eq!(media.screenshots[0].full, "https://cdn.test/shot-1.jpg");
+    }
+
+    #[test]
+    fn le_mp4_est_prefere_au_hls() {
+        let body = r#"{
+          "30": {"success": true, "data": {
+            "movies": [{"name": "Trailer", "thumbnail": "https://cdn.test/trailer.jpg",
+                        "hls_h264": "https://video.test/master.m3u8",
+                        "mp4": {"max": "https://cdn.test/trailer.mp4"}}],
+            "screenshots": []
+          }}
+        }"#;
+        let media = parse(body, 30).unwrap();
+        assert_eq!(media.trailers[0].video, "https://cdn.test/trailer.mp4");
     }
 
     #[test]

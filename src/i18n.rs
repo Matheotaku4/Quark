@@ -6,7 +6,6 @@
 //! langue choisie est appliquée immédiatement à toute l'interface.
 
 use crate::config::UiLanguage;
-use eframe::egui::RichText;
 use std::collections::HashMap;
 use std::sync::LazyLock;
 use std::sync::atomic::{AtomicU8, Ordering};
@@ -115,19 +114,6 @@ pub fn tr(text: &str) -> String {
     text.to_string()
 }
 
-/// Raccourci pour les textes construits dans l'interface.
-pub fn rich(text: impl Into<String>) -> RichText {
-    RichText::new(tr(&text.into()))
-}
-
-/// Texte issu de données (nom de jeu, de succès, de vue enregistrée…) : il est
-/// affiché tel quel, sans passer par le catalogue ni par les règles dynamiques,
-/// pour qu'un titre ne soit jamais réécrit (« Tout seul » ne devient pas
-/// « All seul »).
-pub fn raw(text: impl Into<String>) -> RichText {
-    RichText::new(text.into())
-}
-
 /// Traduit un modèle d'interface dont les `{}` sont remplis ensuite par des
 /// données. Seul le modèle est traduit : les valeurs (noms de jeux, chemins)
 /// sont insérées après coup, donc jamais altérées. Les `{}` sont remplacés dans
@@ -149,11 +135,6 @@ pub fn tr_with(template: &str, values: &[&str]) -> String {
     }
     out.push_str(rest);
     out
-}
-
-/// Variante de [`tr_with`] qui renvoie un `RichText`.
-pub fn rich_with(template: &str, values: &[&str]) -> RichText {
-    RichText::new(tr_with(template, values))
 }
 
 /// Quelques formes produites par `format!` ne peuvent pas figurer telles
@@ -382,8 +363,7 @@ mod tests {
         ] {
             set_language(langue);
             for titre in titres {
-                // Les données passent par `raw` / `tr_with` : aucune règle dynamique.
-                assert_eq!(raw(titre).text(), titre, "raw {langue:?}");
+                // Les données passent par `tr_with` : aucune règle dynamique.
                 assert_eq!(tr_with("{}", &[titre]), titre, "tr_with {langue:?}");
                 assert_eq!(
                     tr_with("Journal · {}", &[titre])

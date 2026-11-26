@@ -1,0 +1,29 @@
+:root { --bg: #0a0d08; --surface: #171b13; --border: #2b3324; --text: #f1f4e9; --dim: #a8b09c; --faint: #737c68; --accent: #c8ff3d; }
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { background: transparent; overflow: hidden; }
+body { font: 13px/1.4 "Archivo", system-ui, sans-serif; color: var(--text); padding: 12px; user-select: none; }
+button { font: inherit; border: 0; background: none; color: inherit; cursor: pointer; }
+#panel { background: color-mix(in srgb, var(--bg) 94%, transparent); border: 1px solid #ffffff1c; border-radius: 16px; box-shadow: 0 24px 70px #000b; overflow: hidden; }
+header { display: flex; align-items: center; justify-content: space-between; padding: 12px 14px 10px; border-bottom: 1px solid #ffffff12; }
+.brand { display: inline-flex; align-items: center; gap: 8px; font: 700 11px Archivo; letter-spacing: .18em; color: var(--dim); }
+.brand i { width: 10px; height: 10px; border-radius: 50%; border: 2px solid var(--accent); display: inline-block; }
+#close { font-size: 20px; line-height: 1; color: var(--faint); padding: 0 2px; }
+#close:hover { color: var(--text); }
+#body { padding: 14px; }
+.game { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 12px; }
+.game b { display: block; font: 600 17px Archivo; }
+.game small { display: block; color: var(--dim); font-size: 11.5px; margin-top: 2px; }
+.live { color: var(--accent); font: 700 10px Archivo; letter-spacing: .08em; border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent); border-radius: 99px; padding: 3px 7px; }
+.bar { height: 5px; border-radius: 99px; background: #ffffff14; overflow: hidden; margin-bottom: 4px; }
+.bar i { display: block; height: 100%; background: var(--accent); border-radius: 99px; }
+.count { color: var(--faint); font-size: 10.5px; margin-bottom: 8px; }
+.row { display: flex; align-items: center; gap: 8px; padding: 5px 0; color: var(--faint); font-size: 12px; }
+.row.on { color: var(--text); }
+.row i { width: 17px; height: 17px; border-radius: 50%; display: grid; place-items: center; background: #ffffff0d; font-size: 10px; color: var(--faint); flex: none; }
+.row.on i { background: var(--accent); color: var(--bg); }
+.row span { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.row em { font-style: normal; font-size: 10.5px; color: var(--faint); }
+#panel.compact #body { padding: 10px 14px; }
+#panel.compact .row { padding: 3px 0; }
+.muted, .empty { color: var(--faint); padding: 10px 0; }
+#foot { padding: 8px 14px 10px; border-top: 1px solid #ffffff10; color: var(--faint); font-size: 10.5px; }

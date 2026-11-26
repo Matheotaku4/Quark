@@ -1,3 +1,18 @@
+> **Mise à jour (21 novembre 2026)** — L'interface egui a été remplacée par une
+> interface **Tauri 2** (`quark-tauri/`) : liste de jeux à gauche, fiche à droite,
+> front en HTML/CSS/JS sans framework (`quark-tauri/ui/`). La racine du dépôt est
+> désormais une bibliothèque (`src/lib.rs`) sans dépendance graphique, consommée
+> par `quark-tauri/src/main.rs`. Les sections ci-dessous décrivent l'ancienne
+> interface egui et ne sont plus à jour. Compilation : `cd quark-tauri && cargo run`
+> (Rust ≥ 1.88, `libwebkit2gtk-4.1-dev`, `libayatana-appindicator3-dev`).
+>
+> État du portage : bibliothèque liste/fiche, accueil, boutique, mes jeux,
+> réglages (8 sections), succès, médias, actualités, historique, notes, lancement,
+> journal, sauvegardes Ludusavi, overlay (`Maj+Retour arrière`, raccourci
+> configurable), icône de notification et cinq langues. Vérifié sous Xvfb avec
+> `--demo` : `cargo fmt`, `cargo clippy -D warnings` et `cargo test` (313 tests)
+> passent sur les deux crates.
+
 # Passation — état du dépôt et suite du travail
 
 Dernière mise à jour : 21 novembre 2026. Ce document s'adresse à l'agent (ou au

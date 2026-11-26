@@ -27,3 +27,14 @@ jobs:
       run: cargo build --locked --verbose
     - name: Run tests
       run: cargo test --locked --verbose
+    - name: Dépendances système Tauri
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y --no-install-recommends \
+          libwebkit2gtk-4.1-dev libgtk-3-dev librsvg2-dev libssl-dev \
+          libayatana-appindicator3-dev
+    - name: Tauri
+      run: |
+        cargo fmt --manifest-path quark-tauri/Cargo.toml --check
+        cargo clippy --manifest-path quark-tauri/Cargo.toml --all-targets --locked -- -D warnings
+        cargo test --manifest-path quark-tauri/Cargo.toml --locked

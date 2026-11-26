@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>Quark</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body data-view="library">
+  <div id="shell">
+  <div id="bg"></div>
+  <header id="top">
+    <div class="brand"><img src="quark.png" alt=""><b>QUARK</b></div>
+    <nav id="top-tabs"></nav>
+    <div id="top-right"></div>
+  </header>
+  <div class="main">
+    <aside class="side">
+      <div class="side-top">
+        <div class="sh"><h2 id="lib-title"></h2><span id="count"></span></div>
+        <div class="srow">
+          <label class="search"><svg class="ic" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="m20 20-4.2-4.2"/></svg><input id="q" type="search" autocomplete="off" spellcheck="false"><kbd>/</kbd></label>
+          <details class="menu fl" id="fl-btn"><summary class="tb" aria-label="Filtres"><svg class="ic" viewBox="0 0 24 24"><path d="M4 5h16l-6 8v6l-4-2v-4z"/></svg></summary><div class="pop" id="fl-pop"></div></details>
+        </div>
+      </div>
+      <div class="batchbar" id="batchbar" hidden></div>
+      <div class="list" id="list" tabindex="0"></div>
+      <footer class="side-foot"><select id="sort" aria-label="Trier"></select><select id="group" aria-label="Grouper"></select><span id="fl-label" hidden></span></footer>
+    </aside>
+    <main class="sheet" id="sheet" tabindex="-1"></main>
+  </div>
+  <div id="modal"></div>
+  <div id="ctxmenu" class="ctxmenu" hidden></div>
+  <div id="toasts" aria-live="polite"></div>
+  </div>
+  <script src="i18n.js"></script>
+  <script src="i18n-extra.js"></script>
+  <script src="core.js"></script>
+  <script src="library.js"></script>
+  <script src="dialogs.js"></script>
+  <script src="settings.js"></script>
+  <script src="providers.js"></script>
+  <script src="onboarding.js"></script>
+  <script src="saves.js"></script>
+  <script src="store.js"></script>
+  <script src="deck.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

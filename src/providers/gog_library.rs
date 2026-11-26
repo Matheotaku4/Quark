@@ -378,11 +378,8 @@ pub fn clean_gog_title(title: &str) -> String {
         " + amazon prime",
     ];
     let trimmed = title.trim();
-    let lower = trimmed.to_lowercase();
     for suffix in SUFFIXES {
-        if lower.ends_with(suffix)
-            && let Some(stripped) = trimmed.get(..trimmed.len() - suffix.len())
-        {
+        if let Some(stripped) = strip_suffix_ascii_case(trimmed, suffix) {
             let cleaned = stripped.trim();
             if !cleaned.is_empty() {
                 return cleaned.to_string();
@@ -390,15 +387,22 @@ pub fn clean_gog_title(title: &str) -> String {
         }
     }
     // Dernière forme observée : « Nom du jeu Amazon Prime » sans séparateur.
-    if lower.ends_with(" amazon prime")
-        && let Some(stripped) = trimmed.get(..trimmed.len() - " amazon prime".len())
-    {
+    if let Some(stripped) = strip_suffix_ascii_case(trimmed, " amazon prime") {
         let cleaned = stripped.trim();
         if !cleaned.is_empty() {
             return cleaned.to_string();
         }
     }
     trimmed.to_string()
+}
+
+/// Retire un suffixe ASCII sans minusculer tout le titre : `to_lowercase()`
+/// peut changer la longueur en octets (`İ` devient deux octets), ce qui
+/// décalait la découpe sur la chaîne d'origine.
+fn strip_suffix_ascii_case<'a>(value: &'a str, suffix: &str) -> Option<&'a str> {
+    let cut = value.len().checked_sub(suffix.len())?;
+    let tail = value.get(cut..)?;
+    tail.eq_ignore_ascii_case(suffix).then(|| &value[..cut])
 }
 
 fn title_key(title: &str) -> String {
@@ -1522,6 +1526,10 @@ mod tests {
             "Call of Juarez"
         );
         assert_eq!(clean_gog_title("Amazon Prime"), "Amazon Prime");
+        // La minuscule de `İ` occupe deux octets : comparer la chaîne
+        // minusculée puis découper l'original décalait la coupe.
+        assert_eq!(clean_gog_title("İstanbul Amazon Prime"), "İstanbul");
+        assert_eq!(clean_gog_title("ẞtra Jeu Prime Gaming"), "ẞtra Jeu");
         let body = r#"[
           {"id": 1, "title": "Call of Juarez", "game_type": "game"},
           {"id": 2, "title": "Call of Juarez Amazon Prime", "game_type": "game"},

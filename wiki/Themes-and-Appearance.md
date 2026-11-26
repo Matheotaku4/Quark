@@ -103,8 +103,9 @@ Named views, sorting and grouping are described in
 ## Notifications and tray icon
 
 The tray icon keeps Quark in the background: the close button hides the window in
-the icon instead of quitting. Epic/GOG screenshots can also show a desktop
-notification. These settings are in **Appearance** and **In game**.
+the icon instead of quitting. Desktop notifications can also announce the end of an
+installation, a save backup or a game session. These settings are in
+**Appearance** and **In game**.
 
 On some environments without a notification area (some minimal Wayland
 compositors), the icon may not appear. Quark remains usable; quit with `Ctrl+Q`.

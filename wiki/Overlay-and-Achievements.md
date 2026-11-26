@@ -1,25 +1,24 @@
-# Overlay, screenshots and achievements
+# Overlay and achievements
 
 > [Home](Home) · [Stores](Stores-and-Saves) · **Overlay and achievements** ·
 > [Settings](Settings) · [Troubleshooting](Troubleshooting)
 
 ## In-game overlay
 
-Launch a game from Quark, then press **`Shift+Backspace`**. A full-screen panel
-appears above the game with:
+Launch a game from Quark, then press **`Shift+Backspace`**. A compact panel
+appears in the bottom-right corner above the game with:
 
 - the game name and store;
 - the session timer;
 - achievement progress;
 - the achievement list, locked or not depending on the setting;
-- rarity and progress when the store publishes them;
-- an indicator for recent screenshots.
+- rarity and progress when the store publishes them.
 
 The same shortcut, `Escape` or the close button dismisses the overlay.
 
-The overlay is not a window that constantly captures clicks: when closed, it
-stays transparent to the mouse. It is only offered for a game launched by Quark,
-because Quark must know the process and session.
+The overlay stays hidden the rest of the time, so it never captures clicks. It
+is only offered for a game launched by Quark, because Quark must know the process
+and session.
 
 ### Settings
 
@@ -49,25 +48,9 @@ top-left corner. They hide when the game loses focus.
 - The counter needs a Windows game launched by Quark with Proton, Wine or
   umu-launcher.
 
-A global X11 helper intercepts the shortcut. Proton games run through XWayland
-and use the same path. On native Wayland, the compositor may forbid global
-shortcuts: the overlay remains available through the close button and built-in
-screenshots, but the shortcut may not work.
-
-## Screenshots
-
-**`F12`** takes a screenshot of the running game. The file is written to:
-
-```text
-~/.local/share/quark/screenshots/<game>/
-```
-
-- Every screenshot plays a short chime and shows a desktop notification, including Steam captures.
-- The key can be changed in **Settings → In game**.
-- Capture goes through X11/XWayland; on native Wayland the compositor may ask
-  for permission or refuse.
-
-Screenshots are never uploaded to a server. They remain local files.
+Tauri registers the global shortcut. Proton games run through XWayland and use
+the same path. On native Wayland, the compositor may forbid global shortcuts:
+the overlay then remains available through its close button.
 
 ## Epic achievements
 
@@ -132,8 +115,6 @@ achievements remain managed by the Steam client.
 | --- | --- |
 | The shortcut does nothing | Check that the game was launched by Quark, then the shortcut in **In game**. On native Wayland, try XWayland. |
 | The overlay appears but not achievements | Check the Epic/GOG connection and metadata cache; refresh the game page. |
-| `F12` does nothing | Check the key and X11/Wayland permissions; try a compositor screenshot. |
-| Screenshots are not where expected | Check `~/.local/share/quark/screenshots/` and folder permissions. |
 | A local achievement does not arrive | Check the URL, token and `QUARK_GAME_ID`; the server only listens on loopback. |
 | EOS does not appear | Check the active prefix, reinstall the EOS overlay and test the game without the Quark overlay. |
 

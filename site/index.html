@@ -8,7 +8,7 @@
 <meta name="theme-color" content="#000000">
 <link rel="canonical" href="https://matheotaku4.github.io/Quark/">
 <meta property="og:title" content="Quark — A quiet game launcher for Linux">
-<meta property="og:description" content="One library for your local, Steam, Epic, GOG and itch.io games. Rust + egui.">
+<meta property="og:description" content="One library for your local, Steam, Epic, GOG and itch.io games. Rust + Tauri.">
 <meta property="og:type" content="website">
 <meta property="og:image" content="https://matheotaku4.github.io/Quark/assets/home-en.png">
 <meta name="twitter:card" content="summary_large_image">
@@ -116,7 +116,7 @@ h1 span{background:linear-gradient(100deg,var(--accent),#b388ff,var(--accent));b
 <main id="main"><div id="top"></div>
 <div class="wrap">
   <div class="hero">
-    <p class="eyebrow">Linux · Rust · egui</p>
+    <p class="eyebrow">Linux · Rust · Tauri</p>
     <h1 data-i="h1"></h1>
     <p class="lead" data-i="lead"></p>
     <div class="cta">
@@ -156,7 +156,7 @@ h1 span{background:linear-gradient(100deg,var(--accent),#b388ff,var(--accent));b
     <div class="keys rv" aria-label="Raccourcis / Shortcuts">
       <div><span data-i="k1"></span><span><kbd>Ctrl</kbd> + <kbd>K</kbd></span></div>
       <div><span data-i="k2"></span><span><kbd>Shift</kbd> + <kbd>Backspace</kbd></span></div>
-      <div><span data-i="k3"></span><kbd>F12</kbd></div>
+      <div><span data-i="k3"></span><kbd>Esc</kbd></div>
       <div><span data-i="k4"></span><span><kbd>Ctrl</kbd> + <kbd>F</kbd></span></div>
     </div>
   </section>
@@ -174,7 +174,7 @@ h1 span{background:linear-gradient(100deg,var(--accent),#b388ff,var(--accent));b
   </section>
 </div></main>
 
-<footer><div class="wrap"><span>Quark · MIT · Rust + egui</span>
+<footer><div class="wrap"><span>Quark · MIT · Rust + Tauri</span>
   <nav><a href="https://github.com/Matheotaku4/Quark">Source</a><a href="https://github.com/Matheotaku4/Quark/releases">Releases</a><a href="https://github.com/Matheotaku4/Quark/wiki">Wiki</a></nav></div></footer>
 
 <script>
@@ -187,13 +187,13 @@ e1:"L’essentiel",t1:"Tout autour du jeu. Rien devant.",
 c1t:"Une seule bibliothèque",c1:"Dossiers locaux et jeux de boutiques partagent jaquettes, notes, tags, statut et temps de jeu. Un jeu en plusieurs éditions reste une seule entrée.",
 c2t:"Steam, Epic, GOG et itch.io",c2:"Lecture de vos bibliothèques Steam, connexion directe à Epic, installation GOG via gogdl et itch.io avec votre clé API. Vos comptes restent sur votre machine.",
 c3t:"Proton sans terminal",c3:"Runtime, préfixe, GameMode, MangoHud, gamescope, PRIME et commande wrapper par jeu, en simples cases à cocher.",
-c4t:"Un vrai overlay",c4:"Panneau en jeu, succès, capture F12 et compteur FPS DirectX 11/12.",
+c4t:"Un vrai overlay",c4:"Panneau en jeu, succès et compteur FPS DirectX 11/12.",
 c5t:"Sauvegardes fiables",c5:"Instantanés Ludusavi avant et après chaque session, avec aperçu et restauration validée. Cloud Epic et GOG inclus.",
 c6t:"Fait pour vos yeux",c6:"Treize thèmes AMOLED, liste ou grille, accueil sous les filtres avec la bibliothèque visible, recherche globale et réglages par tâche en cinq langues.",
 e2:"Un aperçu",t2:"Conçu pour qu’on y vive.",n2:"Captures réelles de l’interface actuelle, pas des maquettes.",
 tab:{home:"Accueil",library:"Bibliothèque",game:"Fiche de jeu",store:"Boutique","my-games":"Mes jeux",settings:"Réglages",onboarding:"Premier lancement"},
-e3:"Clavier d’abord",t3:"Rapide par défaut.",n3:"Tout est à un raccourci : cherchez un jeu ou un réglage, ouvrez l’overlay ou prenez une capture sans quitter le jeu.",
-k1:"Recherche globale",k2:"Overlay en jeu",k3:"Capture d’écran",k4:"Rechercher",
+e3:"Clavier d’abord",t3:"Rapide par défaut.",n3:"Tout est à un raccourci : cherchez un jeu ou un réglage, ouvrez l’overlay ou fermez un panneau sans quitter le jeu.",
+k1:"Recherche globale",k2:"Overlay en jeu",k3:"Fermer un panneau",k4:"Rechercher",
 e4:"Démarrer",t4:"Une archive. Pas d’installeur.",n4:"Téléchargez, vérifiez, décompressez, lancez.",copy:"Copier",copied:"Copié ✓",
 t5:"Les petites lignes",
 q1:"Quark vend-il des jeux ?",a1:"Non. Il ouvre les pages des boutiques dans votre navigateur et n’achète jamais rien.",
@@ -208,13 +208,13 @@ e1:"The essentials",t1:"Everything around the game. Nothing in front of it.",
 c1t:"One library",c1:"Local folders and store games share covers, notes, tags, status and playtime. A game with several editions stays one entry.",
 c2t:"Steam, Epic, GOG and itch.io",c2:"Reads your Steam libraries, signs in to Epic directly, installs GOG and itch.io titles through gogdl and your API key. Accounts stay on your machine.",
 c3t:"Proton without a terminal",c3:"Per-game runtime, prefix, GameMode, MangoHud, gamescope, PRIME and wrapper command, all in plain checkboxes.",
-c4t:"An actual overlay",c4:"In-game panel, achievements, F12 screenshots and a DirectX 11/12 FPS counter.",
+c4t:"An actual overlay",c4:"In-game panel, achievements and a DirectX 11/12 FPS counter.",
 c5t:"Saves you can trust",c5:"Ludusavi snapshots before and after each session, with preview and validated restore. Epic and GOG cloud saves included.",
 c6t:"Easy on the eyes",c6:"Thirteen AMOLED themes, list or grid, a home view under the filters with your library still visible, global search and task-based settings in five languages.",
 e2:"A closer look",t2:"Built to be lived in.",n2:"Real screenshots of the current interface, not mockups.",
 tab:{home:"Home",library:"Library",game:"Game page",store:"Store","my-games":"My games",settings:"Settings",onboarding:"First launch"},
-e3:"Keyboard first",t3:"Fast by default.",n3:"Everything is a shortcut away: find a game or a setting, open the overlay or take a screenshot without leaving the game.",
-k1:"Global search",k2:"In-game overlay",k3:"Screenshot",k4:"Search",
+e3:"Keyboard first",t3:"Fast by default.",n3:"Everything is a shortcut away: find a game or a setting, open the overlay or close a panel without leaving the game.",
+k1:"Global search",k2:"In-game overlay",k3:"Close a panel",k4:"Search",
 e4:"Get started",t4:"One archive. No installer.",n4:"Download, verify, unpack, run.",copy:"Copy",copied:"Copied ✓",
 t5:"Small print, plainly",
 q1:"Does Quark sell games?",a1:"No. It opens store pages in your browser and never buys anything.",

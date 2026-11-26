@@ -7,18 +7,12 @@
 
 ## The welcome guide
 
-A new configuration opens a three-step guide. It is not blocking: **Skip**
-closes it immediately.
+A new configuration opens a welcome panel. It is not blocking: **Later**
+closes it immediately. The panel sets the interface language, theme, startup
+page and the folder used for store games; **Get started** saves the choices and
+marks the guide as done.
 
-1. **Discover** — what Quark brings together: local games and stores, Windows
-   launch options, stores and customization.
-2. **Customize** — interface language, startup page, theme, random hero
-   background and its blur. Changes apply live.
-3. **Start** — add the first game, see the keyboard shortcuts and finish with
-   **Finish**.
-
-The guide is marked as done when it is closed or completed. To see it again:
-**Settings → About → Review the getting-started guide**.
+To see it again: **Settings → About → Review the guide**.
 
 ### Language and startup page
 
@@ -90,7 +84,7 @@ then **Game settings**.
 
 1. Open **Settings → New games** and choose the default Proton runtime and the
    installation folder proposed for Epic/GOG.
-2. Open **Settings → In game** to check the overlay and screenshot shortcuts.
+2. Open **Settings → In game** to check the overlay shortcut.
 3. Install Ludusavi from **Settings → Stores & tools** if you want local save
    snapshots.
 4. Add at least one game and launch it. The first Proton prefix can take several
@@ -108,7 +102,7 @@ beginning:
 - **New games**: values copied into each new game. These are not global
   settings: changing a default does not affect existing games.
 - **Stores & tools**: accounts, synchronization, Legendary, gogdl and Ludusavi.
-- **In game**: overlay, screenshots, achievements, cloud saves.
+- **In game**: overlay, achievements, cloud saves.
 
 ## What next?
 

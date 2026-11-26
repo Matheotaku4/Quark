@@ -28,7 +28,6 @@ Details and screenshots: [Themes and appearance](Themes-and-Appearance).
 
 - **Overlay**: enable it, choose the global shortcut and show locked, compact
   achievements with progress and rarity.
-- **Screenshots**: capture key.
 - **Desktop notifications**: end of an installation, a Ludusavi backup or a
   game session. Each can be disabled independently; nothing is sent while the
   Quark window is focused.
@@ -36,7 +35,7 @@ Details and screenshots: [Themes and appearance](Themes-and-Appearance).
 - **Epic overlay (EOS)**: download and enable the EOS overlay in the game prefix
   when available.
 
-The defaults are `Shift+Backspace` for the overlay and `F12` for screenshots.
+The default overlay shortcut is `Shift+Backspace`.
 See [Overlay and achievements](Overlay-and-Achievements).
 
 ## New games

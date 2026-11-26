@@ -15,3 +15,10 @@ __pycache__/
 
 # Sortie de compilation de la DLL overlay Windows
 tools/overlay-dll/target
+
+# État local des agents
+/.openhands/
+
+# Compilation et schémas générés de l’interface Tauri
+/quark-tauri/target/
+/quark-tauri/gen/
