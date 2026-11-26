@@ -91,14 +91,6 @@ rather than failing. A missing Proton runtime, however, prevents the launch.
   data or a newly added string without a catalogue entry. Note the page and exact
   text to report it.
 
-## The random hero background does not appear
-
-- The library needs at least one banner artwork.
-- The background is drawn behind Home and Library; it can be subtle under cards
-  and the readability veil.
-- The pick changes on restart, not on every navigation.
-- Increase the blur or check that the option is enabled in **Appearance**.
-
 ## Settings
 
 Settings fill the window and scroll. If the **Close** button is not visible,

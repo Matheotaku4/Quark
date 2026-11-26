@@ -411,7 +411,6 @@ struct SettingsDto {
     theme: String,
     ui_language: String,
     compact: bool,
-    hero_background: bool,
     start_page: String,
     view: String,
 }
@@ -637,7 +636,6 @@ fn settings_dto(settings: &Settings) -> SettingsDto {
         theme: snake(&settings.theme),
         ui_language: snake(&settings.ui_language),
         compact: settings.ui_compact,
-        hero_background: settings.hero_background,
         start_page: snake(&settings.start_page),
         view: snake(&settings.view),
     }
@@ -1115,7 +1113,6 @@ struct SettingsPatch {
     theme: Option<String>,
     ui_language: Option<String>,
     compact: Option<bool>,
-    hero_background: Option<bool>,
     start_page: Option<String>,
     view: Option<String>,
 }
@@ -1136,9 +1133,6 @@ fn save_settings(state: State<'_, AppState>, patch: SettingsPatch) -> Result<Set
         }
         if let Some(compact) = patch.compact {
             settings.ui_compact = compact;
-        }
-        if let Some(hero) = patch.hero_background {
-            settings.hero_background = hero;
         }
         if let Some(start_page) = patch.start_page {
             settings.start_page = serde_json::from_value(serde_json::Value::String(start_page))
@@ -1797,7 +1791,6 @@ fn demo_library(root: &Path, with_games: bool) -> Library {
         .unwrap_or(UiLanguage::French);
     library.settings.theme = ThemeMode::Amoled;
     library.settings.ui_compact = false;
-    library.settings.hero_background = true;
     if !with_games {
         return library;
     }

@@ -28,7 +28,7 @@ Object.assign(I18N.en, {
 });
 
 const app = { data: null, cfg: {}, lang: "fr", view: "library", sel: null, query: "", f: { status: "", genre: "", tag: "", fav: false }, running: new Map(), tab: "overview", marked: new Set(),
-  cache: {}, transfers: new Map(), open: true, collapsed: new Set(), pal: null, bgGame: null, stab: "appearance", sq: "" };
+  cache: {}, transfers: new Map(), open: true, collapsed: new Set(), pal: null, stab: "appearance", sq: "" };
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
 const esc = (v) => String(v ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
@@ -136,9 +136,7 @@ function applySettings() {
   for (const [k, v] of Object.entries(th.vars)) root.setProperty(`--${k}`, v);
   const lum = (h) => { const n = parseInt(h.slice(1), 16); return (0.299 * (n >> 16) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255)) / 255; };
   root.setProperty("--on-accent", lum(th.vars.accent) > 0.6 ? "#05070a" : "#fff");
-  root.setProperty("--bgblur", `${Math.round(c.hero_background_blur ?? 18)}px`);
   root.setProperty("--sidew", `${Math.round(c.sidebar_width || 300)}px`);
   document.body.classList.toggle("compact", !!c.ui_compact);
   app.lang = LANGS[c.ui_language] || "fr"; document.documentElement.lang = app.lang;
-  const bg = $("#bg"); if (bg) { const g = app.bgGame && game(app.bgGame); bg.style.backgroundImage = c.hero_background && g && g.heroUrl ? `url('${g.heroUrl}')` : "none"; }
 }

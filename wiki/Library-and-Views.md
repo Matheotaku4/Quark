@@ -74,11 +74,6 @@ The carousel can advance automatically; the delay is set in
 **Settings → Appearance → Home**. The main button becomes **Stop** while the
 game is running.
 
-**Random hero background**: when enabled, Quark picks a banner from the library
-at startup, blurs it and draws it behind Home and Library. The radius is set
-from 2 to 30 px. The pick is made once per session; restarting Quark changes the
-image. See [Themes and appearance](Themes-and-Appearance).
-
 ## Game page
 
 ![Game page](https://raw.githubusercontent.com/Matheotaku4/Quark/main/docs/images/game-en.png)

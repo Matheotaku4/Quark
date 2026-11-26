@@ -57,24 +57,6 @@ game's own accent colour: it is still computed from its artwork.
 
 ![Appearance in English](https://raw.githubusercontent.com/Matheotaku4/Quark/main/docs/images/settings-en.png)
 
-## Random hero background
-
-**Appearance → Background → Random hero background** adds a blurred banner
-behind Home and Library.
-
-- Quark picks a banner from the library artwork.
-- The pick is made **once per session**: restarting Quark changes the image,
-  switching pages does not.
-- The **Blur** slider sets the radius from 2 to 30 px. The blur cache includes
-  the radius, so changing it does not reuse the previous render.
-- A dark veil is applied between the image and the content to keep text
-  readable; the bottom of the page is darker than the top.
-- If the library contains no artwork, no background is drawn: the theme keeps
-  its normal background.
-
-The background is decorative. It does not replace a game's banner or the library
-covers.
-
 ## Startup page
 
 **Appearance → Startup → Startup page**:
@@ -123,8 +105,7 @@ To return to the defaults without losing the library:
 
 1. **Settings → Appearance**.
 2. Choose **AMOLED**, **Home** and the **List** view.
-3. Disable the random hero background.
-4. If needed, set the language back to French.
+3. If needed, set the language back to French.
 
 There is no "reset everything" button that erases the library. A full reset would
 mean deleting `config.json`, which also deletes games, installations, views and

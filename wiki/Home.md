@@ -43,7 +43,7 @@ repository under [`wiki/`](https://github.com/Matheotaku4/Quark/tree/main/wiki).
 | Understand the list, grid, views and filters | [Library and views](Library-and-Views) |
 | Use Steam, Epic, GOG, accounts and cloud saves | [Stores and saves](Stores-and-Saves) |
 | Configure Proton, umu, Wine, variables and launch options | [Proton, Wine and launch options](Proton-Wine-and-Launch-Options) |
-| Change themes, language, hero background or startup page | [Themes and appearance](Themes-and-Appearance) |
+| Change themes, language or startup page | [Themes and appearance](Themes-and-Appearance) |
 | Read achievements and the Epic overlay | [Achievements](Achievements) |
 | Find every settings page | [Settings](Settings) |
 | Fix a game that will not start, a missing text or a save issue | [Troubleshooting](Troubleshooting) |
@@ -65,7 +65,7 @@ repository under [`wiki/`](https://github.com/Matheotaku4/Quark/tree/main/wiki).
   before and after a session.
 - **A configurable interface.** Thirteen dark themes, six interface languages
   (French, English, Spanish, German, Portuguese and Russian), list or grid, a
-  customizable home page, a random blurred hero and a `Ctrl+K` command palette.
+  customizable home page and a `Ctrl+K` command palette.
 - **A launcher, not a store.** Quark never buys anything and never downloads a
   game from a third-party site. Store search results open in your browser.
 

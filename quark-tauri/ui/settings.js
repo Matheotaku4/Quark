@@ -15,7 +15,6 @@ function tabsDef() {
     appearance: () => [
       card(L("Langue et thème", "Language and theme"), selk("ui_language", L("Langue de l'interface", "Interface language"), app.data.languages.map((l) => [l.id, l.label])),
         `<div class="sw col" data-s="theme thème"><span>${esc(t("settings.theme"))}</span><div class="themes">${app.data.themes.map((th) => `<button class="th${th.id === c.theme ? " on" : ""}" data-theme="${th.id}" style="background:${th.vars.bg};color:${th.vars.text}"><i style="background:${th.vars.accent}"></i>${esc(th.label)}</button>`).join("")}</div></div>`),
-      card(L("Fond", "Background"), swk("hero_background", L("Fond bannière aléatoire", "Random hero background"), L("Bannière floutée derrière l'accueil, choisie une fois par session.", "Blurred banner behind Home, picked once per session.")), rangek("hero_background_blur", L("Flou", "Blur"), 0, 40, 1)),
       card(L("Démarrage", "Startup"), selk("start_page", L("Page d'ouverture", "Startup page"), [["home", t("x.home")], ["library", t("nav.library")], ["store", t("x.store")], ["my_games", t("x.mygames")]])),
       card(t("nav.library"), selk("view", L("Affichage", "Layout"), [["list", L("Liste", "List")], ["grid", L("Grille", "Grid")]]), swk("ui_compact", t("settings.compact"), t("settings.compactHint")),
         rangek("sidebar_width", L("Largeur de la liste", "List width"), 240, 420, 10), rangek("grid_tile_width", L("Largeur des vignettes", "Tile width"), 120, 260, 10),
@@ -109,7 +108,7 @@ function bindSettings() {
   const root = $("#sheet");
   bindModel(root, app.cfg, (k) => {
     const top = k.split(".")[0], patch = { [top]: app.cfg[top] };
-    run(() => cfgSet(patch)).then(() => { if (k === "tray_icon") invoke("tray_visibility", { visible: !!app.cfg.tray_icon }).catch(() => {}); if (k === "deck_mode") { QuarkDeck.mode(app.cfg.deck_mode); renderTop(); } else if (k === "ui_language" || k === "ui_compact" || k === "game_actions") { renderAllKeepScroll(); } else if (k === "view") renderTop(); else if (k === "hero_background") applySettings(); });
+    run(() => cfgSet(patch)).then(() => { if (k === "tray_icon") invoke("tray_visibility", { visible: !!app.cfg.tray_icon }).catch(() => {}); if (k === "deck_mode") { QuarkDeck.mode(app.cfg.deck_mode); renderTop(); } else if (k === "ui_language" || k === "ui_compact" || k === "game_actions") { renderAllKeepScroll(); } else if (k === "view") renderTop(); });
   });
   $$('[data-k="screenshot_key"]', root).forEach((el) =>
     el.addEventListener("change", () => run(async () => {

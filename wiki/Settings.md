@@ -14,8 +14,6 @@ contains it. Every change is saved automatically; there is no **Apply** button.
 
 - **Interface language**: French, English, Spanish, German, Portuguese or Russian, applied immediately.
 - **Theme**: thirteen palettes, applied immediately.
-- **Random hero background** and **Blur**: a blurred banner behind Home and
-  Library, picked once per session.
 - **Startup**: startup page (Home, Library, Store, My games).
 - **Library**: list or grid layout, compact interface density and the default game tab.
 - **Home**: carousel sort, automatic advance and interval.

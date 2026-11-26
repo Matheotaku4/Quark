@@ -163,7 +163,6 @@ async function boot() {
   app.data = await invoke("bootstrap_data");
   Object.assign(app.cfg, await invoke("get_settings_raw"));
   setRunning(app.data.running);
-  const withHero = app.data.games.filter((g) => g.heroUrl); app.bgGame = withHero.length ? withHero[Math.floor(Math.random() * withHero.length)].id : null;
   applySettings();
   app.view = ({ home: "home", library: "library", store: "store", my_games: "mygames" })[app.cfg.start_page] || "library";
   let saved = null; try { saved = localStorage.getItem("quark.sel"); } catch {}

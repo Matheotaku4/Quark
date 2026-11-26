@@ -95,10 +95,10 @@ being published.
   and after a session, with preview, inventory and restore.
 - **A sober, configurable interface.** Thirteen dark themes, six interface
   languages (French, English, Spanish, German, Portuguese and Russian), compact
-  spacing and adjustable panel sizes, list or grid, a home carousel, a random
-  blurred hero background, HowLongToBeat times in the game overview, status
-  columns, tags, filters, a global search palette (Ctrl+K/Ctrl+F) and an
-  embedded Archivo font with Lucide icons.
+  spacing and adjustable panel sizes, list or grid, a home carousel,
+  HowLongToBeat times in the game overview, status columns, tags, filters, a
+  global search palette (Ctrl+K/Ctrl+F) and an embedded Archivo font with
+  Lucide icons.
 
 Quark is not a store: it never buys anything, and it never downloads or
 extracts games from third-party download sites. Store search results open in
@@ -199,10 +199,6 @@ set in **Settings → Appearance**.
 opens at launch: **Home** (the default), **Library**, **Store** or **My games**.
 The choice is applied once when the window opens and is saved with the library;
 an older configuration without the setting starts on Home.
-
-**Random hero background.** Appearance → Background can reuse a library banner
-as a blurred backdrop behind Home and Library. One banner is picked per session;
-the blur radius is adjustable from 2 to 30 px and is part of the blur cache key.
 
 ### Library
 
@@ -411,8 +407,8 @@ accented headings. A search field above the sidebar finds a setting by task
 content scrolls independently and `Esc` or the top-right **×** closes the page.
 
 - **Appearance:** interface language, 13 themes, interface size (compact mode,
-  sidebar, rows, covers, banner and overview widths), random hero background,
-  startup page, list/grid, carousel, notification icon.
+  sidebar, rows, covers, banner and overview widths), startup page, list/grid,
+  carousel, notification icon.
 - **In game:** screenshot shortcut, achievement display and cloud-save
   toggle.
 - **New games:** defaults copied into each newly added game.
@@ -425,8 +421,8 @@ content scrolls independently and `Esc` or the top-right **×** closes the page.
 ![Appearance settings](docs/images/settings-en.png)
 
 **Appearance** contains the startup page, interface language, 13-theme grid,
-interface size controls, random hero background, default view, default game
-tab, home carousel and notification icon. **In game** contains the screenshot
+interface size controls, default view, default game tab, home carousel and
+notification icon. **In game** contains the screenshot
 shortcut, achievement display and cloud-save toggle. **New games** contains the values copied into
 each newly added game (prefix, install folder, arguments, runtime, anti-cheat,
 launch options, environment variables). These are defaults, not global
@@ -468,10 +464,10 @@ and exits with code 1 when the title is ambiguous or unknown. `quark list` print
 the status and playtime of every game.
 
 `--ui` accepts `--demo`, `--view`, `--group`, `--tab`, `--theme`, `--lang`,
-`--select`, `--dialog`, `--hero-bg`, `--blur`, `--size`, `--frames`, `--hover`,
-`--click` and `--key`; `--demo` uses a temporary configuration and never reads or
-writes the real library. `--group` accepts `status`, `store`, `genre`, `year` or
-`none`; `--lang` accepts `fr`, `en`, `de`, `es` or `pt`; `--blur` is a 2–30 px radius.
+`--select`, `--dialog`, `--size`, `--frames`, `--hover`, `--click` and `--key`;
+`--demo` uses a temporary configuration and never reads or writes the real
+library. `--group` accepts `status`, `store`, `genre`, `year` or
+`none`; `--lang` accepts `fr`, `en`, `de`, `es` or `pt`.
 `--dialog` includes `onboarding`, `onboarding-settings` and `whats-new` for the
 new screens.
 

@@ -96,7 +96,7 @@ use the **Launch** tab.
 Every page is described in [Settings](Settings). The most useful ones at the
 beginning:
 
-- **Appearance**: language, theme, startup page, random hero, home page.
+- **Appearance**: language, theme, startup page and home page.
 - **New games**: values copied into each new game. These are not global
   settings: changing a default does not affect existing games.
 - **Stores & tools**: accounts, synchronization, Legendary, gogdl and Ludusavi.
@@ -107,8 +107,7 @@ beginning:
 
 - [Library and views](Library-and-Views) to organize games.
 - [Stores and saves](Stores-and-Saves) for Epic, GOG and cloud saves.
-- [Themes and appearance](Themes-and-Appearance) for the thirteen themes and the
-  hero background.
+- [Themes and appearance](Themes-and-Appearance) for the thirteen themes.
 
 ---
 

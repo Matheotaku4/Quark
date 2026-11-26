@@ -1086,10 +1086,6 @@ pub struct Settings {
     /// « Mes jeux » en liste (une ligne par jeu, bouton d'action visible) au lieu
     /// de la grille de jaquettes. Vrai par défaut : la liste compacte.
     pub my_games_list: bool,
-    /// Affiche un hero aléatoire flouté derrière l'accueil et la bibliothèque.
-    pub hero_background: bool,
-    /// Rayon du flou du fond, en pixels logiques.
-    pub hero_background_blur: f32,
     /// Interface resserrée : moins de marges et d'espacement, sans toucher aux
     /// tailles de police. Vrai par défaut pour une fenêtre plus dense.
     pub ui_compact: bool,
@@ -1208,8 +1204,6 @@ impl Default for Settings {
             onboarding_done: false,
             last_seen_version: String::new(),
             my_games_list: true,
-            hero_background: false,
-            hero_background_blur: 14.0,
             ui_compact: true,
             sidebar_width: 252.0,
             sidebar_row_height: 44.0,
@@ -2634,8 +2628,6 @@ mod tests {
         assert_eq!(lib.settings.ui_language, UiLanguage::French);
         assert!(!lib.settings.onboarding_done);
         assert!(lib.settings.last_seen_version.is_empty());
-        assert!(!lib.settings.hero_background);
-        assert!(lib.settings.hero_background_blur > 0.0);
 
         // Une bibliothèque existante est considérée comme déjà accueillie :
         // la mise à jour ne lui impose pas le parcours de première installation.
