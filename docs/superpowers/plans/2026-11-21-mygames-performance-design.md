@@ -1,6 +1,6 @@
 # « Mes jeux » rapide et fiable — plan d’implémentation
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Rendre « Mes jeux » fluide, corriger les jaquettes manquantes et moderniser l’interface sans ajouter de framework front.
 
@@ -34,14 +34,14 @@
 
 ## Préparation
 
-- [ ] Créer la branche et mémoriser `main` :
+- [x] Créer la branche et mémoriser `main` :
 
 ```bash
 git switch -c feat/interface-2.1.0
 git rev-parse main > /tmp/quark-main.sha
 ```
 
-- [ ] Vérifier que le dépôt est propre :
+- [x] Vérifier que le dépôt est propre :
 
 ```bash
 git status --short
@@ -68,7 +68,7 @@ Expected: aucun fichier suivi modifié ; les documents de spec/plan sont les seu
   - `#[tauri::command] pub async fn providers_data(state: State<'_, AppState>) -> Result<ProvidersDto, String>`
   - `ProviderGameDto` gagne `cover_cached: bool`.
 
-- [ ] **Step 1: Écrire le test du précalcul du cache**
+- [x] **Step 1: Écrire le test du précalcul du cache**
 
 Ajouter dans `quark-tauri/src/providers.rs` :
 
@@ -98,12 +98,12 @@ mod tests {
 }
 ```
 
-- [ ] **Step 2: Lancer le test et vérifier l’échec**
+- [x] **Step 2: Lancer le test et vérifier l’échec**
 
 Run: `cargo test --manifest-path quark-tauri/Cargo.toml cached_cover_paths_ne_garde_que_les_png_du_dossier -v`
 Expected: FAIL car `cached_cover_paths` n’existe pas.
 
-- [ ] **Step 3: Implémenter le contexte et le DTO asynchrone**
+- [x] **Step 3: Implémenter le contexte et le DTO asynchrone**
 
 Dans `quark-tauri/src/providers.rs` :
 
@@ -146,14 +146,14 @@ fn provider_context() -> ProviderContext {
 - `provider_sync` et `provider_disconnect` réutilisent `providers_dto_from` après persist ; si la commande est synchrone, elle peut appeler `providers_dto_from` directement, sinon passer par `spawn_blocking`.
 - Supprimer l’ancien `providers_dto(&AppState, ...)` ou le remplacer par un wrapper qui clone les jeux puis appelle `providers_dto_from`.
 
-- [ ] **Step 4: Lancer le test et la compilation**
+- [x] **Step 4: Lancer le test et la compilation**
 
 Run: `cargo test --manifest-path quark-tauri/Cargo.toml cached_cover_paths_ne_garde_que_les_png_du_dossier -v`
 Expected: PASS.
 Run: `cargo check --manifest-path quark-tauri/Cargo.toml`
 Expected: OK.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add quark-tauri/src/providers.rs
@@ -177,7 +177,7 @@ git commit -m "perf(providers): build store DTO off the UI thread"
   - `fn normalize_cover_keys(keys: Vec<ProviderKeyDto>) -> Result<Vec<ProviderGameKey>, String>`
   - `#[tauri::command] pub async fn provider_ensure_covers(state: State<'_, AppState>, keys: Vec<ProviderKeyDto>) -> Result<Vec<ProviderCoverDto>, String>`
 
-- [ ] **Step 1: Écrire le test de normalisation**
+- [x] **Step 1: Écrire le test de normalisation**
 
 ```rust
 #[test]
@@ -209,12 +209,12 @@ fn une_boutique_inconnue_est_refusee() {
 }
 ```
 
-- [ ] **Step 2: Lancer les tests et vérifier l’échec**
+- [x] **Step 2: Lancer les tests et vérifier l’échec**
 
 Run: `cargo test --manifest-path quark-tauri/Cargo.toml les_cles_de_couverture -v`
 Expected: FAIL car les types/fonctions n’existent pas.
 
-- [ ] **Step 3: Implémenter la commande**
+- [x] **Step 3: Implémenter la commande**
 
 - `normalize_cover_keys` convertit `provider` via `serde_json::from_value::<Provider>`, refuse une chaîne vide, déduplique avec `HashSet<ProviderGameKey>` et tronque à 32.
 - `provider_ensure_covers` clone les enregistrements correspondants depuis `state.library`, puis exécute `covers::ensure` par paquets de 4 dans `spawn_blocking`.
@@ -223,14 +223,14 @@ Expected: FAIL car les types/fonctions n’existent pas.
 - Un enregistrement introuvable produit `error: Some("jeu de boutique introuvable")`, sans faire échouer les autres.
 - Enregistrer la commande dans `quark-tauri/src/main.rs` à côté de `providers_data`.
 
-- [ ] **Step 4: Lancer les tests et vérifier la compilation**
+- [x] **Step 4: Lancer les tests et vérifier la compilation**
 
 Run: `cargo test --manifest-path quark-tauri/Cargo.toml les_cles_de_couverture -v`
 Expected: PASS.
 Run: `cargo check --manifest-path quark-tauri/Cargo.toml`
 Expected: OK.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add quark-tauri/src/providers.rs quark-tauri/src/main.rs
@@ -262,7 +262,7 @@ git commit -m "feat(providers): cache visible store covers in batches"
   - `function bindMyGames() -> void`
   - `function repaintMyGamesResults() -> void`
 
-- [ ] **Step 1: Remplacer l’état et les filtres**
+- [x] **Step 1: Remplacer l’état et les filtres**
 
 Dans `providers.js` :
 
@@ -295,7 +295,7 @@ Object.assign(app, {
 - `renderMyGamesResults` rend pour l’instant les `games.slice(0, shown)` avec le `providerCard` existant ; `repaintMyGamesResults` remplace uniquement `#pv-results` et `#pv-count`.
 - `providersLoad` appelle `pvLoadPrefs()` au premier chargement réussi, avant de repeindre les résultats.
 
-- [ ] **Step 2: Construire la barre d’outils**
+- [x] **Step 2: Construire la barre d’outils**
 
 `renderMyGames` produit :
 
@@ -321,7 +321,7 @@ Object.assign(app, {
 - Le changement de layout appelle `cfgSet({ my_games_list: next === "list" })`, puis `repaintMyGamesResults()`.
 - `providersLoad` met à jour `app.pv.data` et appelle `repaintMyGamesResults()` si la vue est `mygames`, sans `renderSheet()` complet.
 
-- [ ] **Step 3: Vérifier visuellement**
+- [x] **Step 3: Vérifier visuellement**
 
 Run:
 ```bash
@@ -335,7 +335,7 @@ xvfb-run -a -s "-screen 0 1360x860x24" bash -c '
 ```
 Expected: la page « Mes jeux » montre la barre d’outils, les puces multi-boutiques, le tri et le bouton liste/grille ; aucune erreur console visible.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add quark-tauri/ui/providers.js quark-tauri/ui/i18n-extra.js
@@ -363,7 +363,7 @@ git commit -m "feat(mygames): add persistent filters, sorting and layout state"
   - `function pvApplyCoverUpdates(updates) -> void`
   - `function pvLazyImages() -> void`
 
-- [ ] **Step 1: Remplacer `providerCard` et ajouter `providerRow`**
+- [x] **Step 1: Remplacer `providerCard` et ajouter `providerRow`**
 
 - `providerCard` garde les actions existantes (`open`, `adopt`, `install`, `uninstall`) et ajoute :
   - `data-pv-cover` / `data-provider` / `data-product` sur le conteneur de jaquette, même quand `coverUrl` est absent ;
@@ -374,7 +374,7 @@ git commit -m "feat(mygames): add persistent filters, sorting and layout state"
 - `renderMyGamesResults` choisit `pvLayout()` et rend `games.slice(0, shown)` avec `providerCard` ou `providerRow`, plus le bouton `#pv-more` si nécessaire.
 - `repaintMyGamesResults` remplace uniquement `#pv-results` et `#pv-count`, puis appelle `pvLazyImages()` et `pvQueueCovers()`.
 
-- [ ] **Step 2: Implémenter la file de couvertures**
+- [x] **Step 2: Implémenter la file de couvertures**
 
 ```js
 function pvQueueCovers() {
@@ -430,14 +430,14 @@ function pvApplyCoverUpdates(updates) {
 - `pvLazyImages` observe les images distantes avec `root: $("#sheet")`, `rootMargin: "300px"` ; quand une image devient visible, elle reçoit `src = dataset.src` si elle n’en a pas. Ne jamais retirer `src` des images déjà chargées (évite le clignotement).
 - `pvMore` ajoute les 24 suivants avec `insertAdjacentHTML("beforebegin", ...)`, met à jour `shown`, puis `pvLazyImages()` + `pvQueueCovers()`.
 
-- [ ] **Step 3: Supprimer `content-visibility` et ajuster les styles**
+- [x] **Step 3: Supprimer `content-visibility` et ajuster les styles**
 
 Dans `styles.css` :
 - supprimer la ligne `.pcard{content-visibility:auto;...}` ;
 - ajouter `.pvgrid` (grille responsive), `.pvlist`, `.pvrow`, `.pvtoolbar`, `.pvcount`, `.pccover`, `.pcactions` ;
 - conserver les fonds opaques et les bordures fines ; aucune surface transparente sur les cartes.
 
-- [ ] **Step 4: Vérifier visuellement**
+- [x] **Step 4: Vérifier visuellement**
 
 Run:
 ```bash
@@ -452,7 +452,7 @@ xvfb-run -a -s "-screen 0 1360x860x24" bash -c '
 ```
 Expected: aucune sortie pour `content-visibility` ; la grille affiche 24 cartes, les actions et le bouton « Charger plus » ; le survol ne fait pas disparaître de carte.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add quark-tauri/ui/providers.js quark-tauri/ui/styles.css
@@ -475,7 +475,7 @@ git commit -m "feat(mygames): render stable grid/list cards with cover queue"
 - Consumes: classes existantes (`#top`, `.side`, `.sheet`, `.row`, `.tile`, `.scard`, `.card`, `.modal`).
 - Produces: tokens CSS et composants visuels partagés ; aucun changement de logique.
 
-- [ ] **Step 1: Ajouter les tokens et les composants**
+- [x] **Step 1: Ajouter les tokens et les composants**
 
 Dans `:root` :
 ```css
@@ -489,20 +489,20 @@ Dans `:root` :
 - Remplacer les fonds `color-mix(... transparent)` des cartes par `var(--surface)` ou `var(--surface-2)`.
 - Garder les transitions à 120–160 ms et `prefers-reduced-motion`.
 
-- [ ] **Step 2: Moderniser la bibliothèque sans changer la structure**
+- [x] **Step 2: Moderniser la bibliothèque sans changer la structure**
 
 - Conserver `aside.side` + `main.sheet`, la liste groupée et la fiche.
 - Ajuster les espacements, la taille des jaquettes, les tabs, le panneau d’aperçu et les boutons d’action.
 - Vérifier que la fiche garde le bouton Play, le statut, les actions et les onglets.
 
-- [ ] **Step 3: Moderniser Accueil, Boutique, Réglages et modales**
+- [x] **Step 3: Moderniser Accueil, Boutique, Réglages et modales**
 
 - Accueil : hero plus sobre, rails alignés.
 - Boutique : cartes plus lisibles, sections et badges harmonisés.
 - Réglages : cartes et formulaires alignés.
 - Modales : en-tête, pied de page et boutons cohérents.
 
-- [ ] **Step 4: Captures de contrôle**
+- [x] **Step 4: Captures de contrôle**
 
 Run:
 ```bash
@@ -517,7 +517,7 @@ xvfb-run -a -s "-screen 0 1360x860x24" bash -c '
 ```
 Expected: les trois captures sont lisibles, sans chevauchement, sans carte vide, et la bibliothèque garde liste à gauche / fiche à droite.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add quark-tauri/ui/styles.css quark-tauri/ui/index.html quark-tauri/ui/library.js quark-tauri/ui/store.js quark-tauri/ui/settings.js
@@ -532,7 +532,7 @@ git commit -m "style(ui): unify the visual system across screens"
 - Modify: `docs/superpowers/plans/2026-11-21-mygames-performance-design.md` (cocher les étapes)
 - Test: tout le dépôt
 
-- [ ] **Step 1: Lancer le formatage**
+- [x] **Step 1: Lancer le formatage**
 
 Run:
 ```bash
@@ -541,7 +541,7 @@ cargo fmt --manifest-path quark-tauri/Cargo.toml --check
 ```
 Expected: aucune sortie.
 
-- [ ] **Step 2: Lancer Clippy**
+- [x] **Step 2: Lancer Clippy**
 
 Run:
 ```bash
@@ -550,7 +550,7 @@ cargo clippy --manifest-path quark-tauri/Cargo.toml --all-targets --locked -- -D
 ```
 Expected: aucune erreur.
 
-- [ ] **Step 3: Lancer les tests**
+- [x] **Step 3: Lancer les tests**
 
 Run:
 ```bash
@@ -559,12 +559,12 @@ cargo test --manifest-path quark-tauri/Cargo.toml --locked
 ```
 Expected: tous les tests passent ; noter le nombre.
 
-- [ ] **Step 4: Vérifier que `main` n’a pas bougé**
+- [x] **Step 4: Vérifier que `main` n’a pas bougé**
 
 Run: `git rev-parse main`
 Expected: le SHA de `main` avant le début du travail, inchangé.
 
-- [ ] **Step 5: Commit final de la phase**
+- [x] **Step 5: Commit final de la phase**
 
 ```bash
 git add docs/superpowers/plans/2026-11-21-mygames-performance-design.md

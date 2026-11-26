@@ -338,9 +338,8 @@ fn normalize_cover_keys(keys: Vec<ProviderKeyDto>) -> Result<Vec<ProviderGameKey
         if product_id.is_empty() {
             continue;
         }
-        let provider: Provider =
-            serde_json::from_value(serde_json::Value::String(key.provider))
-                .map_err(|_| "Boutique inconnue.".to_string())?;
+        let provider: Provider = serde_json::from_value(serde_json::Value::String(key.provider))
+            .map_err(|_| "Boutique inconnue.".to_string())?;
         let key = ProviderGameKey {
             provider,
             product_id,
@@ -1278,10 +1277,8 @@ mod tests {
 
     #[test]
     fn cached_cover_paths_ne_garde_que_les_png_du_dossier() {
-        let dir = std::env::temp_dir().join(format!(
-            "quark-provider-covers-{}",
-            std::process::id()
-        ));
+        let dir =
+            std::env::temp_dir().join(format!("quark-provider-covers-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(&dir).unwrap();
         std::fs::write(dir.join("steam-1.png"), b"png").unwrap();
@@ -1308,8 +1305,14 @@ mod tests {
         assert_eq!(normalized[0].provider, Provider::Steam);
 
         let duplicate = vec![
-            ProviderKeyDto { provider: "steam".into(), product_id: "1".into() },
-            ProviderKeyDto { provider: "steam".into(), product_id: "1".into() },
+            ProviderKeyDto {
+                provider: "steam".into(),
+                product_id: "1".into(),
+            },
+            ProviderKeyDto {
+                provider: "steam".into(),
+                product_id: "1".into(),
+            },
         ];
         assert_eq!(normalize_cover_keys(duplicate).unwrap().len(), 1);
     }
@@ -1322,5 +1325,4 @@ mod tests {
         }];
         assert!(normalize_cover_keys(keys).is_err());
     }
-
 }
