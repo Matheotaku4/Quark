@@ -127,11 +127,54 @@ function renderOverview(g) {
     ${g.installations.length > 1 ? `<div class="hr"></div><h3>${esc(t("installs.title"))}</h3>${g.installations.map((i) => `<button class="instrow${i.active ? " on" : ""}" data-installation="${esc(i.id)}"><b>${esc(i.label)}</b><small>${esc(i.path || i.exe)}</small></button>`).join("")}` : ""}
     <div class="hr"></div><div id="hltb"><h3 class="blue">HowLongToBeat</h3><div class="dim">…</div></div>`;
 }
-function stopMedia() { if (app.hls) { app.hls.destroy(); app.hls = null; } }
+function stopMedia() {
+  exitCinema();
+  if (app.hls) { app.hls.destroy(); app.hls = null; }
+}
+
+function exitCinema() {
+  const state = app.cinema;
+  if (!state) return;
+  app.cinema = null;
+  document.body.classList.remove("cinema");
+  state.video.classList.remove("cinema-video");
+  if (state.holder.isConnected) state.holder.replaceWith(state.video);
+  else state.video.remove();
+  if (!state.deck) invoke("win_set_fullscreen", { active: false }).catch(() => {});
+}
+
+function toggleCinema(video) {
+  if (app.cinema) { exitCinema(); return; }
+  const holder = document.createElement("div");
+  video.before(holder);
+  document.body.append(video);
+  video.classList.add("cinema-video");
+  document.body.classList.add("cinema");
+  app.cinema = { video, holder, deck: document.body.classList.contains("deck") };
+  if (!app.cinema.deck) invoke("win_set_fullscreen", { active: true }).catch(() => {});
+  video.focus?.();
+}
+
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && app.cinema) { event.preventDefault(); exitCinema(); }
+});
+
+function animateTab() {
+  const box = $("#tabc"); if (!box) return;
+  box.classList.remove("tab-anim"); void box.offsetWidth; box.classList.add("tab-anim");
+}
+
+function watchTab() {
+  const box = $("#tabc");
+  if (!box || box.dataset.watched) return;
+  box.dataset.watched = "1";
+  new MutationObserver(animateTab).observe(box, { childList: true });
+}
 
 function renderTab(g) {
   stopMedia();
   const box = $("#tabc"); if (!box) return;
+  watchTab();
   if (app.tab === "news") return loadNews(g);
   if (app.tab === "media") return loadMedia(g);
   if (app.tab === "ach") return loadAchievements(g);
@@ -220,7 +263,9 @@ async function playTrailer(btn) {
     if (failed) return;
     failed = true;
     hls?.destroy(); app.hls = null;
+    if (app.cinema?.video === video) exitCinema();
     video.replaceWith(btn);
+    box.querySelector(".trailerfs")?.remove();
     const warn = $(".trailerfail", box);
     if (warn) warn.hidden = false;
   };
@@ -237,6 +282,15 @@ async function playTrailer(btn) {
     video.src = src;
   }
   btn.replaceWith(video);
+  video.addEventListener("dblclick", () => toggleCinema(video));
+  const bar = box.querySelector(".trailerbar");
+  if (bar) {
+    const full = document.createElement("button");
+    full.className = "btn sec sm trailerfs";
+    full.innerHTML = `${ic("max")}${esc(t("x.fullscreen"))}`;
+    full.onclick = () => toggleCinema(video);
+    bar.append(full);
+  }
   video.play().catch(() => {});
 }
 
@@ -317,5 +371,5 @@ function updateSelection() {
   $$("#list .row").forEach((row) => row.classList.toggle("sel", row.dataset.id === app.sel));
   const act = $(".row.sel", $("#list")); act && act.scrollIntoView({ block: "nearest" });
 }
-function select(id) { app.sel = id; app.open = true; try { localStorage.setItem("quark.sel", id); } catch {} updateSelection(); renderSheet(); $("#sheet").scrollTop = 0; QuarkDeck.refocus(); }
+function select(id) { app.sel = id; app.open = true; app.tab = app.cfg.detail_tab || "overview"; try { localStorage.setItem("quark.sel", id); } catch {} updateSelection(); renderSheet(); $("#sheet").scrollTop = 0; QuarkDeck.refocus(); }
 function setView(v) { app.view = v; renderAll(); $("#sheet").scrollTop = 0; if (v === "mygames") providersLoad(); }

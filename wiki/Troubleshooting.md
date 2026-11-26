@@ -223,7 +223,7 @@ Those files contain account secrets.
 - [Installation](Installation)
 - [Proton, Wine and launch options](Proton-Wine-and-Launch-Options)
 - [Stores and saves](Stores-and-Saves)
-- [Overlay and achievements](Overlay-and-Achievements)
+- [Achievements](Achievements)
 
 ---
 

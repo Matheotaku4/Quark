@@ -167,4 +167,4 @@ See [Troubleshooting](Troubleshooting) for launch and prefix errors.
 
 ---
 
-[Home](Home) · [Proton and Wine](Proton-Wine-and-Launch-Options) · [Overlay](Overlay-and-Achievements) · [Troubleshooting](Troubleshooting)
+[Home](Home) · [Proton and Wine](Proton-Wine-and-Launch-Options) · [Achievements](Achievements) · [Troubleshooting](Troubleshooting)

@@ -14,7 +14,7 @@ the configuration and can be changed with the two top-bar icons or in
 - **List**: one row per game, with a square icon, name, playtime, last use,
   status dot and selection marker. Groups can be collapsed.
 - **Grid**: covers only, for browsing a large library. Clicking opens the game
-  page as an overlay.
+  page in a side panel.
 
 Games whose executable is missing are shown in red. A game marked as running
 keeps that state visible after switching pages.

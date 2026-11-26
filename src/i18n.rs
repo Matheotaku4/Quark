@@ -14,6 +14,7 @@ const EN: &str = include_str!("../assets/i18n/en.json");
 const ES: &str = include_str!("../assets/i18n/es.json");
 const DE: &str = include_str!("../assets/i18n/de.json");
 const PT: &str = include_str!("../assets/i18n/pt.json");
+const RU: &str = include_str!("../assets/i18n/ru.json");
 
 static LANGUAGE: AtomicU8 = AtomicU8::new(0);
 
@@ -29,6 +30,7 @@ static CATALOG_EN: LazyLock<HashMap<String, String>> = LazyLock::new(|| catalog(
 static CATALOG_ES: LazyLock<HashMap<String, String>> = LazyLock::new(|| catalog(ES));
 static CATALOG_DE: LazyLock<HashMap<String, String>> = LazyLock::new(|| catalog(DE));
 static CATALOG_PT: LazyLock<HashMap<String, String>> = LazyLock::new(|| catalog(PT));
+static CATALOG_RU: LazyLock<HashMap<String, String>> = LazyLock::new(|| catalog(RU));
 
 pub fn set_language(language: UiLanguage) {
     LANGUAGE.store(
@@ -38,6 +40,7 @@ pub fn set_language(language: UiLanguage) {
             UiLanguage::Spanish => 2,
             UiLanguage::German => 3,
             UiLanguage::Portuguese => 4,
+            UiLanguage::Russian => 5,
         },
         Ordering::Relaxed,
     );
@@ -49,6 +52,7 @@ pub fn language() -> UiLanguage {
         2 => UiLanguage::Spanish,
         3 => UiLanguage::German,
         4 => UiLanguage::Portuguese,
+        5 => UiLanguage::Russian,
         _ => UiLanguage::French,
     }
 }
@@ -57,8 +61,8 @@ pub fn is_english() -> bool {
     language() == UiLanguage::English
 }
 
-/// Le français, l'espagnol, l'allemand et le portugais utilisent la virgule
-/// décimale ; l'anglais garde le point.
+/// Le français, l'espagnol, l'allemand, le portugais et le russe utilisent la
+/// virgule décimale ; l'anglais garde le point.
 pub fn decimal_comma() -> bool {
     language() != UiLanguage::English
 }
@@ -80,6 +84,7 @@ fn current_catalog() -> Option<&'static HashMap<String, String>> {
         UiLanguage::Spanish => Some(&CATALOG_ES),
         UiLanguage::German => Some(&CATALOG_DE),
         UiLanguage::Portuguese => Some(&CATALOG_PT),
+        UiLanguage::Russian => Some(&CATALOG_RU),
     }
 }
 
@@ -331,7 +336,12 @@ mod tests {
     fn les_catalogues_secondaires_sont_complets() {
         let _guard = language_lock();
         let english: HashMap<String, String> = serde_json::from_str(EN).expect("catalogue anglais");
-        for (nom, texte) in [("espagnol", ES), ("allemand", DE), ("portugais", PT)] {
+        for (nom, texte) in [
+            ("espagnol", ES),
+            ("allemand", DE),
+            ("portugais", PT),
+            ("russe", RU),
+        ] {
             let catalogue: HashMap<String, String> = serde_json::from_str(texte)
                 .unwrap_or_else(|error| panic!("catalogue {nom} : {error}"));
             assert_eq!(
@@ -360,6 +370,7 @@ mod tests {
             UiLanguage::Spanish,
             UiLanguage::German,
             UiLanguage::Portuguese,
+            UiLanguage::Russian,
         ] {
             set_language(langue);
             for titre in titres {
@@ -406,6 +417,8 @@ mod tests {
         assert_eq!(tr("Ajouter un jeu"), "Spiel hinzufügen");
         set_language(UiLanguage::Portuguese);
         assert_eq!(tr("Ajouter un jeu"), "Adicionar um jogo");
+        set_language(UiLanguage::Russian);
+        assert_eq!(tr("Ajouter un jeu"), "Добавить игру");
         set_language(UiLanguage::French);
     }
 

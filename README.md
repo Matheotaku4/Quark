@@ -5,7 +5,7 @@ single library for local games and for the Steam, Epic Games, GOG and itch.io
 titles you own, launches Windows games through Proton (or umu-launcher), and stays out of
 the way with a modern dark interface, a fast library and a detailed game page.
 
-This is the **2.0.0** documentation. Older release notes are kept on the GitHub
+This is the **2.0.1** documentation. Older release notes are kept on the GitHub
 releases page; `docs/release-notes.md` only describes the release currently
 being published.
 
@@ -17,25 +17,30 @@ being published.
 The wiki is published from the versioned source in [`wiki/`](wiki/) by the
 `.github/workflows/wiki.yml` workflow.
 
-## What's new in 2.0.0
+## What's new in 2.0.1
 
-- **Mode Deck.** Détection automatique de la Steam Deck, de gamescope ou d'une manette, navigation complète à la manette et au clavier, plein écran et mise en page agrandie. Réglage Auto / Toujours / Désactivé dans les paramètres.
-- **Bibliothèque proche de Steam.** Liste à gauche, fiche détaillée à droite, apprentissage instantané, thèmes, recherche globale Ctrl+K et actions par lot (statut, favori, retrait).
-- **Téléchargements de boutiques.** Progression en direct, débit, ETA, trois téléchargements simultanés maximum et annulation.
-- **Ajout plus rapide.** Scan d'un dossier, recherche multi-sites et choix d'illustrations parmi les résultats SteamGridDB.
-- **Succès comparés.** Progression côte à côte des jeux de boutique associés.
-- **Interface Tauri 2 légère.** HTML/CSS/JS sans framework dans la WebView système ; le cœur métier reste en Rust et ne dépend plus d'egui.
+- **Lighter interface.** Clearer library search, tab animations, a two-tab
+  Metadata/Images customizer and lazy cover loading in My games.
+- **Video fullscreen fixed.** Trailers use a built-in cinema mode instead of the
+  WebKitGTK native fullscreen that showed a black screen.
+- **Window and memory.** Left-click the notification icon to open Quark,
+  right-click to close it, and the background WebView is destroyed to release
+  memory.
+- **Clearer settings.** Default game tab, plus gamescope/umu options greyed out
+  when their switch is off.
+- **Russian added** to the interface and Rust core messages.
+- **Quark overlay removed.** The global screenshot shortcut remains available.
 
 ## Table of contents
 
-1. [What's new in 2.0.0](#whats-new-in-200)
+1. [What's new in 2.0.1](#whats-new-in-201)
 2. [What Quark does](#what-quark-does)
 3. [Installation](#installation)
 4. [First launch](#first-launch)
 5. [Interface](#interface)
 6. [One game, several installations](#one-game-several-installations)
 7. [Stores, accounts and cloud saves](#stores-accounts-and-cloud-saves)
-8. [Achievements and the in-game overlay](#achievements-and-the-in-game-overlay)
+8. [Achievements and the Epic overlay](#achievements-and-the-epic-overlay)
 9. [Proton, umu and launch options](#proton-umu-and-launch-options)
 10. [Local saves and snapshots](#local-saves-and-snapshots)
 11. [Settings](#settings)
@@ -59,16 +64,15 @@ The wiki is published from the versioned source in [`wiki/`](wiki/) by the
 - **Proton without command lines.** Per-game runtime, prefix, GameMode,
   MangoHud, gamescope, PRIME offload, a free wrapper command, environment
   variables, BattlEye/EasyAntiCheat runtimes and umu-launcher.
-- **A real in-game overlay.** Press `Shift+Backspace` to open a Steam-like
-  panel over the game and read its achievements. Enable **Show FPS in-game** to
-  install small `d3d11.dll` and `dxgi.dll` proxies that draw a Steam-like
-  counter in DirectX 11 and 12 games.
+- **Achievements.** Steam, Epic and GOG progress is shown on the game page,
+  with icons, rarity and session unlocks. The Epic overlay (EOS) can be
+  installed in the game prefix from the store settings.
 - **Cloud saves for Epic and GOG.** The account save is fetched after an
   installation, then synchronized again when the game exits, using the same
   upstream data as the official clients.
 - **Local save snapshots.** Ludusavi creates verified snapshots before a launch
   and after a session, with preview, inventory and restore.
-- **A sober, configurable interface.** Thirteen dark themes, five interface
+- **A sober, configurable interface.** Thirteen dark themes, six interface
   languages (French, English, Spanish, German and Portuguese), compact spacing
   and adjustable panel sizes, list or grid, a home carousel, a
   random blurred hero background, HowLongToBeat times in the game overview,
@@ -88,8 +92,8 @@ Download `quark-<version>-linux-x86_64.tar.gz` and its `.sha256` file from the
 then verify and unpack it:
 
 ```bash
-sha256sum -c quark-2.0.0-linux-x86_64.tar.gz.sha256
-tar -xzf quark-2.0.0-linux-x86_64.tar.gz
+sha256sum -c quark-2.0.1-linux-x86_64.tar.gz.sha256
+tar -xzf quark-2.0.1-linux-x86_64.tar.gz
 ./quark/quark
 ```
 
@@ -313,7 +317,7 @@ interface. The game information panel also has a manual **Synchronize cloud
 saves** button and shows the last result. A save is never invented: when no
 local or remote save exists, the panel says so.
 
-## Achievements and the in-game overlay
+## Achievements and the Epic overlay
 
 ### Achievements
 
@@ -338,32 +342,6 @@ curl -X POST "$QUARK_ACHIEVEMENTS_URL" \
 
 The listener only binds `127.0.0.1`; the token changes on every launch and is
 masked in the session log.
-
-### Overlay
-
-Press **`Shift+Backspace`** while a game launched by Quark is running. A
-compact panel opens in the bottom-right corner with the game name, session
-clock and achievement progress. It closes with the same shortcut, `Esc`, or the
-close button, and stays hidden the rest of the time so it never steals a click
-from the game.
-
-Display options live in **Settings → En jeu**:
-
-- show or hide locked achievements;
-- compact rows;
-- show or hide progress and rarity;
-- choose the overlay shortcut;
-- show or hide the in-game FPS counter.
-
-When the FPS counter is enabled for a Windows game, the proxy also writes
-`overlay.log` next to `session.log`: it records whether the DLLs loaded, which
-DXGI swap-chain path was seen, whether `Present` was hooked, and why the counter
-was hidden. It is the first file to check when a game shows no counter.
-
-The global shortcut is registered by Tauri. On native Wayland, the desktop's
-global-shortcut policy may prevent a global key; the overlay then remains
-reachable from the window controls. The shortcut is released when the game ends
-or when the key changes.
 
 ## Proton, umu and launch options
 
@@ -403,14 +381,14 @@ and keeps the file.
 
 Settings occupy the whole window, with a left sidebar and sections separated by
 accented headings. A search field above the sidebar finds a setting by task
-(for example **cloud saves** or **overlay**) and jumps to the right page. The
+(for example **cloud saves** or **screenshots**) and jumps to the right page. The
 content scrolls independently and `Esc` or the top-right **×** closes the page.
 
 - **Appearance:** interface language, 13 themes, interface size (compact mode,
   sidebar, rows, covers, banner and overview widths), random hero background,
   startup page, list/grid, carousel, notification icon.
-- **In game:** overlay shortcut, FPS counter, achievement
-  display and cloud-save toggle.
+- **In game:** screenshot shortcut, achievement display and cloud-save
+  toggle.
 - **New games:** defaults copied into each newly added game.
 - **Artworks:** image sources, SteamGridDB key and cache.
 - **Stores & tools:** sync, accounts, managed tools and the EOS overlay.
@@ -418,9 +396,9 @@ content scrolls independently and `Esc` or the top-right **×** closes the page.
 - **About:** version, updates, release link, guide and what's-new actions.
 
 **Appearance** contains the startup page, interface language, 13-theme grid,
-interface size controls, random hero background, default view, home carousel
-and notification icon. **In game** contains the overlay shortcut, achievement
-display and cloud-save toggle. **New games** contains the values copied into
+interface size controls, random hero background, default view, default game
+tab, home carousel and notification icon. **In game** contains the screenshot
+shortcut, achievement display and cloud-save toggle. **New games** contains the values copied into
 each newly added game (prefix, install folder, arguments, runtime, anti-cheat,
 launch options, environment variables). These are defaults, not global
 settings: changing one never modifies an existing game.
@@ -503,15 +481,13 @@ src/
   proton.rs           runtime detection, prefix resolution and launch options
   session.rs          process groups and session logs
   saves/              Ludusavi integration and snapshot validation
-  overlay_dll.rs      embedded Windows d3d11.dll/dxgi.dll proxy and installation
 quark-tauri/
   src/main.rs         Tauri commands, session manager and quarkimg:// protocol
   src/themes.rs       theme definitions exposed to the webview
   ui/                 HTML, CSS and JavaScript interface
   icons/              window and application icons
   tauri.conf.json     window, security and bundle configuration
-assets/i18n/         French source plus English, Spanish, German and Portuguese
-assets/overlay/       prebuilt Windows FPS overlay embedded in Quark
+assets/i18n/         French source plus English, Spanish, German, Portuguese and Russian
 docs/
   release-notes.md    notes for the current release only
 site/                 static landing page published by GitHub Pages
@@ -559,17 +535,12 @@ existing GitHub releases.
   that exists only as an `.exe`, `.dmg` or `.apk` installer must be installed
   manually; Quark never runs an opaque installer. itch.io exposes neither
   achievements, cloud saves nor playtime through its API.
-- Real Epic/GOG accounts, a Windows GPU and a graphical X11 session are not
-  available in the development environment. The parsers, argument construction,
-  migration and error paths are covered by tests; a manual account and overlay
-  test is still required before claiming a complete end-to-end validation.
-- The FPS overlay covers DirectX 11 and 12 through DXGI, including the
-  `CreateSwapChainForCoreWindow` path. Vulkan, OpenGL, Direct3D 9 and native
-  Linux titles are not covered; a foreign `d3d11.dll`/`dxgi.dll` is never
-  overwritten. When enabled, the proxy writes `overlay.log` next to the game's
-  `session.log` so an unsupported API or a hidden overlay can be diagnosed.
-- Native Wayland global shortcuts depend on the compositor. The overlay falls
-  back to its close button when the compositor refuses a global key.
+- Real Epic/GOG accounts and a graphical X11 session are not available in the
+  development environment. The parsers, argument construction, migration and
+  error paths are covered by tests; a manual account test is still required
+  before claiming a complete end-to-end validation.
+- Native Wayland global shortcuts depend on the compositor. The screenshot
+  shortcut is ignored when the compositor refuses a global key.
 - Cloud synchronization is deliberately opt-in by store capability. Quark never
   invents a remote save or marks a synchronization successful when the provider
   returned an error.

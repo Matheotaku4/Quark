@@ -137,4 +137,4 @@ statistics. Prefer changing settings one at a time.
 
 ---
 
-[Home](Home) · [Settings](Settings) · [Library](Library-and-Views) · [Overlay](Overlay-and-Achievements)
+[Home](Home) · [Settings](Settings) · [Library](Library-and-Views) · [Achievements](Achievements)

@@ -84,7 +84,7 @@ then **Game settings**.
 
 1. Open **Settings → New games** and choose the default Proton runtime and the
    installation folder proposed for Epic/GOG.
-2. Open **Settings → In game** to check the overlay shortcut.
+2. Open **Settings → In game** to check the screenshot shortcut.
 3. Install Ludusavi from **Settings → Stores & tools** if you want local save
    snapshots.
 4. Add at least one game and launch it. The first Proton prefix can take several
@@ -102,7 +102,7 @@ beginning:
 - **New games**: values copied into each new game. These are not global
   settings: changing a default does not affect existing games.
 - **Stores & tools**: accounts, synchronization, Legendary, gogdl and Ludusavi.
-- **In game**: overlay, achievements, cloud saves.
+- **In game**: screenshots, achievements, cloud saves.
 
 ## What next?
 

@@ -21,11 +21,12 @@ function tabsDef() {
         rangek("sidebar_width", L("Largeur de la liste", "List width"), 240, 420, 10), rangek("grid_tile_width", L("Largeur des vignettes", "Tile width"), 120, 260, 10),
         selk("game_actions", L("Boutons d'action du jeu", "Game action buttons"), [["top_right", L("En haut à droite", "Top right")], ["beside_play", L("À côté de Jouer", "Beside Play")]])),
       card(L("Mode Deck", "Deck mode"), selk("deck_mode", L("Manette et plein écran", "Gamepad and fullscreen"), [["auto", L("Automatique", "Automatic")], ["on", L("Toujours", "Always")], ["off", L("Désactivé", "Disabled")]], L("Auto : Steam Deck, gamescope ou première manette connectée.", "Auto: Steam Deck, gamescope or the first connected gamepad."))),
+      card(L("Fiche de jeu", "Game page"), selk("detail_tab", L("Onglet par défaut", "Default tab"), [["overview", t("x.overview")], ["media", t("x.media")], ["ach", t("x.ach")], ["news", t("x.news")], ["hist", t("x.hist")], ["notes", t("tab.notes")], ["launch", t("tab.launch")], ["log", t("tab.log")]], L("Onglet ouvert quand tu sélectionnes un jeu.", "Tab opened when you select a game."))),
       card(t("x.home"), selk("home_sort", L("Tri du carrousel", "Carousel sort"), [["recent", t("sort.recent")], ["added", t("sort.added")], ["playtime", t("sort.playtime")], ["favorites", t("detail.favorite")]]), swk("carousel_auto", L("Défilement automatique", "Auto advance")), rangek("carousel_secs", L("Intervalle (s)", "Interval (s)"), 3, 30, 1)),
       card(L("Zone de notification", "Notification area"), swk("tray_icon", L("Garder Quark dans la zone de notification", "Keep Quark in the tray"), L("Quark reste accessible dans la zone de notification.", "Keep Quark available from the notification area."))),
     ],
     ingame: () => [
-      card("Overlay", swk("overlay", L("Activer l'overlay", "Enable overlay")), textk("overlay_hotkey", L("Raccourci global", "Global shortcut"), L("Uniquement pendant une partie.", "Only while playing."), "Shift+Backspace", false), textk("screenshot_key", L("Capture d'écran", "Screenshot key"), L("Uniquement pendant une partie.", "Only while playing."), "F12", false), swk("overlay_fps", L("Afficher les FPS", "Show FPS")), swk("overlay_show_locked", L("Succès verrouillés", "Locked achievements")), swk("overlay_compact", L("Succès compacts", "Compact achievements")), swk("overlay_show_progress", L("Progression et rareté", "Progress and rarity"))),
+      card(L("Captures d'écran", "Screenshots"), textk("screenshot_key", L("Raccourci de capture", "Screenshot shortcut"), L("Uniquement pendant une partie.", "Only while playing."), "F12", false)),
 
       card("Notifications", swk("notify_install_done", L("Fin d'une installation", "Installation finished")), swk("notify_save_done", L("Sauvegarde Ludusavi terminée", "Ludusavi backup done")), swk("notify_session_done", L("Fin d'une session de jeu", "Game session ended"))),
       card(L("Sauvegardes cloud", "Cloud saves"), swk("cloud_saves", L("Synchronisation Epic/GOG", "Epic/GOG sync"), L("Après l'installation et à la sortie du jeu.", "After install and on exit."))),
@@ -59,6 +60,25 @@ function tabsDef() {
 }
 const STABS = [["appearance", "Apparence", "Appearance"], ["ingame", "En jeu", "In game"], ["defaults", "Nouveaux jeux", "New games"], ["artworks", "Illustrations", "Artwork"], ["saves", "Sauvegardes", "Saves"], ["providers", "Boutiques & outils", "Stores & tools"], ["stats", "Statistiques", "Statistics"], ["disk", "Disque", "Disk"], ["about", "À propos", "About"]];
 
+function syncDependent(root, masterKey, selector) {
+  const master = root.querySelector(`[data-k="${masterKey}"]`);
+  if (!master) return;
+  const apply = () => {
+    $$(selector, root).forEach((el) => {
+      el.disabled = !master.checked;
+      const row = el.closest(".sw,.fl2,.fl");
+      row && row.classList.toggle("dep-off", !master.checked);
+    });
+  };
+  master.addEventListener("change", apply);
+  apply();
+}
+
+function syncLaunchDeps(root, prefix) {
+  syncDependent(root, `${prefix}gamescope`, `[data-k^="${prefix}gamescope_"]`);
+  syncDependent(root, "umu", '[data-k="umu_game_id"]');
+}
+
 function renderStats() {
   const day = (ts) => Math.floor(ts / 86400), today = day(Date.now() / 1000), per = new Map();
   let total = 0;
@@ -89,14 +109,15 @@ function bindSettings() {
   const root = $("#sheet");
   bindModel(root, app.cfg, (k) => {
     const top = k.split(".")[0], patch = { [top]: app.cfg[top] };
-    run(() => cfgSet(patch)).then(() => { if (k === "tray_icon") invoke("tray_visibility", { visible: !!app.cfg.tray_icon }).catch(() => {}); if (k === "overlay") invoke("refresh_shortcuts").catch((e) => toast(String(e), true)); if (k === "deck_mode") { QuarkDeck.mode(app.cfg.deck_mode); renderTop(); } else if (k === "ui_language" || k === "ui_compact" || k === "game_actions") { renderAllKeepScroll(); } else if (k === "view") renderTop(); else if (k === "hero_background") applySettings(); });
+    run(() => cfgSet(patch)).then(() => { if (k === "tray_icon") invoke("tray_visibility", { visible: !!app.cfg.tray_icon }).catch(() => {}); if (k === "deck_mode") { QuarkDeck.mode(app.cfg.deck_mode); renderTop(); } else if (k === "ui_language" || k === "ui_compact" || k === "game_actions") { renderAllKeepScroll(); } else if (k === "view") renderTop(); else if (k === "hero_background") applySettings(); });
   });
-  $$('[data-k="overlay_hotkey"],[data-k="screenshot_key"]', root).forEach((el) =>
+  $$('[data-k="screenshot_key"]', root).forEach((el) =>
     el.addEventListener("change", () => run(async () => {
-      await cfgSet({ overlay_hotkey: app.cfg.overlay_hotkey, screenshot_key: app.cfg.screenshot_key });
+      await cfgSet({ screenshot_key: app.cfg.screenshot_key });
       await invoke("refresh_shortcuts");
     })),
   );
+  syncLaunchDeps(root, "default_launch.");
   const sqEl = $("#sq"); sqEl.oninput = () => { app.sq = sqEl.value; const pos = sqEl.selectionStart, top = $("#sheet").scrollTop; $("#sheet").innerHTML = renderSettings(); bindSettings(); $("#sheet").scrollTop = top; const n = $("#sq"); n.focus(); n.setSelectionRange(pos, pos); };
   const commitEnv = () => run(() => cfgSet({ default_env: app.cfg.default_env }));
   $$("[data-de]", root).forEach((el) => (el.oninput = () => { app.cfg.default_env[+el.dataset.i][el.dataset.de] = el.value; })); $$("[data-de]", root).forEach((el) => (el.onchange = commitEnv));

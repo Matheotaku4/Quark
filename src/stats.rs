@@ -30,6 +30,21 @@ const MONTHS_PT: [&str; 12] = [
     "jan.", "fev.", "mar.", "abr.", "mai.", "jun.", "jul.", "ago.", "set.", "out.", "nov.", "dez.",
 ];
 
+const MONTHS_RU: [&str; 12] = [
+    "янв.",
+    "февр.",
+    "март",
+    "апр.",
+    "май",
+    "июнь",
+    "июль",
+    "авг.",
+    "сент.",
+    "окт.",
+    "нояб.",
+    "дек.",
+];
+
 fn months() -> &'static [&'static str; 12] {
     match crate::i18n::language() {
         crate::config::UiLanguage::French => &MONTHS,
@@ -37,6 +52,7 @@ fn months() -> &'static [&'static str; 12] {
         crate::config::UiLanguage::Spanish => &MONTHS_ES,
         crate::config::UiLanguage::German => &MONTHS_DE,
         crate::config::UiLanguage::Portuguese => &MONTHS_PT,
+        crate::config::UiLanguage::Russian => &MONTHS_RU,
     }
 }
 
@@ -58,6 +74,7 @@ pub fn weekday_label(day: usize) -> &'static str {
         crate::config::UiLanguage::Spanish => ["L", "M", "X", "J", "V", "S", "D"],
         crate::config::UiLanguage::German => ["M", "D", "M", "D", "F", "S", "S"],
         crate::config::UiLanguage::Portuguese => ["S", "T", "Q", "Q", "S", "S", "D"],
+        crate::config::UiLanguage::Russian => ["П", "В", "С", "Ч", "П", "С", "В"],
     };
     labels[day.min(6)]
 }

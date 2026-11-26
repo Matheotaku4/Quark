@@ -89,7 +89,7 @@ h1{font:700 46px/1.05 Archivo;letter-spacing:-.03em;text-shadow:0 4px 24px #000a
 .badge{padding:3px 12px;border-radius:99px;background:color-mix(in srgb,var(--bc) 32%,#000c);color:#fff;font:700 11.5px Archivo;letter-spacing:.05em;text-transform:uppercase}
 .warn{color:#ffb454;font-size:13px;display:block;margin-top:12px}
 .gb{display:grid;grid-template-columns:1fr 300px;gap:34px;padding:8px 44px 50px;align-items:start}
-.tabs{display:flex;gap:6px;border-bottom:1px solid var(--border);margin-bottom:18px}.tabs button{padding:10px 14px;color:var(--text-dim);position:relative}.tabs button.on{color:var(--text)}.tabs button.on::after{content:"";position:absolute;left:10px;right:10px;bottom:-1px;height:2px;background:var(--accent)}
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--border);margin-bottom:18px}.tabs button{padding:10px 10px;font-size:13px;white-space:nowrap;color:var(--text-dim);position:relative}.tabs button.on{color:var(--text)}.tabs button.on::after{content:"";position:absolute;left:10px;right:10px;bottom:-1px;height:2px;background:var(--accent)}
 .tabs.sm{margin-bottom:12px}
 .ov{background:color-mix(in srgb,var(--surface) 80%,transparent);border:1px solid var(--border);border-radius:16px;padding:18px;position:sticky;top:14px}
 h3{font:700 10.5px Archivo;letter-spacing:.14em;text-transform:uppercase;color:var(--text-faint);margin-bottom:12px;display:flex;justify-content:space-between;align-items:center}h3.blue{color:var(--accent)}h3 span{letter-spacing:0;text-transform:none;font-weight:500}
@@ -129,8 +129,8 @@ input[type=checkbox]{accent-color:var(--accent);width:15px;height:15px}
 .pal button{display:flex;align-items:center;gap:12px;width:100%;padding:9px 12px;border-radius:9px;text-align:left}.pal button.on{background:var(--surface-hover)}.pal small{margin-left:auto;color:var(--text-faint)}
 #toasts{position:fixed;right:18px;bottom:18px;z-index:70;display:grid;gap:8px}.toast{background:var(--surface-hover);border:1px solid var(--border);padding:10px 16px;border-radius:11px;max-width:380px}.toast.err{border-color:var(--danger);color:#ffb3b3}
 /* ---------- paramètres ---------- */
-.settings{display:grid;grid-template-columns:230px 1fr;min-height:100%}
-.snav{padding:22px 14px;display:flex;flex-direction:column;gap:2px;border-right:1px solid var(--border);background:color-mix(in srgb,var(--panel) 90%,transparent)}
+.settings{display:grid;grid-template-columns:230px 1fr;min-height:100%;align-items:start;background:linear-gradient(90deg,color-mix(in srgb,var(--panel) 90%,transparent) 0 229px,var(--border) 229px 230px,transparent 230px)}
+.snav{padding:22px 14px;display:flex;flex-direction:column;gap:2px;border-right:1px solid var(--border);background:color-mix(in srgb,var(--panel) 90%,transparent);position:sticky;top:0;align-self:start;max-height:calc(100vh - 56px);overflow-y:auto}
 .snav input{margin-bottom:12px}.snav button{text-align:left;padding:9px 12px;border-radius:9px;color:var(--text-dim)}.snav button:hover{background:var(--surface)}.snav button.on{background:var(--surface-hover);color:var(--text)}
 .sbody{padding:26px 44px 60px;max-width:860px}.sbody h2{font:700 26px Archivo;letter-spacing:-.02em;margin-bottom:20px}
 .card{background:color-mix(in srgb,var(--surface) 85%,transparent);border:1px solid var(--border);border-radius:16px;padding:18px 20px;margin-bottom:16px}.card h3{margin-bottom:6px}
@@ -341,3 +341,20 @@ body.deck :focus-visible{outline:none}
 .gb>*{min-width:0}
 .tabs{overflow-x:auto;scrollbar-width:none}.tabs::-webkit-scrollbar{display:none}
 body.deck .gb{grid-template-columns:minmax(0,1fr) 340px}
+
+/* ---------- 2.0.1 : confort et performance ---------- */
+.srow{gap:8px}
+.fl>.tb{width:36px;height:36px;flex:none;border:1px solid transparent;border-radius:10px}
+.fl[open]>.tb{border-color:var(--border)}
+.dep-off{opacity:.42;pointer-events:none;filter:saturate(.35)}
+#tabc.tab-anim{animation:tab-in .18s cubic-bezier(.2,.7,.3,1)}
+@keyframes tab-in{from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion: reduce){#tabc.tab-anim{animation:none}}
+.pcard{content-visibility:auto;contain-intrinsic-size:auto 260px}
+.pcover b{opacity:.32}
+.pcover img{opacity:0;transition:opacity .18s ease-out}
+.pcover img[src]{opacity:1}
+video::-webkit-media-controls-fullscreen-button{display:none}
+body.cinema{background:#000}
+body.cinema::before{content:"";position:fixed;inset:0;background:#000;z-index:9998}
+video.cinema-video{position:fixed;inset:0;width:100vw;height:100vh;z-index:9999;object-fit:contain;background:#000}

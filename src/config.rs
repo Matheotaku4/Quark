@@ -515,15 +515,17 @@ pub enum UiLanguage {
     Spanish,
     German,
     Portuguese,
+    Russian,
 }
 
 impl UiLanguage {
-    pub const ALL: [UiLanguage; 5] = [
+    pub const ALL: [UiLanguage; 6] = [
         UiLanguage::French,
         UiLanguage::English,
         UiLanguage::Spanish,
         UiLanguage::German,
         UiLanguage::Portuguese,
+        UiLanguage::Russian,
     ];
 
     /// Nom affiché dans le sélecteur, dans sa propre langue.
@@ -534,6 +536,7 @@ impl UiLanguage {
             UiLanguage::Spanish => "Español",
             UiLanguage::German => "Deutsch",
             UiLanguage::Portuguese => "Português",
+            UiLanguage::Russian => "Русский",
         }
         .to_string()
     }
@@ -545,6 +548,55 @@ impl UiLanguage {
             UiLanguage::Spanish => "ES",
             UiLanguage::German => "DE",
             UiLanguage::Portuguese => "PT",
+            UiLanguage::Russian => "RU",
+        }
+    }
+}
+
+/// Onglet ouvert par défaut dans la fiche d'un jeu.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+pub enum DetailTab {
+    #[default]
+    #[serde(rename = "overview")]
+    Overview,
+    #[serde(rename = "media")]
+    Media,
+    #[serde(rename = "ach")]
+    Achievements,
+    #[serde(rename = "news")]
+    News,
+    #[serde(rename = "hist")]
+    History,
+    #[serde(rename = "notes")]
+    Notes,
+    #[serde(rename = "launch")]
+    Launch,
+    #[serde(rename = "log")]
+    Log,
+}
+
+impl DetailTab {
+    pub const ALL: [DetailTab; 8] = [
+        DetailTab::Overview,
+        DetailTab::Media,
+        DetailTab::Achievements,
+        DetailTab::News,
+        DetailTab::History,
+        DetailTab::Notes,
+        DetailTab::Launch,
+        DetailTab::Log,
+    ];
+
+    pub fn id(self) -> &'static str {
+        match self {
+            DetailTab::Overview => "overview",
+            DetailTab::Media => "media",
+            DetailTab::Achievements => "ach",
+            DetailTab::News => "news",
+            DetailTab::History => "hist",
+            DetailTab::Notes => "notes",
+            DetailTab::Launch => "launch",
+            DetailTab::Log => "log",
         }
     }
 }
@@ -1023,6 +1075,8 @@ pub struct Settings {
     pub ui_language: UiLanguage,
     /// Mode Deck / manette : auto, toujours ou désactivé.
     pub deck_mode: DeckMode,
+    /// Onglet affiché à l'ouverture d'une fiche de jeu.
+    pub detail_tab: DetailTab,
     /// Le parcours de bienvenue a été terminé. Les configurations existantes
     /// sont marquées comme déjà accueillies lors de la migration.
     pub onboarding_done: bool,
@@ -1099,20 +1153,8 @@ pub struct Settings {
     /// Garde Quark dans la zone de notification : la croix ne quitte plus
     /// l'application, elle la range dans l'icône.
     pub tray_icon: bool,
-    /// Overlay en jeu : panneau au-dessus du jeu, captures et succès.
-    pub overlay: bool,
-    /// Compteur FPS dans le jeu via les DLL proxy `d3d11.dll` et `dxgi.dll`.
-    pub overlay_fps: bool,
     /// Touche de capture d'écran globale (F12 par défaut).
     pub screenshot_key: String,
-    /// Raccourci global qui ouvre ou ferme l'overlay (Maj+Retour arrière).
-    pub overlay_hotkey: String,
-    /// Affiche aussi les succès verrouillés dans l'overlay.
-    pub overlay_show_locked: bool,
-    /// Version compacte des lignes de succès dans l'overlay.
-    pub overlay_compact: bool,
-    /// Affiche la progression et la rareté dans l'overlay.
-    pub overlay_show_progress: bool,
     /// Notifie la fin d'une installation Epic/GOG.
     pub notify_install_done: bool,
     /// Notifie la fin d'une sauvegarde Ludusavi.
@@ -1162,6 +1204,7 @@ impl Default for Settings {
             theme: ThemeMode::Amoled,
             ui_language: UiLanguage::French,
             deck_mode: DeckMode::Auto,
+            detail_tab: DetailTab::Overview,
             onboarding_done: false,
             last_seen_version: String::new(),
             my_games_list: true,
@@ -1190,13 +1233,7 @@ impl Default for Settings {
             prefix_defaults_migrated: false,
             auto_update: true,
             tray_icon: true,
-            overlay: true,
-            overlay_fps: false,
             screenshot_key: "F12".to_string(),
-            overlay_hotkey: "Shift+BackSpace".to_string(),
-            overlay_show_locked: true,
-            overlay_compact: false,
-            overlay_show_progress: true,
             notify_install_done: true,
             notify_save_done: true,
             save_backup_dir: None,
@@ -2779,9 +2816,21 @@ mod tests {
         assert_eq!(game.launch.gamescope_size(), (1920, 1080));
         assert!(!game.umu);
         assert!(!game.proton_log);
-        // Ancienne clé d'overlay : ignorée sans erreur de lecture.
+        // Ancienne configuration sans ces clés : les valeurs par défaut s'appliquent.
         let old: Game = serde_json::from_str(r#"{ "name": "V", "steam_launch_id": 42 }"#).unwrap();
         assert_eq!(old.name, "V");
+    }
+
+    #[test]
+    fn l_onglet_par_defaut_de_la_fiche_est_stable() {
+        assert_eq!(Settings::default().detail_tab, DetailTab::Overview);
+        for tab in DetailTab::ALL {
+            let json = serde_json::to_value(tab).unwrap();
+            assert_eq!(json, serde_json::Value::String(tab.id().to_string()));
+            assert_eq!(serde_json::from_value::<DetailTab>(json).unwrap(), tab);
+        }
+        let settings: Settings = serde_json::from_str(r#"{"detail_tab":"media"}"#).unwrap();
+        assert_eq!(settings.detail_tab, DetailTab::Media);
     }
 
     #[test]

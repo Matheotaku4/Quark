@@ -13,11 +13,9 @@ __pycache__/
 # Configuration locale de test
 .quark-home/
 
-# Sortie de compilation de la DLL overlay Windows
-tools/overlay-dll/target
-
 # État local des agents
 /.openhands/
+/.agents_tmp/
 
 # Compilation et schémas générés de l’interface Tauri
 /quark-tauri/target/

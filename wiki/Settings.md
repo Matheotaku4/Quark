@@ -7,18 +7,18 @@
 
 Since 1.4, settings fill the whole window as cards, with side navigation and
 separate sections. A search field above the navigation finds a setting by task
-(for example **cloud saves**, **overlay** or **disk space**) and opens the page
+(for example **cloud saves**, **screenshots** or **disk space**) and opens the page
 that contains it. Every change is saved automatically; there is no **Apply**
 button.
 
 ## Appearance
 
-- **Interface language**: French, English, Spanish, German or Portuguese, applied immediately.
+- **Interface language**: French, English, Spanish, German, Portuguese or Russian, applied immediately.
 - **Theme**: thirteen palettes, applied immediately.
 - **Random hero background** and **Blur**: a blurred banner behind Home and
   Library, picked once per session.
 - **Startup**: startup page (Home, Library, Store, My games).
-- **Library**: list or grid layout, and the compact interface density.
+- **Library**: list or grid layout, compact interface density and the default game tab.
 - **Home**: carousel sort, automatic advance and interval.
 - **Notification area**: keep Quark in the tray icon instead of quitting.
 
@@ -26,8 +26,8 @@ Details and screenshots: [Themes and appearance](Themes-and-Appearance).
 
 ## In game
 
-- **Overlay**: enable it, choose the global shortcut and show locked, compact
-  achievements with progress and rarity.
+- **Screenshots**: choose the global shortcut used to capture the active game.
+- **Achievements**: show locked or compact rows, with progress and rarity.
 - **Desktop notifications**: end of an installation, a Ludusavi backup or a
   game session. Each can be disabled independently; nothing is sent while the
   Quark window is focused.
@@ -35,8 +35,7 @@ Details and screenshots: [Themes and appearance](Themes-and-Appearance).
 - **Epic overlay (EOS)**: download and enable the EOS overlay in the game prefix
   when available.
 
-The default overlay shortcut is `Shift+Backspace`.
-See [Overlay and achievements](Overlay-and-Achievements).
+The default screenshot shortcut is `F12`. See [Achievements](Achievements).
 
 ## New games
 

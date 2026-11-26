@@ -2,28 +2,27 @@
 
 Quark is a game launcher for Linux, written in Rust with a Tauri 2 interface. It brings local
 games and your Steam, Epic Games and GOG libraries together, launches Windows
-games through Proton or umu-launcher, and adds an in-game overlay,
-achievements and verified local saves.
+games through Proton or umu-launcher, and keeps achievements and verified
+local saves alongside the library.
 
-This documentation describes **Quark 2.0.0**. It is also versioned in the
+This documentation describes **Quark 2.0.1**. It is also versioned in the
 repository under [`wiki/`](https://github.com/Matheotaku4/Quark/tree/main/wiki).
 
 ![Quark home](https://raw.githubusercontent.com/Matheotaku4/Quark/main/docs/images/home-en.png)
 
-## What's new in 2.0.0
+## What's new in 2.0.1
 
-- **Deck mode.** Automatic Steam Deck, gamescope or controller detection, full
-  controller and keyboard navigation, fullscreen, larger layout and a shortcut
-  bar. Auto / On / Off in settings.
-- **Steam-like library.** List on the left, detailed game page on the right,
-  global Ctrl+K search and batch actions (status, favourite, remove).
-- **Store downloads.** Live progress, speed, ETA, up to three concurrent
-  downloads and cancellation.
-- **Faster adding.** Folder scan, multi-site search and artwork selection from
-  SteamGridDB results.
-- **Achievement comparison.** Side-by-side progress for linked store games.
-- **Light Tauri 2 interface.** Framework-free HTML/CSS/JS in the system WebView;
-  the Rust core no longer depends on egui.
+- **Lighter interface.** Clearer library search, tab animations, a two-tab
+  Metadata/Images customizer and lazy cover loading in My games.
+- **Video fullscreen fixed.** Trailers use a built-in cinema mode instead of the
+  WebKitGTK native fullscreen that showed a black screen.
+- **Window and memory.** Left-click the notification icon to open Quark,
+  right-click to close it, and the background WebView is destroyed to release
+  memory.
+- **Clearer settings.** Default game tab, plus gamescope/umu options greyed out
+  when their switch is off.
+- **Russian added** to the interface and Rust core messages.
+- **Quark overlay removed.** The global screenshot shortcut remains available.
 
 ## Where to start
 
@@ -35,7 +34,7 @@ repository under [`wiki/`](https://github.com/Matheotaku4/Quark/tree/main/wiki).
 | Use Steam, Epic, GOG, accounts and cloud saves | [Stores and saves](Stores-and-Saves) |
 | Configure Proton, umu, Wine, variables and launch options | [Proton, Wine and launch options](Proton-Wine-and-Launch-Options) |
 | Change themes, language, hero background or startup page | [Themes and appearance](Themes-and-Appearance) |
-| Use the overlay and achievements | [Overlay and achievements](Overlay-and-Achievements) |
+| Read achievements and the Epic overlay | [Achievements](Achievements) |
 | Find every settings page | [Settings](Settings) |
 | Fix a game that will not start, a missing text or a save issue | [Troubleshooting](Troubleshooting) |
 
@@ -50,11 +49,11 @@ repository under [`wiki/`](https://github.com/Matheotaku4/Quark/tree/main/wiki).
 - **Proton without command lines.** Per-game runtime, prefix, GameMode,
   MangoHud, gamescope, PRIME, a free wrapper command, environment variables,
   anti-cheat runtimes and umu-launcher.
-- **A real overlay.** `Shift+Backspace` opens a compact panel above the game.
-  Epic and GOG achievements share the same view.
+- **Achievements.** Epic and GOG achievements share the same view on the game
+  page, with icons, rarity and session unlocks.
 - **Saves.** Epic/GOG cloud synchronization and Ludusavi snapshots verified
   before and after a session.
-- **A configurable interface.** Thirteen dark themes, five interface languages, list or
+- **A configurable interface.** Thirteen dark themes, six interface languages, list or
   grid, a customizable home page, a random blurred hero and a `Ctrl+K` command
   palette.
 - **A launcher, not a store.** Quark never buys anything and never downloads a
@@ -66,10 +65,9 @@ repository under [`wiki/`](https://github.com/Matheotaku4/Quark/tree/main/wiki).
 | --- | --- |
 | `Ctrl+K` | Global search: pages, actions, games and settings |
 | `Ctrl+F` or `/` | Global search (games, stores, settings) |
-| `Escape` | Close a search, panel or the overlay |
+| `Escape` | Close a search, panel or the cinema player |
 | `Enter` | Launch the selected game |
 | Arrow keys | Move through the library |
-| `Shift+Backspace` | Open or close the in-game overlay |
 | `Ctrl+Q` | Quit Quark |
 
 ## About this documentation
@@ -95,5 +93,5 @@ and the release notes for the exact files.
 [Installation](Installation) · [Getting started](Getting-Started) ·
 [Library](Library-and-Views) · [Stores](Stores-and-Saves) ·
 [Proton and Wine](Proton-Wine-and-Launch-Options) ·
-[Themes](Themes-and-Appearance) · [Overlay](Overlay-and-Achievements) ·
+[Themes](Themes-and-Appearance) · [Achievements](Achievements) ·
 [Settings](Settings) · [Troubleshooting](Troubleshooting)

@@ -1,7 +1,7 @@
 "use strict";
 
-const LANGS = { french: "fr", english: "en", spanish: "es", german: "de", portuguese: "pt" };
-const LOCALES = { fr: "fr-FR", en: "en-US", es: "es-ES", de: "de-DE", pt: "pt-BR" };
+const LANGS = { french: "fr", english: "en", spanish: "es", german: "de", portuguese: "pt", russian: "ru" };
+const LOCALES = { fr: "fr-FR", en: "en-US", es: "es-ES", de: "de-DE", pt: "pt-BR", ru: "ru-RU" };
 
 const I18N = {
   fr: {
@@ -715,3 +715,10 @@ const I18N = {
     "source.multiple": "Vários",
   },
 };
+
+// 2.0.1 : recherche de bibliothèque et personnalisation par onglets.
+Object.assign(I18N.fr, { "search.library": "Rechercher…", "customize.metadata": "Métadonnées", "customize.images": "Images", "customize.imagesHint": "Choisis une image SteamGridDB pour chaque emplacement.", "x.fullscreen": "Plein écran" });
+Object.assign(I18N.en, { "search.library": "Search…", "customize.metadata": "Metadata", "customize.images": "Images", "customize.imagesHint": "Pick a SteamGridDB image for each slot.", "x.fullscreen": "Fullscreen" });
+Object.assign(I18N.es, { "search.library": "Buscar…", "customize.metadata": "Metadatos", "customize.images": "Imágenes", "customize.imagesHint": "Elige una imagen de SteamGridDB para cada espacio.", "x.fullscreen": "Pantalla completa" });
+Object.assign(I18N.de, { "search.library": "Suchen…", "customize.metadata": "Metadaten", "customize.images": "Bilder", "customize.imagesHint": "Wähle für jeden Platz ein SteamGridDB-Bild.", "x.fullscreen": "Vollbild" });
+Object.assign(I18N.pt, { "search.library": "Pesquisar…", "customize.metadata": "Metadados", "customize.images": "Imagens", "customize.imagesHint": "Escolha uma imagem do SteamGridDB para cada espaço.", "x.fullscreen": "Ecrã inteiro" });

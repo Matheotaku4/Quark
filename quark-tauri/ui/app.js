@@ -16,7 +16,6 @@ const acts = {
   "news-refresh": () => { const g = game(app.sel); g && loadNews(g, true); },
   "reset-filters": () => { app.f = { status: "", genre: "", tag: "", fav: false }; renderSide(); renderList(); renderSheet(); },
   "open-folder": () => run(() => invoke("open_folder", { id: app.sel })),
-  overlay: () => invoke("overlay_toggle").catch((e) => toast(String(e), true)),
   views: () => viewsModal(), "batch-remove": () => batchRemoveModal(), "batch-status": () => batchStatusModal(), "batch-fav": () => batchFavorite(), "compare-ach": () => achievementsCompareModal(),
   "batch-clear": () => { app.marked.clear(); renderList(); },
 };
@@ -105,7 +104,7 @@ document.addEventListener("click", (e) => {
   const gr = e.target.closest("[data-group]"); if (gr) { const k = gr.dataset.group; app.collapsed.has(k) ? app.collapsed.delete(k) : app.collapsed.add(k); renderList(); }
   const tb = e.target.closest("[data-tab]"); if (tb) { app.tab = tb.dataset.tab; $$(".tabs [data-tab]").forEach((b) => b.classList.toggle("on", b === tb)); const g = game(app.sel); g && renderTab(g); }
   const s = e.target.closest("[data-status]"); if (s) { const d = s.closest("details"); d && (d.open = false); run(async () => { setGame(await invoke("set_status", { id: app.sel, status: s.dataset.status })); renderList(); renderSheet(); }); }
-  const st = e.target.closest("[data-stab]"); if (st) { app.stab = st.dataset.stab; app.sq = ""; renderSheet(); }
+  const st = e.target.closest("[data-stab]"); if (st) { app.stab = st.dataset.stab; app.sq = ""; renderSheet(); $("#sheet").scrollTop = 0; }
   const th = e.target.closest("[data-theme]"); if (th) run(async () => { await cfgSet({ theme: th.dataset.theme }); renderSheet(); });
   const o = e.target.closest("[data-open]"); if (o && o.dataset.open) run(() => invoke("open_url", { target: o.dataset.open }));
   const hi = e.target.closest("[data-hi]"); if (hi) { app.hi = +hi.dataset.hi; app.hTick = 0; renderSheet(); }
@@ -169,6 +168,7 @@ async function boot() {
   app.view = ({ home: "home", library: "library", store: "store", my_games: "mygames" })[app.cfg.start_page] || "library";
   let saved = null; try { saved = localStorage.getItem("quark.sel"); } catch {}
   app.sel = game(saved) ? saved : filtered()[0]?.id ?? null; app.open = app.cfg.view !== "grid";
+  app.tab = app.cfg.detail_tab || "overview";
   renderAll();
   providersLoad().catch(() => {});
   await QuarkDeck.init();

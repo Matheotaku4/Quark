@@ -25,7 +25,7 @@ use quark::session::{self, Session};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
-use std::sync::atomic::AtomicBool;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex, MutexGuard};
 use std::time::Duration;
 use tauri::http::{header, Response, StatusCode};
@@ -58,6 +58,7 @@ struct AppState {
     demo: bool,
     deck_demo: bool,
     demo_root: Option<PathBuf>,
+    quitting: AtomicBool,
 }
 
 fn lock<T>(mutex: &Mutex<T>) -> MutexGuard<'_, T> {
@@ -202,24 +203,12 @@ fn cli_launch(query: &str) -> Result<(), String> {
             }
         ));
     }
-    let mut resolved = proton::resolve_with(
+    let resolved = proton::resolve_with(
         &game,
         &settings,
         &proton::detect_runtimes(),
         proton::Tools::detect(),
     )?;
-    if settings.overlay_fps && proton::looks_windows(&game.exe_path()) {
-        if let Ok(
-            quark::overlay_dll::InstallOutcome::Installed(_)
-            | quark::overlay_dll::InstallOutcome::UpToDate(_),
-        ) = quark::overlay_dll::install_for_game(&game)
-        {
-            for (name, value) in quark::overlay_dll::launch_environment_for(&game, "top-left") {
-                quark::overlay_dll::set_env(&mut resolved.spec.env, &name, &value);
-            }
-            quark::overlay_dll::enable_wine_override(&mut resolved.spec.env);
-        }
-    }
     if let Some(prefix) = &resolved.prefix {
         std::fs::create_dir_all(prefix).map_err(|error| format!("Préfixe Proton : {error}"))?;
     }
@@ -758,6 +747,7 @@ fn parse_language(value: &str) -> Option<UiLanguage> {
         "spanish" | "es" => Some(UiLanguage::Spanish),
         "german" | "de" => Some(UiLanguage::German),
         "portuguese" | "pt" => Some(UiLanguage::Portuguese),
+        "russian" | "ru" => Some(UiLanguage::Russian),
         _ => None,
     }
 }
@@ -831,40 +821,8 @@ fn launch_game(app: AppHandle, state: State<'_, AppState>, id: String) -> Result
             }
         ));
     }
-    let mut resolved =
+    let resolved =
         proton::resolve_with(&game, &settings, &state.runtimes, proton::Tools::detect())?;
-    if settings.overlay_fps && proton::looks_windows(&game.exe_path()) {
-        match quark::overlay_dll::install_for_game(&game) {
-            Ok(quark::overlay_dll::InstallOutcome::Conflict(path)) => {
-                let _ = app.emit(
-                    "quark://notice",
-                    serde_json::json!({
-                        "message": format!(
-                            "{} : {} existe déjà, overlay FPS désactivé",
-                            game.name,
-                            path.display()
-                        ),
-                        "error": true
-                    }),
-                );
-            }
-            Ok(_) => {
-                for (name, value) in quark::overlay_dll::launch_environment_for(&game, "top-left") {
-                    quark::overlay_dll::set_env(&mut resolved.spec.env, &name, &value);
-                }
-                quark::overlay_dll::enable_wine_override(&mut resolved.spec.env);
-            }
-            Err(error) => {
-                let _ = app.emit(
-                    "quark://notice",
-                    serde_json::json!({
-                        "message": format!("{} : overlay FPS indisponible ({error})", game.name),
-                        "error": true
-                    }),
-                );
-            }
-        }
-    }
     if let Some(prefix) = &resolved.prefix {
         std::fs::create_dir_all(prefix).map_err(|error| format!("Préfixe Proton : {error}"))?;
     }
@@ -1299,40 +1257,6 @@ fn win_toggle_maximize(window: tauri::Window) {
     }
 }
 
-fn place_overlay(window: &tauri::WebviewWindow) {
-    if let Ok(Some(monitor)) = window.current_monitor() {
-        let size = window.outer_size().unwrap_or_default();
-        let (width, height) = if size.width > 0 && size.height > 0 {
-            (size.width as i32, size.height as i32)
-        } else {
-            (460, 356)
-        };
-        let margin = (18.0 * monitor.scale_factor()) as i32;
-        let area = monitor.size();
-        let origin = monitor.position();
-        let x = origin.x + area.width as i32 - width - margin;
-        let y = origin.y + area.height as i32 - height - margin;
-        let _ = window.set_position(tauri::PhysicalPosition::new(x, y));
-    }
-}
-
-fn toggle_overlay(app: &AppHandle) {
-    if let Some(window) = app.get_webview_window("overlay") {
-        if window.is_visible().unwrap_or(false) {
-            let _ = window.hide();
-        } else {
-            let _ = window.show();
-            place_overlay(&window);
-            let _ = app.emit("quark://overlay-open", ());
-        }
-    }
-}
-
-#[tauri::command]
-fn overlay_toggle(app: AppHandle) {
-    toggle_overlay(&app);
-}
-
 fn normalized_shortcut(shortcut: &str) -> String {
     shortcut
         .trim()
@@ -1377,12 +1301,6 @@ fn register_one_shortcut(app: &AppHandle, raw: &str, fallback: &str) -> Result<(
 fn register_shortcuts(app: &AppHandle, settings: &Settings) -> Result<(), String> {
     let _ = app.global_shortcut().unregister_all();
     let mut errors = Vec::new();
-    if settings.overlay {
-        if let Err(error) = register_one_shortcut(app, &settings.overlay_hotkey, "Shift+Backspace")
-        {
-            errors.push(error);
-        }
-    }
     if !settings.screenshot_key.trim().is_empty() {
         if let Err(error) = register_one_shortcut(app, &settings.screenshot_key, "F12") {
             errors.push(error);
@@ -1437,13 +1355,6 @@ fn capture_active_session(app: &AppHandle) {
 }
 
 #[tauri::command]
-fn overlay_hide(app: AppHandle) {
-    if let Some(window) = app.get_webview_window("overlay") {
-        let _ = window.hide();
-    }
-}
-
-#[tauri::command]
 fn tray_visibility(app: AppHandle, visible: bool) -> Result<(), String> {
     if let Some(tray) = app.tray_by_id("quark-tray") {
         tray.set_visible(visible)
@@ -1452,11 +1363,40 @@ fn tray_visibility(app: AppHandle, visible: bool) -> Result<(), String> {
     Ok(())
 }
 
+fn show_main_window(app: &AppHandle) -> Result<(), String> {
+    if let Some(window) = app.get_webview_window("main") {
+        window.show().map_err(|error| error.to_string())?;
+        let _ = window.unminimize();
+        let _ = window.set_focus();
+        return Ok(());
+    }
+    let config = app
+        .config()
+        .app
+        .windows
+        .iter()
+        .find(|window| window.label == "main")
+        .cloned()
+        .ok_or_else(|| "Configuration de la fenêtre principale introuvable.".to_string())?;
+    let window = tauri::WebviewWindowBuilder::from_config(app, &config)
+        .map_err(|error| error.to_string())?
+        .build()
+        .map_err(|error| error.to_string())?;
+    let icon =
+        tauri::image::Image::new_owned(include_bytes!("../icons/icon.rgba").to_vec(), 128, 128);
+    let _ = window.set_icon(icon);
+    window.show().map_err(|error| error.to_string())?;
+    let _ = window.set_focus();
+    Ok(())
+}
+
 #[tauri::command]
 fn win_close(window: tauri::Window) {
     let state = window.app_handle().state::<AppState>();
     if lock(&state.library).settings.tray_icon && tray_available() {
-        let _ = window.hide();
+        // Détruire la WebView libère la mémoire du moteur ; la fenêtre est
+        // reconstruite depuis tauri.conf.json au clic sur l'icône.
+        let _ = window.destroy();
     } else {
         let _ = window.close();
     }
@@ -1970,11 +1910,6 @@ fn spawn_monitor(app: AppHandle) {
                 }
             }
         }
-        if !ended.is_empty() && lock(&state.sessions).is_empty() {
-            if let Some(window) = app.get_webview_window("overlay") {
-                let _ = window.hide();
-            }
-        }
         for (id, started, secs) in ended {
             let mut library = lock(&state.library);
             if let Some(game) = library.get_mut(&id) {
@@ -2114,6 +2049,7 @@ fn main() {
         demo,
         deck_demo: args.iter().any(|arg| arg == "--deck"),
         demo_root,
+        quitting: AtomicBool::new(false),
     };
 
     let app = tauri::Builder::default()
@@ -2133,14 +2069,6 @@ fn main() {
                             let app = app.clone();
                             move || capture_active_session(&app)
                         });
-                    } else if settings.overlay
-                        && shortcut_matches_with_fallback(
-                            shortcut,
-                            &settings.overlay_hotkey,
-                            "Shift+Backspace",
-                        )
-                    {
-                        toggle_overlay(app);
                     }
                 })
                 .build(),
@@ -2179,8 +2107,6 @@ fn main() {
             win_close,
             win_start_drag,
             win_start_resize,
-            overlay_toggle,
-            overlay_hide,
             refresh_shortcuts,
             tray_visibility,
             gamepad::deck_status,
@@ -2242,20 +2168,20 @@ fn main() {
                 let _ = window.set_icon(icon.clone());
             }
             if tray_available() {
-                let (show_label, quit_label) = {
+                let quit_label = {
                     let state = app.state::<AppState>();
                     let language = lock(&state.library).settings.ui_language;
                     match language {
-                        UiLanguage::French => ("Afficher Quark", "Quitter Quark"),
-                        UiLanguage::English => ("Show Quark", "Quit Quark"),
-                        UiLanguage::Spanish => ("Mostrar Quark", "Salir de Quark"),
-                        UiLanguage::German => ("Quark anzeigen", "Quark beenden"),
-                        UiLanguage::Portuguese => ("Mostrar o Quark", "Sair do Quark"),
+                        UiLanguage::French => "Fermer Quark",
+                        UiLanguage::English => "Close Quark",
+                        UiLanguage::Spanish => "Cerrar Quark",
+                        UiLanguage::German => "Quark schließen",
+                        UiLanguage::Portuguese => "Fechar o Quark",
+                        UiLanguage::Russian => "Закрыть Quark",
                     }
                 };
-                let show = MenuItem::with_id(app, "show", show_label, true, None::<&str>)?;
                 let quit = MenuItem::with_id(app, "quit", quit_label, true, None::<&str>)?;
-                let menu = Menu::with_items(app, &[&show, &quit])?;
+                let menu = Menu::with_items(app, &[&quit])?;
                 let tray = TrayIconBuilder::with_id("quark-tray")
                     .icon(icon)
                     .tooltip("Quark")
@@ -2269,28 +2195,16 @@ fn main() {
                         } = event
                         {
                             let app = tray.app_handle();
-                            if let Some(window) = app.get_webview_window("main") {
-                                let focused = window.is_focused().unwrap_or(false);
-                                if window.is_visible().unwrap_or(false) && focused {
-                                    let _ = window.hide();
-                                } else {
-                                    let _ = window.show();
-                                    let _ = window.unminimize();
-                                    let _ = window.set_focus();
-                                }
-                            }
+                            let _ = show_main_window(app);
                         }
                     })
-                    .on_menu_event(|app, event| match event.id.as_ref() {
-                        "show" => {
-                            if let Some(window) = app.get_webview_window("main") {
-                                let _ = window.show();
-                                let _ = window.unminimize();
-                                let _ = window.set_focus();
-                            }
+                    .on_menu_event(|app, event| {
+                        if event.id.as_ref() == "quit" {
+                            app.state::<AppState>()
+                                .quitting
+                                .store(true, Ordering::Relaxed);
+                            app.exit(0);
                         }
-                        "quit" => app.exit(0),
-                        _ => {}
                     })
                     .build(app)?;
                 let visible = {
@@ -2314,8 +2228,16 @@ fn main() {
         .expect("Quark n'a pas pu démarrer");
 
     app.run(|app, event| {
-        if let RunEvent::ExitRequested { .. } = event {
-            finalize_sessions(app);
+        if let RunEvent::ExitRequested { api, .. } = event {
+            let state = app.state::<AppState>();
+            let keep_alive = !state.quitting.load(Ordering::Relaxed)
+                && lock(&state.library).settings.tray_icon
+                && tray_available();
+            if keep_alive {
+                api.prevent_exit();
+            } else {
+                finalize_sessions(app);
+            }
         }
     });
 }

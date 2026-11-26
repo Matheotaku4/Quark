@@ -26,7 +26,7 @@ const pd = (detail) => {
   return detail;
 };
 const pvStateLabel = (s) => t("pv.state." + s);
-const PV_PAGE = 30;
+const PV_PAGE = 24;
 const pvInstalled = (g) => g.installState === "installed";
 
 async function providersLoad(force) {
@@ -75,7 +75,7 @@ function providerCard(g) {
     actions.push(pvButton(t("pv.install"), "install", "pri", `data-provider="${g.provider}" data-product="${esc(g.productId)}"`));
   }
   return `<article class="pcard" style="--pc:${PV_COLOR[g.provider] || "var(--accent)"}">
-    <div class="pcover">${g.coverUrl ? `<img loading="lazy" decoding="async" fetchpriority="low" referrerpolicy="no-referrer" src="${esc(g.coverUrl)}" alt="">` : `<b>${esc(g.title.slice(0, 1).toUpperCase())}</b>`}
+    <div class="pcover"><b>${esc(g.title.slice(0, 1).toUpperCase())}</b>${g.coverUrl ? `<img data-src="${esc(g.coverUrl)}" decoding="async" referrerpolicy="no-referrer" alt="">` : ""}
       <span class="pvsrc">${esc(PV_LABEL[g.provider] || g.provider)}</span>
       <span class="pvstate ${installed ? "on" : ""}">${esc(pvStateLabel(g.installState))}</span>
     </div>
@@ -136,7 +136,28 @@ function bindMyGames() {
     grid.dataset.bound = "1";
     grid.addEventListener("error", (e) => { const img = e.target.closest?.("img"); if (img) img.remove(); }, true);
   }
+  pvLazyImages();
   observeMoreGames();
+}
+
+function pvLazyImages() {
+  const images = $$(".pvgrid img[data-src]");
+  if (!images.length) return;
+  if (!("IntersectionObserver" in window)) {
+    images.forEach((img) => { img.src = img.dataset.src; img.removeAttribute("data-src"); });
+    return;
+  }
+  app.pv.imgObs?.disconnect();
+  app.pv.imgObs = new IntersectionObserver((entries) => {
+    for (const entry of entries) {
+      if (!entry.isIntersecting) continue;
+      const img = entry.target;
+      img.src = img.dataset.src;
+      img.removeAttribute("data-src");
+      app.pv.imgObs.unobserve(img);
+    }
+  }, { root: $("#sheet"), rootMargin: "400px" });
+  images.forEach((img) => app.pv.imgObs.observe(img));
 }
 
 function observeMoreGames() {
@@ -158,6 +179,7 @@ function moreGames() {
   if (!next.length) { more.remove(); return; }
   more.insertAdjacentHTML("beforebegin", next.map(providerCard).join(""));
   app.pv.shown = from + next.length;
+  pvLazyImages();
   if (app.pv.shown >= games.length) more.remove(); else observeMoreGames();
 }
 

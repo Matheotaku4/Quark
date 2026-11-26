@@ -14,7 +14,6 @@ pub mod i18n;
 pub mod media;
 pub mod net;
 pub mod news;
-pub mod overlay_dll;
 pub mod process;
 pub mod proton;
 pub mod protondb;

@@ -285,4 +285,4 @@ folder.
 
 ---
 
-[Home](Home) · [Stores](Stores-and-Saves) · [Overlay](Overlay-and-Achievements) · [Troubleshooting](Troubleshooting)
+[Home](Home) · [Stores](Stores-and-Saves) · [Achievements](Achievements) · [Troubleshooting](Troubleshooting)

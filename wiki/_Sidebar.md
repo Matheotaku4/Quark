@@ -8,7 +8,7 @@
 
 - [Library and views](Library-and-Views)
 - [Stores and saves](Stores-and-Saves)
-- [Overlay and achievements](Overlay-and-Achievements)
+- [Achievements](Achievements)
 
 **Configure**
 

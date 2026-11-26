@@ -88,33 +88,49 @@ function logModal() {
 
 // ---------- Personnaliser : illustrations, notes, tags ----------
 function customizeModal() {
-  const g = game(app.sel), art = (k, l, url) => `<div class="art"><div class="thumb${url ? " has" : ""}" id="th-${k}" style="${url ? `background-image:url('${esc(url)}')` : ""}">${url ? "" : `<span class="artph">${ic("image")}</span>`}</div><button class="btn sec sm" data-art="${k}">${esc(l)}</button></div>`;
-  modal(`<h2>${esc(t("x.customize"))}</h2><div class="arts">${art("cover", t("detail.changeCover"), g.coverUrl)}${art("hero", t("detail.changeHero"), g.heroUrl)}${art("logo", t("x.logo"), g.logoUrl)}${art("icon", t("x.icon"), g.iconUrl)}</div>
-    ${lab(t("art.search"), `<div class="row2"><input type="text" id="art-q" value="${esc(g.name)}"><button class="btn sec sm" id="art-auto">${ic("search")}${esc(t("art.auto"))}</button><button class="btn sec sm" id="art-find">${esc(t("art.choose"))}</button></div>`)}
-    <div class="artgrid" id="art-grid"></div>
-    ${lab(t("add.name"), inp("c-name", g.name))}<div class="row2">${lab(t("overview.developer"), inp("c-dev", g.developer))}${lab(t("overview.released"), inp("c-rel", g.released))}</div>
-    ${lab(t("overview.genres"), inp("c-gen", g.genres.join(", ")))}${lab(t("overview.tags"), inp("c-tags", g.tags.join(", ")))}
-    ${lab(t("overview.about"), `<textarea id="c-desc">${esc(g.description)}</textarea>`)}${lab(t("tab.notes"), `<textarea id="c-notes" placeholder="${esc(t("notes.placeholder"))}">${esc(g.notes)}</textarea>`)}${foot(t("x.save"))}`, true);
-  $("#art-auto").onclick = () => run(async () => { $("#art-auto").disabled = true; try { const n = await invoke("artwork_fetch", { id: g.id, query: $("#art-q").value.trim() || null }); setGame(n); closeModal(); renderAll(); toast(t("toast.saved")); } finally { $("#art-auto").disabled = false; } });
-  $("#art-find").onclick = () => run(async () => {
-    const grid = $("#art-grid"); grid.innerHTML = `<div class="dim">${esc(t("art.loading"))}</div>`;
-    const result = await invoke("artwork_candidates", { id: g.id, query: $("#art-q").value.trim() || null });
-    grid.innerHTML = result.items.length ? result.items.map((item, index) => `<button class="artcand" data-cand="${index}" title="${esc(item.source)} · ${esc(item.title)}"><img src="${esc(item.preview || item.url)}" loading="lazy" alt=""><span>${esc(t("art." + item.kind))}</span></button>`).join("") : `<div class="dim">${esc(t("art.none"))}</div>`;
-    $$("[data-cand]", grid).forEach((button) => (button.onclick = () => run(async () => {
-      const item = result.items[+button.dataset.cand];
-      const n = await invoke("artwork_choose", { id: g.id, kind: item.kind, url: item.url });
-      setGame(n);
-      const url = { cover: n.coverUrl, hero: n.heroUrl, logo: n.logoUrl, icon: n.iconUrl }[item.kind];
-      const thumb = $("#th-" + item.kind); if (thumb && url) { thumb.style.backgroundImage = `url('${url}')`; thumb.classList.add("has"); }
-      renderAll(); toast(t("toast.saved"));
-    })));
-  });
-  $$("[data-art]").forEach((b) => (b.onclick = () => run(async () => { const n = await invoke("pick_artwork", { id: g.id, kind: b.dataset.art }); setGame(n); const url = { cover: n.coverUrl, hero: n.heroUrl, logo: n.logoUrl, icon: n.iconUrl }[b.dataset.art]; if (url) $("#th-" + b.dataset.art).style.backgroundImage = `url('${url}')`; renderAll(); })));
-  const list = (s) => s.split(",").map((x) => x.trim()).filter(Boolean);
-  $("#ok").onclick = () => run(async () => {
-    await gameSet(g.id, { name: $("#c-name").value.trim() || g.name, developer: $("#c-dev").value, released: $("#c-rel").value, genres: list($("#c-gen").value), tags: list($("#c-tags").value), description: $("#c-desc").value, notes: $("#c-notes").value });
-    closeModal(); renderAll(); toast(t("toast.saved"));
-  });
+  const id = app.sel;
+  let tab = "meta";
+  const art = (g, k, l, url) => `<div class="art"><div class="thumb${url ? " has" : ""}" id="th-${k}" style="${url ? `background-image:url('${esc(url)}')` : ""}">${url ? "" : `<span class="artph">${ic("image")}</span>`}</div><button class="btn sec sm" data-art="${k}">${esc(l)}</button></div>`;
+  const draw = () => {
+    const g = game(id); if (!g) return;
+    const tabs = `<div class="tabs sm"><button data-cust="meta" class="${tab === "meta" ? "on" : ""}">${esc(t("customize.metadata"))}</button><button data-cust="images" class="${tab === "images" ? "on" : ""}">${esc(t("customize.images"))}</button></div>`;
+    const body = tab === "images"
+      ? `<div class="arts">${art(g, "cover", t("detail.changeCover"), g.coverUrl)}${art(g, "hero", t("detail.changeHero"), g.heroUrl)}${art(g, "logo", t("x.logo"), g.logoUrl)}${art(g, "icon", t("x.icon"), g.iconUrl)}</div>
+        ${lab(t("art.search"), `<div class="row2"><input type="text" id="art-q" value="${esc(g.name)}"><button class="btn sec sm" id="art-auto">${ic("search")}${esc(t("art.auto"))}</button><button class="btn sec sm" id="art-find">${esc(t("art.choose"))}</button></div>`)}
+        <p class="hint">${esc(t("customize.imagesHint"))}</p><div class="artgrid" id="art-grid"></div>`
+      : `${lab(t("add.name"), inp("c-name", g.name))}<div class="row2">${lab(t("overview.developer"), inp("c-dev", g.developer))}${lab(t("overview.released"), inp("c-rel", g.released))}</div>
+        ${lab(t("overview.genres"), inp("c-gen", g.genres.join(", ")))}${lab(t("overview.tags"), inp("c-tags", g.tags.join(", ")))}
+        ${lab(t("overview.about"), `<textarea id="c-desc">${esc(g.description)}</textarea>`)}${lab(t("tab.notes"), `<textarea id="c-notes" placeholder="${esc(t("notes.placeholder"))}">${esc(g.notes)}</textarea>`)}`;
+    modal(`<h2>${esc(t("x.customize"))}</h2>${tabs}${body}${foot(tab === "images" ? t("x.close") : t("x.save"))}`, true);
+    const root = $("#modal");
+    $$("[data-cust]", root).forEach((b) => (b.onclick = () => { tab = b.dataset.cust; draw(); }));
+    const list = (s) => s.split(",").map((x) => x.trim()).filter(Boolean);
+    if (tab === "meta") {
+      $("#ok").onclick = () => run(async () => {
+        await gameSet(id, { name: $("#c-name").value.trim() || g.name, developer: $("#c-dev").value, released: $("#c-rel").value, genres: list($("#c-gen").value), tags: list($("#c-tags").value), description: $("#c-desc").value, notes: $("#c-notes").value });
+        closeModal(); renderAll(); toast(t("toast.saved"));
+      });
+      return;
+    }
+    $("#ok").onclick = closeModal;
+    const auto = $("#art-auto"); auto && (auto.onclick = () => run(async () => {
+      auto.disabled = true;
+      try { setGame(await invoke("artwork_fetch", { id, query: $("#art-q").value.trim() || null })); draw(); renderAll(); toast(t("toast.saved")); }
+      finally { auto.disabled = false; }
+    }));
+    const find = $("#art-find"); find && (find.onclick = () => run(async () => {
+      const grid = $("#art-grid"); grid.innerHTML = `<div class="dim">${esc(t("art.loading"))}</div>`;
+      const result = await invoke("artwork_candidates", { id, query: $("#art-q").value.trim() || null });
+      grid.innerHTML = result.items.length ? result.items.map((item, index) => `<button class="artcand" data-cand="${index}" title="${esc(item.source)} · ${esc(item.title)}"><img src="${esc(item.preview || item.url)}" loading="lazy" alt=""><span>${esc(t("art." + item.kind))}</span></button>`).join("") : `<div class="dim">${esc(t("art.none"))}</div>`;
+      $$("[data-cand]", grid).forEach((button) => (button.onclick = () => run(async () => {
+        const item = result.items[+button.dataset.cand];
+        setGame(await invoke("artwork_choose", { id, kind: item.kind, url: item.url }));
+        draw(); renderAll(); toast(t("toast.saved"));
+      })));
+    }));
+    $$("[data-art]", root).forEach((b) => (b.onclick = () => run(async () => { setGame(await invoke("pick_artwork", { id, kind: b.dataset.art })); draw(); renderAll(); })));
+  };
+  draw();
 }
 
 // ---------- Paramètres du jeu ----------
@@ -180,7 +196,7 @@ async function gameSettingsModal() {
     const secs = [["general", "x.general"], ["proton", "x.proton"], ["env", "x.env"], ["data", "x.data"]];
     modal(`<h2>${esc(w.name)}</h2><div class="tabs sm"><button data-t="settings" class="${st.tab === "settings" ? "on" : ""}">${esc(t("x.settingsTab"))}</button><button data-t="dll" class="${st.tab === "dll" ? "on" : ""}">${esc(t("x.dll"))}</button></div>
       ${st.tab === "settings" ? `<div class="pills">${secs.map(([k, l]) => `<button data-s="${k}" class="${st.sec === k ? "on" : ""}">${esc(t(l))}</button>`).join("")}</div><div class="gsbody">${sections[st.sec]()}</div>` : `<div class="gsbody">${dllView()}</div>`}${foot(t("x.save"))}`, true);
-    const root = $("#modal"); wireBrowse(); bindModel(root, w);
+    const root = $("#modal"); wireBrowse(); bindModel(root, w); syncLaunchDeps(root, "launch.");
     $$("[data-t]", root).forEach((b) => (b.onclick = () => { st.tab = b.dataset.t; draw(); $("#modal .modal").scrollTop = 0; })); $$("[data-s]", root).forEach((b) => (b.onclick = () => { st.sec = b.dataset.s; draw(); $("#modal .modal").scrollTop = 0; }));
     const pm = $("#pm"); pm && (pm.onchange = () => { w.proton = pm.value === "default" || pm.value === "native" ? { mode: pm.value } : { mode: "runtime", runtime: pm.value }; });
     $$("[data-ev]", root).forEach((el) => (el.oninput = () => (envList()[+el.dataset.i][el.dataset.ev] = el.value))); $$("[data-evdel]", root).forEach((b) => (b.onclick = () => { envList().splice(+b.dataset.evdel, 1); draw(); }));
