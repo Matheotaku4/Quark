@@ -7,6 +7,7 @@
 
 mod extras;
 mod features;
+mod gamepad;
 mod providers;
 mod screenshot;
 mod store;
@@ -1261,6 +1262,14 @@ async fn pick_artwork(app: AppHandle, id: String, kind: String) -> Result<GameDt
 // ---------------------------------------------------------------------------
 
 #[tauri::command]
+fn win_set_fullscreen(app: AppHandle, active: bool) -> Result<(), String> {
+    let window = app
+        .get_webview_window("main")
+        .ok_or_else(|| "Fenêtre principale introuvable.".to_string())?;
+    window.set_fullscreen(active).map_err(|error| error.to_string())
+}
+
+#[tauri::command]
 fn win_minimize(window: tauri::Window) {
     let _ = window.minimize();
 }
@@ -2155,6 +2164,8 @@ fn main() {
             overlay_hide,
             refresh_shortcuts,
             tray_visibility,
+            gamepad::deck_status,
+            win_set_fullscreen,
             features::get_settings_raw,
             features::patch_settings_raw,
             features::get_game_raw,
@@ -2271,6 +2282,7 @@ fn main() {
             };
             let _ = register_shortcuts(app.handle(), &settings);
             spawn_monitor(app.handle().clone());
+            gamepad::spawn(app.handle().clone());
             Ok(())
         })
         .build(tauri::generate_context!())
