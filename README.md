@@ -11,7 +11,7 @@ fast, modern interface.
 
 <p align="center"><sub>Home: continue playing, browse the library, launch in one click.</sub></p>
 
-**Version 2.0.1** · **Linux x86_64** · **MIT licence**
+**Version 2.0.2** · **Linux x86_64** · **MIT licence**
 
 **Website:** [matheotaku4.github.io/Quark](https://matheotaku4.github.io/Quark/) ·
 **Documentation:** [GitHub Wiki](https://github.com/Matheotaku4/Quark/wiki) ·
@@ -33,28 +33,27 @@ French, Spanish, German, Portuguese and Russian are available in the app.
 | **Settings:** full-page navigation and live previews | **First launch:** language, theme and startup page |
 | ![Appearance settings](docs/images/settings-en.png) | ![Welcome guide](docs/images/onboarding-en.png) |
 
-## What's new in 2.0.1
+## What's new in 2.0.2
 
-- **Lighter interface.** Clearer library search, tab animations, a two-tab
-  Metadata/Images customizer and lazy cover loading in My games.
-- **Video fullscreen fixed.** Trailers use a built-in cinema mode instead of the
-  WebKitGTK native fullscreen that showed a black screen.
-- **Window and memory.** Left-click the notification icon to open Quark,
-  right-click to close it, and the background WebView is destroyed to release
-  memory.
-- **Clearer settings.** Default game tab, plus gamescope/umu options greyed out
-  when their switch is off.
-- **Russian added** to the interface and Rust core messages.
-- **Quark overlay removed.** The global screenshot shortcut remains available.
+- **Trailer volume remembered.** The slider now uses a logarithmic 20 dB curve
+  and keeps its position between launches and between videos.
+- **Useful notification icon.** Left-click opens Quark, right-click shows
+  **Open Quark** and **Close Quark**. A second launch focuses the existing
+  window instead of starting another WebView.
+- **Lighter My games.** Covers are released when they leave the screen, the
+  runaway infinite scroll is replaced by an explicit **Load more** button, and
+  observers are cleaned up when the page changes.
+- **Library unchanged.** The left-hand game list and the right-hand game page
+  keep the Steam-like layout, with the same local and store libraries.
 
-This is the **2.0.1** documentation. Older release notes are kept on the GitHub
+This is the **2.0.2** documentation. Older release notes are kept on the GitHub
 releases page; `docs/release-notes.md` only describes the release currently
 being published.
 
 ## Table of contents
 
 1. [Preview](#preview)
-2. [What's new in 2.0.1](#whats-new-in-201)
+2. [What's new in 2.0.2](#whats-new-in-202)
 3. [What Quark does](#what-quark-does)
 4. [Installation](#installation)
 5. [First launch](#first-launch)
@@ -113,8 +112,8 @@ Download `quark-<version>-linux-x86_64.tar.gz` and its `.sha256` file from the
 then verify and unpack it:
 
 ```bash
-sha256sum -c quark-2.0.1-linux-x86_64.tar.gz.sha256
-tar -xzf quark-2.0.1-linux-x86_64.tar.gz
+sha256sum -c quark-2.0.2-linux-x86_64.tar.gz.sha256
+tar -xzf quark-2.0.2-linux-x86_64.tar.gz
 ./quark/quark
 ```
 
@@ -131,17 +130,15 @@ update-desktop-database ~/.local/share/applications 2>/dev/null || true
 
 `~/.local/bin` must be in your `PATH` for the `Exec=quark` entry to work; if it
 is not, use the absolute path of the binary in the desktop file. Quark needs
-WebKitGTK 4.1 (`libwebkit2gtk-4.1-0`), GTK 3, the AppIndicator library
-(`libayatana-appindicator3-1`, optional but required for the tray icon) and an
-X11 or Wayland session.
+WebKitGTK 4.1 (`libwebkit2gtk-4.1-0`), GTK 3 and an X11 or Wayland session.
+The notification icon uses StatusNotifierItem: KDE, Cinnamon and Xfce support
+it natively; GNOME needs the AppIndicator extension.
 `python3` is required by Legendary and gogdl (both are Python zipapps).
-For inline trailers, install GStreamer with `gst-launch-1.0` and the HLS/H.264
-plugins (`gstreamer1.0-tools`, `gstreamer1.0-plugins-good` and
-`gstreamer1.0-libav` on Debian/Ubuntu). Without them, the Media tab shows the
-thumbnail and offers the Steam page instead. The trailer volume slider also
-needs `pactl` and a PulseAudio or PipeWire server; without it, the slider stays
-hidden. If `pulsesink` cannot open the stream, Quark retries once with
-`autoaudiosink`; the trailer plays but the slider stays hidden.
+For inline trailers, install GStreamer with the HLS/H.264 plugins
+(`gstreamer1.0-plugins-good` and `gstreamer1.0-libav` on Debian/Ubuntu).
+Without them, the Media tab shows the thumbnail and offers the Steam page
+instead. The trailer volume slider is part of the embedded player and keeps its
+position between videos and launches.
 
 ### Build from source
 

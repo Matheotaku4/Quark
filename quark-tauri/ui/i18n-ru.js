@@ -396,6 +396,8 @@ Object.assign(I18N, {
     "x.native": "родной",
     "x.builtin": "встроенный",
     "x.updateInstall": "Установить и перезапустить",
-    "x.updateInstalling": "Загрузка и проверка…"
+    "x.updateInstalling": "Загрузка и проверка…",
+    "Volume": "Громкость",
+    "x.trayUnavailable": "Область уведомлений недоступна в этой среде."
 }
 });

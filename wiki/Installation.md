@@ -13,27 +13,26 @@
   zipapps.
 - Optional, depending on the features you use: `gamescope`, `gamemoderun`
   (GameMode), `mangohud`, `umu-launcher` and `ludusavi`.
-- For inline trailers: GStreamer with `gst-launch-1.0`, the HLS demuxer and the
-  H.264 decoder (`gstreamer1.0-tools`, `gstreamer1.0-plugins-good` and
-  `gstreamer1.0-libav` on Debian/Ubuntu). Without them, the Media tab offers
-  the Steam page instead.
-- For the trailer volume slider: `pactl` and a PulseAudio or PipeWire server.
-  Without it, trailers still play but the volume control stays hidden. If
-  `pulsesink` fails before the first frame, Quark retries with `autoaudiosink`;
-  the trailer plays without the slider.
+- For inline trailers: GStreamer with the HLS demuxer and the H.264 decoder
+  (`gstreamer1.0-plugins-good` and `gstreamer1.0-libav` on Debian/Ubuntu).
+  Without them, the Media tab offers the Steam page instead. The volume slider
+  is part of the embedded player and keeps its position between videos and
+  launches.
+- For the notification icon: a StatusNotifierItem host. KDE, Cinnamon and Xfce
+  support it natively; GNOME needs the AppIndicator extension.
 - To build: stable Rust, `pkg-config`, the X11/Wayland headers and OpenGL.
 
 Quark needs no Quark account and sends no telemetry.
 
 ## Release archive
 
-1. Download `quark-2.0.1-linux-x86_64.tar.gz` and its `.sha256` file from the
+1. Download `quark-2.0.2-linux-x86_64.tar.gz` and its `.sha256` file from the
    [latest release](https://github.com/Matheotaku4/Quark/releases/latest).
 2. Verify the archive **before** extracting it:
 
    ```bash
-   sha256sum -c quark-2.0.1-linux-x86_64.tar.gz.sha256
-   tar -xzf quark-2.0.1-linux-x86_64.tar.gz
+   sha256sum -c quark-2.0.2-linux-x86_64.tar.gz.sha256
+   tar -xzf quark-2.0.2-linux-x86_64.tar.gz
    ./quark/quark
    ```
 
@@ -55,7 +54,7 @@ in `quark.desktop`.
 
 ## Update from an older release
 
-Quark 2.0.1 keeps the existing `config.json` format and adds fields with default
+Quark 2.0.2 keeps the existing `config.json` format and adds fields with default
 values. Updating does not require resetting the library and does not force the
 welcome guide on existing installations.
 
@@ -75,12 +74,12 @@ executable is kept until the next successful start.
 
 If automatic updates are disabled or fail:
 
-1. Quit Quark, then download the 2.0.1 archive and its checksum.
+1. Quit Quark, then download the 2.0.2 archive and its checksum.
 2. Verify the checksum, then replace only the binary:
 
    ```bash
-   sha256sum -c quark-2.0.1-linux-x86_64.tar.gz.sha256
-   tar -xzf quark-2.0.1-linux-x86_64.tar.gz
+   sha256sum -c quark-2.0.2-linux-x86_64.tar.gz.sha256
+   tar -xzf quark-2.0.2-linux-x86_64.tar.gz
    install -Dm755 quark/quark ~/.local/bin/quark
    ```
 
@@ -88,7 +87,7 @@ If automatic updates are disabled or fail:
 
 Your games, prefixes, saves, artwork, Legendary/gogdl accounts and statistics
 stay in the same folders. The welcome guide is skipped for an existing library;
-the **What's new in 2.0.1** summary appears once.
+the **What's new in 2.0.2** summary appears once.
 
 > Do not delete `~/.config/quark/config.json` to "repair" an update. If the file
 > cannot be read, Quark keeps a `config.json.corrompu-<timestamp>` copy and

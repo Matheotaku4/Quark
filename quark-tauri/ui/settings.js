@@ -108,7 +108,7 @@ function bindSettings() {
   const root = $("#sheet");
   bindModel(root, app.cfg, (k) => {
     const top = k.split(".")[0], patch = { [top]: app.cfg[top] };
-    run(() => cfgSet(patch)).then(() => { if (k === "tray_icon") invoke("tray_visibility", { visible: !!app.cfg.tray_icon }).catch(() => {}); if (k === "deck_mode") { QuarkDeck.mode(app.cfg.deck_mode); renderTop(); } else if (k === "ui_language" || k === "ui_compact" || k === "game_actions") { renderAllKeepScroll(); } else if (k === "view") renderTop(); });
+    run(() => cfgSet(patch)).then(() => { if (k === "tray_icon" || k === "ui_language") invoke("tray_visibility", { visible: !!app.cfg.tray_icon }).catch(() => toast(t("x.trayUnavailable"), true)); if (k === "deck_mode") { QuarkDeck.mode(app.cfg.deck_mode); renderTop(); } else if (k === "ui_language" || k === "ui_compact" || k === "game_actions") { renderAllKeepScroll(); } else if (k === "view") renderTop(); });
   });
   $$('[data-k="screenshot_key"]', root).forEach((el) =>
     el.addEventListener("change", () => run(async () => {

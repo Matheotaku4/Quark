@@ -1089,6 +1089,8 @@ pub struct Settings {
     /// Interface resserrée : moins de marges et d'espacement, sans toucher aux
     /// tailles de police. Vrai par défaut pour une fenêtre plus dense.
     pub ui_compact: bool,
+    /// Position mémorisée du curseur de volume des bandes-annonces (0 à 1).
+    pub media_volume: f32,
     /// Largeur de la colonne de gauche, en pixels logiques.
     pub sidebar_width: f32,
     /// Hauteur d'une ligne de jeu dans la colonne de gauche.
@@ -1205,6 +1207,7 @@ impl Default for Settings {
             last_seen_version: String::new(),
             my_games_list: true,
             ui_compact: true,
+            media_volume: 0.8,
             sidebar_width: 252.0,
             sidebar_row_height: 44.0,
             grid_tile_width: 144.0,
@@ -2942,6 +2945,17 @@ mod tests {
         game.record_session(9_000, 30);
         assert_eq!(game.sessions.len(), 2);
         assert_eq!(game.playtime_secs, 180);
+    }
+
+    #[test]
+    fn le_volume_des_bandes_annonces_est_memorise() {
+        let settings = Settings {
+            media_volume: 0.42,
+            ..Default::default()
+        };
+        let json = serde_json::to_string(&settings).unwrap();
+        let reloaded: Settings = serde_json::from_str(&json).unwrap();
+        assert!((reloaded.media_volume - 0.42).abs() < 1e-6);
     }
 
     #[test]

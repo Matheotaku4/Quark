@@ -24,13 +24,14 @@ use quark::providers as core_providers;
 use quark::session::{self, Session};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use std::io::{Read, Write};
+use std::os::unix::fs::PermissionsExt;
+use std::os::unix::net::{UnixListener, UnixStream};
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::{Arc, Mutex, MutexGuard};
+use std::sync::{Arc, Mutex, MutexGuard, OnceLock};
 use std::time::Duration;
 use tauri::http::{header, Response, StatusCode};
-use tauri::menu::{Menu, MenuItem};
-use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
 use tauri::{AppHandle, Emitter, Manager, RunEvent, State};
 use tauri_plugin_global_shortcut::{GlobalShortcutExt, Shortcut, ShortcutState};
 use themes::THEMES;
@@ -59,6 +60,9 @@ struct AppState {
     deck_demo: bool,
     demo_root: Option<PathBuf>,
     quitting: AtomicBool,
+    tray: Mutex<Option<ksni::blocking::Handle<QuarkTray>>>,
+    tray_ready: AtomicBool,
+    tray_visible: Arc<AtomicBool>,
 }
 
 fn lock<T>(mutex: &Mutex<T>) -> MutexGuard<'_, T> {
@@ -66,18 +70,122 @@ fn lock<T>(mutex: &Mutex<T>) -> MutexGuard<'_, T> {
 }
 
 fn tray_available() -> bool {
-    if std::env::var_os("DBUS_SESSION_BUS_ADDRESS").is_none() {
-        return false;
+    std::env::var_os("DBUS_SESSION_BUS_ADDRESS").is_some()
+}
+
+fn tray_labels(language: UiLanguage) -> (&'static str, &'static str) {
+    match language {
+        UiLanguage::French => ("Ouvrir Quark", "Fermer Quark"),
+        UiLanguage::English => ("Open Quark", "Close Quark"),
+        UiLanguage::Spanish => ("Abrir Quark", "Cerrar Quark"),
+        UiLanguage::German => ("Quark öffnen", "Quark schließen"),
+        UiLanguage::Portuguese => ("Abrir o Quark", "Fechar o Quark"),
+        UiLanguage::Russian => ("Открыть Quark", "Закрыть Quark"),
     }
-    std::process::Command::new("ldconfig")
-        .arg("-p")
-        .output()
-        .ok()
-        .map(|output| {
-            let list = String::from_utf8_lossy(&output.stdout);
-            list.contains("libayatana-appindicator3.so.1") || list.contains("libappindicator3.so.1")
-        })
-        .unwrap_or(false)
+}
+
+struct QuarkTray {
+    app: AppHandle,
+    visible: Arc<AtomicBool>,
+}
+
+impl ksni::Tray for QuarkTray {
+    fn id(&self) -> String {
+        "quark".to_string()
+    }
+
+    fn title(&self) -> String {
+        "Quark".to_string()
+    }
+
+    fn status(&self) -> ksni::Status {
+        if self.visible.load(Ordering::Relaxed) {
+            ksni::Status::Active
+        } else {
+            ksni::Status::Passive
+        }
+    }
+
+    fn icon_pixmap(&self) -> Vec<ksni::Icon> {
+        let rgba = include_bytes!("../icons/icon.rgba");
+        let mut data = Vec::with_capacity(rgba.len());
+        for pixel in rgba.as_chunks::<4>().0 {
+            data.extend_from_slice(&[pixel[3], pixel[0], pixel[1], pixel[2]]);
+        }
+        vec![ksni::Icon {
+            width: 128,
+            height: 128,
+            data,
+        }]
+    }
+
+    fn activate(&mut self, _x: i32, _y: i32) {
+        let app = self.app.clone();
+        run_on_main(&self.app, move || {
+            let _ = show_main_window(&app);
+        });
+    }
+
+    fn menu(&self) -> Vec<ksni::MenuItem<Self>> {
+        use ksni::menu::StandardItem;
+        let (open, quit) = tray_labels(
+            lock(&self.app.state::<AppState>().library)
+                .settings
+                .ui_language,
+        );
+        vec![
+            StandardItem {
+                label: open.to_string(),
+                icon_name: "window-new".to_string(),
+                activate: Box::new(|this: &mut Self| {
+                    let app = this.app.clone();
+                    run_on_main(&this.app, move || {
+                        let _ = show_main_window(&app);
+                    });
+                }),
+                ..Default::default()
+            }
+            .into(),
+            ksni::MenuItem::Separator,
+            StandardItem {
+                label: quit.to_string(),
+                icon_name: "application-exit".to_string(),
+                activate: Box::new(|this: &mut Self| {
+                    let app = this.app.clone();
+                    run_on_main(&this.app, move || {
+                        app.state::<AppState>()
+                            .quitting
+                            .store(true, Ordering::Relaxed);
+                        app.exit(0);
+                    });
+                }),
+                ..Default::default()
+            }
+            .into(),
+        ]
+    }
+}
+
+fn run_on_main(app: &AppHandle, action: impl FnOnce() + Send + 'static) {
+    if let Err(error) = app.run_on_main_thread(action) {
+        eprintln!("Action de la fenêtre indisponible : {error}");
+    }
+}
+
+fn spawn_tray(app: &AppHandle) -> Result<(), String> {
+    let state = app.state::<AppState>();
+    if lock(&state.tray).is_some() {
+        return Ok(());
+    }
+    let tray = QuarkTray {
+        app: app.clone(),
+        visible: state.tray_visible.clone(),
+    };
+    let handle = ksni::blocking::TrayMethods::spawn(tray)
+        .map_err(|error| format!("Icône de notification indisponible : {error}"))?;
+    *lock(&state.tray) = Some(handle);
+    state.tray_ready.store(true, Ordering::Relaxed);
+    Ok(())
 }
 
 /// Notification bureau via le service XDG. La fenêtre au premier plan est
@@ -1350,9 +1458,14 @@ fn capture_active_session(app: &AppHandle) {
 
 #[tauri::command]
 fn tray_visibility(app: AppHandle, visible: bool) -> Result<(), String> {
-    if let Some(tray) = app.tray_by_id("quark-tray") {
-        tray.set_visible(visible)
-            .map_err(|error| error.to_string())?;
+    let state = app.state::<AppState>();
+    state.tray_visible.store(visible, Ordering::Relaxed);
+    if visible && lock(&state.tray).is_none() && tray_available() {
+        spawn_tray(&app)?;
+    }
+    let tray = { lock(&state.tray).clone() };
+    if let Some(tray) = tray {
+        tray.update(|_| {});
     }
     Ok(())
 }
@@ -1387,7 +1500,7 @@ fn show_main_window(app: &AppHandle) -> Result<(), String> {
 #[tauri::command]
 fn win_close(window: tauri::Window) {
     let state = window.app_handle().state::<AppState>();
-    if lock(&state.library).settings.tray_icon && tray_available() {
+    if lock(&state.library).settings.tray_icon && state.tray_ready.load(Ordering::Relaxed) {
         // Détruire la WebView libère la mémoire du moteur ; la fenêtre est
         // reconstruite depuis tauri.conf.json au clic sur l'icône.
         let _ = window.destroy();
@@ -2003,6 +2116,50 @@ fn configure_wayland_rendering() {
     }
 }
 
+static INSTANCE_APP: OnceLock<AppHandle> = OnceLock::new();
+
+/// Une seule instance graphique : la seconde demande à la première d'afficher
+/// sa fenêtre puis quitte, au lieu d'ouvrir une deuxième WebView.
+fn claim_single_instance() -> bool {
+    let path = config::config_dir().join("quark.sock");
+    if let Some(parent) = path.parent() {
+        let _ = std::fs::create_dir_all(parent);
+    }
+    let listener = match UnixListener::bind(&path) {
+        Ok(listener) => listener,
+        Err(_) => {
+            if let Ok(mut stream) = UnixStream::connect(&path) {
+                let _ = stream.write_all(b"show\n");
+                return false;
+            }
+            let _ = std::fs::remove_file(&path);
+            match UnixListener::bind(&path) {
+                Ok(listener) => listener,
+                Err(_) => return true,
+            }
+        }
+    };
+    let _ = std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o600));
+    std::thread::spawn(move || {
+        for stream in listener.incoming().flatten() {
+            let mut request = [0u8; 16];
+            let mut stream = stream;
+            let _ = stream.read(&mut request);
+            for _ in 0..50 {
+                if let Some(app) = INSTANCE_APP.get() {
+                    let target = app.clone();
+                    let _ = app.run_on_main_thread(move || {
+                        let _ = show_main_window(&target);
+                    });
+                    break;
+                }
+                std::thread::sleep(Duration::from_millis(100));
+            }
+        }
+    });
+    true
+}
+
 fn main() {
     #[cfg(target_os = "linux")]
     configure_wayland_rendering();
@@ -2020,6 +2177,9 @@ fn main() {
     if let Some(code) = cli_main(&args) {
         std::process::exit(code);
     }
+    if !claim_single_instance() {
+        return;
+    }
     let demo = args
         .iter()
         .any(|arg| arg == "--demo" || arg == "--demo-empty");
@@ -2030,6 +2190,7 @@ fn main() {
         None => Library::load(),
     };
     quark::i18n::set_language(library.settings.ui_language);
+    let tray_visible = Arc::new(AtomicBool::new(library.settings.tray_icon));
     let state = AppState {
         library: Mutex::new(library),
         sessions: Mutex::new(HashMap::new()),
@@ -2043,6 +2204,9 @@ fn main() {
         deck_demo: args.iter().any(|arg| arg == "--deck"),
         demo_root,
         quitting: AtomicBool::new(false),
+        tray: Mutex::new(None),
+        tray_ready: AtomicBool::new(false),
+        tray_visible,
     };
 
     let app = tauri::Builder::default()
@@ -2152,6 +2316,7 @@ fn main() {
             extras::game_remove_artwork,
         ])
         .setup(|app| {
+            let _ = INSTANCE_APP.set(app.handle().clone());
             let icon = tauri::image::Image::new_owned(
                 include_bytes!("../icons/icon.rgba").to_vec(),
                 128,
@@ -2160,52 +2325,11 @@ fn main() {
             if let Some(window) = app.get_webview_window("main") {
                 let _ = window.set_icon(icon.clone());
             }
-            if tray_available() {
-                let quit_label = {
-                    let state = app.state::<AppState>();
-                    let language = lock(&state.library).settings.ui_language;
-                    match language {
-                        UiLanguage::French => "Fermer Quark",
-                        UiLanguage::English => "Close Quark",
-                        UiLanguage::Spanish => "Cerrar Quark",
-                        UiLanguage::German => "Quark schließen",
-                        UiLanguage::Portuguese => "Fechar o Quark",
-                        UiLanguage::Russian => "Закрыть Quark",
-                    }
-                };
-                let quit = MenuItem::with_id(app, "quit", quit_label, true, None::<&str>)?;
-                let menu = Menu::with_items(app, &[&quit])?;
-                let tray = TrayIconBuilder::with_id("quark-tray")
-                    .icon(icon)
-                    .tooltip("Quark")
-                    .menu(&menu)
-                    .show_menu_on_left_click(false)
-                    .on_tray_icon_event(|tray, event| {
-                        if let TrayIconEvent::Click {
-                            button: MouseButton::Left,
-                            button_state: MouseButtonState::Up,
-                            ..
-                        } = event
-                        {
-                            let app = tray.app_handle();
-                            let _ = show_main_window(app);
-                        }
-                    })
-                    .on_menu_event(|app, event| {
-                        if event.id.as_ref() == "quit" {
-                            app.state::<AppState>()
-                                .quitting
-                                .store(true, Ordering::Relaxed);
-                            app.exit(0);
-                        }
-                    })
-                    .build(app)?;
-                let visible = {
-                    let state = app.state::<AppState>();
-                    let visible = lock(&state.library).settings.tray_icon;
-                    visible
-                };
-                let _ = tray.set_visible(visible);
+            let tray_on = app.state::<AppState>().tray_visible.load(Ordering::Relaxed);
+            if tray_on && tray_available() {
+                if let Err(error) = spawn_tray(app.handle()) {
+                    eprintln!("{error}");
+                }
             }
             let settings = {
                 let state = app.state::<AppState>();
@@ -2225,7 +2349,7 @@ fn main() {
             let state = app.state::<AppState>();
             let keep_alive = !state.quitting.load(Ordering::Relaxed)
                 && lock(&state.library).settings.tray_icon
-                && tray_available();
+                && state.tray_ready.load(Ordering::Relaxed);
             if keep_alive {
                 api.prevent_exit();
             } else {

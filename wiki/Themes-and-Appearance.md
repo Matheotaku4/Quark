@@ -90,8 +90,9 @@ to open the menu and close the application. Desktop notifications can also
 announce the end of an installation, a save backup or a game session. These
 settings are in **Appearance** and **In game**.
 
-On some environments without a notification area (some minimal Wayland
-compositors), the icon may not appear. Quark remains usable; quit with `Ctrl+Q`.
+The icon uses StatusNotifierItem. KDE, Cinnamon and Xfce support it natively;
+GNOME needs the AppIndicator extension. On environments without a notification
+area, the icon may not appear: Quark then quits normally from its close button.
 
 ## Game accent colours
 

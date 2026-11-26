@@ -105,14 +105,9 @@ layout is responsive but some blocks need a minimum width.
 - **The trailer stutters or only advances when the mouse moves**: current builds
   schedule their own repaints instead of waiting for an input event. Update
   Quark if the problem persists on an older build.
-- **No volume slider under the trailer**: the slider controls the
-  PulseAudio/PipeWire stream of the GStreamer process and needs `pactl`
-  (`pulseaudio-utils` on Debian/Ubuntu, `libpulse` on Arch) plus a running
-  PulseAudio or PipeWire server. With a direct ALSA sink the trailer still
-  plays, but its volume must be changed with the system mixer. If `pulsesink`
-  fails before the first frame, Quark retries with `autoaudiosink`; the trailer
-  plays, but the slider stays hidden because that output cannot be controlled
-  through `pactl`.
+- **No volume slider under the trailer**: the slider appears once the embedded
+  player starts. It controls the player directly and remembers its position
+  between videos and launches; if it is missing, update Quark.
 
 ## Legendary, gogdl and accounts
 

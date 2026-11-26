@@ -5,7 +5,7 @@ It brings local games and your Steam, Epic Games, GOG and itch.io libraries
 together, launches Windows games through Proton or umu-launcher, and keeps
 achievements and verified local saves alongside the library.
 
-This documentation describes **Quark 2.0.1**. Its source is versioned in the
+This documentation describes **Quark 2.0.2**. Its source is versioned in the
 repository under [`wiki/`](https://github.com/Matheotaku4/Quark/tree/main/wiki).
 
 ![Quark home](https://raw.githubusercontent.com/Matheotaku4/Quark/main/docs/images/home-en.png)
@@ -20,19 +20,18 @@ repository under [`wiki/`](https://github.com/Matheotaku4/Quark/tree/main/wiki).
 | **Settings** | **First launch** |
 | ![Appearance settings](https://raw.githubusercontent.com/Matheotaku4/Quark/main/docs/images/settings-en.png) | ![Welcome guide](https://raw.githubusercontent.com/Matheotaku4/Quark/main/docs/images/onboarding-en.png) |
 
-## What's new in 2.0.1
+## What's new in 2.0.2
 
-- **Lighter interface.** Clearer library search, tab animations, a two-tab
-  Metadata/Images customizer and lazy cover loading in My games.
-- **Video fullscreen fixed.** Trailers use a built-in cinema mode instead of the
-  WebKitGTK native fullscreen that showed a black screen.
-- **Window and memory.** Left-click the notification icon to open Quark,
-  right-click to close it, and the background WebView is destroyed to release
-  memory.
-- **Clearer settings.** Default game tab, plus gamescope/umu options greyed out
-  when their switch is off.
-- **Russian added** to the interface and Rust core messages.
-- **Quark overlay removed.** The global screenshot shortcut remains available.
+- **Trailer volume remembered.** The slider now uses a logarithmic 20 dB curve
+  and keeps its position between launches and between videos.
+- **Useful notification icon.** Left-click opens Quark, right-click shows
+  **Open Quark** and **Close Quark**. A second launch focuses the existing
+  window instead of starting another WebView.
+- **Lighter My games.** Covers are released when they leave the screen, the
+  runaway infinite scroll is replaced by an explicit **Load more** button, and
+  observers are cleaned up when the page changes.
+- **Library unchanged.** The left-hand game list and the right-hand game page
+  keep the Steam-like layout, with the same local and store libraries.
 
 ## Where to start
 

@@ -75,7 +75,7 @@ function providerCard(g) {
     actions.push(pvButton(t("pv.install"), "install", "pri", `data-provider="${g.provider}" data-product="${esc(g.productId)}"`));
   }
   return `<article class="pcard" style="--pc:${PV_COLOR[g.provider] || "var(--accent)"}">
-    <div class="pcover"><b>${esc(g.title.slice(0, 1).toUpperCase())}</b>${g.coverUrl ? `<img data-src="${esc(g.coverUrl)}" decoding="async" referrerpolicy="no-referrer" alt="">` : ""}
+    <div class="pcover"><b>${esc(g.title.slice(0, 1).toUpperCase())}</b>${g.coverUrl ? `<img data-src="${esc(g.coverUrl)}" loading="lazy" decoding="async" referrerpolicy="no-referrer" alt="">` : ""}
       <span class="pvsrc">${esc(PV_LABEL[g.provider] || g.provider)}</span>
       <span class="pvstate ${installed ? "on" : ""}">${esc(pvStateLabel(g.installState))}</span>
     </div>
@@ -112,8 +112,15 @@ function renderMyGames() {
       <div class="pchips">${chips.map(([id, label]) => `<button data-pvprov="${id}" class="${app.pv.provider === id ? "on" : ""}">${esc(label)}</button>`).join("")}</div>
       <select id="pv-state">${["all", "installed", "missing"].map((id) => `<option value="${id}" ${app.pv.state === id ? "selected" : ""}>${esc(t("pv.filter." + id))}</option>`).join("")}</select>
       <button class="tb" data-pv="reload" title="${esc(t("pv.reload"))}">${ic("refresh")}</button></div>
-    ${games.length ? `<div class="pvgrid">${games.slice(0, app.pv.shown || PV_PAGE).map(providerCard).join("")}${games.length > (app.pv.shown || PV_PAGE) ? `<div class="pvmore" id="pv-more">${esc(t("pv.more"))}</div>` : ""}</div>` : `<div class="none">${esc(data.games.length ? t("pv.noMatch") : t("pv.empty"))}</div>`}
+    ${games.length ? `<div class="pvgrid">${games.slice(0, app.pv.shown || PV_PAGE).map(providerCard).join("")}${games.length > (app.pv.shown || PV_PAGE) ? `<button class="pvmore" id="pv-more" type="button">${esc(t("pv.more"))}</button>` : ""}</div>` : `<div class="none">${esc(data.games.length ? t("pv.noMatch") : t("pv.empty"))}</div>`}
   </div>`;
+}
+
+function stopMyGames() {
+  app.pv.obs?.disconnect();
+  app.pv.obs = null;
+  app.pv.imgObs?.disconnect();
+  app.pv.imgObs = null;
 }
 
 function bindMyGames() {
@@ -136,40 +143,32 @@ function bindMyGames() {
     grid.dataset.bound = "1";
     grid.addEventListener("error", (e) => { const img = e.target.closest?.("img"); if (img) img.remove(); }, true);
   }
+  const more = $("#pv-more");
+  if (more) more.onclick = moreGames;
   pvLazyImages();
-  observeMoreGames();
 }
 
 function pvLazyImages() {
-  const images = $$(".pvgrid img[data-src]");
+  const images = $$(".pvgrid img");
   if (!images.length) return;
   if (!("IntersectionObserver" in window)) {
-    images.forEach((img) => { img.src = img.dataset.src; img.removeAttribute("data-src"); });
+    images.forEach((img) => { if (img.dataset.src) img.src = img.dataset.src; });
     return;
   }
   app.pv.imgObs?.disconnect();
   app.pv.imgObs = new IntersectionObserver((entries) => {
     for (const entry of entries) {
-      if (!entry.isIntersecting) continue;
       const img = entry.target;
-      img.src = img.dataset.src;
-      img.removeAttribute("data-src");
-      app.pv.imgObs.unobserve(img);
+      if (entry.isIntersecting) {
+        if (!img.getAttribute("src") && img.dataset.src) img.src = img.dataset.src;
+      } else if (img.getAttribute("src")) {
+        // Libère la mémoire des jaquettes sorties de l'écran ; elles sont
+        // rechargées depuis data-src au retour.
+        img.removeAttribute("src");
+      }
     }
   }, { root: $("#sheet"), rootMargin: "400px" });
   images.forEach((img) => app.pv.imgObs.observe(img));
-}
-
-function observeMoreGames() {
-  app.pv.obs?.disconnect();
-  const more = $("#pv-more");
-  if (!more) return;
-  app.pv.obs = new IntersectionObserver((entries) => {
-    if (!entries.some((entry) => entry.isIntersecting)) return;
-    app.pv.obs?.disconnect();
-    moreGames();
-  }, { root: $("#sheet"), rootMargin: "600px" });
-  app.pv.obs.observe(more);
 }
 
 function moreGames() {
@@ -179,8 +178,8 @@ function moreGames() {
   if (!next.length) { more.remove(); return; }
   more.insertAdjacentHTML("beforebegin", next.map(providerCard).join(""));
   app.pv.shown = from + next.length;
+  if (app.pv.shown >= games.length) more.remove();
   pvLazyImages();
-  if (app.pv.shown >= games.length) more.remove(); else observeMoreGames();
 }
 
 function providersSettings() {

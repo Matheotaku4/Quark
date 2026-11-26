@@ -236,8 +236,24 @@ async function loadMedia(g) {
   const m = cache[g.id];
   if (m.err) { box.innerHTML = `<div class="none">${esc(bt(m.err))}</div>`; return; }
   const trailer = m.trailers[0];
-  box.innerHTML = `${trailer ? `<div class="trailerwrap"><button class="trailerplay" data-trailer="${esc(trailer.video)}" data-poster="${esc(trailer.thumbnail)}"><img src="${esc(trailer.thumbnail)}" alt=""><span class="tplay">${ic("play")}</span></button><div class="trailerbar"><b>${esc(trailer.title || t("x.trailer"))}</b><button class="btn sec sm" data-open="${esc(trailer.page)}">${ic("ext")}Steam</button></div><p class="trailerfail" hidden>${esc(t("x.trailerUnavailable"))}</p></div>` : `<div class="none">${esc(t("x.noMedia"))}</div>`}
+  box.innerHTML = `${trailer ? `<div class="trailerwrap"><button class="trailerplay" data-trailer="${esc(trailer.video)}" data-poster="${esc(trailer.thumbnail)}"><img src="${esc(trailer.thumbnail)}" alt=""><span class="tplay">${ic("play")}</span></button><div class="trailerbar"><b>${esc(trailer.title || t("x.trailer"))}</b><div class="trailerbar-actions"><label class="trailervol" title="${esc(t("Volume"))}">${ic("volume")}<input type="range" min="0" max="1" step="0.01" value="${mediaSlider()}" aria-label="${esc(t("Volume"))}"></label><button class="btn sec sm" data-open="${esc(trailer.page)}">${ic("ext")}Steam</button></div></div><p class="trailerfail" hidden>${esc(t("x.trailerUnavailable"))}</p></div>` : `<div class="none">${esc(t("x.noMedia"))}</div>`}
     ${m.screenshots.length ? `<div class="shots">${m.screenshots.map((p) => `<button data-open="${esc(p.full)}"><img loading="lazy" decoding="async" src="${esc(p.thumbnail)}" alt=""></button>`).join("")}</div>` : ""}`;
+}
+
+const MEDIA_VOLUME_DEFAULT = 0.8;
+function mediaSlider() {
+  const value = Number(app.cfg.media_volume);
+  return Number.isFinite(value) ? Math.min(1, Math.max(0, value)) : MEDIA_VOLUME_DEFAULT;
+}
+// Courbe logarithmique (20 dB) : la position du curseur est une sensation
+// d'écoute, pas une amplitude linéaire.
+const mediaVolume = (position) => (position <= 0 ? 0 : Math.pow(10, (position - 1) * 2));
+const mediaSliderFromVolume = (volume) => (volume <= 0 ? 0 : Math.min(1, Math.max(0, 1 + Math.log10(volume) / 2)));
+let mediaVolumeTimer;
+function persistMediaVolume(position) {
+  app.cfg.media_volume = position;
+  clearTimeout(mediaVolumeTimer);
+  mediaVolumeTimer = setTimeout(() => cfgSet({ media_volume: position }).catch(() => {}), 250);
 }
 
 function loadHls() {
@@ -271,6 +287,25 @@ async function playTrailer(btn) {
   };
   video.controls = video.autoplay = video.playsInline = true;
   video.poster = btn.dataset.poster || "";
+  const slider = $(".trailervol input", box);
+  let syncingVolume = false;
+  const applyVolume = (position) => {
+    syncingVolume = true;
+    video.volume = mediaVolume(position);
+    if (slider) slider.value = String(position);
+    syncingVolume = false;
+  };
+  applyVolume(mediaSlider());
+  if (slider) slider.oninput = () => {
+    applyVolume(+slider.value);
+    persistMediaVolume(+slider.value);
+  };
+  video.addEventListener("volumechange", () => {
+    if (syncingVolume) return;
+    const position = mediaSliderFromVolume(video.volume);
+    if (slider) slider.value = String(position);
+    persistMediaVolume(position);
+  });
   video.addEventListener("error", fail, { once: true });
   if (hlsSrc && window.Hls && Hls.isSupported()) {
     hls = app.hls = new Hls({ enableWorker: false, lowLatencyMode: false, backBufferLength: 30 });
@@ -356,6 +391,7 @@ const renderSoon = (name) => `<div class="empty"><h2>${esc(name)}</h2><p>${esc(t
 // ---------- orchestration ----------
 function renderSheet() {
   stopMedia();
+  stopMyGames();
   const el = $("#sheet"), v = app.view;
   if (v === "settings") { el.innerHTML = renderSettings(); bindSettings(); return; }
   if (v === "home") { el.innerHTML = renderHome(); return; }

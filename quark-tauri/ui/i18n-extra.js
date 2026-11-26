@@ -241,6 +241,11 @@ const EXTRA_I18N = {
 };
 
 for (const lang of Object.keys(EXTRA_I18N)) Object.assign(I18N[lang], EXTRA_I18N[lang]);
+Object.assign(I18N.fr, { "Volume": "Volume", "x.trayUnavailable": "Zone de notification indisponible sur ce bureau." });
+Object.assign(I18N.en, { "Volume": "Volume", "x.trayUnavailable": "Notification area unavailable on this desktop." });
+Object.assign(I18N.es, { "Volume": "Volumen", "x.trayUnavailable": "Área de notificación no disponible en este escritorio." });
+Object.assign(I18N.de, { "Volume": "Lautstärke", "x.trayUnavailable": "Benachrichtigungsbereich auf diesem Desktop nicht verfügbar." });
+Object.assign(I18N.pt, { "Volume": "Volume", "x.trayUnavailable": "Área de notificação indisponível neste ambiente." });
 
 Object.assign(I18N.es, {
   "x.home": "Inicio", "x.store": "Tienda", "x.mygames": "Mis juegos", "x.inGame": "Jugando", "x.palette": "Ir a un juego o acción…",
