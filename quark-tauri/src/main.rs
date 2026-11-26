@@ -2210,6 +2210,7 @@ fn main() {
             features::artwork_candidates,
             features::artwork_choose,
             extras::game_achievements,
+            extras::achievements_compare,
             extras::game_playtime,
             extras::game_media,
             extras::save_preview,

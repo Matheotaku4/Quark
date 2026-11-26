@@ -403,3 +403,9 @@ Object.assign(I18N.en, { "batch.favorite": "Favorite", "batch.status": "Status" 
 Object.assign(I18N.es, { "batch.favorite": "Favorito", "batch.status": "Estado" });
 Object.assign(I18N.de, { "batch.favorite": "Favorit", "batch.status": "Status" });
 Object.assign(I18N.pt, { "batch.favorite": "Favorito", "batch.status": "Estado" });
+
+Object.assign(I18N.fr, { "ach.compare": "Comparer", "ach.compareTitle": "Comparer les succès", "ach.compareEmpty": "Aucun jeu de boutique associé à comparer." });
+Object.assign(I18N.en, { "ach.compare": "Compare", "ach.compareTitle": "Compare achievements", "ach.compareEmpty": "No linked store game to compare." });
+Object.assign(I18N.es, { "ach.compare": "Comparar", "ach.compareTitle": "Comparar logros", "ach.compareEmpty": "Ningún juego de tienda vinculado para comparar." });
+Object.assign(I18N.de, { "ach.compare": "Vergleichen", "ach.compareTitle": "Erfolge vergleichen", "ach.compareEmpty": "Kein verknüpftes Store-Spiel zum Vergleichen." });
+Object.assign(I18N.pt, { "ach.compare": "Comparar", "ach.compareTitle": "Comparar conquistas", "ach.compareEmpty": "Nenhum jogo de loja associado para comparar." });

@@ -193,58 +193,78 @@ fn preview_dto(preview: BackupPreview) -> SavePreviewDto {
     }
 }
 
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AchievementSummaryDto {
+    id: String,
+    name: String,
+    provider: String,
+    total: u32,
+    unlocked: u32,
+    percent: u32,
+    error: Option<String>,
+}
+
+fn achievement_source(
+    state: &AppState,
+    id: &str,
+) -> Result<(Provider, String, Option<u32>, credentials::Credentials), String> {
+    let library = lock(&state.library);
+    let game = library
+        .get(id)
+        .ok_or_else(|| "Jeu introuvable.".to_string())?;
+    let record = provider_record(&library, id).ok_or_else(|| {
+        "Les succès sont disponibles pour les jeux de boutique installés.".to_string()
+    })?;
+    let credentials = credentials::load(&config::credentials_path()).unwrap_or_default();
+    Ok((
+        record.key.provider,
+        record.key.product_id.clone(),
+        game.steam_app_id,
+        credentials,
+    ))
+}
+
+fn fetch_achievement_info(
+    provider: Provider,
+    product: String,
+    steam_id: Option<u32>,
+    credentials: credentials::Credentials,
+) -> Result<achievements::AchievementInfo, String> {
+    let mut info = match provider {
+        Provider::Steam => {
+            let app_id = steam_id.ok_or_else(|| "Ce jeu n'a pas d'AppID Steam.".to_string())?;
+            let key = credentials.steam_web_api_key.as_deref().ok_or_else(|| {
+                "Ajoute une clé Steam Web API dans Boutiques & outils.".to_string()
+            })?;
+            let steam_id = credentials.steam_id.as_deref().ok_or_else(|| {
+                "Ajoute ton SteamID64 dans Boutiques & outils.".to_string()
+            })?;
+            steam::fetch_achievements(&app_id.to_string(), key, steam_id)?
+        }
+        Provider::Epic => legendary::epic_achievements(&product)?,
+        Provider::Gog => {
+            let tokens = gog_library::usable_tokens(&gog::auth_config_path(), config::now_ts())?;
+            gog_library::fetch_achievements(&product, &tokens.access_token, &tokens.user_id)?
+        }
+        Provider::Itch => {
+            return Err("itch.io ne publie pas de succès.".to_string());
+        }
+    };
+    achievements::cache_icons(&mut info, provider, &product);
+    info.normalize();
+    Ok(info)
+}
+
 #[tauri::command]
 pub async fn game_achievements(
     state: State<'_, AppState>,
     id: String,
 ) -> Result<AchievementsDto, String> {
-    let (record, steam_id, credentials) = {
-        let library = lock(&state.library);
-        let game = library
-            .get(&id)
-            .ok_or_else(|| "Jeu introuvable.".to_string())?;
-        let record = provider_record(&library, &id);
-        let credentials = credentials::load(&config::credentials_path()).unwrap_or_default();
-        (record, game.steam_app_id, credentials)
-    };
-    let record = record.ok_or_else(|| {
-        "Les succès sont disponibles pour les jeux de boutique installés.".to_string()
-    })?;
-    let provider = record.key.provider;
-    let product = record.key.product_id.clone();
-    let result = tauri::async_runtime::spawn_blocking(
-        move || -> Result<achievements::AchievementInfo, String> {
-            let mut info = match provider {
-                Provider::Steam => {
-                    let app_id =
-                        steam_id.ok_or_else(|| "Ce jeu n'a pas d'AppID Steam.".to_string())?;
-                    let key = credentials.steam_web_api_key.as_deref().ok_or_else(|| {
-                        "Ajoute une clé Steam Web API dans Boutiques & outils.".to_string()
-                    })?;
-                    let steam_id = credentials.steam_id.as_deref().ok_or_else(|| {
-                        "Ajoute ton SteamID64 dans Boutiques & outils.".to_string()
-                    })?;
-                    steam::fetch_achievements(&app_id.to_string(), key, steam_id)?
-                }
-                Provider::Epic => legendary::epic_achievements(&product)?,
-                Provider::Gog => {
-                    let tokens =
-                        gog_library::usable_tokens(&gog::auth_config_path(), config::now_ts())?;
-                    gog_library::fetch_achievements(
-                        &product,
-                        &tokens.access_token,
-                        &tokens.user_id,
-                    )?
-                }
-                Provider::Itch => {
-                    return Err("itch.io ne publie pas de succès.".to_string());
-                }
-            };
-            achievements::cache_icons(&mut info, provider, &product);
-            info.normalize();
-            Ok(info)
-        },
-    )
+    let (provider, product, steam_id, credentials) = achievement_source(&state, &id)?;
+    let result = tauri::async_runtime::spawn_blocking(move || {
+        fetch_achievement_info(provider, product, steam_id, credentials)
+    })
     .await
     .map_err(|error| error.to_string())??;
     Ok(AchievementsDto {
@@ -270,6 +290,70 @@ pub async fn game_achievements(
             })
             .collect(),
     })
+}
+
+#[tauri::command]
+pub async fn achievements_compare(
+    state: State<'_, AppState>,
+    ids: Vec<String>,
+) -> Result<Vec<AchievementSummaryDto>, String> {
+    let mut summaries = Vec::new();
+    for id in ids.into_iter().take(8) {
+        let name = {
+            let library = lock(&state.library);
+            library.get(&id).map(|game| game.name.clone()).unwrap_or_else(|| id.clone())
+        };
+        let (provider, product, steam_id, credentials) = match achievement_source(&state, &id) {
+            Ok(source) => source,
+            Err(error) => {
+                summaries.push(AchievementSummaryDto {
+                    id,
+                    name,
+                    provider: String::new(),
+                    total: 0,
+                    unlocked: 0,
+                    percent: 0,
+                    error: Some(error),
+                });
+                continue;
+            }
+        };
+        let provider_name = format!("{provider:?}").to_lowercase();
+        let result = tauri::async_runtime::spawn_blocking(move || {
+            fetch_achievement_info(provider, product, steam_id, credentials)
+        })
+        .await
+        .map_err(|error| error.to_string())?;
+        let summary = match result {
+            Ok(info) => {
+                let percent = if info.total == 0 {
+                    0
+                } else {
+                    (info.unlocked * 100 / info.total).min(100)
+                };
+                AchievementSummaryDto {
+                    id,
+                    name,
+                    provider: provider_name,
+                    total: info.total,
+                    unlocked: info.unlocked,
+                    percent,
+                    error: None,
+                }
+            }
+            Err(error) => AchievementSummaryDto {
+                id,
+                name,
+                provider: provider_name,
+                total: 0,
+                unlocked: 0,
+                percent: 0,
+                error: Some(error),
+            },
+        };
+        summaries.push(summary);
+    }
+    Ok(summaries)
 }
 
 #[tauri::command]

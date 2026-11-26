@@ -331,3 +331,13 @@ body.deck :focus-visible{outline:none}
 .webhit{display:grid;grid-template-columns:56px 1fr auto auto;gap:10px;align-items:center;padding:8px;border-radius:10px;background:var(--surface)}
 .webhit img{width:56px;height:56px;object-fit:cover;border-radius:8px;background:var(--surface-hover)}
 .webhit b{display:block;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.webhit small{display:block;color:var(--text-faint);font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* ---------- comparaison des succès ---------- */
+.achcmp{padding:12px 14px;border-radius:11px;background:var(--surface);border:1px solid var(--border)}.achcmp.err{border-color:#ff5c5c55}
+.achcmp .t-top small{text-transform:capitalize}
+
+/* ---------- robustesse des colonnes de fiche ---------- */
+.gb{grid-template-columns:minmax(0,1fr) 300px}
+.gb>*{min-width:0}
+.tabs{overflow-x:auto;scrollbar-width:none}.tabs::-webkit-scrollbar{display:none}
+body.deck .gb{grid-template-columns:minmax(0,1fr) 340px}

@@ -17,7 +17,7 @@ const acts = {
   "reset-filters": () => { app.f = { status: "", genre: "", tag: "", fav: false }; renderSide(); renderList(); renderSheet(); },
   "open-folder": () => run(() => invoke("open_folder", { id: app.sel })),
   overlay: () => invoke("overlay_toggle").catch((e) => toast(String(e), true)),
-  views: () => viewsModal(), "batch-remove": () => batchRemoveModal(), "batch-status": () => batchStatusModal(), "batch-fav": () => batchFavorite(),
+  views: () => viewsModal(), "batch-remove": () => batchRemoveModal(), "batch-status": () => batchStatusModal(), "batch-fav": () => batchFavorite(), "compare-ach": () => achievementsCompareModal(),
   "batch-clear": () => { app.marked.clear(); renderList(); },
 };
 

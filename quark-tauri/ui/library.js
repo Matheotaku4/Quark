@@ -251,9 +251,19 @@ async function loadAchievements(g) {
   const a = cache[g.id];
   if (a.err) { box.innerHTML = `<div class="none">${esc(bt(a.err))}</div>`; return; }
   const pct = a.total ? Math.round((a.unlocked / a.total) * 100) : 0;
-  box.innerHTML = `<div class="achhead"><h3>${esc(t("x.ach"))}<span>${a.unlocked} / ${a.total}</span></h3><div class="pbar"><i style="width:${pct}%"></i></div><small>${pct} % · ${esc(a.provider)}</small></div>
+  box.innerHTML = `<div class="achhead"><h3>${esc(t("x.ach"))}<span>${a.unlocked} / ${a.total}</span></h3><div class="pbar"><i style="width:${pct}%"></i></div><small>${pct} % · ${esc(a.provider)}</small><button class="btn sec sm" data-act="compare-ach">${ic("grid")}${esc(t("ach.compare"))}</button></div>
     <div class="achlist">${a.rows.map((r) => `<div class="ach ${r.unlocked ? "on" : ""}"><div class="achico">${r.iconUrl ? `<img src="${esc(r.iconUrl)}" alt="">` : ic(r.unlocked ? "star" : "x")}</div><div><b>${esc(r.name)}</b><small>${esc(r.description)}</small></div><div class="achmeta">${r.rarity != null ? `<em>${r.rarity.toFixed(1)} %</em>` : ""}<span>${r.unlocked ? "✓" : Math.round((r.progress || 0) * 100) + " %"}</span></div></div>`).join("")}</div>`;
 }
+async function achievementsCompareModal() {
+  await providersLoad().catch(() => {});
+  const ids = [...new Set((app.pv.data?.games || []).filter((g) => g.quarkGameId).map((g) => g.quarkGameId))].slice(0, 8);
+  if (!ids.length) return toast(t("ach.compareEmpty"), true);
+  modal(`<h2>${esc(t("ach.compareTitle"))}</h2><div class="dim">${esc(t("log.loading"))}</div>`, true);
+  const rows = await invoke("achievements_compare", { ids }).catch((e) => { toast(String(e), true); return []; });
+  const body = rows.length ? rows.map((row) => `<div class="achcmp ${row.error ? "err" : ""}"><div class="t-top"><b>${esc(row.name)}</b><small>${esc(row.provider || "—")}</small></div>${row.error ? `<div class="dim">${esc(row.error)}</div>` : `<div class="t-bar"><i style="width:${row.percent}%"></i></div><div class="t-meta"><span>${row.unlocked} / ${row.total}</span><b>${row.percent} %</b></div>`}</div>`).join("") : `<div class="dim">${esc(t("ach.none"))}</div>`;
+  modal(`<h2>${esc(t("ach.compareTitle"))}</h2><div class="transfers">${body}</div><div class="foot"><button class="btn sec" data-act="close">${esc(t("x.close"))}</button></div>`, true);
+}
+
 async function loadNews(g, force) {
   const box = $("#tabc"), c = (app.cache.news ||= {});
   if (!g.steamAppId) { box.innerHTML = `<div class="none">${esc(t("x.noAppId"))}</div>`; return; }
