@@ -192,7 +192,7 @@ input[type=checkbox]{accent-color:var(--accent);width:15px;height:15px}
 .pvgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:18px}
 .pvmore{grid-column:1/-1;width:100%;padding:16px;text-align:center;color:var(--text-faint);font-size:13px;border:1px dashed var(--border);border-radius:12px;background:var(--surface);cursor:pointer}
 .pvmore:hover{color:var(--text);border-color:var(--accent)}
-.pcard{background:color-mix(in srgb,var(--surface) 82%,transparent);border:1px solid var(--border);border-radius:14px;overflow:hidden;display:flex;flex-direction:column}
+.pcard{position:relative;background:var(--surface);border:1px solid var(--border);border-radius:14px;overflow:hidden;display:flex;flex-direction:column;min-width:0}
 .pcover{aspect-ratio:16/9;background:center/cover linear-gradient(145deg,hsl(var(--h) 40% 22%),#080808);position:relative;display:grid;place-items:center;font:700 34px Archivo;color:#fff8}
 .pcover img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}.pcover b{opacity:.35;position:relative;z-index:1}.pvsrc,.pvstate{position:absolute;top:8px;z-index:2;padding:3px 8px;border-radius:99px;font:700 10px Archivo;letter-spacing:.06em;text-transform:uppercase;background:#000c}.pvsrc{left:8px;color:var(--pc)}.pvstate{right:8px;color:var(--text-dim)}.pvstate.on{color:#4cd07d}
 .pmeta{padding:10px 12px 12px;display:flex;flex-direction:column;gap:3px;min-width:0}.pmeta>b{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:500}.pmeta>small{font-size:11.5px;color:var(--text-faint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -354,7 +354,6 @@ body.deck .gb{grid-template-columns:minmax(0,1fr) 340px}
 #tabc.tab-anim{animation:tab-in .18s cubic-bezier(.2,.7,.3,1)}
 @keyframes tab-in{from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:none}}
 @media (prefers-reduced-motion: reduce){#tabc.tab-anim{animation:none}}
-.pcard{content-visibility:auto;contain-intrinsic-size:auto 260px}
 .pcover b{opacity:.32}
 .pcover img{opacity:0;transition:opacity .18s ease-out}
 .pcover img[src]{opacity:1}
@@ -362,3 +361,24 @@ video::-webkit-media-controls-fullscreen-button{display:none}
 body.cinema{background:#000}
 body.cinema::before{content:"";position:fixed;inset:0;background:#000;z-index:9998}
 video.cinema-video{position:fixed;inset:0;width:100vw;height:100vh;z-index:9999;object-fit:contain;background:#000}
+
+
+/* ---------- 2.1 : Mes jeux ---------- */
+.pvtoolbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:18px 0 10px;padding:8px;background:var(--surface);border:1px solid var(--border);border-radius:14px}
+.pvtoolbar input[type=search]{flex:1;min-width:220px;height:34px;padding:0 11px;background:var(--bg);border:1px solid transparent;border-radius:9px;color:var(--text);user-select:text}
+.pvtoolbar input[type=search]:focus{border-color:var(--accent);outline:none}
+.pvtoolbar select{height:34px;min-width:118px}
+.pvcount{color:var(--text-faint);font-size:12px;margin:0 2px 12px}
+.pvlist{display:flex;flex-direction:column;gap:6px}
+.pvrow{display:flex;align-items:center;gap:12px;padding:7px 10px;background:var(--surface);border:1px solid var(--border);border-radius:12px;min-width:0}
+.pvrow:hover{background:var(--surface-hover);border-color:color-mix(in srgb,var(--accent) 45%,var(--border))}
+.pvrow-main{flex:1;min-width:0}.pvrow-main b{display:block;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.pvrow-main small{display:block;color:var(--text-faint);font-size:11.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pvrow .pvstate{position:static;flex:none;background:transparent;color:var(--text-dim)}
+.pvrow .pactions{margin:0;flex-wrap:nowrap}
+.pcover.sm{width:44px;height:58px;aspect-ratio:auto;border-radius:7px;flex:none;font-size:20px}
+.pvmono{position:relative;z-index:1;opacity:.38}
+.pcover img{z-index:0}
+.pv-skeleton{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:18px}
+.pcard.sk{height:260px;background:linear-gradient(100deg,var(--surface) 20%,var(--surface-hover) 40%,var(--surface) 60%);background-size:220% 100%;animation:pvsk 1.2s linear infinite}
+@keyframes pvsk{to{background-position:-220% 0}}
+@media (prefers-reduced-motion: reduce){.pcard.sk{animation:none}}

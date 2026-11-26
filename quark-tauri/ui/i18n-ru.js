@@ -400,4 +400,10 @@ Object.assign(I18N, {
     "Volume": "Громкость",
     "x.trayUnavailable": "Область уведомлений недоступна в этой среде."
 }
+    ,"pv.count": "Все игры · {n}",
+    "pv.sort.title": "Название",
+    "pv.sort.installed": "Сначала установленные",
+    "pv.sort.synced": "Недавно синхронизированные",
+    "pv.layout.grid": "Сетка",
+    "pv.layout.list": "Список"
 });

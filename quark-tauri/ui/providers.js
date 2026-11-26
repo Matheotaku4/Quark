@@ -2,7 +2,22 @@
 // Mes jeux : bibliothèques Steam / Epic / GOG / itch.io, comptes et outils.
 
 Object.assign(app, {
-  pv: { data: null, q: "", provider: "", state: "all", loading: false, error: null, busy: "", shown: 24, obs: null },
+  pv: {
+    data: null,
+    loading: false,
+    error: null,
+    q: "",
+    providers: new Set(),
+    state: "all",
+    sort: "title",
+    shown: 24,
+    coverTried: new Set(),
+    coverFailures: new Map(),
+    coverQueue: new Set(),
+    imgObs: null,
+    prefsLoaded: false,
+    searchT: null,
+  },
 });
 
 const PV_LABEL = { steam: "Steam", epic: "Epic Games", gog: "GOG", itch: "itch.io" };
@@ -27,100 +42,215 @@ const pd = (detail) => {
 };
 const pvStateLabel = (s) => t("pv.state." + s);
 const PV_PAGE = 24;
+const PV_FILTERS_KEY = "quark.mygames.filters.v1";
 const pvInstalled = (g) => g.installState === "installed";
+const pvIsLocal = (g) => g.coverCached || String(g.coverUrl || "").startsWith("quarkimg://");
+
+function pvLoadPrefs() {
+  if (app.pv.prefsLoaded) return;
+  app.pv.prefsLoaded = true;
+  try {
+    const raw = JSON.parse(localStorage.getItem(PV_FILTERS_KEY) || "{}");
+    const providers = Array.isArray(raw.providers) ? raw.providers.filter((id) => PV_LABEL[id]) : [];
+    app.pv.providers = new Set(providers);
+    if (["all", "installed", "missing"].includes(raw.state)) app.pv.state = raw.state;
+    if (["title", "installed", "synced"].includes(raw.sort)) app.pv.sort = raw.sort;
+  } catch {}
+}
+
+function pvSavePrefs() {
+  try {
+    localStorage.setItem(PV_FILTERS_KEY, JSON.stringify({
+      providers: [...app.pv.providers],
+      state: app.pv.state,
+      sort: app.pv.sort,
+    }));
+  } catch {}
+}
+
+function pvLayout() {
+  return app.cfg.my_games_list ? "list" : "grid";
+}
 
 async function providersLoad(force) {
   if (app.pv.loading || (app.pv.data && !force)) return app.pv.data;
   app.pv.loading = true;
+  if (app.view === "mygames") repaintMyGamesResults();
   try {
     app.pv.data = await invoke("providers_data");
     app.pv.error = null;
     app.pv.shown = PV_PAGE;
+    pvLoadPrefs();
   } catch (e) {
     app.pv.error = String(e);
-    // Évite une boucle infinie : renderSheet relance providersLoad tant que
-    // data reste nul.
     app.pv.data ||= { games: [], accounts: [], tools: [], error: String(e) };
   }
   app.pv.loading = false;
-  if (app.view === "mygames") renderSheetKeepScroll();
+  if (app.view === "mygames") {
+    if ($("#pv-results")) repaintMyGamesResults();
+    else renderSheetKeepScroll();
+  }
   return app.pv.data;
 }
 
+function pvMatches(g, q) {
+  if (!q) return true;
+  return norm([g.title, PV_LABEL[g.provider], g.installPath].join(" ")).includes(q);
+}
+
+function pvSort(a, b) {
+  if (app.pv.sort === "installed") {
+    const delta = Number(pvInstalled(b)) - Number(pvInstalled(a));
+    if (delta) return delta;
+  }
+  if (app.pv.sort === "synced") {
+    const delta = (b.lastSynced || 0) - (a.lastSynced || 0);
+    if (delta) return delta;
+  }
+  return a.title.localeCompare(b.title, locale(), { sensitivity: "base" });
+}
+
 function pvGames() {
-  const data = app.pv.data, q = norm(app.pv.q.trim());
-  return (data?.games || []).filter((g) =>
-    (!app.pv.provider || g.provider === app.pv.provider) &&
-    (app.pv.state === "all" || (app.pv.state === "installed" ? pvInstalled(g) : !pvInstalled(g))) &&
-    (!q || norm([g.title, PV_LABEL[g.provider], g.installPath].join(" ")).includes(q)));
+  const q = norm(app.pv.q.trim());
+  return (app.pv.data?.games || [])
+    .filter((g) =>
+      (!app.pv.providers.size || app.pv.providers.has(g.provider)) &&
+      (app.pv.state === "all" || (app.pv.state === "installed" ? pvInstalled(g) : !pvInstalled(g))) &&
+      pvMatches(g, q))
+    .sort(pvSort);
 }
 
 function pvButton(label, action, cls = "sec", attrs = "") {
   return `<button class="btn ${cls} sm" data-pv="${action}" ${attrs}>${esc(label)}</button>`;
 }
 
-function providerCard(g) {
+function pvActions(g) {
   const installed = pvInstalled(g);
   const linked = g.quarkGameId;
   const actions = [];
-  if (g.installState === "installing") actions.push(`<span class="pvwait">${esc(t("pv.installing"))}</span>`);
-  else if (installed) {
+  if (g.installState === "installing") {
+    actions.push(`<span class="pvwait">${esc(t("pv.installing"))}</span>`);
+  } else if (installed) {
     actions.push(linked
       ? pvButton(t("pv.open"), "open", "pri", `data-game="${esc(linked)}"`)
       : pvButton(t("pv.adopt"), "adopt", "pri", `data-provider="${g.provider}" data-product="${esc(g.productId)}"`));
-    if (g.provider !== "steam") actions.push(pvButton(t("pv.uninstall"), "uninstall", "sec", `data-provider="${g.provider}" data-product="${esc(g.productId)}"`));
+    if (g.provider !== "steam") {
+      actions.push(pvButton(t("pv.uninstall"), "uninstall", "sec", `data-provider="${g.provider}" data-product="${esc(g.productId)}"`));
+    }
   } else if (g.provider === "steam") {
     actions.push(pvButton(t("pv.installSteam"), "install", "pri", `data-provider="${g.provider}" data-product="${esc(g.productId)}"`));
   } else {
     actions.push(pvButton(t("pv.install"), "install", "pri", `data-provider="${g.provider}" data-product="${esc(g.productId)}"`));
   }
-  return `<article class="pcard" style="--pc:${PV_COLOR[g.provider] || "var(--accent)"}">
-    <div class="pcover"><b>${esc(g.title.slice(0, 1).toUpperCase())}</b>${g.coverUrl ? `<img data-src="${esc(g.coverUrl)}" loading="lazy" decoding="async" referrerpolicy="no-referrer" alt="">` : ""}
-      <span class="pvsrc">${esc(PV_LABEL[g.provider] || g.provider)}</span>
-      <span class="pvstate ${installed ? "on" : ""}">${esc(pvStateLabel(g.installState))}</span>
-    </div>
+  return actions.join("");
+}
+
+function pvCover(g, cls = "") {
+  const cached = pvIsLocal(g);
+  const mono = `<span class="pvmono">${esc((g.title || "?").slice(0, 1).toUpperCase())}</span>`;
+  const img = g.coverUrl
+    ? `<img src="${esc(g.coverUrl)}" loading="lazy" decoding="async" referrerpolicy="no-referrer" alt="" ${cached ? 'data-cover-cached="1"' : ""}>`
+    : "";
+  return `<div class="pcover ${cls}" data-pv-cover data-provider="${esc(g.provider)}" data-product="${esc(g.productId)}" ${cached ? 'data-cover-cached="1"' : ""}>${mono}${img}</div>`;
+}
+
+function providerCard(g) {
+  const installed = pvInstalled(g);
+  return `<article class="pcard" style="--pc:${PV_COLOR[g.provider] || "var(--accent)"}" data-provider="${esc(g.provider)}" data-product="${esc(g.productId)}">
+    ${pvCover(g)}
+    <span class="pvsrc">${esc(PV_LABEL[g.provider] || g.provider)}</span>
+    <span class="pvstate ${installed ? "on" : ""}">${esc(pvStateLabel(g.installState))}</span>
     <div class="pmeta"><b title="${esc(g.title)}">${esc(g.title)}</b>
       <small>${installed ? esc(t("pv.installedAt", { path: g.installPath || "—" })) : esc(t("pv.owned"))}</small>
-      <div class="pactions">${actions.join("")}</div>
+      <div class="pactions">${pvActions(g)}</div>
     </div>
   </article>`;
 }
 
-function accountBadge(a) {
-  return `<div class="account ${a.connected ? "on" : ""}">
-    <i class="pdot"></i><div><b>${esc(a.label)}</b><small>${esc(pd(a.detail))}</small></div>
-    ${a.connected ? pvButton(t("pv.disconnect"), "disconnect", "sec", `data-provider="${a.id}"`) : pvButton(t("pv.connect"), "connect", "sec", `data-provider="${a.id}"`)}
-  </div>`;
+function providerRow(g) {
+  const installed = pvInstalled(g);
+  return `<article class="pvrow" data-provider="${esc(g.provider)}" data-product="${esc(g.productId)}">
+    ${pvCover(g, "sm")}
+    <div class="pvrow-main"><b title="${esc(g.title)}">${esc(g.title)}</b>
+      <small>${esc(PV_LABEL[g.provider] || g.provider)} · ${installed ? esc(g.installPath || t("pv.state.installed")) : esc(t("pv.owned"))}</small>
+    </div>
+    <span class="pvstate ${installed ? "on" : ""}">${esc(pvStateLabel(g.installState))}</span>
+    <div class="pactions">${pvActions(g)}</div>
+  </article>`;
 }
 
-function toolRow(tool) {
-  return `<div class="tool ${tool.installed ? "on" : ""}"><div><b>${esc(tool.label)}</b><small>${esc(tool.installed ? t("pv.toolReady") : t("pv.toolMissing"))}</small></div>
-    ${tool.installed ? `<span class="ok">✓</span>` : pvButton(t("pv.installTool"), "tool", "sec", `data-tool="${esc(tool.id)}"`)}</div>`;
+function pvCount(games) {
+  return t("pv.count", { n: games.length });
+}
+
+function renderMyGamesResults() {
+  const games = pvGames();
+  const shown = Math.min(app.pv.shown || PV_PAGE, games.length);
+  const visible = games.slice(0, shown);
+  if (!games.length) {
+    return `<div class="none">${esc(app.pv.data?.games?.length ? t("pv.noMatch") : t("pv.empty"))}</div>`;
+  }
+  const layout = pvLayout();
+  const body = layout === "list" ? visible.map(providerRow).join("") : visible.map(providerCard).join("");
+  const more = games.length > shown ? `<button class="pvmore" id="pv-more" type="button">${esc(t("pv.more"))}</button>` : "";
+  return `<div class="${layout === "list" ? "pvlist" : "pvgrid"}">${body}${more}</div>`;
+}
+
+function repaintMyGamesResults() {
+  const count = $("#pv-count"), results = $("#pv-results");
+  if (!count || !results) return;
+  const games = pvGames();
+  count.textContent = pvCount(games);
+  results.innerHTML = renderMyGamesResults();
+  bindMyGamesResults();
+  pvLazyImages();
+  pvQueueCovers();
 }
 
 function renderMyGames() {
   const data = app.pv.data;
-  if (!data && app.pv.loading) return `<div class="sline">${esc(t("pv.loading"))}</div>`;
+  if (!data && app.pv.loading) return `<div class="pv-skeleton">${Array.from({ length: 8 }, () => `<div class="pcard sk"></div>`).join("")}</div>`;
   if (!data) return `<div class="empty"><h2>${esc(t("pv.title"))}</h2><p>${esc(app.pv.error || t("pv.emptyHint"))}</p><button class="btn" data-pv="reload">${esc(t("pv.reload"))}</button></div>`;
-  const games = pvGames();
+  pvLoadPrefs();
   const chips = [["", t("pv.all")], ["steam", "Steam"], ["epic", "Epic Games"], ["gog", "GOG"], ["itch", "itch.io"]];
   return `<div class="mygames">
     <div class="pvhero"><div><span class="pill">${esc(t("pv.mygames"))}</span><h2>${esc(t("pv.title"))}</h2><p>${esc(t("pv.subtitle"))}</p></div>
       <div class="pvactions"><button class="btn sec" data-pv="accounts">${ic("gear")}${esc(t("pv.accounts"))}</button><button class="btn sec" data-pv="sync-all">${ic("refresh")}${esc(t("pv.syncAll"))}</button><button class="btn" data-pv="steam-import">${ic("plus")}${esc(t("pv.importSteam"))}</button></div></div>
     ${data.error ? `<div class="sline err">${esc(data.error)}</div>` : ""}
-    <div class="pvfilters"><input type="search" id="pv-q" value="${esc(app.pv.q)}" placeholder="${esc(t("pv.search"))}" autocomplete="off">
-      <div class="pchips">${chips.map(([id, label]) => `<button data-pvprov="${id}" class="${app.pv.provider === id ? "on" : ""}">${esc(label)}</button>`).join("")}</div>
+    <div class="pvtoolbar">
+      <input type="search" id="pv-q" value="${esc(app.pv.q)}" placeholder="${esc(t("pv.search"))}" autocomplete="off">
+      <div class="pchips" id="pv-providers">${chips.map(([id, label]) => {
+        const active = id ? app.pv.providers.has(id) : !app.pv.providers.size;
+        return `<button data-pvprov="${id}" class="${active ? "on" : ""}">${esc(label)}</button>`;
+      }).join("")}</div>
       <select id="pv-state">${["all", "installed", "missing"].map((id) => `<option value="${id}" ${app.pv.state === id ? "selected" : ""}>${esc(t("pv.filter." + id))}</option>`).join("")}</select>
-      <button class="tb" data-pv="reload" title="${esc(t("pv.reload"))}">${ic("refresh")}</button></div>
-    ${games.length ? `<div class="pvgrid">${games.slice(0, app.pv.shown || PV_PAGE).map(providerCard).join("")}${games.length > (app.pv.shown || PV_PAGE) ? `<button class="pvmore" id="pv-more" type="button">${esc(t("pv.more"))}</button>` : ""}</div>` : `<div class="none">${esc(data.games.length ? t("pv.noMatch") : t("pv.empty"))}</div>`}
+      <select id="pv-sort">${["title", "installed", "synced"].map((id) => `<option value="${id}" ${app.pv.sort === id ? "selected" : ""}>${esc(t("pv.sort." + id))}</option>`).join("")}</select>
+      <button class="tb" id="pv-layout" title="${esc(t(pvLayout() === "list" ? "pv.layout.grid" : "pv.layout.list"))}">${ic(pvLayout() === "list" ? "grid" : "list")}</button>
+      <button class="tb" data-pv="reload" title="${esc(t("pv.reload"))}">${ic("refresh")}</button>
+    </div>
+    <div class="pvcount" id="pv-count">${esc(pvCount(pvGames()))}</div>
+    <div id="pv-results">${renderMyGamesResults()}</div>
   </div>`;
 }
 
 function stopMyGames() {
-  app.pv.obs?.disconnect();
-  app.pv.obs = null;
+  clearTimeout(app.pv.searchT);
   app.pv.imgObs?.disconnect();
   app.pv.imgObs = null;
+}
+
+function bindMyGamesResults() {
+  const more = $("#pv-more");
+  if (more) more.onclick = pvMore;
+  const results = $("#pv-results");
+  if (results && !results.dataset.bound) {
+    results.dataset.bound = "1";
+    results.addEventListener("error", (e) => {
+      const img = e.target.closest?.("img");
+      if (!img) return;
+      img.remove();
+    }, true);
+  }
 }
 
 function bindMyGames() {
@@ -130,56 +260,120 @@ function bindMyGames() {
     app.pv.q = q.value;
     reset();
     clearTimeout(app.pv.searchT);
-    app.pv.searchT = setTimeout(() => {
-      renderSheet();
-      const n = $("#pv-q");
-      n && (n.focus(), n.setSelectionRange(n.value.length, n.value.length));
-    }, 110);
+    app.pv.searchT = setTimeout(repaintMyGamesResults, 120);
   };
-  const s = $("#pv-state"); if (s) s.onchange = () => { app.pv.state = s.value; reset(); renderSheet(); };
-  $$("[data-pvprov]").forEach((b) => (b.onclick = () => { app.pv.provider = b.dataset.pvprov; reset(); renderSheet(); }));
-  const grid = $(".pvgrid");
-  if (grid && !grid.dataset.bound) {
-    grid.dataset.bound = "1";
-    grid.addEventListener("error", (e) => { const img = e.target.closest?.("img"); if (img) img.remove(); }, true);
-  }
-  const more = $("#pv-more");
-  if (more) more.onclick = moreGames;
+  const state = $("#pv-state");
+  if (state) state.onchange = () => { app.pv.state = state.value; reset(); pvSavePrefs(); repaintMyGamesResults(); };
+  const sort = $("#pv-sort");
+  if (sort) sort.onchange = () => { app.pv.sort = sort.value; reset(); pvSavePrefs(); repaintMyGamesResults(); };
+  $$("[data-pvprov]").forEach((button) => (button.onclick = () => {
+    const id = button.dataset.pvprov;
+    if (!id) app.pv.providers.clear();
+    else if (app.pv.providers.has(id)) app.pv.providers.delete(id);
+    else app.pv.providers.add(id);
+    reset();
+    pvSavePrefs();
+    repaintMyGamesResults();
+    $$("[data-pvprov]").forEach((chip) => {
+      const key = chip.dataset.pvprov;
+      chip.classList.toggle("on", key ? app.pv.providers.has(key) : !app.pv.providers.size);
+    });
+  }));
+  const layout = $("#pv-layout");
+  if (layout) layout.onclick = () => run(async () => {
+    const next = pvLayout() === "list" ? "grid" : "list";
+    await cfgSet({ my_games_list: next === "list" });
+    const button = $("#pv-layout");
+    if (button) {
+      button.innerHTML = ic(next === "list" ? "grid" : "list");
+      button.title = t(next === "list" ? "pv.layout.grid" : "pv.layout.list");
+    }
+    repaintMyGamesResults();
+  });
+  bindMyGamesResults();
   pvLazyImages();
+  pvQueueCovers();
 }
 
 function pvLazyImages() {
-  const images = $$(".pvgrid img");
+  const images = $$("#pv-results img[data-src]");
   if (!images.length) return;
   if (!("IntersectionObserver" in window)) {
-    images.forEach((img) => { if (img.dataset.src) img.src = img.dataset.src; });
+    images.forEach((img) => { img.src = img.dataset.src; });
     return;
   }
   app.pv.imgObs?.disconnect();
   app.pv.imgObs = new IntersectionObserver((entries) => {
     for (const entry of entries) {
+      if (!entry.isIntersecting) continue;
       const img = entry.target;
-      if (entry.isIntersecting) {
-        if (!img.getAttribute("src") && img.dataset.src) img.src = img.dataset.src;
-      } else if (img.getAttribute("src")) {
-        // Libère la mémoire des jaquettes sorties de l'écran ; elles sont
-        // rechargées depuis data-src au retour.
-        img.removeAttribute("src");
-      }
+      if (!img.getAttribute("src") && img.dataset.src) img.src = img.dataset.src;
+      app.pv.imgObs.unobserve(img);
     }
-  }, { root: $("#sheet"), rootMargin: "400px" });
+  }, { root: $("#sheet"), rootMargin: "300px" });
   images.forEach((img) => app.pv.imgObs.observe(img));
 }
 
-function moreGames() {
-  const grid = $(".pvgrid"), more = $("#pv-more");
-  if (!grid || !more) return;
-  const games = pvGames(), from = app.pv.shown || PV_PAGE, next = games.slice(from, from + PV_PAGE);
-  if (!next.length) { more.remove(); return; }
-  more.insertAdjacentHTML("beforebegin", next.map(providerCard).join(""));
+function pvQueueCovers() {
+  const nodes = $$("#pv-results [data-pv-cover]");
+  const keys = [];
+  for (const node of nodes) {
+    if (node.dataset.coverCached === "1") continue;
+    const provider = node.dataset.provider;
+    const productId = node.dataset.product;
+    const key = `${provider}:${productId}`;
+    if (app.pv.coverTried.has(key)) continue;
+    if ((app.pv.coverFailures.get(key) || 0) >= 3) continue;
+    if (app.pv.coverQueue.has(key)) continue;
+    app.pv.coverQueue.add(key);
+    keys.push({ provider, productId });
+    if (keys.length >= 8) break;
+  }
+  if (!keys.length) return;
+  invoke("provider_ensure_covers", { keys })
+    .then((updates) => { pvApplyCoverUpdates(updates); pvQueueCovers(); })
+    .catch(() => keys.forEach((key) => app.pv.coverQueue.delete(`${key.provider}:${key.productId}`)));
+}
+
+function pvApplyCoverUpdates(updates) {
+  for (const update of updates) {
+    const key = `${update.provider}:${update.productId}`;
+    app.pv.coverQueue.delete(key);
+    if (!update.coverUrl) {
+      app.pv.coverFailures.set(key, (app.pv.coverFailures.get(key) || 0) + 1);
+      continue;
+    }
+    app.pv.coverTried.add(key);
+    app.pv.coverFailures.delete(key);
+    const node = $(`#pv-results [data-pv-cover][data-provider="${update.provider}"][data-product="${update.productId}"]`);
+    if (!node) continue;
+    node.dataset.coverCached = "1";
+    let img = node.querySelector("img");
+    if (!img) {
+      img = document.createElement("img");
+      img.alt = "";
+      img.loading = "lazy";
+      img.decoding = "async";
+      node.prepend(img);
+    }
+    img.src = update.coverUrl;
+    img.hidden = false;
+    node.querySelector(".pvmono")?.remove();
+  }
+}
+
+function pvMore() {
+  const games = pvGames();
+  const from = app.pv.shown || PV_PAGE;
+  const next = games.slice(from, from + PV_PAGE);
+  const more = $("#pv-more");
+  if (!next.length) { more?.remove(); return; }
+  const layout = pvLayout();
+  more?.insertAdjacentHTML("beforebegin", next.map(layout === "list" ? providerRow : providerCard).join(""));
   app.pv.shown = from + next.length;
-  if (app.pv.shown >= games.length) more.remove();
+  if (app.pv.shown >= games.length) more?.remove();
   pvLazyImages();
+  pvQueueCovers();
 }
 
 function providersSettings() {

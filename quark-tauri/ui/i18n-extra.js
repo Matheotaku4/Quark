@@ -409,3 +409,9 @@ Object.assign(I18N.en, { "ach.compare": "Compare", "ach.compareTitle": "Compare 
 Object.assign(I18N.es, { "ach.compare": "Comparar", "ach.compareTitle": "Comparar logros", "ach.compareEmpty": "Ningún juego de tienda vinculado para comparar." });
 Object.assign(I18N.de, { "ach.compare": "Vergleichen", "ach.compareTitle": "Erfolge vergleichen", "ach.compareEmpty": "Kein verknüpftes Store-Spiel zum Vergleichen." });
 Object.assign(I18N.pt, { "ach.compare": "Comparar", "ach.compareTitle": "Comparar conquistas", "ach.compareEmpty": "Nenhum jogo de loja associado para comparar." });
+
+Object.assign(I18N.fr, { "pv.count": "Tous les jeux · {n}", "pv.sort.title": "Nom", "pv.sort.installed": "Installés d'abord", "pv.sort.synced": "Synchronisés récemment", "pv.layout.grid": "Vue grille", "pv.layout.list": "Vue liste" });
+Object.assign(I18N.en, { "pv.count": "All games · {n}", "pv.sort.title": "Name", "pv.sort.installed": "Installed first", "pv.sort.synced": "Recently synced", "pv.layout.grid": "Grid view", "pv.layout.list": "List view" });
+Object.assign(I18N.es, { "pv.count": "Todos los juegos · {n}", "pv.sort.title": "Nombre", "pv.sort.installed": "Instalados primero", "pv.sort.synced": "Sincronizados recientemente", "pv.layout.grid": "Vista de cuadrícula", "pv.layout.list": "Vista de lista" });
+Object.assign(I18N.de, { "pv.count": "Alle Spiele · {n}", "pv.sort.title": "Name", "pv.sort.installed": "Installierte zuerst", "pv.sort.synced": "Zuletzt synchronisiert", "pv.layout.grid": "Rasteransicht", "pv.layout.list": "Listenansicht" });
+Object.assign(I18N.pt, { "pv.count": "Todos os jogos · {n}", "pv.sort.title": "Nome", "pv.sort.installed": "Instalados primeiro", "pv.sort.synced": "Sincronizados recentemente", "pv.layout.grid": "Vista de grelha", "pv.layout.list": "Vista de lista" });
