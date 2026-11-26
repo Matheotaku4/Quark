@@ -2285,6 +2285,7 @@ fn main() {
             store::store_refresh,
             store::store_search,
             providers::providers_data,
+            providers::provider_ensure_covers,
             providers::provider_sync,
             providers::provider_login,
             providers::provider_disconnect,

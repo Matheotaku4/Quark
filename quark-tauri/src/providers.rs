@@ -12,7 +12,7 @@ use quark::providers::{
     steam, tools,
 };
 use quark::steamlib;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::AtomicBool;
@@ -68,6 +68,22 @@ pub struct ProvidersDto {
     tools: Vec<ToolDto>,
     steam_id: Option<String>,
     error: Option<String>,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ProviderKeyDto {
+    pub provider: String,
+    pub product_id: String,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ProviderCoverDto {
+    pub provider: String,
+    pub product_id: String,
+    pub cover_url: Option<String>,
+    pub error: Option<String>,
 }
 
 #[derive(Serialize)]
@@ -314,6 +330,127 @@ pub async fn providers_data(state: State<'_, AppState>) -> Result<ProvidersDto, 
         .await
         .map_err(|error| error.to_string())
 }
+fn normalize_cover_keys(keys: Vec<ProviderKeyDto>) -> Result<Vec<ProviderGameKey>, String> {
+    let mut seen = HashSet::new();
+    let mut normalized = Vec::new();
+    for key in keys {
+        let product_id = key.product_id.trim().to_string();
+        if product_id.is_empty() {
+            continue;
+        }
+        let provider: Provider =
+            serde_json::from_value(serde_json::Value::String(key.provider))
+                .map_err(|_| "Boutique inconnue.".to_string())?;
+        let key = ProviderGameKey {
+            provider,
+            product_id,
+        };
+        if seen.insert(key.clone()) {
+            normalized.push(key);
+        }
+        if normalized.len() >= 32 {
+            break;
+        }
+    }
+    Ok(normalized)
+}
+
+#[tauri::command]
+pub async fn provider_ensure_covers(
+    state: State<'_, AppState>,
+    keys: Vec<ProviderKeyDto>,
+) -> Result<Vec<ProviderCoverDto>, String> {
+    let keys = normalize_cover_keys(keys)?;
+    if keys.is_empty() {
+        return Ok(Vec::new());
+    }
+    let records = {
+        let library = lock(&state.library);
+        keys.into_iter()
+            .map(|key| {
+                let record = library
+                    .provider_library
+                    .games
+                    .iter()
+                    .find(|game| game.key == key)
+                    .cloned();
+                (key, record)
+            })
+            .collect::<Vec<_>>()
+    };
+    let results = tauri::async_runtime::spawn_blocking(move || {
+        let mut results = Vec::new();
+        for chunk in records.chunks(4) {
+            let mut handles = Vec::new();
+            for (key, record) in chunk {
+                let key = key.clone();
+                let record = record.clone();
+                handles.push(std::thread::spawn(move || {
+                    let Some(record) = record else {
+                        return (key, Err("jeu de boutique introuvable".to_string()));
+                    };
+                    (key, providers::covers::ensure(&record))
+                }));
+            }
+            for handle in handles {
+                match handle.join() {
+                    Ok(result) => results.push(result),
+                    Err(_) => results.push((
+                        ProviderGameKey {
+                            provider: Provider::Steam,
+                            product_id: String::new(),
+                        },
+                        Err("téléchargement interrompu".to_string()),
+                    )),
+                }
+            }
+        }
+        results
+    })
+    .await
+    .map_err(|error| error.to_string())?;
+
+    let mut updates = Vec::new();
+    let mut changed = false;
+    let mut library = lock(&state.library);
+    for (key, result) in results {
+        let provider = format!("{:?}", key.provider).to_lowercase();
+        match result {
+            Ok((path, discovered)) => {
+                if let Some(url) = discovered {
+                    if let Some(record) = library
+                        .provider_library
+                        .games
+                        .iter_mut()
+                        .find(|game| game.key == key)
+                    {
+                        if record.cover_url.as_deref() != Some(url.as_str()) {
+                            record.cover_url = Some(url);
+                            changed = true;
+                        }
+                    }
+                }
+                updates.push(ProviderCoverDto {
+                    provider,
+                    product_id: key.product_id,
+                    cover_url: super::asset_url(Some(&path)),
+                    error: None,
+                });
+            }
+            Err(error) => updates.push(ProviderCoverDto {
+                provider,
+                product_id: key.product_id,
+                cover_url: None,
+                error: Some(error),
+            }),
+        }
+    }
+    if changed {
+        persist(&state, &mut library)?;
+    }
+    Ok(updates)
+}
+
 fn sync_provider(
     provider: Provider,
     existing: &[ProviderGame],
@@ -1157,4 +1294,33 @@ mod tests {
 
         let _ = std::fs::remove_dir_all(&dir);
     }
+
+    #[test]
+    fn les_cles_de_couverture_sont_dedupliquees_et_bornees() {
+        let keys = (0..40)
+            .map(|index| ProviderKeyDto {
+                provider: "steam".to_string(),
+                product_id: index.to_string(),
+            })
+            .collect();
+        let normalized = normalize_cover_keys(keys).unwrap();
+        assert_eq!(normalized.len(), 32);
+        assert_eq!(normalized[0].provider, Provider::Steam);
+
+        let duplicate = vec![
+            ProviderKeyDto { provider: "steam".into(), product_id: "1".into() },
+            ProviderKeyDto { provider: "steam".into(), product_id: "1".into() },
+        ];
+        assert_eq!(normalize_cover_keys(duplicate).unwrap().len(), 1);
+    }
+
+    #[test]
+    fn une_boutique_inconnue_est_refusee() {
+        let keys = vec![ProviderKeyDto {
+            provider: "ubisoft".into(),
+            product_id: "1".into(),
+        }];
+        assert!(normalize_cover_keys(keys).is_err());
+    }
+
 }
