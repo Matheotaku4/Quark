@@ -7,21 +7,21 @@
 
 ## A full-screen page, not a small dialog
 
-Since 1.2, **Settings** fills the window. A sidebar on the left lists the pages,
-the active page is outlined with the accent colour, and each section is
-separated by a title and a rule. The **×** button in the top right closes
-settings. Content scrolls independently of the navigation.
+**Settings** fills the window. A sidebar on the left lists the pages, the
+active page is outlined with the accent colour, and each section is separated
+by a title and a rule. The **×** button in the top right closes settings.
+Content scrolls independently of the navigation.
 
 The pages are: **Appearance**, **In game**, **New games**, **Artwork**,
-**Stores & tools**, **Statistics**, **Disk space** and **About**. The
+**Saves**, **Stores & tools**, **Statistics**, **Disk** and **About**. The
 [Settings](Settings) page describes each one.
 
 ## Interface language
 
 **Appearance → Interface language** offers **Français**, **English**,
-**Español**, **Deutsch** and **Português**. The change is immediate: the whole
-interface is rebuilt with the new catalogue, without restarting Quark. The
-choice is stored in `settings.ui_language`.
+**Español**, **Deutsch**, **Português** and **Русский**. The change is
+immediate: the whole interface is rebuilt with the new catalogue, without
+restarting Quark. The choice is stored in `settings.ui_language`.
 
 This language is **separate** from `settings.language`, which asks the Steam API
 for descriptions in a given language. You can keep the interface in French and
@@ -103,9 +103,10 @@ Named views, sorting and grouping are described in
 ## Notifications and tray icon
 
 The tray icon keeps Quark in the background: the close button hides the window in
-the icon instead of quitting. Desktop notifications can also announce the end of an
-installation, a save backup or a game session. These settings are in
-**Appearance** and **In game**.
+the icon instead of quitting. Left-click the icon to open Quark; right-click it
+to open the menu and close the application. Desktop notifications can also
+announce the end of an installation, a save backup or a game session. These
+settings are in **Appearance** and **In game**.
 
 On some environments without a notification area (some minimal Wayland
 compositors), the icon may not appear. Quark remains usable; quit with `Ctrl+Q`.

@@ -1,14 +1,24 @@
 # Quark Wiki
 
-Quark is a game launcher for Linux, written in Rust with a Tauri 2 interface. It brings local
-games and your Steam, Epic Games and GOG libraries together, launches Windows
-games through Proton or umu-launcher, and keeps achievements and verified
-local saves alongside the library.
+Quark is a game launcher for Linux, written in Rust with a Tauri 2 interface.
+It brings local games and your Steam, Epic Games, GOG and itch.io libraries
+together, launches Windows games through Proton or umu-launcher, and keeps
+achievements and verified local saves alongside the library.
 
-This documentation describes **Quark 2.0.1**. It is also versioned in the
+This documentation describes **Quark 2.0.1**. Its source is versioned in the
 repository under [`wiki/`](https://github.com/Matheotaku4/Quark/tree/main/wiki).
 
 ![Quark home](https://raw.githubusercontent.com/Matheotaku4/Quark/main/docs/images/home-en.png)
+
+## Preview
+
+| Library | Game page |
+| --- | --- |
+| ![Library with list and game page](https://raw.githubusercontent.com/Matheotaku4/Quark/main/docs/images/library-en.png) | ![Game page](https://raw.githubusercontent.com/Matheotaku4/Quark/main/docs/images/game-en.png) |
+| **Store** | **My games** |
+| ![Store page](https://raw.githubusercontent.com/Matheotaku4/Quark/main/docs/images/store-en.png) | ![My games](https://raw.githubusercontent.com/Matheotaku4/Quark/main/docs/images/my-games-en.png) |
+| **Settings** | **First launch** |
+| ![Appearance settings](https://raw.githubusercontent.com/Matheotaku4/Quark/main/docs/images/settings-en.png) | ![Welcome guide](https://raw.githubusercontent.com/Matheotaku4/Quark/main/docs/images/onboarding-en.png) |
 
 ## What's new in 2.0.1
 
@@ -41,8 +51,8 @@ repository under [`wiki/`](https://github.com/Matheotaku4/Quark/tree/main/wiki).
 ## What Quark does
 
 - **One library.** Local and store games share covers, hero images, logos,
-  notes, favorites, tags, playtime and statistics. A game can have several installations
-  without appearing twice.
+  notes, favorites, tags, playtime and statistics. A game can have several
+  installations without appearing twice.
 - **Steam, Epic Games and GOG.** Steam is read from local libraries. Legendary
   manages Epic and gogdl manages GOG. Passwords never pass through Quark; only
   the tokens written by those tools stay on the machine.
@@ -53,9 +63,9 @@ repository under [`wiki/`](https://github.com/Matheotaku4/Quark/tree/main/wiki).
   page, with icons, rarity and session unlocks.
 - **Saves.** Epic/GOG cloud synchronization and Ludusavi snapshots verified
   before and after a session.
-- **A configurable interface.** Thirteen dark themes, six interface languages, list or
-  grid, a customizable home page, a random blurred hero and a `Ctrl+K` command
-  palette.
+- **A configurable interface.** Thirteen dark themes, six interface languages
+  (French, English, Spanish, German, Portuguese and Russian), list or grid, a
+  customizable home page, a random blurred hero and a `Ctrl+K` command palette.
 - **A launcher, not a store.** Quark never buys anything and never downloads a
   game from a third-party site. Store search results open in your browser.
 
@@ -77,9 +87,8 @@ repository under [`wiki/`](https://github.com/Matheotaku4/Quark/tree/main/wiki).
 - Epic/GOG accounts and a real graphical server are not available in the build
   environment. Code paths, migrations and errors are tested, but a manual check
   with a real account is still recommended.
-- The GitHub wiki is a separate repository. Publishing it needs GitHub
-  authentication with wiki access; the source is versioned here so it can be
-  synchronized as soon as that access is available.
+- The wiki is published from the versioned source in `wiki/`. Pages are kept in
+  step with the current release; old release-specific notes are removed.
 
 ## Licence
 

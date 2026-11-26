@@ -1,21 +1,37 @@
 # Quark
 
-A lightweight game launcher for Linux, written in Rust with a Tauri 2 interface. Quark keeps a
-single library for local games and for the Steam, Epic Games, GOG and itch.io
-titles you own, launches Windows games through Proton (or umu-launcher), and stays out of
-the way with a modern dark interface, a fast library and a detailed game page.
+**A lightweight game launcher for Linux.** Quark keeps local games and the
+Steam, Epic Games, GOG and itch.io titles you own in one library. It launches
+Windows games through Proton or umu-launcher and stays out of the way with a
+fast, modern interface.
 
-This is the **2.0.1** documentation. Older release notes are kept on the GitHub
-releases page; `docs/release-notes.md` only describes the release currently
-being published.
+<p align="center">
+  <img src="docs/images/home-en.png" alt="Quark home page with a recently played game and the library rail" width="100%">
+</p>
+
+<p align="center"><sub>Home: continue playing, browse the library, launch in one click.</sub></p>
+
+**Version 2.0.1** · **Linux x86_64** · **MIT licence**
 
 **Website:** [matheotaku4.github.io/Quark](https://matheotaku4.github.io/Quark/) ·
 **Documentation:** [GitHub Wiki](https://github.com/Matheotaku4/Quark/wiki) ·
 [Getting started](https://github.com/Matheotaku4/Quark/wiki/Getting-Started) ·
 [Proton and Wine options](https://github.com/Matheotaku4/Quark/wiki/Proton-Wine-and-Launch-Options) ·
-[Troubleshooting](https://github.com/Matheotaku4/Quark/wiki/Troubleshooting).
+[Troubleshooting](https://github.com/Matheotaku4/Quark/wiki/Troubleshooting)
+
 The wiki is published from the versioned source in [`wiki/`](wiki/) by the
-`.github/workflows/wiki.yml` workflow.
+`.github/workflows/wiki.yml` workflow. Screenshots use the English interface;
+French, Spanish, German, Portuguese and Russian are available in the app.
+
+## Preview
+
+| Library: list on the left, game page on the right | Game page: hero, play button and tabs |
+| --- | --- |
+| ![Library with a game selected](docs/images/library-en.png) | ![Game page for A Short Hike](docs/images/game-en.png) |
+| **Store:** deals, recommendations and store search | **My games:** owned and installed games by store |
+| ![Steam store page](docs/images/store-en.png) | ![My games library](docs/images/my-games-en.png) |
+| **Settings:** full-page navigation and live previews | **First launch:** language, theme and startup page |
+| ![Appearance settings](docs/images/settings-en.png) | ![Welcome guide](docs/images/onboarding-en.png) |
 
 ## What's new in 2.0.1
 
@@ -31,25 +47,30 @@ The wiki is published from the versioned source in [`wiki/`](wiki/) by the
 - **Russian added** to the interface and Rust core messages.
 - **Quark overlay removed.** The global screenshot shortcut remains available.
 
+This is the **2.0.1** documentation. Older release notes are kept on the GitHub
+releases page; `docs/release-notes.md` only describes the release currently
+being published.
+
 ## Table of contents
 
-1. [What's new in 2.0.1](#whats-new-in-201)
-2. [What Quark does](#what-quark-does)
-3. [Installation](#installation)
-4. [First launch](#first-launch)
-5. [Interface](#interface)
-6. [One game, several installations](#one-game-several-installations)
-7. [Stores, accounts and cloud saves](#stores-accounts-and-cloud-saves)
-8. [Achievements and the Epic overlay](#achievements-and-the-epic-overlay)
-9. [Proton, umu and launch options](#proton-umu-and-launch-options)
-10. [Local saves and snapshots](#local-saves-and-snapshots)
-11. [Settings](#settings)
-12. [Command line](#command-line)
-13. [Files, data and privacy](#files-data-and-privacy)
-14. [Project layout](#project-layout)
-15. [Development and tests](#development-and-tests)
-16. [Known limitations](#known-limitations)
-17. [Licence](#licence)
+1. [Preview](#preview)
+2. [What's new in 2.0.1](#whats-new-in-201)
+3. [What Quark does](#what-quark-does)
+4. [Installation](#installation)
+5. [First launch](#first-launch)
+6. [Interface](#interface)
+7. [One game, several installations](#one-game-several-installations)
+8. [Stores, accounts and cloud saves](#stores-accounts-and-cloud-saves)
+9. [Achievements and the Epic overlay](#achievements-and-the-epic-overlay)
+10. [Proton, umu and launch options](#proton-umu-and-launch-options)
+11. [Local saves and snapshots](#local-saves-and-snapshots)
+12. [Settings](#settings)
+13. [Command line](#command-line)
+14. [Files, data and privacy](#files-data-and-privacy)
+15. [Project layout](#project-layout)
+16. [Development and tests](#development-and-tests)
+17. [Known limitations](#known-limitations)
+18. [Licence](#licence)
 
 ## What Quark does
 
@@ -73,11 +94,11 @@ The wiki is published from the versioned source in [`wiki/`](wiki/) by the
 - **Local save snapshots.** Ludusavi creates verified snapshots before a launch
   and after a session, with preview, inventory and restore.
 - **A sober, configurable interface.** Thirteen dark themes, six interface
-  languages (French, English, Spanish, German and Portuguese), compact spacing
-  and adjustable panel sizes, list or grid, a home carousel, a
-  random blurred hero background, HowLongToBeat times in the game overview,
-  status columns, tags, filters, a global search palette (Ctrl+K/Ctrl+F) and an embedded
-  Archivo font with Lucide icons.
+  languages (French, English, Spanish, German, Portuguese and Russian), compact
+  spacing and adjustable panel sizes, list or grid, a home carousel, a random
+  blurred hero background, HowLongToBeat times in the game overview, status
+  columns, tags, filters, a global search palette (Ctrl+K/Ctrl+F) and an
+  embedded Archivo font with Lucide icons.
 
 Quark is not a store: it never buys anything, and it never downloads or
 extracts games from third-party download sites. Store search results open in
@@ -143,9 +164,10 @@ sudo apt-get install build-essential pkg-config libwebkit2gtk-4.1-dev \
 
 A new configuration opens a welcome panel. It is not blocking: **Later**
 closes it. The panel sets the interface language, startup page, theme and store
-games folder. Existing
-configurations are marked as already welcomed, so updating from 1.1.4 never
-shows it unexpectedly; they still see the 1.8 summary once.
+games folder. Existing configurations are marked as already welcomed, so an
+update never shows it unexpectedly.
+
+![Welcome guide](docs/images/onboarding-en.png)
 
 1. Open **Settings → Stores & tools** and install Legendary and/or gogdl with
    **Install / update**. Quark verifies the SHA-256 digest published by GitHub
@@ -184,14 +206,16 @@ the blur radius is adjustable from 2 to 30 px and is part of the blur cache key.
 
 ### Library
 
-The top bar switches between **Grid** and **List** with a labelled segmented
-control, and the **Add** button sits next to it. A single search entry point in the top bar adapts to
-narrower windows. The list shows one row per game with a square icon, a status
+The top bar toggles between **Grid** and **List** with the grid icon, and the
+**Add** button sits next to it. A single search entry point in the top bar adapts
+to narrower windows. The list shows one row per game with a square icon, a status
 dot and a blue selection marker. The grid shows covers and opens the game page
-as an overlay.
+full width.
 Games with a missing executable are highlighted in red. Right-click a game for
 launch, customize, settings and remove; `Ctrl+click` marks several games for a
 batch removal.
+
+![Library: game list on the left, game page on the right](docs/images/library-en.png)
 
 The **Views** menu stores the current search, filters, sort and grouping under
 a name; apply or delete a view from the same menu. Three starter views (**À jouer**,
@@ -204,8 +228,6 @@ collapsed. Sort by name, last session, date added or play time. The global searc
 ignores accents, covers local games, owned store games and settings, and
 requires a real substring so a query cannot scatter across unrelated fields.
 
-![Filters menu](docs/images/filters-fr.png)
-
 Keyboard shortcuts: arrows navigate, `Enter` launches, `Ctrl+F` or `/` opens
 the same global search as `Ctrl+K`, `Esc` closes it and `Ctrl+Q` really quits
 Quark. The search runs from any tab: type to find pages, actions, local games,
@@ -215,17 +237,17 @@ to close.
 ### Game page
 
 The page shows the hero banner, ProtonDB/native badges, the **Play** button with
-playtime, media, achievements and history tabs. The **Media** tab plays the Steam
-trailer inline and lists it before the screenshots in a horizontal filmstrip;
-clicking a screenshot replaces the video, clicking the video starts it again.
-The information button stays on the banner; per-game settings, customization,
-the session log and removal live
-in a single **···** menu (removal still asks for confirmation). **History**
-summarises the game's sessions, shows the last twelve weeks and lists its latest
-play sessions.
-**Customize** replaces or
-removes the cover, hero, logo and icon; images can come from SteamGridDB,
-Steam, the store itself, or a local file.
+playtime, and Overview, Media, Achievements, News, History, Notes, Launch and Log
+tabs. The **Media** tab plays the Steam trailer inline and lists it before the
+screenshots in a horizontal filmstrip; clicking a screenshot replaces the video,
+clicking the video starts it again. Action icons stay on the banner: favorite,
+ProtonDB, customize, open the install folder and remove (removal asks for
+confirmation). **History** summarises the game's sessions, shows the last twelve
+weeks and lists its latest play sessions. **Customize** replaces or removes the
+cover, hero, logo and icon; images can come from SteamGridDB, Steam, the store
+itself, or a local file.
+
+![Game page](docs/images/game-en.png)
 
 ### Stores
 
@@ -234,6 +256,8 @@ the most played games, top sellers, specials, new releases and upcoming titles.
 Prices are regional and the store page opens in your browser. A game card also
 offers a search on the download sites supported by Quark; results only open the
 site in your browser.
+
+![Store discovery page](docs/images/store-en.png)
 
 ### My games / Stores library
 
@@ -247,9 +271,11 @@ The segmented control next to the search field switches between the cover grid
 and a **List** view with one row per game, an **Open** / **Install** button and
 a **···** menu with the same actions as the right-click menu.
 
+![My games across Steam, Epic and GOG](docs/images/my-games-en.png)
+
 ## One game, several installations
 
-Quark 1.1 introduces a `Game → Installations` model. A `Game` carries the
+Quark uses a `Game → Installations` model. A `Game` carries the
 shared data (name, artwork, notes, favorite, tags, status, playtime, sessions); each
 `Installation` carries one edition:
 
@@ -390,10 +416,13 @@ content scrolls independently and `Esc` or the top-right **×** closes the page.
 - **In game:** screenshot shortcut, achievement display and cloud-save
   toggle.
 - **New games:** defaults copied into each newly added game.
-- **Artworks:** image sources, SteamGridDB key and cache.
+- **Artwork:** image sources, SteamGridDB key and cache.
+- **Saves:** local snapshots and Ludusavi.
 - **Stores & tools:** sync, accounts, managed tools and the EOS overlay.
-- **Statistics** and **Disk space:** play history and storage measurements.
-- **About:** version, updates, release link, guide and what's-new actions.
+- **Statistics** and **Disk:** play history and storage measurements.
+- **About:** version, updates, release link and guide.
+
+![Appearance settings](docs/images/settings-en.png)
 
 **Appearance** contains the startup page, interface language, 13-theme grid,
 interface size controls, random hero background, default view, default game
@@ -415,9 +444,8 @@ enabled (the default), verifies the SHA-256 and the new binary, replaces the
 executable in place and relaunches itself. It keeps the previous executable
 next to the new one until the next successful start. The automatic path is
 skipped for development builds and read-only installs; a game running in Quark
-blocks the install. Use **Check for updates** to do it manually. 1.1.4 and
-later install subsequent releases automatically with the same archive format;
-the manual archive remains available for read-only installs and for a recovery.
+blocks the install. Use **Check for updates** to do it manually. The manual
+archive remains available for read-only installs and for a recovery.
 
 ## Command line
 

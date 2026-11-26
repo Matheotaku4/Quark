@@ -16,8 +16,9 @@ To see it again: **Settings → About → Review the guide**.
 
 ### Language and startup page
 
-- **Interface language**: French, English, Spanish, German or Portuguese. This is separate from the language
-  requested from Steam APIs, which controls store descriptions.
+- **Interface language**: French, English, Spanish, German, Portuguese or
+  Russian. This is separate from the language requested from Steam APIs, which
+  controls store descriptions.
 - **Startup page**: Home (default), Library, Store or My games. It is read on the
   next launch, not on every click.
 - Both settings remain available in **Settings → Appearance**.
@@ -26,10 +27,7 @@ To see it again: **Settings → About → Review the guide**.
 
 After an update, Quark shows **What's new** once per version. It summarizes the
 concrete changes in a few sentences, not a commit log. Once closed, the version
-is stored in `last_seen_version`. To see it again: **Settings → About → Review
-what's new**.
-
-![What's new in Quark](https://raw.githubusercontent.com/Matheotaku4/Quark/main/docs/images/whats-new-en.png)
+is stored in `last_seen_version`.
 
 ## Add a game
 
@@ -78,7 +76,7 @@ a Quark server.
 
 Automatic mode looks at the executable extension: an `.exe` goes through
 Proton, a Linux binary stays native. To force a choice, open the game page and
-then **Game settings**.
+use the **Launch** tab.
 
 ## A useful first launch
 
@@ -102,7 +100,8 @@ beginning:
 - **New games**: values copied into each new game. These are not global
   settings: changing a default does not affect existing games.
 - **Stores & tools**: accounts, synchronization, Legendary, gogdl and Ludusavi.
-- **In game**: screenshots, achievements, cloud saves.
+- **Saves**: local snapshots, Ludusavi and cloud-save behaviour.
+- **In game**: screenshots, achievements and cloud saves.
 
 ## What next?
 

@@ -5,11 +5,10 @@
 
 ![Settings](https://raw.githubusercontent.com/Matheotaku4/Quark/main/docs/images/settings-en.png)
 
-Since 1.4, settings fill the whole window as cards, with side navigation and
-separate sections. A search field above the navigation finds a setting by task
-(for example **cloud saves**, **screenshots** or **disk space**) and opens the page
-that contains it. Every change is saved automatically; there is no **Apply**
-button.
+Settings fill the whole window as cards, with side navigation and separate
+sections. A search field above the navigation finds a setting by task (for
+example **cloud saves**, **screenshots** or **disk**) and opens the page that
+contains it. Every change is saved automatically; there is no **Apply** button.
 
 ## Appearance
 
@@ -67,6 +66,17 @@ option and variable does.
 A game page also offers **Customize** to choose a specific image, including a
 local file.
 
+## Saves
+
+- **Ludusavi backup folder**: where Quark stores local snapshots.
+- **Ludusavi search folders**: one absolute path per line, added to each
+  game's own save folders.
+- **Snapshots**: created before a launch and after a session, with preview,
+  inventory and restore on the game page.
+- **Cloud saves**: Epic/GOG synchronization is enabled on the **In game** page.
+
+See [Stores and saves](Stores-and-Saves).
+
 ## Stores & tools
 
 - **Synchronization**: import or refresh the Steam, Epic and GOG libraries.
@@ -89,7 +99,7 @@ Statistics come from the local session history. Playtime published by a store
 can be shown on the game page, but the detailed history remains what Quark
 observed.
 
-## Disk space
+## Disk
 
 Background measurement of:
 
@@ -108,8 +118,7 @@ what to remove.
 - Installed version.
 - **Check for updates**, last check state, archive size and installation.
 - **Install updates on startup**.
-- **Review the getting-started guide**: reopen the welcome guide.
-- **Review what's new**: reopen the version summary.
+- **Review the guide**: reopen the welcome guide.
 - **Release page**, resources and data folders.
 
 Updates verify the SHA-256 and refuse a binary that does not match the expected

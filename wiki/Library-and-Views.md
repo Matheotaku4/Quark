@@ -3,42 +3,43 @@
 > [Home](Home) · [Getting started](Getting-Started) · **Library** ·
 > [Stores](Stores-and-Saves) · [Settings](Settings)
 
-![Library in list view](https://raw.githubusercontent.com/Matheotaku4/Quark/main/docs/images/library-fr.png)
+![Library in list view](https://raw.githubusercontent.com/Matheotaku4/Quark/main/docs/images/library-en.png)
 
 ## Two layouts
 
-The library can be shown as a **list** or a **grid**. The choice is stored in
-the configuration and can be changed with the two top-bar icons or in
+The library opens as a **list** with the game page on the right, or as a
+**grid** of covers. The grid button in the top bar switches between them; the
+choice is stored in the configuration and can also be changed in
 **Settings → Appearance → Library layout**.
 
 - **List**: one row per game, with a square icon, name, playtime, last use,
-  status dot and selection marker. Groups can be collapsed.
-- **Grid**: covers only, for browsing a large library. Clicking opens the game
-  page in a side panel.
+  status dot and selection marker. The selected game opens beside the list.
+- **Grid**: covers only, for browsing a large library. Clicking a cover opens
+  the game page full width.
 
 Games whose executable is missing are shown in red. A game marked as running
 keeps that state visible after switching pages.
 
-## Search
+## Search and filters
 
-- `Ctrl+F`, `/` or `Ctrl+K` opens one global search from any tab.
-- It covers local games, games owned in a connected store, pages, actions and
-  settings tasks. A store game opens in **My games**; a settings task opens the
-  right page.
+- The search field at the top of the library filters the current view.
+- `Ctrl+F`, `/` or `Ctrl+K` opens the global search from any tab. It covers
+  local games, games owned in a connected store, pages, actions and settings
+  tasks. A store game opens in **My games**; a settings task opens the right
+  page.
 - Search ignores accents and requires a real substring. A query cannot match by
   scattering its letters across unrelated fields.
-- `Escape` closes the search; the **Filters** button still opens one panel for
-  status, Steam genre and personal tags. The number of active filters appears
-  on the button, and **Clear all** removes them at once.
+- `Escape` closes the search. The **Filters** button opens one panel for status,
+  Steam genre and personal tags. The number of active filters appears on the
+  button, and **Clear all** removes them at once.
 
 ## Sort, filter, group
 
-**Sort**: name, last session, date added, playtime or **Favorites first**.
+**Sort**: name, last session, date added or playtime.
 
-**Filters**: the funnel button above the list groups status (`To play`,
-`Playing`, `Completed`, `Dropped`), Steam genre and personal tag. Filters
-combine, stay open while selecting and show their count on the button. **Clear
-all** restores the full library. The global search stays in the top bar.
+**Filters**: status (`To play`, `Playing`, `Completed`, `Dropped`), Steam genre
+and personal tag. Filters combine, stay open while selecting and show their
+count on the button. **Clear all** restores the full library.
 
 List **grouping**:
 
@@ -63,15 +64,15 @@ cleaned on load and save. The list is limited to 32 views.
 
 ## Home
 
-Home shows a carousel of recently played games, then a **Favorites** strip with
-the games you starred, then the library as covers. The carousel can advance
-automatically; the delay is set in **Settings → Appearance → Home**.
+Home is a full-width page reached from the **Home** tab. A carousel of recently
+played games shows the hero image, logo or title, **Play/Stop**, playtime, last
+session, the ProtonDB rating and the native-Linux badge. Below it, the
+**Continue** rail lists the library as covers, sorted by last session, date
+added or hours played.
 
-The main button becomes **Stop** while the game is running. Since 1.4.5,
-playtime and the last session live in the overview panel rather than beside
-**Play**; the ProtonDB rating and the native Linux badge stay on the banner.
-The game actions can be placed in the top-right corner or beside **Play** in
-**Settings → Appearance**.
+The carousel can advance automatically; the delay is set in
+**Settings → Appearance → Home**. The main button becomes **Stop** while the
+game is running.
 
 **Random hero background**: when enabled, Quark picks a banner from the library
 at startup, blurs it and draws it behind Home and Library. The radius is set
@@ -80,23 +81,28 @@ image. See [Themes and appearance](Themes-and-Appearance).
 
 ## Game page
 
+![Game page](https://raw.githubusercontent.com/Matheotaku4/Quark/main/docs/images/game-en.png)
+
 The game page shows:
 
 - the banner, logo or title and the ProtonDB/Linux badges;
 - the **Play/Stop** button, playtime and last session;
-- the **Media**, **Achievements** and **History** tabs;
-- the **Logs**, **Information**, **Customize** and **Game settings** actions;
-- a star button to add or remove the game from the **Favorites** strip.
+- Overview, Media, Achievements, News, History, Notes, Launch and Log tabs;
+- action icons on the banner: favorite, ProtonDB, customize, open the install
+  folder and remove.
 
 **Media** plays the Steam trailer in the page itself, then lists it before the
 screenshots in a horizontal filmstrip. Click a screenshot to show it full size,
 click the video to bring it back and start playback, and scroll the strip with
-the wheel, a drag or the previous/next arrows. **History**
-summarizes sessions, shows the last twelve weeks and lists recent play sessions. Playtime published by Epic or GOG replaces local playtime when
+the wheel, a drag or the previous/next arrows.
+
+**History** summarises sessions, shows the last twelve weeks and lists recent
+play sessions. Playtime published by Epic or GOG replaces local playtime when
 the store provides it; Steam Cloud remains managed by Steam.
 
 **Customize** replaces or removes the cover, hero, logo and icon from
-SteamGridDB, Steam, the store or a local file.
+SteamGridDB, Steam, the store or a local file. The **Launch** tab holds the
+per-game runtime, prefix, arguments, environment and compatibility options.
 
 ## Several installations for one game
 
@@ -118,15 +124,6 @@ executable, prefix, cloud save folder and install state.
 selection. Removing an entry does not delete the game files: it only removes the
 library entry. Prefixes, saves and installations stay on disk unless you
 explicitly remove them in the relevant tools.
-
-## Global search
-
-`Ctrl+K`, `Ctrl+F` or `/` opens the same palette from any tab.
-
-- Type to filter; accents are ignored and a real substring is required.
-- `↑`/`↓` move the selection, `Enter` opens, `Escape` closes.
-- Results include pages, actions, local games, owned store games and settings
-  tasks. Settings results jump directly to the relevant page.
 
 ## Library shortcuts
 

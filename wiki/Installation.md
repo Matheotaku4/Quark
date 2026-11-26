@@ -53,15 +53,15 @@ update-desktop-database ~/.local/share/applications 2>/dev/null || true
 `Exec=quark`. Otherwise replace that line with the absolute path to the binary
 in `quark.desktop`.
 
-## Update from 1.1.4 or later
+## Update from an older release
 
-Quark 2.0.1 keeps the `config.json` format used by 1.1.4 and adds fields with
-default values. Updating does not require resetting the library and does not
-force the welcome guide on existing installations.
+Quark 2.0.1 keeps the existing `config.json` format and adds fields with default
+values. Updating does not require resetting the library and does not force the
+welcome guide on existing installations.
 
 ### Automatic update
 
-1. Start Quark 1.1.4 or later.
+1. Start any 2.x release.
 2. Open **Settings → About**.
 3. Click **Check for updates**, or leave **Install updates on startup** enabled.
 4. Quark downloads the archive, verifies its SHA-256, replaces the binary and
@@ -98,24 +98,25 @@ the **What's new in 2.0.1** summary appears once.
 
 ```bash
 git clone https://github.com/Matheotaku4/Quark.git
-cd Quark
+cd Quark/quark-tauri
 cargo build --release --locked
-./target/release/quark
+./target/release/quark-tauri
 ```
 
-On Debian/Ubuntu, the dependencies used by CI are:
+On Debian/Ubuntu, the Tauri build needs WebKitGTK, GTK and the usual Rust
+build tools:
 
 ```bash
-sudo apt-get install build-essential pkg-config libx11-dev libxkbcommon-dev \
-  libwayland-dev libgl1-mesa-dev
+sudo apt-get install build-essential pkg-config libwebkit2gtk-4.1-dev \
+  libgtk-3-dev librsvg2-dev libssl-dev libayatana-appindicator3-dev
 ```
 
 Before publishing:
 
 ```bash
-cargo fmt --check
-cargo test --offline
-cargo build --release --locked --offline
+cargo fmt --all --check
+cargo clippy --all-targets --locked -- -D warnings
+cargo test --locked
 ```
 
 ## Uninstall

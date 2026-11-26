@@ -69,6 +69,8 @@ opens its actions.
   and URLTask entries do not block adoption. A folder with only `setup.exe` or
   `__redist` files is never considered installed.
 
+![My games across Steam, Epic and GOG](https://raw.githubusercontent.com/Matheotaku4/Quark/main/docs/images/my-games-en.png)
+
 For the Epic overlay, launching a game without it offers to install it before
 the game starts. An overlay already present in the game prefix (Epic Games
 Launcher, EOS artifacts or `OverlayPath`) is detected and enabled without a new

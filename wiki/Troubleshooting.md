@@ -101,16 +101,18 @@ rather than failing. A missing Proton runtime, however, prevents the launch.
 
 ## Settings
 
-Since 1.2, settings fill the window and scroll. If the **Close** button is not
-visible, `Escape` closes the page. If content looks cut off, resize the window:
-the layout is responsive but some blocks need a minimum width.
+Settings fill the window and scroll. If the **Close** button is not visible,
+`Escape` closes the page. If content looks cut off, resize the window: the
+layout is responsive but some blocks need a minimum width.
 
 ## Media and trailers
 
-- **The trailer stutters or only advances when the mouse moves**: fixed in
-  1.8.7. The player now schedules its own repaints instead of waiting for an
-  input event. On an older build, keep moving the pointer over the window or
-  update Quark.
+- **Fullscreen trailer is black**: use the cinema button in the player. Quark
+  now keeps playback inside its own window instead of relying on WebKitGTK
+  native fullscreen.
+- **The trailer stutters or only advances when the mouse moves**: current builds
+  schedule their own repaints instead of waiting for an input event. Update
+  Quark if the problem persists on an older build.
 - **No volume slider under the trailer**: the slider controls the
   PulseAudio/PipeWire stream of the GStreamer process and needs `pactl`
   (`pulseaudio-utils` on Debian/Ubuntu, `libpulse` on Arch) plus a running
