@@ -162,6 +162,40 @@ fn fetch_text(url: &str, accept: &str) -> Result<String, String> {
     crate::net::text(response, crate::net::MAX_HTML, "réponse du site")
 }
 
+fn fetch_bytes(url: &str, accept: &str) -> Result<Vec<u8>, String> {
+    let response = crate::artwork::http()
+        .get(url)
+        .header(reqwest::header::ACCEPT, accept)
+        .timeout(Duration::from_secs(22))
+        .send()
+        .map_err(|_| "site injoignable".to_string())?;
+    if !response.status().is_success() {
+        return Err(format!(
+            "le site a refusé la recherche (HTTP {})",
+            response.status().as_u16()
+        ));
+    }
+    crate::net::bytes(response, crate::net::MAX_HTML, "réponse du site")
+}
+
+fn decode_windows_1251(bytes: &[u8]) -> String {
+    encoding_rs::WINDOWS_1251.decode(bytes).0.into_owned()
+}
+
+fn strip_tags(text: &str) -> String {
+    let mut out = String::with_capacity(text.len());
+    let mut inside = false;
+    for character in text.chars() {
+        match character {
+            '<' => inside = true,
+            '>' => inside = false,
+            _ if !inside => out.push(character),
+            _ => {}
+        }
+    }
+    out
+}
+
 fn json_root(text: &str) -> Result<Value, String> {
     serde_json::from_str(text).map_err(|_| "réponse JSON illisible".to_string())
 }
@@ -411,8 +445,63 @@ fn parse_kryoto(text: &str) -> Result<Vec<SiteHit>, String> {
 // scene.cat
 // ---------------------------------------------------------------------------
 
-fn search_onlinefix(_query: &str) -> Result<Vec<SiteHit>, String> {
-    Ok(Vec::new())
+fn search_onlinefix(query: &str) -> Result<Vec<SiteHit>, String> {
+    let url = format!(
+        "https://online-fix.me/index.php?do=search&subaction=search&story={}",
+        urlencode(query)
+    );
+    let bytes = fetch_bytes(&url, "text/html")?;
+    Ok(parse_onlinefix(&decode_windows_1251(&bytes)))
+}
+
+fn parse_onlinefix(text: &str) -> Vec<SiteHit> {
+    let mut hits = Vec::new();
+    let mut seen = HashSet::new();
+    for chunk in text.split("<div class=\"article clr\">").skip(1) {
+        let Some(link_start) = chunk.find("class=\"big-link\"").and_then(|pos| {
+            chunk[pos..]
+                .find("href=\"")
+                .map(|offset| pos + offset + 6)
+        }) else {
+            continue;
+        };
+        let Some(link_end) = chunk[link_start..].find('"').map(|end| link_start + end) else {
+            continue;
+        };
+        let url = chunk[link_start..link_end].trim();
+        if !url.starts_with("http") || !seen.insert(url.to_string()) {
+            continue;
+        }
+        let title = chunk
+            .find("<h2 class=\"title\">")
+            .and_then(|start| {
+                let start = start + "<h2 class=\"title\">".len();
+                chunk[start..].find("</h2>").map(|end| &chunk[start..start + end])
+            })
+            .map(|title| decode_entities(strip_tags(title).trim()))
+            .unwrap_or_default();
+        if title.is_empty() {
+            continue;
+        }
+        let cover = chunk
+            .find("data-src=\"")
+            .and_then(|start| {
+                let start = start + "data-src=\"".len();
+                chunk[start..].find('"').map(|end| &chunk[start..start + end])
+            })
+            .filter(|url| url.starts_with("http"))
+            .map(str::to_string);
+        hits.push(SiteHit {
+            title,
+            url: url.to_string(),
+            detail: String::new(),
+            cover,
+        });
+        if hits.len() >= 8 {
+            break;
+        }
+    }
+    hits
 }
 
 fn search_zeigames(_query: &str) -> Result<Vec<SiteHit>, String> {
@@ -695,6 +784,31 @@ mod tests {
         assert_eq!(hits[0].url, "https://astralgames.net/game/cyberpunk-2077");
         assert_eq!(hits[0].detail, "141.82 GB · Build 20383525");
         assert_eq!(hits[0].cover.as_deref(), Some("https://cdn/cover.jpg"));
+    }
+
+
+    #[test]
+    fn onlinefix_decode_le_windows_1251() {
+        let bytes = b"\xCF\xF0\xE8\xE2\xE5\xF2";
+        assert_eq!(decode_windows_1251(bytes), "Привет");
+    }
+
+    #[test]
+    fn onlinefix_lit_les_articles_et_deduit_le_titre() {
+        let body = r#"
+      <div class="article clr">
+        <a class="big-link" href="https://online-fix.me/games/rpg/17004-elden-ring-po-seti.html"></a>
+        <a class="img" href="https://online-fix.me/games/rpg/17004-elden-ring-po-seti.html">
+          <img data-src="https://online-fix.me/poster.jpg" alt="">
+        </a>
+        <h2 class="title">Elden Ring по сети</h2>
+      </div>
+    "#;
+        let hits = parse_onlinefix(body);
+        assert_eq!(hits.len(), 1);
+        assert_eq!(hits[0].title, "Elden Ring по сети");
+        assert_eq!(hits[0].url, "https://online-fix.me/games/rpg/17004-elden-ring-po-seti.html");
+        assert_eq!(hits[0].cover.as_deref(), Some("https://online-fix.me/poster.jpg"));
     }
 
 }
