@@ -504,8 +504,51 @@ fn parse_onlinefix(text: &str) -> Vec<SiteHit> {
     hits
 }
 
-fn search_zeigames(_query: &str) -> Result<Vec<SiteHit>, String> {
-    Ok(Vec::new())
+fn search_zeigames(query: &str) -> Result<Vec<SiteHit>, String> {
+    let mut url = reqwest::Url::parse("https://zeigames.com/search/")
+        .map_err(|_| "adresse ZeiGames invalide".to_string())?;
+    url.query_pairs_mut().append_pair("q", query);
+    let text = fetch_text(url.as_str(), "text/html")?;
+    Ok(parse_zeigames(&text))
+}
+
+fn parse_zeigames(text: &str) -> Vec<SiteHit> {
+    let marker = "data-linktype=\"link\"";
+    let mut hits = Vec::new();
+    let mut seen = HashSet::new();
+    let mut rest = text;
+    while let Some(position) = rest.find(marker) {
+        let before = &rest[..position];
+        if let Some(link_start) = before.rfind("<a href=\"") {
+            let link_start = link_start + "<a href=\"".len();
+            if let Some(link_end) = before[link_start..].find('"') {
+                let url = &before[link_start..link_start + link_end];
+                if url.starts_with("https://zeigames.com/topic/") && seen.insert(url.to_string()) {
+                    if let Some(text_start) = rest[position..].find('>') {
+                        let text_start = position + text_start + 1;
+                        if let Some(text_end) = rest[text_start..].find("</a>") {
+                            let title = decode_entities(
+                                strip_tags(&rest[text_start..text_start + text_end]).trim(),
+                            );
+                            if !title.is_empty() {
+                                hits.push(SiteHit {
+                                    title,
+                                    url: url.to_string(),
+                                    detail: String::new(),
+                                    cover: None,
+                                });
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        rest = &rest[position + marker.len()..];
+        if hits.len() >= 8 {
+            break;
+        }
+    }
+    hits
 }
 
 fn search_scene(query: &str) -> Result<Vec<SiteHit>, String> {
@@ -809,6 +852,21 @@ mod tests {
         assert_eq!(hits[0].title, "Elden Ring по сети");
         assert_eq!(hits[0].url, "https://online-fix.me/games/rpg/17004-elden-ring-po-seti.html");
         assert_eq!(hits[0].cover.as_deref(), Some("https://online-fix.me/poster.jpg"));
+    }
+
+
+    #[test]
+    fn zeigames_lit_les_sujets_et_deduit_les_doublons() {
+        let body = r#"
+      <a href="https://zeigames.com/topic/4295-elden-ring-free-download-v1171-all-dlc-online/" data-linktype="link" data-searchable>ELDEN RING Free Download (v1.17.1 + ALL DLC + Online)</a>
+      <a href="https://zeigames.com/topic/4295-elden-ring-free-download-v1171-all-dlc-online/" data-linktype="link" data-searchable>ELDEN RING Free Download (v1.17.1 + ALL DLC + Online)</a>
+      <a href="https://zeigames.com/topic/9913-elden-ring-nightreign-free-download-v1035-all-dlc-online/" data-linktype="link" data-searchable>ELDEN RING NIGHTREIGN Free Download (v1.03.5 + ALL DLC + Online)</a>
+    "#;
+        let hits = parse_zeigames(body);
+        assert_eq!(hits.len(), 2);
+        assert_eq!(hits[0].title, "ELDEN RING Free Download (v1.17.1 + ALL DLC + Online)");
+        assert_eq!(hits[0].url, "https://zeigames.com/topic/4295-elden-ring-free-download-v1171-all-dlc-online/");
+        assert!(hits[1].title.contains("NIGHTREIGN"));
     }
 
 }
