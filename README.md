@@ -11,7 +11,7 @@ fast, modern interface.
 
 <p align="center"><sub>Home: continue playing, browse the library, launch in one click.</sub></p>
 
-**Version 2.0.2** · **Linux x86_64** · **MIT licence**
+**Version 2.1.0** · **Linux x86_64** · **MIT licence**
 
 **Website:** [matheotaku4.github.io/Quark](https://matheotaku4.github.io/Quark/) ·
 **Documentation:** [GitHub Wiki](https://github.com/Matheotaku4/Quark/wiki) ·
@@ -30,30 +30,35 @@ French, Spanish, German, Portuguese and Russian are available in the app.
 | ![Library with a game selected](docs/images/library-en.png) | ![Game page for A Short Hike](docs/images/game-en.png) |
 | **Store:** deals, recommendations and store search | **My games:** owned and installed games by store |
 | ![Steam store page](docs/images/store-en.png) | ![My games library](docs/images/my-games-en.png) |
-| **Settings:** full-page navigation and live previews | **First launch:** language, theme and startup page |
-| ![Appearance settings](docs/images/settings-en.png) | ![Welcome guide](docs/images/onboarding-en.png) |
+| **Site search:** seven sources, one ordered result list | **Settings:** full-page navigation and live previews |
+| ![Multi-site game search](docs/images/site-search-en.png) | ![Appearance settings](docs/images/settings-en.png) |
+| **First launch:** language, theme and startup page | **Home:** continue playing, browse the library |
+| ![Welcome guide](docs/images/onboarding-en.png) | ![Quark home page](docs/images/home-en.png) |
 
-## What's new in 2.0.2
+## What's new in 2.1.0
 
-- **Trailer volume remembered.** The slider now uses a logarithmic 20 dB curve
-  and keeps its position between launches and between videos.
-- **Useful notification icon.** Left-click opens Quark, right-click shows
-  **Open Quark** and **Close Quark**. A second launch focuses the existing
-  window instead of starting another WebView.
-- **Lighter My games.** Covers are released when they leave the screen, the
-  runaway infinite scroll is replaced by an explicit **Load more** button, and
-  observers are cleaned up when the page changes.
+- **Faster My games.** Store data is built off the UI thread, visible covers are
+  downloaded in small batches, and the runaway infinite scroll is replaced by
+  an explicit **Load more** button. Filters, sorting and the list/grid choice
+  are remembered between launches.
+- **Seven download sites.** The game page and every store card open a multi-site
+  search: GameBounty first, then AnkerGames, AstralGames, Kryoto, Online-Fix,
+  ZeiGames and scene.cat. Each source reports its own results or error, and
+  Quark never downloads a file from these sites.
+- **Cleaner surfaces.** The interface now uses opaque cards, shared spacing and
+  radius tokens, stable hover states and no expensive backdrop blur. Rendering
+  artifacts from lazy card painting are gone.
 - **Library unchanged.** The left-hand game list and the right-hand game page
   keep the Steam-like layout, with the same local and store libraries.
 
-This is the **2.0.2** documentation. Older release notes are kept on the GitHub
+This is the **2.1.0** documentation. Older release notes are kept on the GitHub
 releases page; `docs/release-notes.md` only describes the release currently
 being published.
 
 ## Table of contents
 
 1. [Preview](#preview)
-2. [What's new in 2.0.2](#whats-new-in-202)
+2. [What's new in 2.1.0](#whats-new-in-210)
 3. [What Quark does](#what-quark-does)
 4. [Installation](#installation)
 5. [First launch](#first-launch)
@@ -100,8 +105,8 @@ being published.
   Lucide icons.
 
 Quark is not a store: it never buys anything, and it never downloads or
-extracts games from third-party download sites. Store search results open in
-your browser.
+extracts games from third-party download sites. Store search results and the
+seven-site search open pages in your browser; no file is fetched by Quark.
 
 ## Installation
 
@@ -112,8 +117,8 @@ Download `quark-<version>-linux-x86_64.tar.gz` and its `.sha256` file from the
 then verify and unpack it:
 
 ```bash
-sha256sum -c quark-2.0.2-linux-x86_64.tar.gz.sha256
-tar -xzf quark-2.0.2-linux-x86_64.tar.gz
+sha256sum -c quark-2.1.0-linux-x86_64.tar.gz.sha256
+tar -xzf quark-2.1.0-linux-x86_64.tar.gz
 ./quark/quark
 ```
 

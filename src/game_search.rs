@@ -458,11 +458,10 @@ fn parse_onlinefix(text: &str) -> Vec<SiteHit> {
     let mut hits = Vec::new();
     let mut seen = HashSet::new();
     for chunk in text.split("<div class=\"article clr\">").skip(1) {
-        let Some(link_start) = chunk.find("class=\"big-link\"").and_then(|pos| {
-            chunk[pos..]
-                .find("href=\"")
-                .map(|offset| pos + offset + 6)
-        }) else {
+        let Some(link_start) = chunk
+            .find("class=\"big-link\"")
+            .and_then(|pos| chunk[pos..].find("href=\"").map(|offset| pos + offset + 6))
+        else {
             continue;
         };
         let Some(link_end) = chunk[link_start..].find('"').map(|end| link_start + end) else {
@@ -476,7 +475,9 @@ fn parse_onlinefix(text: &str) -> Vec<SiteHit> {
             .find("<h2 class=\"title\">")
             .and_then(|start| {
                 let start = start + "<h2 class=\"title\">".len();
-                chunk[start..].find("</h2>").map(|end| &chunk[start..start + end])
+                chunk[start..]
+                    .find("</h2>")
+                    .map(|end| &chunk[start..start + end])
             })
             .map(|title| decode_entities(strip_tags(title).trim()))
             .unwrap_or_default();
@@ -487,7 +488,9 @@ fn parse_onlinefix(text: &str) -> Vec<SiteHit> {
             .find("data-src=\"")
             .and_then(|start| {
                 let start = start + "data-src=\"".len();
-                chunk[start..].find('"').map(|end| &chunk[start..start + end])
+                chunk[start..]
+                    .find('"')
+                    .map(|end| &chunk[start..start + end])
             })
             .filter(|url| url.starts_with("http"))
             .map(str::to_string);
@@ -519,31 +522,36 @@ fn parse_zeigames(text: &str) -> Vec<SiteHit> {
     let mut rest = text;
     while let Some(position) = rest.find(marker) {
         let before = &rest[..position];
-        if let Some(link_start) = before.rfind("<a href=\"") {
-            let link_start = link_start + "<a href=\"".len();
-            if let Some(link_end) = before[link_start..].find('"') {
-                let url = &before[link_start..link_start + link_end];
-                if url.starts_with("https://zeigames.com/topic/") && seen.insert(url.to_string()) {
-                    if let Some(text_start) = rest[position..].find('>') {
-                        let text_start = position + text_start + 1;
-                        if let Some(text_end) = rest[text_start..].find("</a>") {
-                            let title = decode_entities(
-                                strip_tags(&rest[text_start..text_start + text_end]).trim(),
-                            );
-                            if !title.is_empty() {
-                                hits.push(SiteHit {
-                                    title,
-                                    url: url.to_string(),
-                                    detail: String::new(),
-                                    cover: None,
-                                });
-                            }
-                        }
-                    }
-                }
-            }
-        }
+        let after = &rest[position..];
         rest = &rest[position + marker.len()..];
+        let Some(link_start) = before.rfind("<a href=\"") else {
+            continue;
+        };
+        let link_start = link_start + "<a href=\"".len();
+        let Some(link_end) = before[link_start..].find('"') else {
+            continue;
+        };
+        let url = &before[link_start..link_start + link_end];
+        if !url.starts_with("https://zeigames.com/topic/") || !seen.insert(url.to_string()) {
+            continue;
+        }
+        let Some(text_start) = after.find('>') else {
+            continue;
+        };
+        let text_start = text_start + 1;
+        let Some(text_end) = after[text_start..].find("</a>") else {
+            continue;
+        };
+        let title = decode_entities(strip_tags(&after[text_start..text_start + text_end]).trim());
+        if title.is_empty() {
+            continue;
+        }
+        hits.push(SiteHit {
+            title,
+            url: url.to_string(),
+            detail: String::new(),
+            cover: None,
+        });
         if hits.len() >= 8 {
             break;
         }
@@ -692,10 +700,7 @@ mod tests {
         ]}}"#;
         let hits = parse_gamebounty(body).unwrap();
         assert_eq!(hits.len(), 1);
-        assert_eq!(
-            hits[0].url,
-            "https://gamebounty.st/cp2077"
-        );
+        assert_eq!(hits[0].url, "https://gamebounty.st/cp2077");
         assert_eq!(hits[0].detail, "116.1GB · Build 26161058");
         assert_eq!(hits[0].cover.as_deref(), Some("https://cdn/cover.jpg"));
     }
@@ -817,7 +822,6 @@ mod tests {
         }
     }
 
-
     #[test]
     fn astral_lit_la_ligne_rsc_des_jeux() {
         let body = "0:{\"a\":\"$@1\"}\n1:{\"games\":[{\"name\":\"Cyberpunk 2077\",\"slug\":\"cyberpunk-2077\",\"image\":\"https://cdn/cover.jpg\",\"file_size\":\"141.82 GB\",\"build_id\":20383525}],\"hasMore\":false,\"total\":1}\n";
@@ -828,7 +832,6 @@ mod tests {
         assert_eq!(hits[0].detail, "141.82 GB · Build 20383525");
         assert_eq!(hits[0].cover.as_deref(), Some("https://cdn/cover.jpg"));
     }
-
 
     #[test]
     fn onlinefix_decode_le_windows_1251() {
@@ -850,10 +853,15 @@ mod tests {
         let hits = parse_onlinefix(body);
         assert_eq!(hits.len(), 1);
         assert_eq!(hits[0].title, "Elden Ring по сети");
-        assert_eq!(hits[0].url, "https://online-fix.me/games/rpg/17004-elden-ring-po-seti.html");
-        assert_eq!(hits[0].cover.as_deref(), Some("https://online-fix.me/poster.jpg"));
+        assert_eq!(
+            hits[0].url,
+            "https://online-fix.me/games/rpg/17004-elden-ring-po-seti.html"
+        );
+        assert_eq!(
+            hits[0].cover.as_deref(),
+            Some("https://online-fix.me/poster.jpg")
+        );
     }
-
 
     #[test]
     fn zeigames_lit_les_sujets_et_deduit_les_doublons() {
@@ -864,9 +872,14 @@ mod tests {
     "#;
         let hits = parse_zeigames(body);
         assert_eq!(hits.len(), 2);
-        assert_eq!(hits[0].title, "ELDEN RING Free Download (v1.17.1 + ALL DLC + Online)");
-        assert_eq!(hits[0].url, "https://zeigames.com/topic/4295-elden-ring-free-download-v1171-all-dlc-online/");
+        assert_eq!(
+            hits[0].title,
+            "ELDEN RING Free Download (v1.17.1 + ALL DLC + Online)"
+        );
+        assert_eq!(
+            hits[0].url,
+            "https://zeigames.com/topic/4295-elden-ring-free-download-v1171-all-dlc-online/"
+        );
         assert!(hits[1].title.contains("NIGHTREIGN"));
     }
-
 }

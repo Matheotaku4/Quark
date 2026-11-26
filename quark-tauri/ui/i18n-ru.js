@@ -422,4 +422,22 @@ Object.assign(I18N, {
     "web.error": "Ошибка",
     "web.filterAll": "Все",
     "web.open": "Открыть"
+    ,"web.httpError": "Сайт отклонил поиск (HTTP {code}).",
+    "web.unreachable": "Сайт недоступен.",
+    "web.expired": "Поиск устарел, попробуйте ещё раз.",
+    "web.loading": "Идёт поиск…",
+    "web.sources": "7 источников",
+    "web.disclaimer": "Quark не скачивает файлы с этих сайтов.",
+    "web.retry": "Повторить",
+    "web.steam": "Открыть в Steam",
+    "web.site.gamebounty": "GameBounty",
+    "web.site.ankergames": "AnkerGames",
+    "web.site.astralgames": "AstralGames",
+    "web.site.kryoto": "Kryoto",
+    "web.site.onlinefix": "Online-Fix",
+    "web.site.zeigames": "ZeiGames",
+    "web.site.scenecat": "scene.cat",
+    "pv.menu.openFolder": "Открыть папку",
+    "pv.menu.copyPath": "Копировать путь",
+    "pv.menu.details": "Подробности"
 });

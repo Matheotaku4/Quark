@@ -70,6 +70,15 @@ const SITE_META = [
   { id: "scenecat", label: "scene.cat", host: "scene.cat", search: (q) => `https://scene.cat/?q=${encodeURIComponent(q)}` },
 ];
 
+function webError(message) {
+  const text = String(message || "");
+  const http = text.match(/HTTP (\d+)/);
+  if (http) return t("web.httpError", { code: http[1] });
+  if (/expir/i.test(text)) return t("web.expired");
+  if (/injoignable|unreachable|timeout/i.test(text)) return t("web.unreachable");
+  return t("web.error");
+}
+
 function renderWebResults(state) {
   const visible = (hit) => !state.filter || hit.siteId === state.filter;
   const groups = SITE_META
@@ -79,7 +88,7 @@ function renderWebResults(state) {
   if (!groups.length) return `<div class="webempty">${esc(t(state.loading ? "log.loading" : "web.none"))}</div>`;
   return groups.map(({ site, hits, errors }) => `<section class="webgroup">
     <div class="webhead"><span class="webdot" data-site="${esc(site.id)}"></span><b>${esc(site.label)}</b><small>${esc(site.host)}</small><em>${hits.length} ${esc(t("web.results"))}</em><button class="websearch" data-open="${esc(site.search(state.q))}">${ic("ext")}${esc(t("web.siteSearch"))}</button></div>
-    ${errors.map((error) => `<p class="weberr">${esc(error.message || t("web.error"))}</p>`).join("")}
+    ${errors.map((error) => `<p class="weberr">${esc(webError(error.message))}</p>`).join("")}
     ${hits.map((hit) => `<div class="webhit"><div class="webcover">${hit.cover ? `<img src="${esc(hit.cover)}" alt="" loading="lazy">` : `<span>${esc((hit.title || "?").slice(0, 1).toUpperCase())}</span>`}</div>
       <div class="webmeta"><b>${esc(hit.title)}</b><small>${esc(hit.detail || site.label)}</small></div>
       <button class="btn sec sm" data-web-use="${esc(hit.title)}">${esc(t("web.use"))}</button>

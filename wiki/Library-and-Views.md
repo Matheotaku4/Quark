@@ -99,6 +99,22 @@ the store provides it; Steam Cloud remains managed by Steam.
 SteamGridDB, Steam, the store or a local file. The **Launch** tab holds the
 per-game runtime, prefix, arguments, environment and compatibility options.
 
+## Download sites
+
+![Multi-site search](https://raw.githubusercontent.com/Matheotaku4/Quark/main/docs/images/site-search-en.png)
+
+The banner action with the external-link icon opens a search across seven
+download sites: **GameBounty** first, then **AnkerGames**, **AstralGames**,
+**Kryoto**, **Online-Fix**, **ZeiGames** and **scene.cat**. Store cards open the
+same dialog with the game name already filled in.
+
+- Results are grouped by source in that fixed order. A source that fails shows
+  its own message; the other results stay visible.
+- **Use this name** fills the add-game dialog. **Open** opens the page in your
+  browser.
+- Quark only reads search pages. It never downloads, extracts or installs a
+  file from these sites.
+
 ## Several installations for one game
 
 A game has shared data (name, artwork, notes, tags, status, statistics) and one

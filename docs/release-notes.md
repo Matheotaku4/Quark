@@ -1,28 +1,27 @@
-# Quark 2.0.2 — volume mémorisé, icône utile, mémoire maîtrisée
-
-### Lecture des vidéos
-
-- **Volume mémorisé.** Le curseur de la bande-annonce conserve sa position entre deux lancements et entre deux vidéos.
-- **Courbe logarithmique.** La position du curseur suit une échelle de 20 dB, comme les lecteurs vidéo modernes : les petits réglages restent précis et le passage au maximum est progressif.
-- **Synchronisation avec les contrôles natifs.** Un changement de volume effectué dans la barre du lecteur met aussi à jour le curseur Quark.
-
-### Icône de notification
-
-- **Clic gauche :** ouvre directement la fenêtre Quark.
-- **Clic droit :** menu avec « Ouvrir Quark » et « Fermer Quark ».
-- **Une seule instance.** Un second lancement affiche la fenêtre déjà ouverte puis quitte, au lieu de créer une deuxième WebView.
-- Le menu suit la langue de l'interface et reste à jour après un changement de langue.
+# Quark 2.1.0 — interface plus rapide, jaquettes et recherche multi-sites
 
 ### Mes jeux
 
-- **Jaquettes déchargées hors écran.** Les couvertures quittent la mémoire dès qu'elles sortent de la zone visible et sont rechargées au retour.
-- **Chargement explicite.** Le bouton « Charger plus » remplace le défilement infini qui pouvait enchaîner des centaines de cartes et faire grimper la mémoire.
-- **Observateurs nettoyés** à chaque changement de page, pour éviter les anciens callbacks et la charge CPU résiduelle.
-- **Liste et grille conservées** : la bibliothèque garde la liste à gauche et la fiche à droite, comme avant.
+- **Chargement plus léger.** Les données de boutiques sont construites hors du fil d'interface, les jaquettes visibles sont téléchargées par petits lots et le défilement infini est remplacé par un bouton « Charger plus » explicite.
+- **Préférences conservées.** Les filtres, le tri et le choix liste/grille sont mémorisés entre deux lancements.
+- **Cartes stables.** Les jaquettes apparaissent sans artefact de rendu ; le menu « ··· » ouvre le dossier, copie le chemin et affiche les détails du jeu.
+
+### Recherche multi-sites
+
+- **Sept sources dans un ordre fixe.** GameBounty arrive en premier, puis AnkerGames, AstralGames, Kryoto, Online-Fix, ZeiGames et scene.cat.
+- **Erreurs par source.** Une source indisponible affiche son propre message sans masquer les résultats des autres.
+- **Aucun téléchargement.** Quark ouvre les pages dans le navigateur et ne récupère jamais de fichier depuis ces sites.
+- **Accès direct.** La fiche de jeu, chaque carte de la boutique et le bouton « Sites de téléchargement » du modal d'ajout ouvrent la recherche avec le nom du jeu.
+
+### Interface
+
+- **Surfaces nettes.** Cartes opaques, espacements et rayons partagés, états de survol stables et suppression des flous coûteux.
+- **Bibliothèque inchangée.** La liste à gauche et la fiche à droite conservent la disposition proche de Steam.
 
 ### Vérifications
 
-- `cargo fmt --all -- --check` : OK.
-- `cargo clippy --all-targets --locked -- -D warnings` : OK.
+- `cargo fmt --check` et `cargo fmt --manifest-path quark-tauri/Cargo.toml --check` : OK.
+- `cargo clippy --all-targets --locked -- -D warnings` : OK sur le cœur et l'interface.
 - `cargo test --locked` : tests du cœur réussis.
-- Build Tauri et vérification visuelle sous Xvfb.
+- `cargo test --manifest-path quark-tauri/Cargo.toml --locked` : tests de l'interface réussis.
+- Captures réelles sous Xvfb en français et en anglais.

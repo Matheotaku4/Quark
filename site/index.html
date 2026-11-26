@@ -191,7 +191,7 @@ c4t:"Succès réunis",c4:"Progression Steam, Epic et GOG sur la fiche, avec icô
 c5t:"Sauvegardes fiables",c5:"Instantanés Ludusavi avant et après chaque session, avec aperçu et restauration validée. Cloud Epic et GOG inclus.",
 c6t:"Fait pour vos yeux",c6:"Treize thèmes AMOLED, liste ou grille, accueil sous les filtres avec la bibliothèque visible, recherche globale et réglages par tâche en six langues.",
 e2:"Un aperçu",t2:"Conçu pour qu’on y vive.",n2:"Captures réelles de l’interface actuelle, pas des maquettes.",
-tab:{home:"Accueil",library:"Bibliothèque",game:"Fiche de jeu",store:"Boutique","my-games":"Mes jeux",settings:"Réglages",onboarding:"Premier lancement"},
+tab:{home:"Accueil",library:"Bibliothèque",game:"Fiche de jeu",store:"Boutique","my-games":"Mes jeux","site-search":"Recherche multi-sites",settings:"Réglages",onboarding:"Premier lancement"},
 e3:"Clavier d’abord",t3:"Rapide par défaut.",n3:"Tout est à un raccourci : cherchez un jeu ou un réglage, prenez une capture ou fermez un panneau sans quitter le jeu.",
 k1:"Recherche globale",k2:"Capture d’écran",k3:"Fermer un panneau",k4:"Rechercher",
 e4:"Démarrer",t4:"Une archive. Pas d’installeur.",n4:"Téléchargez, vérifiez, décompressez, lancez.",copy:"Copier",copied:"Copié ✓",
@@ -212,7 +212,7 @@ c4t:"Achievements in one place",c4:"Steam, Epic and GOG progress on the game pag
 c5t:"Saves you can trust",c5:"Ludusavi snapshots before and after each session, with preview and validated restore. Epic and GOG cloud saves included.",
 c6t:"Easy on the eyes",c6:"Thirteen AMOLED themes, list or grid, a home view under the filters with your library still visible, global search and task-based settings in six languages.",
 e2:"A closer look",t2:"Built to be lived in.",n2:"Real screenshots of the current interface, not mockups.",
-tab:{home:"Home",library:"Library",game:"Game page",store:"Store","my-games":"My games",settings:"Settings",onboarding:"First launch"},
+tab:{home:"Home",library:"Library",game:"Game page",store:"Store","my-games":"My games","site-search":"Site search",settings:"Settings",onboarding:"First launch"},
 e3:"Keyboard first",t3:"Fast by default.",n3:"Everything is a shortcut away: find a game or a setting, take a screenshot or close a panel without leaving the game.",
 k1:"Global search",k2:"Screenshot",k3:"Close a panel",k4:"Search",
 e4:"Get started",t4:"One archive. No installer.",n4:"Download, verify, unpack, run.",copy:"Copy",copied:"Copied ✓",
@@ -221,7 +221,7 @@ q1:"Does Quark sell games?",a1:"No. It opens store pages in your browser and nev
 q2:"Does it send telemetry?",a2:"None. Store sessions and library data stay on your machine.",
 q3:"What about Windows games?",a3:"They run through Proton or umu-launcher with the prefix you choose.",
 q4:"Can I build it?",a4:"Yes: clone the repository and run <code>cargo build --release --locked</code>."}};
-const TABS=["home","library","game","my-games","store","settings","onboarding"];
+const TABS=["home","library","game","my-games","site-search","store","settings","onboarding"];
 const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
 let lang=(()=>{try{const s=localStorage.getItem("q-lang");if(s)return s}catch(e){}return "en"})();
 let tab="library",ver="",dlUrl="";

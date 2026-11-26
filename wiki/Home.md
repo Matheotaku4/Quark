@@ -5,7 +5,7 @@ It brings local games and your Steam, Epic Games, GOG and itch.io libraries
 together, launches Windows games through Proton or umu-launcher, and keeps
 achievements and verified local saves alongside the library.
 
-This documentation describes **Quark 2.0.2**. Its source is versioned in the
+This documentation describes **Quark 2.1.0**. Its source is versioned in the
 repository under [`wiki/`](https://github.com/Matheotaku4/Quark/tree/main/wiki).
 
 ![Quark home](https://raw.githubusercontent.com/Matheotaku4/Quark/main/docs/images/home-en.png)
@@ -17,19 +17,21 @@ repository under [`wiki/`](https://github.com/Matheotaku4/Quark/tree/main/wiki).
 | ![Library with list and game page](https://raw.githubusercontent.com/Matheotaku4/Quark/main/docs/images/library-en.png) | ![Game page](https://raw.githubusercontent.com/Matheotaku4/Quark/main/docs/images/game-en.png) |
 | **Store** | **My games** |
 | ![Store page](https://raw.githubusercontent.com/Matheotaku4/Quark/main/docs/images/store-en.png) | ![My games](https://raw.githubusercontent.com/Matheotaku4/Quark/main/docs/images/my-games-en.png) |
-| **Settings** | **First launch** |
-| ![Appearance settings](https://raw.githubusercontent.com/Matheotaku4/Quark/main/docs/images/settings-en.png) | ![Welcome guide](https://raw.githubusercontent.com/Matheotaku4/Quark/main/docs/images/onboarding-en.png) |
+| **Site search** | **Settings** |
+| ![Multi-site search](https://raw.githubusercontent.com/Matheotaku4/Quark/main/docs/images/site-search-en.png) | ![Appearance settings](https://raw.githubusercontent.com/Matheotaku4/Quark/main/docs/images/settings-en.png) |
+| **First launch** | **Home** |
+| ![Welcome guide](https://raw.githubusercontent.com/Matheotaku4/Quark/main/docs/images/onboarding-en.png) | ![Quark home](https://raw.githubusercontent.com/Matheotaku4/Quark/main/docs/images/home-en.png) |
 
-## What's new in 2.0.2
+## What's new in 2.1.0
 
-- **Trailer volume remembered.** The slider now uses a logarithmic 20 dB curve
-  and keeps its position between launches and between videos.
-- **Useful notification icon.** Left-click opens Quark, right-click shows
-  **Open Quark** and **Close Quark**. A second launch focuses the existing
-  window instead of starting another WebView.
-- **Lighter My games.** Covers are released when they leave the screen, the
-  runaway infinite scroll is replaced by an explicit **Load more** button, and
-  observers are cleaned up when the page changes.
+- **Faster My games.** Store data is built off the UI thread, covers are loaded
+  in small batches and **Load more** replaces the runaway infinite scroll.
+  Filters, sorting and the list/grid choice are remembered.
+- **Seven download sites.** GameBounty, AnkerGames, AstralGames, Kryoto,
+  Online-Fix, ZeiGames and scene.cat in one ordered search, with per-source
+  errors and no file download.
+- **Cleaner surfaces.** Opaque cards, shared spacing and radius tokens, stable
+  hover states and no expensive backdrop blur.
 - **Library unchanged.** The left-hand game list and the right-hand game page
   keep the Steam-like layout, with the same local and store libraries.
 
