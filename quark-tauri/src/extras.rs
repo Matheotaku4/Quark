@@ -237,9 +237,10 @@ fn fetch_achievement_info(
             let key = credentials.steam_web_api_key.as_deref().ok_or_else(|| {
                 "Ajoute une clé Steam Web API dans Boutiques & outils.".to_string()
             })?;
-            let steam_id = credentials.steam_id.as_deref().ok_or_else(|| {
-                "Ajoute ton SteamID64 dans Boutiques & outils.".to_string()
-            })?;
+            let steam_id = credentials
+                .steam_id
+                .as_deref()
+                .ok_or_else(|| "Ajoute ton SteamID64 dans Boutiques & outils.".to_string())?;
             steam::fetch_achievements(&app_id.to_string(), key, steam_id)?
         }
         Provider::Epic => legendary::epic_achievements(&product)?,
@@ -301,7 +302,10 @@ pub async fn achievements_compare(
     for id in ids.into_iter().take(8) {
         let name = {
             let library = lock(&state.library);
-            library.get(&id).map(|game| game.name.clone()).unwrap_or_else(|| id.clone())
+            library
+                .get(&id)
+                .map(|game| game.name.clone())
+                .unwrap_or_else(|| id.clone())
         };
         let (provider, product, steam_id, credentials) = match achievement_source(&state, &id) {
             Ok(source) => source,
@@ -326,11 +330,12 @@ pub async fn achievements_compare(
         .map_err(|error| error.to_string())?;
         let summary = match result {
             Ok(info) => {
-                let percent = if info.total == 0 {
-                    0
-                } else {
-                    (info.unlocked * 100 / info.total).min(100)
-                };
+                let percent = info
+                    .unlocked
+                    .saturating_mul(100)
+                    .checked_div(info.total)
+                    .unwrap_or(0)
+                    .min(100);
                 AchievementSummaryDto {
                     id,
                     name,
@@ -418,11 +423,10 @@ pub async fn save_preview(
         let library = lock(&state.library);
         (save_identity(&library, &id)?, library.settings.clone())
     };
-    let result = tauri::async_runtime::spawn_blocking(move || {
-        save_manager(&settings).preview(&identity)
-    })
-    .await
-    .map_err(|error| error.to_string())??;
+    let result =
+        tauri::async_runtime::spawn_blocking(move || save_manager(&settings).preview(&identity))
+            .await
+            .map_err(|error| error.to_string())??;
     Ok(preview_dto(result))
 }
 
@@ -435,11 +439,10 @@ pub async fn save_backups(
         let library = lock(&state.library);
         (save_identity(&library, &id)?, library.settings.clone())
     };
-    let result = tauri::async_runtime::spawn_blocking(move || {
-        save_manager(&settings).backups(&identity)
-    })
-    .await
-    .map_err(|error| error.to_string())??;
+    let result =
+        tauri::async_runtime::spawn_blocking(move || save_manager(&settings).backups(&identity))
+            .await
+            .map_err(|error| error.to_string())??;
     Ok(result
         .into_iter()
         .map(|backup: BackupInfo| SaveBackupDto {
@@ -472,11 +475,7 @@ pub async fn save_backup(
     .await
     .map_err(|error| error.to_string())??;
     if notify {
-        super::notify_desktop(
-            &app,
-            &quark::i18n::tr("Sauvegarde terminée"),
-            &result.title,
-        );
+        super::notify_desktop(&app, &quark::i18n::tr("Sauvegarde terminée"), &result.title);
     }
     Ok(SaveBackupResultDto {
         title: result.title,

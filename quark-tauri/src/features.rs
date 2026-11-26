@@ -182,7 +182,10 @@ fn collect_dlls(root: &Path, dir: &Path, depth: usize, out: &mut Vec<DllCandidat
         {
             continue;
         }
-        let Some(stem) = path.file_stem().map(|stem| stem.to_string_lossy().to_string()) else {
+        let Some(stem) = path
+            .file_stem()
+            .map(|stem| stem.to_string_lossy().to_string())
+        else {
             continue;
         };
         if stem.is_empty() || out.iter().any(|row| row.name.eq_ignore_ascii_case(&stem)) {
@@ -382,9 +385,7 @@ pub async fn check_update() -> Result<UpdateDto, String> {
 pub async fn install_update() -> Result<(), String> {
     blocking(|| {
         if !update::automatic_update_allowed() {
-            return Err(
-                "La mise à jour intégrée est désactivée pour cette exécution.".to_string(),
-            );
+            return Err("La mise à jour intégrée est désactivée pour cette exécution.".to_string());
         }
         let client = artwork::http();
         let release = update::latest(&client)?;
@@ -499,7 +500,11 @@ pub struct ArtworkCandidatesDto {
 }
 
 #[tauri::command]
-pub async fn scan_folder(folder: String, max_depth: u32, limit: u32) -> Result<Vec<ScanHitDto>, String> {
+pub async fn scan_folder(
+    folder: String,
+    max_depth: u32,
+    limit: u32,
+) -> Result<Vec<ScanHitDto>, String> {
     blocking(move || {
         let root = Path::new(&folder);
         if !root.is_dir() {
@@ -586,7 +591,10 @@ pub async fn artwork_candidates(
             warnings.extend(plan.warnings.iter().cloned());
             for kind in quark::config::AssetKind::ALL {
                 for (index, url) in plan.candidates(kind).iter().take(8).enumerate() {
-                    if items.iter().any(|item: &ArtworkCandidateDto| item.url == *url) {
+                    if items
+                        .iter()
+                        .any(|item: &ArtworkCandidateDto| item.url == *url)
+                    {
                         continue;
                     }
                     items.push(ArtworkCandidateDto {

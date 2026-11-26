@@ -5,7 +5,7 @@ single library for local games and for the Steam, Epic Games, GOG and itch.io
 titles you own, launches Windows games through Proton (or umu-launcher), and stays out of
 the way with a modern dark interface, a fast library and a detailed game page.
 
-This is the **1.8.8** documentation. Older release notes are kept on the GitHub
+This is the **2.0.0** documentation. Older release notes are kept on the GitHub
 releases page; `docs/release-notes.md` only describes the release currently
 being published.
 
@@ -17,17 +17,18 @@ being published.
 The wiki is published from the versioned source in [`wiki/`](wiki/) by the
 `.github/workflows/wiki.yml` workflow.
 
-## What's new in 1.8.8
+## What's new in 2.0.0
 
-- **Interface Tauri 2.** Le rendu egui est remplacé par une interface HTML/CSS/JS sans framework, affichée par WebKitGTK. La bibliothèque garde la disposition Steam : liste des jeux à gauche, fiche détaillée à droite. Le cœur métier reste en Rust et ne dépend plus d'egui.
-- **Secours audio automatique.** Si `pulsesink` échoue avant la première image, le lecteur relance une fois GStreamer avec `autoaudiosink` (PipeWire, ALSA ou autre sortie disponible) au lieu d'afficher une erreur. Le secours ne remplace jamais `QUARK_GST_AUDIO_SINK`, ne redémarre pas une vidéo déjà commencée et masque le curseur de volume si la sortie de secours ne permet pas de régler le flux.
-- **Adoption GOG fidèle aux manifestes réels.** L'adoption exige l'exécutable de la tâche primaire et tous les exécutables de catégorie `game`, y compris les tâches cachées derrière un lanceur. Les manuels, outils de configuration et `URLTask` optionnels n'empêchent plus d'adopter une installation complète ; les chemins Windows, les doubles séparateurs et la casse restent reconnus.
-- **Quatre manifestes multi-playTasks testés.** Beneath a Steel Sky, Trails in the Sky SC, Prison Architect et The Witcher 3 couvrent l'adoption, les tâches optionnelles, les tâches cachées et les lanceurs primaires.
-- **Tests** : 313 tests unitaires du cœur, plus 4 tests réseau exécutés séparément (bande-annonce HLS réelle, médias Steam, résolution du pack GOG et builds Windows du jeu).
+- **Mode Deck.** Détection automatique de la Steam Deck, de gamescope ou d'une manette, navigation complète à la manette et au clavier, plein écran et mise en page agrandie. Réglage Auto / Toujours / Désactivé dans les paramètres.
+- **Bibliothèque proche de Steam.** Liste à gauche, fiche détaillée à droite, apprentissage instantané, thèmes, recherche globale Ctrl+K et actions par lot (statut, favori, retrait).
+- **Téléchargements de boutiques.** Progression en direct, débit, ETA, trois téléchargements simultanés maximum et annulation.
+- **Ajout plus rapide.** Scan d'un dossier, recherche multi-sites et choix d'illustrations parmi les résultats SteamGridDB.
+- **Succès comparés.** Progression côte à côte des jeux de boutique associés.
+- **Interface Tauri 2 légère.** HTML/CSS/JS sans framework dans la WebView système ; le cœur métier reste en Rust et ne dépend plus d'egui.
 
 ## Table of contents
 
-1. [What's new in 1.8.8](#whats-new-in-188)
+1. [What's new in 2.0.0](#whats-new-in-200)
 2. [What Quark does](#what-quark-does)
 3. [Installation](#installation)
 4. [First launch](#first-launch)
@@ -87,8 +88,8 @@ Download `quark-<version>-linux-x86_64.tar.gz` and its `.sha256` file from the
 then verify and unpack it:
 
 ```bash
-sha256sum -c quark-1.8.8-linux-x86_64.tar.gz.sha256
-tar -xzf quark-1.8.8-linux-x86_64.tar.gz
+sha256sum -c quark-2.0.0-linux-x86_64.tar.gz.sha256
+tar -xzf quark-2.0.0-linux-x86_64.tar.gz
 ./quark/quark
 ```
 

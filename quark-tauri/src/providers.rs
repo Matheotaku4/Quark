@@ -645,7 +645,13 @@ pub async fn provider_install(
             while !done.load(std::sync::atomic::Ordering::Relaxed) {
                 let current = lock(&progress).clone();
                 emit_install_progress(
-                    &app, &job_key, &provider, &product_id, "installing", &title, &current,
+                    &app,
+                    &job_key,
+                    &provider,
+                    &product_id,
+                    "installing",
+                    &title,
+                    &current,
                 );
                 std::thread::sleep(std::time::Duration::from_millis(400));
             }
@@ -839,8 +845,7 @@ pub fn provider_cancel(
     let job = installs
         .get(&job_key)
         .ok_or_else(|| "Aucun téléchargement pour ce jeu.".to_string())?;
-    job.cancel
-        .store(true, std::sync::atomic::Ordering::Relaxed);
+    job.cancel.store(true, std::sync::atomic::Ordering::Relaxed);
     Ok(())
 }
 

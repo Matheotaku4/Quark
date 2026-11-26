@@ -135,7 +135,9 @@ fn cli_find_game<'a>(library: &'a Library, query: &str) -> Result<&'a Game, Stri
                 .map(|game| format!("  - {}", game.name))
                 .collect::<Vec<_>>()
                 .join("\n");
-            Err(format!("Plusieurs jeux correspondent à « {query} » :\n{names}"))
+            Err(format!(
+                "Plusieurs jeux correspondent à « {query} » :\n{names}"
+            ))
         }
     }
 }
@@ -244,7 +246,11 @@ fn cli_launch(query: &str) -> Result<(), String> {
 
 fn cli_list() -> Result<(), String> {
     let library = Library::load();
-    let mut names: Vec<&str> = library.games.iter().map(|game| game.name.as_str()).collect();
+    let mut names: Vec<&str> = library
+        .games
+        .iter()
+        .map(|game| game.name.as_str())
+        .collect();
     names.sort_by_key(|name| name.to_lowercase());
     for name in names {
         println!("{name}");
@@ -843,8 +849,7 @@ fn launch_game(app: AppHandle, state: State<'_, AppState>, id: String) -> Result
                 );
             }
             Ok(_) => {
-                for (name, value) in quark::overlay_dll::launch_environment_for(&game, "top-left")
-                {
+                for (name, value) in quark::overlay_dll::launch_environment_for(&game, "top-left") {
                     quark::overlay_dll::set_env(&mut resolved.spec.env, &name, &value);
                 }
                 quark::overlay_dll::enable_wine_override(&mut resolved.spec.env);
@@ -1275,7 +1280,9 @@ fn win_set_fullscreen(app: AppHandle, active: bool) -> Result<(), String> {
     let window = app
         .get_webview_window("main")
         .ok_or_else(|| "Fenêtre principale introuvable.".to_string())?;
-    window.set_fullscreen(active).map_err(|error| error.to_string())
+    window
+        .set_fullscreen(active)
+        .map_err(|error| error.to_string())
 }
 
 #[tauri::command]
@@ -1371,7 +1378,8 @@ fn register_shortcuts(app: &AppHandle, settings: &Settings) -> Result<(), String
     let _ = app.global_shortcut().unregister_all();
     let mut errors = Vec::new();
     if settings.overlay {
-        if let Err(error) = register_one_shortcut(app, &settings.overlay_hotkey, "Shift+Backspace") {
+        if let Err(error) = register_one_shortcut(app, &settings.overlay_hotkey, "Shift+Backspace")
+        {
             errors.push(error);
         }
     }

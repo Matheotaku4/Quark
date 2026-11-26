@@ -1,16 +1,18 @@
-# Quark 1.8.8 — interface Tauri 2
+# Quark 2.0.0 — mode Deck et interface Tauri 2
 
 ### Interface
 
-- **Nouvelle interface Tauri 2.** Le rendu egui est remplacé par une interface HTML/CSS/JS sans framework, affichée par WebKitGTK. Le cœur métier reste en Rust (`src/lib.rs`) et ne dépend plus d'egui.
-- **Bibliothèque proche de Steam.** Liste des jeux à gauche (statut, temps de jeu, recherche, tri, groupes), fiche détaillée à droite : bannière, logo, boutons Jouer/Terminé, onglets Aperçu, Médias, Succès, Actualités, Historique, Notes, Lancement et Journal.
-- **Accueil, Boutique, Mes jeux.** Carrousel plein écran, catalogue Steam avec réductions et recommandations, gestion des installations par boutique.
-- **Réglages complets.** Huit sections, recherche instantanée, thèmes, langue, overlay, sauvegardes, statistiques, disque et à propos. Enregistrement automatique.
-- **Overlay et zone de notification.** `Maj+Retour arrière` ouvre le panneau en jeu ; le raccourci est configurable. L'icône de notification reste optionnelle.
-- **Cinq langues.** Français, anglais, espagnol, allemand et portugais, y compris les écrans ajoutés par le portage.
+- **Bibliothèque proche de Steam.** Liste des jeux à gauche, fiche détaillée à droite, avec bannière, logo, boutons Jouer/Terminé et onglets Aperçu, Médias, Succès, Actualités, Historique, Notes, Lancement et Journal.
+- **Interface Tauri 2 légère.** HTML/CSS/JS sans framework dans une WebView système ; le cœur métier reste en Rust et ne dépend plus d'egui.
+- **Mode Deck.** Détection automatique de la Steam Deck, de gamescope ou d'une manette, navigation complète au clavier et à la manette, plein écran, mise en page agrandie et barre de raccourcis. Réglage Auto / Toujours / Désactivé dans les paramètres.
+- **Téléchargements de boutiques.** Progression en direct, débit, ETA, trois téléchargements simultanés maximum et annulation depuis le panneau Transferts.
+- **Ajout plus rapide.** Scan d'un dossier avec détection des exécutables et ajout en lot, recherche multi-sites, choix d'illustrations parmi les résultats SteamGridDB.
+- **Recherche globale étendue.** Palette Ctrl+K sur toute la bibliothèque, les jeux de boutique et une recherche web directe.
+- **Actions par lot.** Statut et favori sur plusieurs jeux, en plus du retrait groupé.
+- **Succès comparés.** Progression côte à côte des jeux de boutique associés.
 
 ### Vérifications
 
-- `cargo fmt --all -- --check` : OK sur les deux crates.
+- `cargo fmt --all -- --check` : OK.
 - `cargo clippy --all-targets --locked -- -D warnings` : OK sur les deux crates.
-- `cargo test --locked` : 313 tests réussis, 3 tests réseau ignorés.
+- `cargo test --locked` : 317 tests réussis, 3 tests réseau ignorés.

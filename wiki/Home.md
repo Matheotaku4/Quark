@@ -5,28 +5,25 @@ games and your Steam, Epic Games and GOG libraries together, launches Windows
 games through Proton or umu-launcher, and adds an in-game overlay,
 achievements and verified local saves.
 
-This documentation describes **Quark 1.8.8**. It is also versioned in the
+This documentation describes **Quark 2.0.0**. It is also versioned in the
 repository under [`wiki/`](https://github.com/Matheotaku4/Quark/tree/main/wiki).
 
 ![Quark home](https://raw.githubusercontent.com/Matheotaku4/Quark/main/docs/images/home-en.png)
 
-## What's new in 1.8.8
+## What's new in 2.0.0
 
-- **Automatic audio fallback.** If `pulsesink` fails before the first frame,
-  the player retries once with `autoaudiosink` (PipeWire, ALSA or another
-  available output) instead of showing an error. The fallback never overrides
-  `QUARK_GST_AUDIO_SINK`, never restarts a video that already started, and
-  hides the volume slider when the fallback output cannot be controlled.
-- **GOG adoption matches real manifests.** Adoption requires the primary task's
-  executable and every game-category executable, including hidden tasks behind
-  a launcher. Optional manuals, configuration tools and URLTask entries no
-  longer block a complete install; Windows paths, double separators and case
-  differences are still resolved.
-- **Four multi-playTasks manifests covered.** Beneath a Steel Sky, Trails in the
-  Sky SC, Prison Architect and The Witcher 3 exercise adoption, optional tasks,
-  hidden tasks and launcher-primary installs.
-- **Tests:** 362 unit tests, plus 4 live network tests run separately (a real
-  HLS trailer, Steam media, GOG pack resolution and the game's Windows builds).
+- **Deck mode.** Automatic Steam Deck, gamescope or controller detection, full
+  controller and keyboard navigation, fullscreen, larger layout and a shortcut
+  bar. Auto / On / Off in settings.
+- **Steam-like library.** List on the left, detailed game page on the right,
+  global Ctrl+K search and batch actions (status, favourite, remove).
+- **Store downloads.** Live progress, speed, ETA, up to three concurrent
+  downloads and cancellation.
+- **Faster adding.** Folder scan, multi-site search and artwork selection from
+  SteamGridDB results.
+- **Achievement comparison.** Side-by-side progress for linked store games.
+- **Light Tauri 2 interface.** Framework-free HTML/CSS/JS in the system WebView;
+  the Rust core no longer depends on egui.
 
 ## Where to start
 

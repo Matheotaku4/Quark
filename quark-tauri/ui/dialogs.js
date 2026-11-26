@@ -52,9 +52,12 @@ function scanModal() {
     let hits = list.querySelectorAll("[data-scan]:checked"); if (!hits.length) return load(folder);
     const ids = [...hits].map((el) => +el.dataset.scan);
     const result = await invoke("scan_folder", { folder, maxDepth: 3, limit: 50 });
-    let added = 0;
-    for (const index of ids) { const hit = result[index]; if (!hit) continue; await invoke("add_game", { name: hit.title, exe: hit.exe }); added++; }
-    app.data = await invoke("bootstrap_data"); closeModal(); renderAll(); select(filtered()[0]?.id); toast(t("scan.added", { n: added }));
+    let added = 0, lastId = null;
+    for (const index of ids) {
+      const hit = result[index]; if (!hit) continue;
+      try { const game = await invoke("add_game", { name: hit.title, exe: hit.exe }); lastId = game.id; added++; } catch {}
+    }
+    app.data = await invoke("bootstrap_data"); closeModal(); renderAll(); if (lastId) select(lastId); toast(t("scan.added", { n: added }));
   });
 }
 function webSearchModal(query = "") {
