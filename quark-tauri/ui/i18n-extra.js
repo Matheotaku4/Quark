@@ -339,3 +339,29 @@ Object.assign(I18N.pt, {
   "deck.hint.open": "Abrir", "deck.hint.back": "Voltar", "deck.hint.play": "Jogar", "deck.hint.favorite": "Favorito",
   "deck.hint.tabs": "Abas", "deck.hint.menu": "Menu",
 });
+
+Object.assign(I18N.fr, {
+  "pv.transfers": "Téléchargements", "pv.noTransfers": "Aucun téléchargement en cours.", "pv.cancel": "Annuler",
+  "pv.cancelling": "Annulation…", "pv.cancelled": "Téléchargement annulé.", "pv.preparing": "Préparation…",
+  "pv.installFailed": "Le téléchargement a échoué.", "pv.installDone": "Installation terminée.",
+});
+Object.assign(I18N.en, {
+  "pv.transfers": "Downloads", "pv.noTransfers": "No download in progress.", "pv.cancel": "Cancel",
+  "pv.cancelling": "Cancelling…", "pv.cancelled": "Download cancelled.", "pv.preparing": "Preparing…",
+  "pv.installFailed": "The download failed.", "pv.installDone": "Installation complete.",
+});
+Object.assign(I18N.es, {
+  "pv.transfers": "Descargas", "pv.noTransfers": "No hay descargas en curso.", "pv.cancel": "Cancelar",
+  "pv.cancelling": "Cancelando…", "pv.cancelled": "Descarga cancelada.", "pv.preparing": "Preparando…",
+  "pv.installFailed": "La descarga falló.", "pv.installDone": "Instalación terminada.",
+});
+Object.assign(I18N.de, {
+  "pv.transfers": "Downloads", "pv.noTransfers": "Kein Download läuft.", "pv.cancel": "Abbrechen",
+  "pv.cancelling": "Wird abgebrochen…", "pv.cancelled": "Download abgebrochen.", "pv.preparing": "Vorbereitung…",
+  "pv.installFailed": "Der Download ist fehlgeschlagen.", "pv.installDone": "Installation abgeschlossen.",
+});
+Object.assign(I18N.pt, {
+  "pv.transfers": "Downloads", "pv.noTransfers": "Nenhum download em andamento.", "pv.cancel": "Cancelar",
+  "pv.cancelling": "Cancelando…", "pv.cancelled": "Download cancelado.", "pv.preparing": "Preparando…",
+  "pv.installFailed": "O download falhou.", "pv.installDone": "Instalação concluída.",
+});

@@ -28,7 +28,7 @@ Object.assign(I18N.en, {
 });
 
 const app = { data: null, cfg: {}, lang: "fr", view: "library", sel: null, query: "", f: { status: "", genre: "", tag: "", fav: false }, running: new Map(), tab: "overview", marked: new Set(),
-  cache: {}, open: true, collapsed: new Set(), pal: null, bgGame: null, stab: "appearance", sq: "" };
+  cache: {}, transfers: new Map(), open: true, collapsed: new Set(), pal: null, bgGame: null, stab: "appearance", sq: "" };
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
 const esc = (v) => String(v ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);

@@ -234,13 +234,14 @@ function installProviderModal(provider, productId) {
   modal(`<h2>${esc(t("pv.install") + " · " + rec.title)}</h2>
     ${steam ? `<p class="desc">${esc(t("pv.steamInstallHint"))}</p>` : `<label class="fl"><span>${esc(t("pv.destination"))}</span><input type="text" id="pv-dest" value="${esc(app.cfg.default_install_dir || "~/Games")}" placeholder="~/Games"></label>`}
     ${foot(steam ? t("pv.openSteam") : t("pv.install"))}`);
-  $("#ok").onclick = () => run(async () => {
+  $("#ok").onclick = () => {
     const destination = steam ? null : ($("#pv-dest")?.value || null);
     closeModal(); toast(t("pv.installStarted"));
-    try { await invoke("provider_install", { provider, productId, destination }); }
-    catch (e) { toast(String(e), true); }
-    await providersLoad(true); renderAll();
-  });
+    invoke("provider_install", { provider, productId, destination })
+      .then(() => providersLoad(true))
+      .then(() => { if (app.view === "mygames") renderSheetKeepScroll(); })
+      .catch((e) => toast(String(e), true));
+  };
 }
 
 function confirmUninstall(provider, productId) {
@@ -265,6 +266,51 @@ async function steamImportModal() {
       closeModal(); app.view = "library"; renderAll(); if (added[0]) select(added[0].id); toast(t("pv.imported", { n: added.length }));
     });
   } catch (e) { $("#st-list").textContent = String(e); }
+}
+
+// ---------- transferts ----------
+function providerProgress(p) {
+  if (!p?.key) return;
+  app.transfers.set(p.key, { ...p, at: Date.now() });
+  renderTop();
+  if (app.view === "mygames" && (p.state === "installed" || p.state === "failed")) {
+    providersLoad(true).then(() => { if (app.view === "mygames") renderSheetKeepScroll(); });
+  }
+  if (p.state === "installed" || p.state === "failed") {
+    setTimeout(() => {
+      app.transfers.delete(p.key);
+      renderTop();
+      if (app.view === "mygames") renderSheetKeepScroll();
+    }, 4500);
+  }
+}
+
+function transferRow(p) {
+  const pct = p.percent == null ? null : Math.max(0, Math.min(100, p.percent));
+  const size = p.written != null && p.total ? `${bytes(p.written)} / ${bytes(p.total)}` : "";
+  const meta = [p.stage || "", p.speed, p.eta ? `ETA ${p.eta}` : "", size].filter(Boolean).join(" · ");
+  const state = p.state === "installed" ? "done" : p.state === "failed" ? "failed" : "";
+  return `<div class="transfer ${state}">
+    <div class="t-top"><b>${esc(p.title || p.productId)}</b><small>${esc(PV_LABEL[p.provider] || p.provider)}</small></div>
+    <div class="t-bar${pct == null ? " indeterminate" : ""}"><i style="width:${pct == null ? 35 : pct}%"></i></div>
+    <div class="t-meta"><span>${esc(meta || t("pv.preparing"))}</span>${pct == null ? "" : `<b>${Math.round(pct)} %</b>`}</div>
+    ${p.state === "failed" ? `<div class="t-error">${esc(p.error || t("pv.installFailed"))}</div>` : ""}
+    ${p.state === "installed" ? `<div class="t-ok">${esc(t("pv.installDone"))}</div>` : ""}
+    ${p.state === "installing" ? `<div class="foot"><button class="btn sec sm" data-transfer-cancel="${esc(p.key)}" data-provider="${esc(p.provider)}" data-product="${esc(p.productId)}">${esc(t("pv.cancel"))}</button></div>` : ""}
+  </div>`;
+}
+
+function transfersModal() {
+  const rows = [...app.transfers.values()];
+  modal(`<h2>${esc(t("pv.transfers"))}</h2>
+    <div class="transfers">${rows.length ? rows.map(transferRow).join("") : `<div class="dim">${esc(t("pv.noTransfers"))}</div>`}</div>
+    <div class="foot"><button class="btn sec" data-act="close">${esc(t("x.close"))}</button></div>`, true);
+  $$("[data-transfer-cancel]").forEach((button) => (button.onclick = () => run(async () => {
+    button.disabled = true;
+    button.textContent = t("pv.cancelling");
+    await invoke("provider_cancel", { provider: button.dataset.provider, productId: button.dataset.product });
+    toast(t("pv.cancelled"));
+  })));
 }
 
 document.addEventListener("click", (e) => {

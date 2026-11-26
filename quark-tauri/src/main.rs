@@ -25,7 +25,8 @@ use quark::session::{self, Session};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
-use std::sync::{Mutex, MutexGuard};
+use std::sync::atomic::AtomicBool;
+use std::sync::{Arc, Mutex, MutexGuard};
 use std::time::Duration;
 use tauri::http::{header, Response, StatusCode};
 use tauri::menu::{Menu, MenuItem};
@@ -45,9 +46,14 @@ struct Running {
     name: String,
 }
 
+pub(crate) struct InstallJob {
+    pub cancel: Arc<AtomicBool>,
+}
+
 struct AppState {
     library: Mutex<Library>,
     sessions: Mutex<HashMap<String, Running>>,
+    installs: Mutex<HashMap<String, InstallJob>>,
     runtimes: Vec<ProtonRuntime>,
     demo: bool,
     deck_demo: bool,
@@ -2091,6 +2097,7 @@ fn main() {
     let state = AppState {
         library: Mutex::new(library),
         sessions: Mutex::new(HashMap::new()),
+        installs: Mutex::new(HashMap::new()),
         runtimes: if demo {
             Vec::new()
         } else {
@@ -2193,6 +2200,7 @@ fn main() {
             providers::provider_save_credentials,
             providers::provider_tool_install,
             providers::provider_install,
+            providers::provider_cancel,
             providers::provider_uninstall,
             providers::provider_adopt,
             providers::steam_candidates,

@@ -516,6 +516,37 @@ fn update_provider_record(
     persist(state, &mut library)
 }
 
+fn install_job_key(provider: &str, product_id: &str) -> String {
+    format!("{provider}:{product_id}")
+}
+
+fn emit_install_progress(
+    app: &AppHandle,
+    key: &str,
+    provider: &str,
+    product_id: &str,
+    state: &str,
+    title: &str,
+    progress: &providers::runner::InstallProgress,
+) {
+    let _ = app.emit(
+        "quark://provider-install-progress",
+        serde_json::json!({
+            "key": key,
+            "provider": provider,
+            "productId": product_id,
+            "state": state,
+            "title": title,
+            "percent": progress.percent,
+            "stage": progress.stage,
+            "speed": progress.speed,
+            "eta": progress.eta,
+            "written": progress.written,
+            "total": progress.total,
+        }),
+    );
+}
+
 #[tauri::command]
 pub async fn provider_install(
     app: AppHandle,
@@ -558,6 +589,24 @@ pub async fn provider_install(
         ));
     }
 
+    let job_key = install_job_key(&provider, &product_id);
+    let progress = Arc::new(Mutex::new(providers::runner::InstallProgress::default()));
+    let cancel = Arc::new(AtomicBool::new(false));
+    {
+        let mut installs = lock(&state.installs);
+        if installs.len() >= 3 {
+            return Err("Trois téléchargements sont déjà en cours.".to_string());
+        }
+        if installs.contains_key(&job_key) {
+            return Err("Ce jeu est déjà en cours de téléchargement.".to_string());
+        }
+        installs.insert(
+            job_key.clone(),
+            super::InstallJob {
+                cancel: cancel.clone(),
+            },
+        );
+    }
     {
         let mut library = lock(&state.library);
         if let Some(current) = library
@@ -568,16 +617,46 @@ pub async fn provider_install(
         {
             current.install_state = InstallState::Installing;
         }
-        persist(&state, &mut library)?;
+        if let Err(error) = persist(&state, &mut library) {
+            lock(&state.installs).remove(&job_key);
+            return Err(error);
+        }
     }
-    let _ = app.emit(
-        "quark://provider-install",
-        serde_json::json!({ "provider": provider, "productId": product_id, "state": "installing" }),
+    emit_install_progress(
+        &app,
+        &job_key,
+        &provider,
+        &product_id,
+        "installing",
+        &record.title,
+        &lock(&progress),
     );
+
+    let done = Arc::new(AtomicBool::new(false));
+    let poller = {
+        let app = app.clone();
+        let progress = progress.clone();
+        let done = done.clone();
+        let job_key = job_key.clone();
+        let provider = provider.clone();
+        let product_id = product_id.clone();
+        let title = record.title.clone();
+        Some(std::thread::spawn(move || {
+            while !done.load(std::sync::atomic::Ordering::Relaxed) {
+                let current = lock(&progress).clone();
+                emit_install_progress(
+                    &app, &job_key, &provider, &product_id, "installing", &title, &current,
+                );
+                std::thread::sleep(std::time::Duration::from_millis(400));
+            }
+        }))
+    };
 
     let key_for_job = key.clone();
     let record_for_job = record.clone();
     let destination_for_job = destination.clone();
+    let cancel_for_job = cancel.clone();
+    let progress_for_job = progress.clone();
     let result = tauri::async_runtime::spawn_blocking(move || -> Result<ProviderGame, String> {
         std::fs::create_dir_all(&destination_for_job)
             .map_err(|error| format!("Dossier d'installation : {error}"))?;
@@ -587,23 +666,21 @@ pub async fn provider_install(
                 if !adapter.executable.is_file() {
                     return Err("Legendary n'est pas installé.".to_string());
                 }
-                let progress = Arc::new(Mutex::new(providers::runner::InstallProgress::default()));
                 adapter.run_install_streaming(
                     legendary::LegendaryAdapter::install_args(
                         &key_for_job.product_id,
                         &destination_for_job,
                     ),
-                    Some(Arc::new(AtomicBool::new(false))),
-                    progress,
+                    Some(cancel_for_job),
+                    progress_for_job,
                 )?;
                 let installed = adapter.sync_installed(config::now_ts(), None)?;
-                let found = installed
+                installed
                     .into_iter()
                     .find(|game| game.key == key_for_job)
                     .ok_or_else(|| {
                         "Legendary a terminé mais le jeu n'apparaît pas installé.".to_string()
-                    })?;
-                Ok(found)
+                    })
             }
             Provider::Gog => {
                 let adapter = gog::GogAdapter::new(gog::auth_config_path());
@@ -618,15 +695,14 @@ pub async fn provider_install(
                     return Err("gogdl n'a pas pu lire les informations du jeu.".to_string());
                 }
                 let folder = gog::folder_from_info(&info.stdout)?;
-                let progress = Arc::new(Mutex::new(providers::runner::InstallProgress::default()));
                 adapter.run_install_streaming(
                     gog::GogAdapter::install_args(
                         &key_for_job.product_id,
                         &destination_for_job,
                         "windows",
                     ),
-                    Some(Arc::new(AtomicBool::new(false))),
-                    progress,
+                    Some(cancel_for_job),
+                    progress_for_job,
                 )?;
                 let install_path = gog::resolve_install_path(
                     &destination_for_job,
@@ -657,27 +733,65 @@ pub async fn provider_install(
                     .itch_api_key
                     .as_deref()
                     .ok_or_else(|| "Clé API itch.io absente.".to_string())?;
-                let progress = Arc::new(Mutex::new(providers::runner::InstallProgress::default()));
                 itch::install(
                     api_key,
                     &record_for_job,
                     &destination_for_job,
-                    progress,
-                    Arc::new(AtomicBool::new(false)),
+                    progress_for_job,
+                    cancel_for_job,
                 )
             }
             Provider::Steam => Err("Steam gère l'installation.".to_string()),
         }
     })
-    .await
-    .map_err(|error| error.to_string())?;
+    .await;
+
+    done.store(true, std::sync::atomic::Ordering::Relaxed);
+    if let Some(poller) = poller {
+        let _ = poller.join();
+    }
+    lock(&state.installs).remove(&job_key);
+
+    let result = match result {
+        Ok(result) => result,
+        Err(error) => {
+            let mut library = lock(&state.library);
+            if let Some(current) = library
+                .provider_library
+                .games
+                .iter_mut()
+                .find(|game| game.key == key)
+            {
+                current.install_state = InstallState::Failed;
+            }
+            let _ = persist(&state, &mut library);
+            emit_install_progress(
+                &app,
+                &job_key,
+                &provider,
+                &product_id,
+                "failed",
+                &record.title,
+                &lock(&progress),
+            );
+            return Err(error.to_string());
+        }
+    };
 
     match result {
         Ok(installed) => {
             update_provider_record(&state, &key, installed)?;
-            let _ = app.emit(
-                "quark://provider-install",
-                serde_json::json!({ "provider": provider, "productId": product_id, "state": "installed" }),
+            let mut final_progress = lock(&progress).clone();
+            final_progress.percent = Some(100.0);
+            final_progress.stage = "Installation terminée".to_string();
+            emit_install_progress(
+                &app,
+                &job_key,
+                &provider,
+                &product_id,
+                "installed",
+                &record.title,
+                &final_progress,
             );
             if settings.notify_install_done {
                 super::notify_desktop(
@@ -699,13 +813,35 @@ pub async fn provider_install(
                 current.install_state = InstallState::Failed;
             }
             let _ = persist(&state, &mut library);
-            let _ = app.emit(
-                "quark://provider-install",
-                serde_json::json!({ "provider": provider, "productId": product_id, "state": "failed", "error": error }),
+            emit_install_progress(
+                &app,
+                &job_key,
+                &provider,
+                &product_id,
+                "failed",
+                &record.title,
+                &lock(&progress),
             );
             Err(error)
         }
     }
+}
+
+#[tauri::command]
+pub fn provider_cancel(
+    provider: String,
+    product_id: String,
+    state: State<'_, AppState>,
+) -> Result<(), String> {
+    provider_key(&provider, &product_id)?;
+    let job_key = install_job_key(&provider, &product_id);
+    let installs = lock(&state.installs);
+    let job = installs
+        .get(&job_key)
+        .ok_or_else(|| "Aucun téléchargement pour ce jeu.".to_string())?;
+    job.cancel
+        .store(true, std::sync::atomic::Ordering::Relaxed);
+    Ok(())
 }
 
 #[tauri::command]

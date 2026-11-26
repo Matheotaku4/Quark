@@ -19,6 +19,7 @@ function renderTop() {
   $("#top-right").innerHTML = `<button class="tb" data-act="toggle-view" title="${esc(t("x.view"))}">${ic(grid ? "list" : "grid")}</button>
     <button class="tb" data-act="add" title="${esc(t("x.add"))}">${ic("plus")}</button><button class="tb" data-act="palette" title="${esc(t("x.search"))}">${ic("search")}</button>
     <button class="tb" data-act="updates" title="${esc(t("x.updates"))}">${ic("down")}${upd ? '<i class="pip"></i>' : ""}</button>
+    ${app.transfers.size ? `<button class="tb on" data-act="transfers" title="${esc(t("pv.transfers"))}">${ic("down")}<i class="pip"></i></button>` : ""}
     ${QuarkDeck.available() ? `<button class="tb${QuarkDeck.active() ? " on" : ""}" data-act="deck" title="${esc(t("deck.mode"))}">${ic("gamepad")}</button>` : ""}
     <button class="tb ${app.view === "settings" ? "on" : ""}" data-act="settings" title="${esc(t("settings.title"))}">${ic("gear")}</button><span class="vsep"></span>
     <button class="wb" data-win="win_minimize">${ic("min")}</button><button class="wb" data-win="win_toggle_maximize">${ic("max")}</button><button class="wb x" data-win="win_close">${ic("x")}</button>`;
