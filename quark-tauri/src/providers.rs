@@ -13,7 +13,8 @@ use quark::providers::{
 };
 use quark::steamlib;
 use serde::Serialize;
-use std::path::PathBuf;
+use std::collections::HashSet;
+use std::path::{Path, PathBuf};
 use std::sync::atomic::AtomicBool;
 use std::sync::{Arc, Mutex};
 use tauri::{AppHandle, Emitter, State};
@@ -30,6 +31,7 @@ pub struct ProviderGameDto {
     install_root: Option<String>,
     install_exe: Option<String>,
     cover_url: Option<String>,
+    cover_cached: bool,
     quark_game_id: Option<String>,
     last_synced: Option<i64>,
     achievements: String,
@@ -101,16 +103,49 @@ fn capability_label(state: &providers::model::CapabilityState) -> String {
     }
 }
 
-fn provider_game_dto(
-    record: &ProviderGame,
-    credentials: &credentials::Credentials,
-) -> ProviderGameDto {
-    let cover = providers::covers::cached(&record.key)
-        .and_then(|path| super::asset_url(Some(&path)))
+struct ProviderContext {
+    credentials: credentials::Credentials,
+    legendary_ready: bool,
+    gogdl_ready: bool,
+    cached_covers: HashSet<PathBuf>,
+}
+
+impl ProviderContext {
+    fn cover(&self, key: &ProviderGameKey) -> Option<PathBuf> {
+        let path = providers::covers::cache_path(key);
+        self.cached_covers.contains(&path).then_some(path)
+    }
+}
+
+fn cached_cover_paths(dir: &Path) -> HashSet<PathBuf> {
+    std::fs::read_dir(dir)
+        .into_iter()
+        .flatten()
+        .flatten()
+        .map(|entry| entry.path())
+        .filter(|path| path.extension().is_some_and(|ext| ext == "png"))
+        .collect()
+}
+
+fn provider_context() -> ProviderContext {
+    ProviderContext {
+        credentials: credentials::load(&config::credentials_path()).unwrap_or_default(),
+        legendary_ready: tools::ManagedToolId::Legendary.installed_path().is_file(),
+        gogdl_ready: tools::ManagedToolId::Gogdl.installed_path().is_file(),
+        cached_covers: cached_cover_paths(&providers::covers::cache_dir()),
+    }
+}
+
+fn provider_game_dto(record: &ProviderGame, ctx: &ProviderContext) -> ProviderGameDto {
+    let cached = ctx.cover(&record.key);
+    let cover = cached
+        .as_ref()
+        .and_then(|path| super::asset_url(Some(path)))
         .or_else(|| record.cover_url.clone());
     let achievements = match record.key.provider {
         Provider::Steam
-            if credentials.steam_web_api_key.is_some() && credentials.steam_id.is_some() =>
+            if ctx.credentials.steam_web_api_key.is_some()
+                && ctx.credentials.steam_id.is_some() =>
         {
             "supported".to_string()
         }
@@ -120,9 +155,9 @@ fn provider_game_dto(
     };
     let can_install = match record.key.provider {
         Provider::Steam => true,
-        Provider::Epic => tools::ManagedToolId::Legendary.installed_path().is_file(),
-        Provider::Gog => tools::ManagedToolId::Gogdl.installed_path().is_file(),
-        Provider::Itch => credentials.itch_api_key.is_some(),
+        Provider::Epic => ctx.legendary_ready,
+        Provider::Gog => ctx.gogdl_ready,
+        Provider::Itch => ctx.credentials.itch_api_key.is_some(),
     };
     ProviderGameDto {
         provider: format!("{:?}", record.key.provider).to_lowercase(),
@@ -146,6 +181,7 @@ fn provider_game_dto(
             .as_ref()
             .map(|path| path.display().to_string()),
         cover_url: cover,
+        cover_cached: cached.is_some(),
         quark_game_id: record.quark_game_id.clone(),
         last_synced: record.last_synced,
         achievements,
@@ -156,8 +192,9 @@ fn provider_game_dto(
     }
 }
 
-fn accounts(credentials: &credentials::Credentials) -> Vec<AccountDto> {
-    let legendary_ready = tools::ManagedToolId::Legendary.installed_path().is_file();
+fn accounts(ctx: &ProviderContext) -> Vec<AccountDto> {
+    let credentials = &ctx.credentials;
+    let legendary_ready = ctx.legendary_ready;
     let epic_direct = epic_account::connected_account();
     let epic_legendary = legendary_ready && legendary::LegendaryAdapter::is_logged_in();
     let gog_connected = gog::GogAdapter::is_logged_in();
@@ -211,12 +248,12 @@ fn accounts(credentials: &credentials::Credentials) -> Vec<AccountDto> {
             connected: gog_connected,
             detail: if gog_connected {
                 "Session gogdl".to_string()
-            } else if tools::ManagedToolId::Gogdl.installed_path().is_file() {
+            } else if ctx.gogdl_ready {
                 "gogdl installé · compte non connecté".to_string()
             } else {
                 "gogdl n'est pas installé".to_string()
             },
-            can_connect: tools::ManagedToolId::Gogdl.installed_path().is_file(),
+            can_connect: ctx.gogdl_ready,
             can_disconnect: gog_connected,
         },
         AccountDto {
@@ -249,30 +286,34 @@ fn tools_dto() -> Vec<ToolDto> {
         .collect()
 }
 
-fn providers_dto(state: &AppState, error: Option<String>) -> ProvidersDto {
-    let library = lock(&state.library);
-    let credentials = credentials::load(&config::credentials_path()).unwrap_or_default();
-    let mut games = library
-        .provider_library
-        .games
+fn providers_dto_from(games: Vec<ProviderGame>, error: Option<String>) -> ProvidersDto {
+    let ctx = provider_context();
+    let mut games = games
         .iter()
-        .map(|game| provider_game_dto(game, &credentials))
+        .map(|game| provider_game_dto(game, &ctx))
         .collect::<Vec<_>>();
     games.sort_by_key(|game| game.title.to_lowercase());
     ProvidersDto {
         games,
-        accounts: accounts(&credentials),
+        accounts: accounts(&ctx),
         tools: tools_dto(),
-        steam_id: credentials.steam_id.clone(),
+        steam_id: ctx.credentials.steam_id.clone(),
         error,
     }
 }
 
-#[tauri::command]
-pub fn providers_data(state: State<'_, AppState>) -> ProvidersDto {
-    providers_dto(&state, None)
+fn providers_dto(state: &AppState, error: Option<String>) -> ProvidersDto {
+    let games = lock(&state.library).provider_library.games.clone();
+    providers_dto_from(games, error)
 }
 
+#[tauri::command]
+pub async fn providers_data(state: State<'_, AppState>) -> Result<ProvidersDto, String> {
+    let games = lock(&state.library).provider_library.games.clone();
+    tauri::async_runtime::spawn_blocking(move || providers_dto_from(games, None))
+        .await
+        .map_err(|error| error.to_string())
+}
 fn sync_provider(
     provider: Provider,
     existing: &[ProviderGame],
@@ -1092,4 +1133,28 @@ pub fn steam_import(state: State<'_, AppState>, app_ids: Vec<u32>) -> Result<Vec
             )
         })
         .collect())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn cached_cover_paths_ne_garde_que_les_png_du_dossier() {
+        let dir = std::env::temp_dir().join(format!(
+            "quark-provider-covers-{}",
+            std::process::id()
+        ));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::write(dir.join("steam-1.png"), b"png").unwrap();
+        std::fs::write(dir.join("steam-2.jpg"), b"jpg").unwrap();
+        std::fs::write(dir.join("notes.txt"), b"txt").unwrap();
+
+        let paths = cached_cover_paths(&dir);
+        assert_eq!(paths.len(), 1);
+        assert!(paths.contains(&dir.join("steam-1.png")));
+
+        let _ = std::fs::remove_dir_all(&dir);
+    }
 }
