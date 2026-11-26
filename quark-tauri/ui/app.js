@@ -10,6 +10,7 @@ const acts = {
   }),
   fav: () => run(async () => { const g = game(app.sel); setGame(await invoke("set_favorite", { id: g.id, favorite: !g.favorite })); renderList(); renderSheet(); }),
   gsettings: () => gameSettingsModal(), customize: () => customizeModal(), log: () => logModal(), remove: () => removeModal(), add: () => addModal(),
+  sites: () => webSearchModal(game(app.sel)?.name || ""),
   settings: () => setView(app.view === "settings" ? "library" : "settings"), close: () => closeModal(), palette: () => palette(), updates: () => updatesModal(), deck: () => QuarkDeck.toggle(), transfers: () => transfersModal(),
   back: () => { app.open = false; renderSheet(); },
   "toggle-view": () => run(async () => { await cfgSet({ view: app.cfg.view === "grid" ? "list" : "grid" }); app.open = false; app.view = "library"; renderAll(); }),

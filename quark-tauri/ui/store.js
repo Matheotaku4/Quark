@@ -29,7 +29,7 @@ function leadersOf(n) {
 
 function storeCard(i, rank) {
   const d = discountOf(i);
-  return `<button class="scard" data-open="${esc(i.storeUrl)}" title="${esc(i.name)}"><div class="simg" style="${i.artworkUrl ? `background-image:url('${esc(i.artworkUrl)}')` : ""}">
+  return `<button class="scard" data-sites="${esc(i.name)}" title="${esc(i.name)}"><div class="simg" style="${i.artworkUrl ? `background-image:url('${esc(i.artworkUrl)}')` : ""}">
     ${rank ? `<span class="rank">${rank}</span>` : ""}${d ? `<span class="dbadge">-${d}%</span>` : ""}${i.linuxAvailable ? `<span class="lx">Linux</span>` : ""}</div>
     <div class="sinfo"><b>${esc(i.name)}</b><div class="price">${priceLine(i)}</div>${i.playersPeak ? `<small>${esc(thousands(i.playersPeak))} ${esc(L("joueurs en pic", "peak players"))}</small>` : ""}</div></button>`;
 }
@@ -78,6 +78,7 @@ function bindStore() {
   q.onkeydown = (e) => { if (e.key === "Enter") { e.stopPropagation(); storeSearch(); } };
   $("#store-search").onclick = storeSearch; $("#store-refresh").onclick = storeRefresh;
   $$("[data-jump]").forEach((b) => (b.onclick = () => document.getElementById(b.dataset.jump)?.scrollIntoView({ block: "start" })));
+  $$("[data-sites]").forEach((card) => (card.onclick = () => webSearchModal(card.dataset.sites)));
 }
 async function storeSearch() {
   const s = app.store; if (s.q.trim().length < 2 || s.searching) return;

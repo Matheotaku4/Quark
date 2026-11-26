@@ -96,7 +96,7 @@ function renderGame(g) {
   const sub = [g.developer, g.released, g.genres.slice(0, 3).join(", "), srcLabel(g), g.isNative ? "Linux" : ""].filter(Boolean);
   const tabs = [["overview", "x.overview"], ["media", "x.media"], ["ach", "x.ach"], ["news", "x.news"], ["hist", "x.hist"], ["notes", "tab.notes"], ["launch", "tab.launch"], ["log", "tab.log"]];
   const placement = app.cfg.game_actions === "beside_play";
-  const actions = `<div class="acts">${iconBtn("fav", "star", "#ffc94d", t(g.favorite ? "detail.unfavorite" : "detail.favorite"), g.favorite)}${iconBtn("gsettings", "gear", "var(--accent)", t("x.settingsGame"))}${iconBtn("customize", "edit", "#ffc94d", t("x.customize"))}${iconBtn("log", "log", "#4cd07d", t("x.logBtn"))}${iconBtn("remove", "trash", "var(--danger)", t("x.remove"))}</div>`;
+  const actions = `<div class="acts">${iconBtn("fav", "star", "#ffc94d", t(g.favorite ? "detail.unfavorite" : "detail.favorite"), g.favorite)}${iconBtn("sites", "ext", "var(--accent)", t("web.sites"))}${iconBtn("gsettings", "gear", "var(--accent)", t("x.settingsGame"))}${iconBtn("customize", "edit", "#ffc94d", t("x.customize"))}${iconBtn("log", "log", "#4cd07d", t("x.logBtn"))}${iconBtn("remove", "trash", "var(--danger)", t("x.remove"))}</div>`;
   return `<div class="gp" style="${accent(g)}">
     <div class="gh">
       <div class="gh-art" style="${art ? `background-image:url('${esc(art)}')` : ""}"></div>${art ? "" : `<span class="gh-mono">${esc(g.monogram)}</span>`}<div class="gh-fade"></div>

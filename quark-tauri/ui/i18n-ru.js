@@ -415,4 +415,11 @@ Object.assign(I18N, {
     "pv.productId": "Идентификатор",
     "pv.stateLabel": "Состояние",
     "pv.path": "Путь"
+    ,"web.sites": "Сайты загрузки",
+    "web.hint": "Quark не скачивает файлы с этих сайтов.",
+    "web.results": "результат(ов)",
+    "web.siteSearch": "Искать на сайте",
+    "web.error": "Ошибка",
+    "web.filterAll": "Все",
+    "web.open": "Открыть"
 });
