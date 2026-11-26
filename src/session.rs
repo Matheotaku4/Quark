@@ -396,6 +396,9 @@ pub fn timestamp(epoch: i64) -> String {
 /// Date civile d'un nombre de jours depuis l'époque Unix (algorithme de
 /// Howard Hinnant, sans table ni bibliothèque).
 pub(crate) fn civil_from_days(days: i64) -> (i64, u32, u32) {
+    // Les horodatages viennent de fichiers et de réponses réseau : borner
+    // l'entrée évite tout débordement i64 dans l'algorithme.
+    let days = days.clamp(-719_162, 2_932_896);
     let z = days + 719_468;
     let era = if z >= 0 { z } else { z - 146_096 } / 146_097;
     let doe = z - era * 146_097;
@@ -417,6 +420,14 @@ mod tests {
         assert_eq!(timestamp(0), "1970-01-01 00:00 UTC");
         // 2026-10-28 14:05 UTC
         assert_eq!(timestamp(1_793_196_300), "2026-10-28 14:05 UTC");
+    }
+
+    #[test]
+    fn les_horodatages_extremes_ne_debordent_pas() {
+        let (year, month, day) = civil_from_days(i64::MAX);
+        assert!(year >= 1 && (1..=12).contains(&month) && (1..=31).contains(&day));
+        let (year, month, day) = civil_from_days(i64::MIN);
+        assert!(year >= 1 && (1..=12).contains(&month) && (1..=31).contains(&day));
     }
 
     #[test]

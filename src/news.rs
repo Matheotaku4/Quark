@@ -86,22 +86,29 @@ pub fn open_in_browser(url: &str) -> Result<(), String> {
         return Err("lien invalide".to_string());
     }
     // Plusieurs bureaux possibles : on essaie les lanceurs dans l'ordre courant
-    // sur Linux et on retient le premier réellement installé.
+    // sur Linux et on retient le premier qui démarre réellement.
     let candidates: [&[&str]; 3] = [&["xdg-open"], &["gio", "open"], &["sensible-browser"]];
+    open_with_candidates(url, &candidates)
+}
+
+fn open_with_candidates(url: &str, candidates: &[&[&str]]) -> Result<(), String> {
+    let mut last_error = None;
     for args in candidates {
-        let mut cmd = std::process::Command::new(args[0]);
-        cmd.args(&args[1..])
+        let Some((program, rest)) = args.split_first() else {
+            continue;
+        };
+        let mut cmd = std::process::Command::new(program);
+        cmd.args(rest)
             .arg(url)
             .stdin(std::process::Stdio::null())
             .stdout(std::process::Stdio::null())
             .stderr(std::process::Stdio::null());
         match crate::process::spawn_and_reap(&mut cmd) {
             Ok(()) => return Ok(()),
-            Err(err) if err.kind() == std::io::ErrorKind::NotFound => continue,
-            Err(err) => return Err(format!("{} : {err}", args[0])),
+            Err(err) => last_error = Some(format!("{program} : {err}")),
         }
     }
-    Err("aucun navigateur trouvé (xdg-open, gio, sensible-browser)".to_string())
+    Err(last_error.unwrap_or_else(|| "aucun navigateur trouvé".to_string()))
 }
 
 // ---------------------------------------------------------------------------
@@ -394,5 +401,31 @@ mod tests {
             .filter(|raw| !raw.title.trim().is_empty())
             .count();
         assert_eq!(kept, 1);
+    }
+    #[cfg(unix)]
+    #[test]
+    fn un_lanceur_non_executable_laisse_essayer_le_suivant() {
+        use std::os::unix::fs::PermissionsExt;
+        let path = std::env::temp_dir().join(format!("quark-xdg-{}", std::process::id()));
+        std::fs::write(&path, b"#!/bin/sh\nexit 3\n").unwrap();
+        std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o644)).unwrap();
+        let broken = path.display().to_string();
+        let candidates: [&[&str]; 2] = [&[broken.as_str()], &["/bin/true"]];
+        assert!(open_with_candidates("https://example.com", &candidates).is_ok());
+        let _ = std::fs::remove_file(path);
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn tous_les_lanceurs_en_echec_renvoient_la_derniere_erreur() {
+        use std::os::unix::fs::PermissionsExt;
+        let path = std::env::temp_dir().join(format!("quark-xdg-fail-{}", std::process::id()));
+        std::fs::write(&path, b"#!/bin/sh\n").unwrap();
+        std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o644)).unwrap();
+        let broken = path.display().to_string();
+        let candidates: [&[&str]; 1] = [&[broken.as_str()]];
+        let error = open_with_candidates("https://example.com", &candidates).unwrap_err();
+        assert!(error.contains(&broken), "{error}");
+        let _ = std::fs::remove_file(path);
     }
 }

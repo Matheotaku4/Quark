@@ -212,7 +212,7 @@ const dllEq = (left, right) => left.replace(/\.dll$/i, "").toLowerCase() === rig
 const dirOf = (path) => path.replace(/[/\\][^/\\]*$/, "");
 async function gameSettingsModal() {
   const id = app.sel, raw = await run(() => invoke("get_game_raw", { id })); if (!raw) return;
-  app.runtimes ||= await invoke("list_runtimes").catch(() => []);
+  app.runtimes = await invoke("list_runtimes").catch(() => app.runtimes || []);
   const w = raw, st = { tab: "settings", sec: "general", dllFolder: w.dll_source || dirOf(w.exe), dlls: null, dllBusy: false, dllError: "" };
   const mode = () => (w.proton?.mode === "runtime" ? w.proton.runtime : w.proton?.mode || "default");
   const envList = () => (w.env ||= []);

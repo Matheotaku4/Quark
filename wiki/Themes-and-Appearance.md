@@ -85,8 +85,9 @@ Named views, sorting and grouping are described in
 ## Notifications and tray icon
 
 The tray icon keeps Quark in the background: the close button hides the window in
-the icon instead of quitting. Left-click the icon to open Quark; right-click it
-to open the menu and close the application. Desktop notifications can also
+the icon instead of quitting. Left-clicking the icon toggles the window: it opens
+Quark when the window is closed or minimised, and closes it back to the icon when
+it is already visible. Right-click opens the menu and closes the application. Desktop notifications can also
 announce the end of an installation, a save backup or a game session. These
 settings are in **Appearance** and **In game**.
 

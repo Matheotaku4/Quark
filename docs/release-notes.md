@@ -13,6 +13,15 @@
 - **Aucun téléchargement.** Quark ouvre les pages dans le navigateur et ne récupère jamais de fichier depuis ces sites.
 - **Accès direct.** La fiche de jeu, chaque carte de la boutique et le bouton « Sites de téléchargement » du modal d'ajout ouvrent la recherche avec le nom du jeu.
 
+### Icône de notification
+
+- **Clic qui bascule.** Un clic gauche ouvre Quark si la fenêtre est fermée ou réduite, et referme la fenêtre vers l'icône si elle est déjà visible. La croix garde le même comportement.
+
+### Proton
+
+- **Runtimes redétectés à chaque lancement.** Un Proton installé après le démarrage de Quark est pris en compte sans redémarrer.
+- **Runtime supprimé ou renommé.** Le jeu se rabat sur le Proton disponible par défaut avec un avertissement visible, au lieu de refuser de se lancer.
+
 ### Interface
 
 - **Surfaces nettes.** Cartes opaques, espacements et rayons partagés, états de survol stables et suppression des flous coûteux.

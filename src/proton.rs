@@ -628,13 +628,30 @@ fn resolve_with_extra(
     }
 
     let runtime = match &game.proton {
-        ProtonMode::Runtime(key) => runtimes
-            .iter()
-            .find(|r| &r.key == key)
-            .cloned()
-            .ok_or_else(|| {
-                format!("Runtime Proton « {key} » introuvable. Vérifie les paramètres.")
-            })?,
+        ProtonMode::Runtime(key) => match runtimes.iter().find(|r| &r.key == key).cloned() {
+            Some(runtime) => runtime,
+            None => {
+                // Un runtime choisi puis supprimé ou renommé par Steam ne doit
+                // pas bloquer tous les lancements : on se rabat sur le défaut
+                // disponible et on explique le changement.
+                let fallback = settings
+                    .default_proton
+                    .as_ref()
+                    .and_then(|k| runtimes.iter().find(|r| &r.key == k).cloned())
+                    .filter(|r| r.kind == RuntimeKind::Proton)
+                    .or_else(|| suggested_default(runtimes).cloned())
+                    .ok_or_else(|| {
+                        format!(
+                            "Runtime Proton « {key} » introuvable et aucun autre Proton détecté. Vérifie les paramètres."
+                        )
+                    })?;
+                warnings.push(format!(
+                    "Runtime Proton « {key} » introuvable : « {} » utilisé à la place.",
+                    fallback.name
+                ));
+                fallback
+            }
+        },
         _ => {
             let chosen = settings
                 .default_proton
@@ -1228,6 +1245,30 @@ mod tests {
         let error = resolve(&game, &Settings::default(), &[broken]).unwrap_err();
         assert!(error.contains("script `proton`"), "{error}");
         let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn un_runtime_supprime_se_rabat_sur_un_proton_disponible() {
+        let root = std::env::temp_dir().join(format!("quark-runtime-perdu-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&root);
+        faux_runtime(&root, "GE-Proton9-20");
+        let exe = root.join("jeu.exe");
+        std::fs::write(&exe, b"MZ").unwrap();
+        let runtimes = detect_in(&root);
+        let mut game = Game::new("Jeu", exe.display().to_string());
+        game.proton = ProtonMode::Runtime("GE-Proton9-19".to_string());
+
+        let resolu = resolve(&game, &Settings::default(), &runtimes).unwrap();
+        assert_eq!(
+            resolu.runtime.as_ref().map(|r| r.name.as_str()),
+            Some("GE-Proton9-20")
+        );
+        assert!(
+            resolu.warnings.iter().any(|w| w.contains("GE-Proton9-19")),
+            "{:?}",
+            resolu.warnings
+        );
+        let _ = std::fs::remove_dir_all(&root);
     }
 
     #[test]

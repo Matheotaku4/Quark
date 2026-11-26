@@ -19,7 +19,7 @@ use quark::config::{
     self, AssetKind, Game, GameStatus, Library, PlaySession, ProtonMode, Settings, ThemeMode,
     UiLanguage,
 };
-use quark::proton::{self, ProtonRuntime};
+use quark::proton;
 use quark::providers as core_providers;
 use quark::session::{self, Session};
 use serde::{Deserialize, Serialize};
@@ -55,7 +55,6 @@ struct AppState {
     library: Mutex<Library>,
     sessions: Mutex<HashMap<String, Running>>,
     installs: Mutex<HashMap<String, InstallJob>>,
-    runtimes: Vec<ProtonRuntime>,
     demo: bool,
     deck_demo: bool,
     demo_root: Option<PathBuf>,
@@ -121,9 +120,7 @@ impl ksni::Tray for QuarkTray {
 
     fn activate(&mut self, _x: i32, _y: i32) {
         let app = self.app.clone();
-        run_on_main(&self.app, move || {
-            let _ = show_main_window(&app);
-        });
+        run_on_main(&self.app, move || toggle_main_window(&app));
     }
 
     fn menu(&self) -> Vec<ksni::MenuItem<Self>> {
@@ -927,8 +924,16 @@ fn launch_game(app: AppHandle, state: State<'_, AppState>, id: String) -> Result
             }
         ));
     }
-    let resolved =
-        proton::resolve_with(&game, &settings, &state.runtimes, proton::Tools::detect())?;
+    // Redétecte les runtimes à chaque lancement : Steam peut en avoir ajouté
+    // ou renommé un depuis le démarrage de Quark.
+    let runtimes = proton::detect_runtimes();
+    let resolved = proton::resolve_with(&game, &settings, &runtimes, proton::Tools::detect())?;
+    for warning in &resolved.warnings {
+        let _ = app.emit(
+            "quark://notice",
+            serde_json::json!({ "message": warning, "error": false }),
+        );
+    }
     if let Some(prefix) = &resolved.prefix {
         std::fs::create_dir_all(prefix).map_err(|error| format!("Préfixe Proton : {error}"))?;
     }
@@ -1468,6 +1473,24 @@ fn tray_visibility(app: AppHandle, visible: bool) -> Result<(), String> {
         tray.update(|_| {});
     }
     Ok(())
+}
+
+/// Clic sur l'icône : affiche la fenêtre si elle est absente ou réduite, et la
+/// referme comme la croix si elle est déjà au premier plan. La fenêtre est
+/// détruite (pas seulement masquée) pour libérer la WebView ; l'icône reste.
+fn toggle_main_window(app: &AppHandle) {
+    let Some(window) = app.get_webview_window("main") else {
+        let _ = show_main_window(app);
+        return;
+    };
+    let visible = window.is_visible().unwrap_or(false);
+    let minimized = window.is_minimized().unwrap_or(false);
+    let tray_on = lock(&app.state::<AppState>().library).settings.tray_icon;
+    if visible && !minimized && tray_on {
+        let _ = window.destroy();
+    } else {
+        let _ = show_main_window(app);
+    }
 }
 
 fn show_main_window(app: &AppHandle) -> Result<(), String> {
@@ -2195,11 +2218,6 @@ fn main() {
         library: Mutex::new(library),
         sessions: Mutex::new(HashMap::new()),
         installs: Mutex::new(HashMap::new()),
-        runtimes: if demo {
-            Vec::new()
-        } else {
-            proton::detect_runtimes()
-        },
         demo,
         deck_demo: args.iter().any(|arg| arg == "--deck"),
         demo_root,

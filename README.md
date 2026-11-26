@@ -48,6 +48,12 @@ French, Spanish, German, Portuguese and Russian are available in the app.
 - **Cleaner surfaces.** The interface now uses opaque cards, shared spacing and
   radius tokens, stable hover states and no expensive backdrop blur. Rendering
   artifacts from lazy card painting are gone.
+- **Tray that toggles.** With the notification icon enabled, left-clicking it
+  opens Quark when the window is closed or minimised, and closes the window
+  back to the icon when it is already visible. The close button does the same.
+- **Proton that recovers.** Runtimes are detected again at every launch, and a
+  game pointing to a Proton that Steam removed falls back to the available
+  default with a visible warning instead of refusing to start.
 - **Library unchanged.** The left-hand game list and the right-hand game page
   keep the Steam-like layout, with the same local and store libraries.
 
