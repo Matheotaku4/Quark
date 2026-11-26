@@ -382,3 +382,6 @@ video.cinema-video{position:fixed;inset:0;width:100vw;height:100vh;z-index:9999;
 .pcard.sk{height:260px;background:linear-gradient(100deg,var(--surface) 20%,var(--surface-hover) 40%,var(--surface) 60%);background-size:220% 100%;animation:pvsk 1.2s linear infinite}
 @keyframes pvsk{to{background-position:-220% 0}}
 @media (prefers-reduced-motion: reduce){.pcard.sk{animation:none}}
+.pvmenu{display:flex;flex-direction:column;gap:6px;margin:10px 0}
+.pvmenu .btn{justify-content:flex-start}
+.pvmenubtn{width:30px;min-width:30px;padding:0;font-size:15px;color:var(--text-faint)}

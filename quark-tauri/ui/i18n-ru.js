@@ -406,4 +406,13 @@ Object.assign(I18N, {
     "pv.sort.synced": "Недавно синхронизированные",
     "pv.layout.grid": "Сетка",
     "pv.layout.list": "Список"
+    ,"pv.menu": "Ещё",
+    "pv.folder": "Открыть папку",
+    "pv.copyPath": "Копировать путь",
+    "pv.copied": "Путь скопирован",
+    "pv.details": "Подробности",
+    "pv.provider": "Магазин",
+    "pv.productId": "Идентификатор",
+    "pv.stateLabel": "Состояние",
+    "pv.path": "Путь"
 });

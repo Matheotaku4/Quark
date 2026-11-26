@@ -142,6 +142,7 @@ function pvActions(g) {
   } else {
     actions.push(pvButton(t("pv.install"), "install", "pri", `data-provider="${g.provider}" data-product="${esc(g.productId)}"`));
   }
+  actions.push(`<button class="tb pvmenubtn" data-pv-menu data-provider="${esc(g.provider)}" data-product="${esc(g.productId)}" title="${esc(t("pv.menu"))}">···</button>`);
   return actions.join("");
 }
 
@@ -239,7 +240,37 @@ function stopMyGames() {
   app.pv.imgObs = null;
 }
 
+function pvMenu(g) {
+  const path = g.installPath || g.installRoot || "";
+  modal(`<h2>${esc(g.title)}</h2>
+    <p class="desc">${esc(PV_LABEL[g.provider] || g.provider)}${path ? ` · ${esc(path)}` : ""}</p>
+    <div class="pvmenu">
+      <button class="btn sec" id="pv-menu-folder" ${path ? "" : "disabled"}>${ic("folder")}${esc(t("pv.folder"))}</button>
+      <button class="btn sec" id="pv-menu-copy" ${path ? "" : "disabled"}>${ic("edit")}${esc(t("pv.copyPath"))}</button>
+      <button class="btn sec" id="pv-menu-details">${ic("eye")}${esc(t("pv.details"))}</button>
+    </div>
+    ${foot(t("x.close"))}`);
+  $("#pv-menu-folder").onclick = () => path && run(() => invoke("open_url", { target: path }));
+  $("#pv-menu-copy").onclick = () => run(async () => {
+    if (!path) return;
+    await navigator.clipboard.writeText(path);
+    toast(t("pv.copied"));
+  });
+  $("#pv-menu-details").onclick = () => modal(`<h2>${esc(g.title)}</h2>
+    <div class="kv"><span>${esc(t("pv.provider"))}</span><b>${esc(PV_LABEL[g.provider] || g.provider)}</b></div>
+    <div class="kv"><span>${esc(t("pv.productId"))}</span><b>${esc(g.productId)}</b></div>
+    <div class="kv"><span>${esc(t("pv.stateLabel"))}</span><b>${esc(pvStateLabel(g.installState))}</b></div>
+    <div class="kv"><span>${esc(t("pv.path"))}</span><b>${esc(path || "—")}</b></div>
+    ${foot(t("x.close"))}`);
+}
+
 function bindMyGamesResults() {
+  $$("#pv-results [data-pv-menu]").forEach((button) => (button.onclick = (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    const game = (app.pv.data?.games || []).find((item) => item.provider === button.dataset.provider && item.productId === button.dataset.product);
+    if (game) pvMenu(game);
+  }));
   const more = $("#pv-more");
   if (more) more.onclick = pvMore;
   const results = $("#pv-results");
