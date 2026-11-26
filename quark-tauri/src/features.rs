@@ -459,6 +459,14 @@ mod tests {
 
         std::fs::remove_dir_all(root).unwrap();
     }
+
+    #[test]
+    fn les_resultats_de_recherche_suivent_l_ordre_des_sources() {
+        let sites = quark::game_search::SearchSite::ALL;
+        assert_eq!(sites[0], quark::game_search::SearchSite::GameBounty);
+        let labels: Vec<_> = sites.iter().map(|site| site.label()).collect();
+        assert_eq!(labels.first().copied(), Some("GameBounty"));
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -475,11 +483,27 @@ pub struct ScanHitDto {
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SiteHitDto {
+    site_id: String,
     site: String,
     title: String,
     url: String,
     detail: String,
     cover: Option<String>,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SiteErrorDto {
+    site_id: String,
+    site: String,
+    message: String,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SiteSearchDto {
+    hits: Vec<SiteHitDto>,
+    errors: Vec<SiteErrorDto>,
 }
 
 #[derive(Serialize)]
@@ -524,42 +548,59 @@ pub async fn scan_folder(
 }
 
 #[tauri::command]
-pub async fn site_search(query: String) -> Result<Vec<SiteHitDto>, String> {
+pub async fn site_search(query: String) -> Result<SiteSearchDto, String> {
     blocking(move || {
         let query = query.trim().to_string();
         if query.len() < 2 {
-            return Ok(Vec::new());
+            return Ok(SiteSearchDto {
+                hits: Vec::new(),
+                errors: Vec::new(),
+            });
         }
-        let mut hits = Vec::new();
-        let mut errors = Vec::new();
+        let mut per_site = Vec::new();
         std::thread::scope(|scope| {
             let mut handles = Vec::new();
             for site in quark::game_search::SearchSite::ALL {
                 let query = query.clone();
-                handles.push(scope.spawn(move || (site, quark::game_search::search(site, &query))));
+                handles.push((
+                    site,
+                    scope.spawn(move || quark::game_search::search(site, &query)),
+                ));
             }
-            for handle in handles {
-                match handle.join() {
-                    Ok((site, Ok(found))) => {
-                        for hit in found {
-                            hits.push(SiteHitDto {
-                                site: site.label().to_string(),
-                                title: hit.title,
-                                url: hit.url,
-                                detail: hit.detail,
-                                cover: hit.cover,
-                            });
-                        }
-                    }
-                    Ok((site, Err(error))) => errors.push(format!("{} : {error}", site.label())),
-                    Err(_) => errors.push("Recherche interrompue.".to_string()),
-                }
+            for (site, handle) in handles {
+                per_site.push((
+                    site,
+                    handle
+                        .join()
+                        .unwrap_or_else(|_| Err("Recherche interrompue.".to_string())),
+                ));
             }
         });
-        if hits.is_empty() && !errors.is_empty() {
-            return Err(errors.join(" · "));
+        let mut hits = Vec::new();
+        let mut errors = Vec::new();
+        for (site, result) in per_site {
+            let site_id = format!("{site:?}").to_lowercase();
+            match result {
+                Ok(found) => {
+                    for hit in found {
+                        hits.push(SiteHitDto {
+                            site_id: site_id.clone(),
+                            site: site.label().to_string(),
+                            title: hit.title,
+                            url: hit.url,
+                            detail: hit.detail,
+                            cover: hit.cover,
+                        });
+                    }
+                }
+                Err(message) => errors.push(SiteErrorDto {
+                    site_id,
+                    site: site.label().to_string(),
+                    message,
+                }),
+            }
         }
-        Ok(hits)
+        Ok(SiteSearchDto { hits, errors })
     })
     .await
 }
