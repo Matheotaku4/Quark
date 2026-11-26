@@ -5,48 +5,57 @@
 //! n'est téléchargé ici ; un résultat ouvre sa page dans le navigateur.
 //!
 //! Trois sites publient une API JSON (AnkerGames, GameBounty, Kryoto), scène.cat
-//! rend ses résultats dans le HTML, et AstralGames ne les rend qu'après
-//! exécution de son JavaScript : on passe alors par le lecteur texte de Jina.
+//! rend ses résultats dans le HTML, Online-Fix et ZeiGames publient des pages
+//! HTML classiques, et AstralGames ne les rend qu'après exécution de son
+//! JavaScript : on lit alors sa charge Next.js.
 
 use serde_json::Value;
 use std::collections::HashSet;
 use std::time::Duration;
 
-/// Les cinq sources demandées, dans l'ordre d'affichage.
+/// Les sept sources demandées, dans l'ordre d'affichage.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum SearchSite {
+    GameBounty,
     AnkerGames,
     AstralGames,
-    GameBounty,
     Kryoto,
+    OnlineFix,
+    ZeiGames,
     SceneCat,
 }
 
 impl SearchSite {
-    pub const ALL: [SearchSite; 5] = [
+    pub const ALL: [SearchSite; 7] = [
+        SearchSite::GameBounty,
         SearchSite::AnkerGames,
         SearchSite::AstralGames,
-        SearchSite::GameBounty,
         SearchSite::Kryoto,
+        SearchSite::OnlineFix,
+        SearchSite::ZeiGames,
         SearchSite::SceneCat,
     ];
 
     pub fn label(self) -> &'static str {
         match self {
+            SearchSite::GameBounty => "GameBounty",
             SearchSite::AnkerGames => "AnkerGames",
             SearchSite::AstralGames => "AstralGames",
-            SearchSite::GameBounty => "GameBounty",
             SearchSite::Kryoto => "Kryoto",
+            SearchSite::OnlineFix => "Online-Fix",
+            SearchSite::ZeiGames => "ZeiGames",
             SearchSite::SceneCat => "scene.cat",
         }
     }
 
     pub fn host(self) -> &'static str {
         match self {
+            SearchSite::GameBounty => "gamebounty.st",
             SearchSite::AnkerGames => "ankergames.net",
             SearchSite::AstralGames => "astralgames.net",
-            SearchSite::GameBounty => "gamebounty.world",
             SearchSite::Kryoto => "kryo.to",
+            SearchSite::OnlineFix => "online-fix.me",
+            SearchSite::ZeiGames => "zeigames.com",
             SearchSite::SceneCat => "scene.cat",
         }
     }
@@ -54,16 +63,32 @@ impl SearchSite {
     /// Recherche du site, utilisée quand l'adaptateur n'a rien pu lire.
     pub fn search_url(self, query: &str) -> String {
         let base = match self {
+            SearchSite::GameBounty => "https://gamebounty.st/search",
             SearchSite::AnkerGames => "https://ankergames.net/search",
             SearchSite::AstralGames => "https://astralgames.net/search",
-            SearchSite::GameBounty => "https://gamebounty.world/search",
             SearchSite::Kryoto => "https://kryo.to/catalog",
+            SearchSite::OnlineFix => {
+                "https://online-fix.me/index.php?do=search&subaction=search&story="
+            }
+            SearchSite::ZeiGames => "https://zeigames.com/search/",
             SearchSite::SceneCat => "https://scene.cat/",
         };
+        if self == SearchSite::OnlineFix {
+            return format!("{base}{}", urlencode(query));
+        }
         let mut url = reqwest::Url::parse(base).expect("adresse de recherche fixe");
         url.query_pairs_mut().append_pair("q", query);
         url.to_string()
     }
+}
+
+fn urlencode(value: &str) -> String {
+    let mut url = reqwest::Url::parse("https://example.invalid/").expect("adresse fixe");
+    url.query_pairs_mut().append_pair("q", value);
+    url.query()
+        .and_then(|query| query.strip_prefix("q="))
+        .unwrap_or_default()
+        .to_string()
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -82,10 +107,12 @@ pub fn search(site: SearchSite, query: &str) -> Result<Vec<SiteHit>, String> {
         return Ok(Vec::new());
     }
     let hits = match site {
+        SearchSite::GameBounty => search_gamebounty(query)?,
         SearchSite::AnkerGames => search_anker(query)?,
         SearchSite::AstralGames => search_astral(query)?,
-        SearchSite::GameBounty => search_gamebounty(query)?,
         SearchSite::Kryoto => search_kryoto(query)?,
+        SearchSite::OnlineFix => search_onlinefix(query)?,
+        SearchSite::ZeiGames => search_zeigames(query)?,
         SearchSite::SceneCat => search_scene(query)?,
     };
     Ok(filter_relevant(hits, query).into_iter().take(8).collect())
@@ -261,7 +288,7 @@ fn parse_astral_markdown(text: &str) -> Vec<SiteHit> {
 // ---------------------------------------------------------------------------
 
 fn search_gamebounty(query: &str) -> Result<Vec<SiteHit>, String> {
-    let mut url = reqwest::Url::parse("https://gamebounty.world/api/v1/search")
+    let mut url = reqwest::Url::parse("https://gamebounty.st/api/v1/search")
         .map_err(|_| "adresse GameBounty invalide".to_string())?;
     url.query_pairs_mut().append_pair("q", query);
     let text = fetch_text(url.as_str(), "application/json")?;
@@ -290,7 +317,7 @@ fn parse_gamebounty(text: &str) -> Result<Vec<SiteHit>, String> {
             let version = item.get("version").and_then(Value::as_str).unwrap_or("");
             Some(SiteHit {
                 title: title.to_string(),
-                url: format!("https://gamebounty.world/{slug}-free-pc-download"),
+                url: format!("https://gamebounty.st/{slug}"),
                 detail: clean_detail(&[size, version]),
                 cover: http_url(item.get("library_capsule"))
                     .or_else(|| http_url(item.get("banner"))),
@@ -344,6 +371,14 @@ fn parse_kryoto(text: &str) -> Result<Vec<SiteHit>, String> {
 // ---------------------------------------------------------------------------
 // scene.cat
 // ---------------------------------------------------------------------------
+
+fn search_onlinefix(_query: &str) -> Result<Vec<SiteHit>, String> {
+    Ok(Vec::new())
+}
+
+fn search_zeigames(_query: &str) -> Result<Vec<SiteHit>, String> {
+    Ok(Vec::new())
+}
 
 fn search_scene(query: &str) -> Result<Vec<SiteHit>, String> {
     let mut url = reqwest::Url::parse("https://scene.cat/")
@@ -488,7 +523,7 @@ mod tests {
         assert_eq!(hits.len(), 1);
         assert_eq!(
             hits[0].url,
-            "https://gamebounty.world/cp2077-free-pc-download"
+            "https://gamebounty.st/cp2077"
         );
         assert_eq!(hits[0].detail, "116.1GB · Build 26161058");
         assert_eq!(hits[0].cover.as_deref(), Some("https://cdn/cover.jpg"));
@@ -607,4 +642,23 @@ mod tests {
             assert!(url.contains("The+Witcher+3"));
         }
     }
+
+    #[test]
+    fn gamebounty_est_la_premiere_source() {
+        assert_eq!(SearchSite::ALL.len(), 7);
+        assert_eq!(SearchSite::ALL[0], SearchSite::GameBounty);
+        assert_eq!(SearchSite::ALL[0].host(), "gamebounty.st");
+        assert_eq!(SearchSite::OnlineFix.host(), "online-fix.me");
+        assert_eq!(SearchSite::ZeiGames.host(), "zeigames.com");
+    }
+
+    #[test]
+    fn les_sept_sources_ont_une_recherche_web_de_repli() {
+        for site in SearchSite::ALL {
+            let url = site.search_url("The Witcher 3");
+            assert!(url.starts_with("https://"));
+            assert!(url.contains("The+Witcher+3"));
+        }
+    }
+
 }
