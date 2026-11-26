@@ -243,42 +243,81 @@ fn parse_anker(text: &str) -> Result<Vec<SiteHit>, String> {
 // AstralGames (résultats rendus par le lecteur Jina)
 // ---------------------------------------------------------------------------
 
+const ASTRAL_SEARCH_ACTION: &str = "602df744916efa21adc18a657f93057bc489bb7f6e";
+
 fn search_astral(query: &str) -> Result<Vec<SiteHit>, String> {
     let mut target = reqwest::Url::parse("https://astralgames.net/search")
         .map_err(|_| "adresse AstralGames invalide".to_string())?;
     target.query_pairs_mut().append_pair("q", query);
-    let url = format!("https://r.jina.ai/{target}");
-    let text = fetch_text(&url, "text/plain")?;
-    Ok(parse_astral_markdown(&text))
+    let body = serde_json::json!([
+        query,
+        {
+            "page": 1,
+            "limit": 12,
+            "sortBy": "relevance",
+            "timeframe": "all",
+            "tier": null
+        }
+    ])
+    .to_string();
+    let response = crate::artwork::http()
+        .post(target)
+        .header("Next-Action", ASTRAL_SEARCH_ACTION)
+        .header(reqwest::header::CONTENT_TYPE, "text/plain;charset=UTF-8")
+        .header(reqwest::header::ACCEPT, "text/x-component")
+        .body(body)
+        .timeout(Duration::from_secs(22))
+        .send()
+        .map_err(|_| "AstralGames injoignable".to_string())?;
+    if !response.status().is_success() {
+        return Err("AstralGames a refusé la recherche (action expirée)".to_string());
+    }
+    let text = crate::net::text(response, crate::net::MAX_HTML, "AstralGames")?;
+    let hits = parse_astral_rsc(&text);
+    if hits.is_empty() {
+        return Err("AstralGames a refusé la recherche (action expirée)".to_string());
+    }
+    Ok(hits)
 }
 
-fn parse_astral_markdown(text: &str) -> Vec<SiteHit> {
-    let marker = "](https://astralgames.net/game/";
+fn parse_astral_rsc(text: &str) -> Vec<SiteHit> {
     let mut hits = Vec::new();
     let mut seen = HashSet::new();
-    let mut rest = text;
-    while let Some(position) = rest.find(marker) {
-        let link_start = position + 2;
-        let Some(end) = rest[link_start..].find(')') else {
-            break;
+    for line in text.lines() {
+        let Some(payload) = line.strip_prefix("1:") else {
+            continue;
         };
-        let url = &rest[link_start..link_start + end];
-        let before = &rest[..position];
-        let title = before
-            .rfind("### ")
-            .map(|start| before[start + 4..].trim())
-            .unwrap_or_default()
-            .trim_end_matches('~')
-            .trim();
-        if !title.is_empty() && seen.insert(url.to_string()) {
+        let Ok(root) = serde_json::from_str::<Value>(payload) else {
+            continue;
+        };
+        let Some(games) = root.get("games").and_then(Value::as_array) else {
+            continue;
+        };
+        for item in games {
+            let Some(title) = item.get("name").and_then(Value::as_str) else {
+                continue;
+            };
+            let Some(slug) = item.get("slug").and_then(Value::as_str) else {
+                continue;
+            };
+            let title = title.trim();
+            let slug = slug.trim();
+            if title.is_empty() || slug.is_empty() || !seen.insert(slug.to_string()) {
+                continue;
+            }
+            let size = item.get("file_size").and_then(Value::as_str).unwrap_or("");
+            let build = item
+                .get("build_id")
+                .and_then(Value::as_i64)
+                .map(|id| format!("Build {id}"))
+                .unwrap_or_default();
             hits.push(SiteHit {
-                title: decode_entities(title),
-                url: url.to_string(),
-                detail: String::new(),
-                cover: None,
+                title: title.to_string(),
+                url: format!("https://astralgames.net/game/{slug}"),
+                detail: clean_detail(&[size, &build]),
+                cover: http_url(item.get("image")),
             });
         }
-        rest = &rest[link_start + end + 1..];
     }
     hits
 }
@@ -574,21 +613,6 @@ mod tests {
     }
 
     #[test]
-    fn astral_lit_les_liens_du_lecteur_texte() {
-        let body = "\
-## Search Results
-
-4 games found for “cyberpunk”
-
-[![Image 2: Cyberpunk 2077](https://img/cover.jpg) Action RPG ### Cyberpunk 2077 ~](https://astralgames.net/game/cyberpunk-2077)[![Image 3: VA-11 Hall-A](https://img/va.jpg) Indie ### VA-11 Hall-A: Cyberpunk Bartender Action ~](https://astralgames.net/game/va-11-hall-a)";
-        let hits = parse_astral_markdown(body);
-        assert_eq!(hits.len(), 2);
-        assert_eq!(hits[0].title, "Cyberpunk 2077");
-        assert_eq!(hits[0].url, "https://astralgames.net/game/cyberpunk-2077");
-        assert_eq!(hits[1].url, "https://astralgames.net/game/va-11-hall-a");
-    }
-
-    #[test]
     fn les_entites_html_des_titres_sont_decodees() {
         assert_eq!(
             decode_entities("Tom &amp; Jerry &#39;Deluxe&#39;"),
@@ -659,6 +683,18 @@ mod tests {
             assert!(url.starts_with("https://"));
             assert!(url.contains("The+Witcher+3"));
         }
+    }
+
+
+    #[test]
+    fn astral_lit_la_ligne_rsc_des_jeux() {
+        let body = "0:{\"a\":\"$@1\"}\n1:{\"games\":[{\"name\":\"Cyberpunk 2077\",\"slug\":\"cyberpunk-2077\",\"image\":\"https://cdn/cover.jpg\",\"file_size\":\"141.82 GB\",\"build_id\":20383525}],\"hasMore\":false,\"total\":1}\n";
+        let hits = parse_astral_rsc(body);
+        assert_eq!(hits.len(), 1);
+        assert_eq!(hits[0].title, "Cyberpunk 2077");
+        assert_eq!(hits[0].url, "https://astralgames.net/game/cyberpunk-2077");
+        assert_eq!(hits[0].detail, "141.82 GB · Build 20383525");
+        assert_eq!(hits[0].cover.as_deref(), Some("https://cdn/cover.jpg"));
     }
 
 }
