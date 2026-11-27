@@ -12,6 +12,7 @@ mod providers;
 mod screenshot;
 mod store;
 mod themes;
+mod validators;
 
 use base64::engine::general_purpose::URL_SAFE_NO_PAD;
 use base64::Engine as _;
@@ -1096,6 +1097,7 @@ fn add_game(state: State<'_, AppState>, name: String, exe: String) -> Result<Gam
     if exe.is_empty() {
         return Err("Choisissez un exécutable.".to_string());
     }
+    validators::validate_executable(Path::new(&exe))?;
     let name = if name.trim().is_empty() {
         Path::new(&exe)
             .file_stem()

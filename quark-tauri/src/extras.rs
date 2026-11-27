@@ -527,6 +527,7 @@ pub fn save_add_folder(state: State<'_, AppState>, id: String, path: String) -> 
     if !path.is_absolute() {
         return Err("Le dossier de sauvegarde doit être absolu.".to_string());
     }
+    crate::validators::validate_scan_folder(&path)?;
     let mut library = lock(&state.library);
     let record = library
         .provider_library

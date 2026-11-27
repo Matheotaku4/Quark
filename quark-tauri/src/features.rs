@@ -413,15 +413,20 @@ pub async fn install_update() -> Result<(), String> {
 #[tauri::command]
 pub fn open_url(target: String) -> Result<(), String> {
     if target.starts_with("http://") || target.starts_with("https://") {
+        crate::validators::validate_open_url(&target)?;
         news::open_in_browser(&target)
-    } else if std::path::Path::new(&target).exists() {
+    } else {
+        let path = std::path::Path::new(&target);
+        let home = quark::config::home_dir();
+        crate::validators::validate_known_path(
+            path,
+            &[home, "/media".into(), "/mnt".into(), "/run/media".into()],
+        )?;
         std::process::Command::new("xdg-open")
             .arg(&target)
             .spawn()
             .map(|_| ())
             .map_err(|error| format!("xdg-open : {error}"))
-    } else {
-        Err("Chemin introuvable".to_string())
     }
 }
 
@@ -531,9 +536,7 @@ pub async fn scan_folder(
 ) -> Result<Vec<ScanHitDto>, String> {
     blocking(move || {
         let root = Path::new(&folder);
-        if !root.is_dir() {
-            return Err("Dossier introuvable.".to_string());
-        }
+        crate::validators::validate_scan_folder(root)?;
         let depth = max_depth.clamp(1, 8) as usize;
         let limit = limit.clamp(1, 100) as usize;
         Ok(quark::scan::scan(root, depth, limit)
