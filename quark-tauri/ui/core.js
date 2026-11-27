@@ -31,7 +31,10 @@ const app = { data: null, cfg: {}, lang: "fr", view: "library", sel: null, query
   cache: {}, transfers: new Map(), open: true, collapsed: new Set(), pal: null, stab: "appearance", sq: "" };
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
-const esc = (v) => String(v ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+const esc = QuarkHTML.esc;
+const html = QuarkHTML.html;
+const raw = QuarkHTML.raw;
+const cssColor = QuarkHTML.cssColor;
 const norm = (s) => String(s).normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
 const locale = () => LOCALES[app.lang] || "fr-FR";
 function t(key, vars) {

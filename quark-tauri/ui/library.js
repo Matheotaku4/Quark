@@ -370,7 +370,7 @@ async function loadExtras(g) {
   if (app.sel !== g.id) return;
   const h = c[g.id], box = $("#hltb"), d = p[g.id], b = $("#pdb");
   if (box) box.innerHTML = `<h3 class="blue">HowLongToBeat</h3>${h ? `<div class="kv"><span>${esc(t("x.main"))}</span><b>${hrs(h.main)}</b></div><div class="kv"><span>${esc(t("x.extra"))}</span><b>${hrs(h.mainExtra)}</b></div><div class="kv"><span>${esc(t("x.compl"))}</span><b>${hrs(h.completionist)}</b></div><button class="lnk" data-open="${esc(h.url)}">${esc(t("x.hltbLink"))} →</button>` : `<div class="dim">—</div>`}`;
-  if (b && d) b.innerHTML = `<span class="badge" style="--bc:${d.color}" title="${esc(d.label)}">${esc(d.tier)} · ProtonDB</span>`;
+  if (b && d) b.innerHTML = `<span class="badge" style="--bc:${cssColor(d.color)}" title="${esc(d.label)}">${esc(d.tier)} · ProtonDB</span>`;
 }
 
 // ---------- accueil ----------
