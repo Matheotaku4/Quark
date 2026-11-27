@@ -2,6 +2,7 @@
 name = "quark"
 version = "2.1.1"
 edition = "2024"
+license = "MIT"
 
 [dependencies]
 dirs = "7.0.0"
@@ -12,7 +13,7 @@ libc = "0.2"
 ring = "0.17"
 flate2 = "1.1"
 tar = "0.4"
-zip = { version = "2", default-features = false, features = ["deflate"] }
+zip = { version = "9", default-features = false, features = ["deflate"] }
 serde = { version = "1.0.229", features = ["derive"] }
 serde_json = "1.0.154"
 # Online-Fix sert ses pages en Windows-1251.
