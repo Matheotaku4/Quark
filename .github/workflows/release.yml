@@ -26,7 +26,17 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
             build-essential pkg-config libwebkit2gtk-4.1-dev libgtk-3-dev \
-            librsvg2-dev libssl-dev libayatana-appindicator3-dev libudev-dev minisign
+            librsvg2-dev libssl-dev libayatana-appindicator3-dev libudev-dev \
+            cmake libsodium-dev
+
+      - name: Outil de signature minisign
+        run: |
+          git clone --depth 1 --branch 0.12 https://github.com/jedisct1/minisign.git "$RUNNER_TEMP/minisign-src"
+          test "$(git -C "$RUNNER_TEMP/minisign-src" rev-parse HEAD)" = "b85e15d45ac9eab34e44596fd309f5b07db9545c"
+          cmake -S "$RUNNER_TEMP/minisign-src" -B "$RUNNER_TEMP/minisign-build"
+          cmake --build "$RUNNER_TEMP/minisign-build" -j2
+          sudo install -m755 "$RUNNER_TEMP/minisign-build/minisign" /usr/local/bin/minisign
+          minisign -v
 
       - name: Version
         id: version
