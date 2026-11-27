@@ -20,3 +20,4 @@ __pycache__/
 # Compilation et schémas générés de l’interface Tauri
 /quark-tauri/target/
 /quark-tauri/gen/
+/quark-tauri/permissions/

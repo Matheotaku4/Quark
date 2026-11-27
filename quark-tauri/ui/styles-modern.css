@@ -1,0 +1,246 @@
+/* Couche visuelle 2.2 : bibliothèque à gauche, fiche à droite.
+   Uniquement des couleurs, bordures et espacements : aucun filtre coûteux,
+   aucune animation au repos. */
+
+:root {
+  --row-h: 64px;
+  --sidew: 340px;
+  --radius-sm: 10px;
+  --radius-md: 14px;
+  --radius-lg: 20px;
+}
+
+#shell {
+  background:
+    radial-gradient(1100px 520px at 78% -12%, color-mix(in srgb, var(--accent) 12%, transparent), transparent 62%),
+    radial-gradient(900px 500px at -10% 100%, color-mix(in srgb, var(--g) 8%, transparent), transparent 60%),
+    var(--bg);
+}
+
+/* ---------- barre du haut ---------- */
+#top {
+  height: 58px;
+  gap: 18px;
+  padding: 0 14px 0 20px;
+  background: color-mix(in srgb, var(--bg) 88%, var(--panel));
+  border-bottom: 1px solid color-mix(in srgb, var(--border) 80%, transparent);
+}
+.brand { gap: 11px; }
+.brand img { width: 28px; height: 28px; }
+.brand b {
+  font-size: 13px;
+  letter-spacing: .2em;
+  background: linear-gradient(100deg, var(--text), color-mix(in srgb, var(--accent) 70%, var(--text)));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+#top-tabs { gap: 2px; }
+#top-tabs button {
+  height: 36px;
+  margin: 11px 0;
+  padding: 0 16px;
+  border-radius: 10px;
+  font: 600 13px Archivo;
+  letter-spacing: 0;
+  text-transform: none;
+}
+#top-tabs button:hover { background: color-mix(in srgb, var(--surface-hover) 70%, transparent); }
+#top-tabs button.on { background: color-mix(in srgb, var(--accent) 14%, transparent); color: var(--text); }
+#top-tabs button.on::after { display: none; }
+#top-right { gap: 2px; }
+.tb { width: 34px; height: 34px; border-radius: 10px; }
+.wb { width: 42px; }
+
+/* ---------- colonne de gauche ---------- */
+.main {
+  gap: 12px;
+  padding: 12px 12px 12px 12px;
+}
+.side {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: color-mix(in srgb, var(--panel) 88%, var(--bg));
+  overflow: hidden;
+}
+.side-top { padding: 18px 16px 10px; }
+.sh { margin-bottom: 14px; }
+.sh h2 { font-size: 22px; letter-spacing: -.025em; }
+.sh span { font-size: 11.5px; }
+.search {
+  height: 38px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--surface) 80%, transparent);
+}
+.search:focus-within { border-color: color-mix(in srgb, var(--accent) 55%, var(--border)); }
+.list { padding: 6px 8px 12px; }
+.list h4 { padding: 16px 10px 6px; }
+.row {
+  height: var(--row-h);
+  grid-template-columns: 40px minmax(0, 1fr) 10px;
+  gap: 12px;
+  padding: 0 10px;
+  border: 1px solid transparent;
+  border-radius: 12px;
+}
+.row:hover {
+  background: color-mix(in srgb, var(--surface) 72%, transparent);
+  border-color: color-mix(in srgb, var(--border) 70%, transparent);
+}
+.row.sel {
+  background: linear-gradient(90deg, color-mix(in srgb, var(--g) 16%, var(--surface)), var(--surface));
+  border-color: color-mix(in srgb, var(--g) 32%, var(--border));
+}
+.row.sel::before {
+  left: -1px;
+  top: 10px;
+  bottom: 10px;
+  width: 3px;
+  background: var(--g);
+}
+.ico {
+  width: 40px;
+  height: 54px;
+  border-radius: 8px;
+  box-shadow: 0 5px 14px #0008;
+}
+.meta b { font-size: 13.5px; font-weight: 600; }
+.meta small { font-size: 11.5px; }
+.side-foot {
+  gap: 8px;
+  padding: 10px;
+  background: color-mix(in srgb, var(--panel) 70%, var(--bg));
+}
+.side-foot select { height: 32px; border: 1px solid var(--border); }
+
+/* ---------- fiche de jeu ---------- */
+.sheet {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--panel);
+  overflow: auto;
+}
+body.grid .sheet, body:not([data-view="library"]) .sheet { border-radius: var(--radius-lg); }
+.gh {
+  height: 430px;
+  border-radius: calc(var(--radius-lg) - 1px) calc(var(--radius-lg) - 1px) 0 0;
+  overflow: hidden;
+}
+.gh-art { background-position: center 30%; }
+.gh-fade {
+  background:
+    linear-gradient(0deg, var(--panel) 1%, color-mix(in srgb, var(--panel) 62%, transparent) 38%, transparent 72%),
+    linear-gradient(90deg, color-mix(in srgb, var(--panel) 78%, transparent), transparent 62%);
+}
+.gh-top { top: 18px; left: 46px; right: 26px; }
+.gh-main { padding: 0 46px 30px; }
+h1 { font-size: clamp(34px, 4.2vw, 56px); }
+.sub { font-size: 13px; margin-bottom: 20px; }
+.play {
+  height: 48px;
+  padding: 0 30px 0 26px;
+  border-radius: 999px;
+  font-size: 14.5px;
+  box-shadow: 0 10px 28px color-mix(in srgb, var(--g) 28%, transparent);
+}
+.play:hover { filter: brightness(1.07); }
+.play.run { box-shadow: none; }
+.chip {
+  padding: 7px 14px;
+  border: 1px solid color-mix(in srgb, var(--sc) 38%, var(--border));
+  background: color-mix(in srgb, var(--sc) 14%, transparent);
+  font-size: 12.5px;
+}
+.acts { gap: 7px; }
+.ib {
+  width: 34px;
+  height: 34px;
+  border: 1px solid color-mix(in srgb, var(--c) 35%, transparent);
+  background: color-mix(in srgb, var(--bg) 62%, transparent);
+  box-shadow: none;
+}
+.ib:hover, .ib.on { background: color-mix(in srgb, var(--c) 18%, var(--bg)); }
+.badge { border: 1px solid color-mix(in srgb, var(--bc) 50%, transparent); }
+.gb {
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: 28px;
+  padding: 18px 46px 54px;
+}
+.tabs {
+  gap: 3px;
+  margin-bottom: 20px;
+}
+.tabs button {
+  padding: 10px 14px;
+  border-radius: 10px 10px 0 0;
+  font-size: 12.5px;
+}
+.tabs button:hover { color: var(--text); background: color-mix(in srgb, var(--surface) 60%, transparent); }
+.tabs button.on { background: color-mix(in srgb, var(--accent) 9%, transparent); }
+.tabs button.on::after { left: 12px; right: 12px; }
+.ov {
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--surface) 90%, var(--panel)), var(--surface));
+  box-shadow: 0 18px 44px #0005;
+}
+.ov .instrow { border-radius: 10px; }
+
+/* ---------- grille ---------- */
+.gridwrap { padding: 28px 34px 40px; }
+.gridwrap .grid { gap: 26px 20px; }
+.tile .cover {
+  border-radius: 14px;
+  box-shadow: 0 10px 24px #0006;
+  transition: transform .16s ease, box-shadow .16s ease;
+}
+.tile:hover .cover {
+  transform: translateY(-3px);
+  box-shadow: 0 18px 34px #0009;
+}
+.tile .meta { padding-top: 10px; }
+.tile .meta b { font-size: 13px; }
+
+/* ---------- composants ---------- */
+.btn { border-radius: 999px; padding: 9px 20px; }
+.btn.sec { border: 1px solid var(--border); box-shadow: none; }
+.btn.sec:hover { border-color: color-mix(in srgb, var(--text-faint) 55%, var(--border)); }
+.modal {
+  border-radius: 22px;
+  border: 1px solid color-mix(in srgb, var(--border) 80%, transparent);
+  box-shadow: 0 34px 90px #000b;
+}
+input[type=text], input[type=search], textarea, select {
+  border-radius: 11px;
+  border: 1px solid transparent;
+}
+input[type=text]:focus, input[type=search]:focus, textarea:focus, select:focus {
+  border-color: color-mix(in srgb, var(--accent) 55%, var(--border));
+}
+.pop, .ctxmenu { border-radius: 14px; box-shadow: 0 22px 54px #000b; }
+.pvtoolbar { border-radius: 16px; }
+.pvrow { border-radius: 14px; }
+
+/* ---------- défilement discret ---------- */
+.list, .sheet, .cards, #web-res { scrollbar-width: thin; scrollbar-color: color-mix(in srgb, var(--text-faint) 35%, transparent) transparent; }
+.list::-webkit-scrollbar, .sheet::-webkit-scrollbar, .cards::-webkit-scrollbar { width: 10px; height: 10px; }
+.list::-webkit-scrollbar-thumb, .sheet::-webkit-scrollbar-thumb, .cards::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--text-faint) 28%, transparent);
+  border: 3px solid transparent;
+  background-clip: content-box;
+  border-radius: 999px;
+}
+
+/* ---------- Deck ---------- */
+body.deck .main { gap: 14px; padding: 14px; }
+body.deck .row { height: 66px; grid-template-columns: 46px minmax(0, 1fr) 10px; }
+body.deck .ico { width: 46px; height: 60px; }
+body.deck .gh { height: 380px; }
+
+@media (max-width: 1100px) {
+  :root { --sidew: 300px; }
+  .gb { grid-template-columns: minmax(0, 1fr) 280px; gap: 20px; padding-inline: 28px; }
+  .gh-main { padding-inline: 28px; }
+  .gh-top { left: 28px; }
+}
