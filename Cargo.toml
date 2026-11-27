@@ -21,3 +21,4 @@ encoding_rs = "0.8"
 # pas seulement le JSON que Quark y écrit. `serde_yaml` étant archivé, on prend
 # le fork maintenu, d'API identique.
 serde_yaml_ng = "0.10"
+minisign-verify = "0.3"

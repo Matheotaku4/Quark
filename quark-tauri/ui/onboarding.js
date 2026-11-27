@@ -9,11 +9,13 @@ function onboardingModal() {
     <div class="row2">${lab(t("onboarding.language"), sel("ob-lang", langOpts, app.cfg.ui_language))}${lab(t("onboarding.theme"), sel("ob-theme", themeOpts, app.cfg.theme))}</div>
     ${lab(t("onboarding.start"), sel("ob-start", pages, app.cfg.start_page))}
     ${lab(t("onboarding.install"), inp("ob-install", app.cfg.default_install_dir || "~/Games", "~/Games"))}
+    <label class="check"><input type="checkbox" id="ob-auto" ${app.cfg.auto_update ? "checked" : ""}> ${esc(t("Vérifier les mises à jour"))}</label>
     <div class="foot"><button class="btn sec" data-act="close">${esc(t("onboarding.skip"))}</button><button class="btn" id="ok">${esc(t("onboarding.finish"))}</button></div>`, true);
   $("#ok").onclick = () => run(async () => {
     await cfgSet({
       ui_language: $("#ob-lang").value, theme: $("#ob-theme").value, start_page: $("#ob-start").value,
       default_install_dir: $("#ob-install").value.trim() || null,
+      auto_update: $("#ob-auto").checked,
       onboarding_done: true, last_seen_version: app.data.version,
     });
     closeModal(); applySettings(); app.view = ({ home: "home", library: "library", store: "store", my_games: "mygames" })[app.cfg.start_page] || "library";

@@ -1228,7 +1228,7 @@ impl Default for Settings {
             default_env: Vec::new(),
             defaults_migrated: false,
             prefix_defaults_migrated: false,
-            auto_update: true,
+            auto_update: false,
             tray_icon: true,
             screenshot_key: "F12".to_string(),
             notify_install_done: true,

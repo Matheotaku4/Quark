@@ -67,6 +67,32 @@ impl Release {
             .iter()
             .find(|asset| asset.name == expected || asset.name.ends_with(&expected))
     }
+
+    pub fn signature_for(&self, archive: &Asset) -> Option<&Asset> {
+        let expected = format!("{}.minisig", archive.name);
+        self.assets
+            .iter()
+            .find(|asset| asset.name == expected || asset.name.ends_with(&expected))
+    }
+}
+
+pub fn allowed_download_host(url: &str) -> bool {
+    reqwest::Url::parse(url).is_ok_and(|url| {
+        matches!(
+            url.host_str(),
+            Some("github.com" | "objects.githubusercontent.com")
+        )
+    })
+}
+
+pub fn verify_signature(archive: &Path, signature: &Path, public_key: &str) -> Result<(), String> {
+    let key = minisign_verify::PublicKey::decode(public_key)
+        .map_err(|_| "clé publique minisign invalide".to_string())?;
+    let sig = minisign_verify::Signature::from_file(signature)
+        .map_err(|_| "signature minisign illisible".to_string())?;
+    let data = std::fs::read(archive).map_err(|err| err.to_string())?;
+    key.verify(&data, &sig, false)
+        .map_err(|_| "signature minisign invalide".to_string())
 }
 
 /// Version du binaire en cours d'exécution.
@@ -173,6 +199,15 @@ pub fn download(
         .checksum_for(asset)
         .ok_or_else(|| "la release ne publie pas de somme SHA-256".to_string())?;
     let expected = fetch_checksum(client, checksum)?;
+    let signature = release
+        .signature_for(asset)
+        .ok_or_else(|| "la release ne publie pas de signature minisign".to_string())?;
+    if !allowed_download_host(&asset.browser_download_url)
+        || !allowed_download_host(&checksum.browser_download_url)
+        || !allowed_download_host(&signature.browser_download_url)
+    {
+        return Err("téléchargement de mise à jour hors GitHub refusé".to_string());
+    }
     // Nom de fichier de l'archive seule, jamais le chemin fourni par le serveur.
     let name = asset
         .name
@@ -180,7 +215,7 @@ pub fn download(
         .next()
         .unwrap_or("quark.tar.gz")
         .to_string();
-    let path = dir.join(name);
+    let path = dir.join(&name);
     let result = (|| -> Result<(), String> {
         let response = client
             .get(&asset.browser_download_url)
@@ -212,6 +247,26 @@ pub fn download(
         if actual != expected {
             return Err("somme SHA-256 de l'archive invalide".to_string());
         }
+        let signature_path = dir.join(format!("{name}.minisig"));
+        let response = client
+            .get(&signature.browser_download_url)
+            .send()
+            .map_err(|err| format!("réseau : {err}"))?;
+        if !response.status().is_success() {
+            return Err(format!(
+                "signature refusée par GitHub ({})",
+                response.status().as_u16()
+            ));
+        }
+        let mut sig_file = std::fs::File::create(&signature_path).map_err(|err| err.to_string())?;
+        std::io::copy(&mut response.take(64 * 1024), &mut sig_file)
+            .map_err(|err| err.to_string())?;
+        drop(sig_file);
+        verify_signature(
+            &path,
+            &signature_path,
+            include_str!("../assets/minisign.pub"),
+        )?;
         Ok(())
     })();
     if let Err(error) = result {
@@ -648,5 +703,52 @@ mod tests {
             release.archive().map(|asset| asset.name.as_str()),
             Some("quark-0.4.0-linux-x86_64.tar.gz")
         );
+    }
+
+    #[test]
+    fn une_signature_valide_est_acceptee() {
+        let dir = std::env::temp_dir().join(format!("quark-sig-ok-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let archive = dir.join("quark.tar.gz");
+        std::fs::write(&archive, b"test").unwrap();
+        let signature = dir.join("test.minisig");
+        std::fs::copy("src/testdata/minisign/test.minisig", &signature).unwrap();
+        assert!(
+            verify_signature(
+                &archive,
+                &signature,
+                include_str!("testdata/minisign/test.pub")
+            )
+            .is_ok()
+        );
+    }
+
+    #[test]
+    fn refuse_une_signature_invalide() {
+        let dir = std::env::temp_dir().join(format!("quark-sig-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let archive = dir.join("quark.tar.gz");
+        let signature = dir.join("quark.tar.gz.minisig");
+        std::fs::write(&archive, b"pas le bon fichier").unwrap();
+        std::fs::copy("src/testdata/minisign/bad.minisig", &signature).unwrap();
+        assert!(
+            verify_signature(
+                &archive,
+                &signature,
+                include_str!("testdata/minisign/test.pub")
+            )
+            .is_err()
+        );
+    }
+
+    #[test]
+    fn refuse_un_hote_inconnu() {
+        assert!(!allowed_download_host("https://evil.example/quark.tar.gz"));
+        assert!(allowed_download_host(
+            "https://github.com/Matheotaku4/Quark/releases/download/v2.2.0/quark.tar.gz"
+        ));
+        assert!(allowed_download_host(
+            "https://objects.githubusercontent.com/abc"
+        ));
     }
 }
