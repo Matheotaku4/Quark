@@ -16,7 +16,10 @@ pub fn validate_executable(path: &Path) -> Result<(), String> {
     if !meta.file_type().is_file() {
         return Err("L'exécutable doit être un fichier".to_string());
     }
-    if path.extension().is_some_and(|ext| ext.eq_ignore_ascii_case("exe")) {
+    if path
+        .extension()
+        .is_some_and(|ext| ext.eq_ignore_ascii_case("exe"))
+    {
         return Ok(());
     }
     #[cfg(unix)]
@@ -30,7 +33,9 @@ pub fn validate_executable(path: &Path) -> Result<(), String> {
 }
 
 pub fn validate_scan_folder(path: &Path) -> Result<(), String> {
-    let path = path.canonicalize().map_err(|_| "Dossier introuvable".to_string())?;
+    let path = path
+        .canonicalize()
+        .map_err(|_| "Dossier introuvable".to_string())?;
     let home = quark::config::home_dir()
         .canonicalize()
         .map_err(|_| "Dossier personnel introuvable".to_string())?;
@@ -56,11 +61,13 @@ pub fn validate_scan_folder(path: &Path) -> Result<(), String> {
 }
 
 pub fn validate_known_path(path: &Path, roots: &[PathBuf]) -> Result<(), String> {
-    let path = path.canonicalize().map_err(|_| "Chemin introuvable".to_string())?;
-    if roots.iter().any(|root| {
-        root.canonicalize()
-            .is_ok_and(|root| path.starts_with(root))
-    }) {
+    let path = path
+        .canonicalize()
+        .map_err(|_| "Chemin introuvable".to_string())?;
+    if roots
+        .iter()
+        .any(|root| root.canonicalize().is_ok_and(|root| path.starts_with(root)))
+    {
         Ok(())
     } else {
         Err("Chemin hors des dossiers autorisés".to_string())
