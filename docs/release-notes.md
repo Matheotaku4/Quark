@@ -1,3 +1,38 @@
+# Quark 2.2.0 — bibliothèque modernisée et mises à jour signées
+
+### Interface
+
+- **Bibliothèque plus lisible.** La liste à gauche et la fiche à droite gardent leur disposition proche de Steam. Panneaux arrondis, barre supérieure compacte, couvertures verticales dans la liste et ligne sélectionnée plus nette.
+- **Fiche de jeu.** Onglets, bouton de lancement, carte d'aperçu et actions suivent une hiérarchie visuelle unique.
+- **Aucun coût au repos.** La modernisation est une feuille de style : pas de flou, pas d'animation permanente, pas de script supplémentaire.
+
+### Sécurité
+
+- **CSP stricte.** Aucun script inline ; seules les ressources locales et les images distantes attendues sont autorisées.
+- **Commandes validées.** URL, exécutable et dossier de scan sont contrôlés ; chaque commande Tauri a une permission explicite.
+- **Échappement HTML.** Les valeurs distantes passent par un helper unique et les couleurs injectées sont validées.
+
+### Mises à jour
+
+- **Signature minisign.** L'archive est vérifiée par SHA-256 puis par signature avant de remplacer le binaire.
+- **Opt-in.** Les mises à jour automatiques sont désactivées par défaut et proposées à l'accueil.
+- **Hôtes limités.** Le téléchargement refuse tout hôte autre que GitHub.
+
+### Chaîne d'approvisionnement
+
+- Actions GitHub épinglées par commit.
+- `cargo-deny` vérifie avis, licences, doublons et sources.
+- Dependabot suit les crates Rust et les actions.
+
+### Vérifications
+
+- `cargo fmt --all --check` : OK.
+- `cargo clippy --all-targets --locked -- -D warnings` : OK.
+- `cargo test --locked` : 326 tests réussis.
+- `cargo test --manifest-path quark-tauri/Cargo.toml --locked` : 15 tests réussis.
+- `cargo deny check` : avis, licences, bans et sources OK.
+- Aperçu de la bibliothèque vérifié avec des données factices.
+
 # Quark 2.1.1 — recherche AnkerGames rétablie et artworks plus sûrs
 
 ### Recherche multi-sites

@@ -11,7 +11,7 @@ fast, modern interface.
 
 <p align="center"><sub>Home: continue playing, browse the library, launch in one click.</sub></p>
 
-**Version 2.1.1** · **Linux x86_64** · **MIT licence**
+**Version 2.2.0** · **Linux x86_64** · **MIT licence**
 
 **Website:** [matheotaku4.github.io/Quark](https://matheotaku4.github.io/Quark/) ·
 **Documentation:** [GitHub Wiki](https://github.com/Matheotaku4/Quark/wiki) ·
@@ -35,26 +35,29 @@ French, Spanish, German, Portuguese and Russian are available in the app.
 | **First launch:** language, theme and startup page | **Home:** continue playing, browse the library |
 | ![Welcome guide](docs/images/onboarding-en.png) | ![Quark home page](docs/images/home-en.png) |
 
-## What's new in 2.1.1
+## What's new in 2.2.0
 
-- **AnkerGames search works again.** Its API rejects non-browser clients with
-  HTTP 403. Quark now sends the origin, referer and browser user agent the site
-  expects, so AnkerGames results appear with the other six sources.
-- **Safer artwork loading.** WebP dimensions are read from the file header
-  (VP8X, VP8 and VP8L) instead of decoding the whole image. The remaining decode
-  fallback is capped at 8192 pixels per side and 64 MiB, so a huge or corrupted
-  remote artwork can no longer cause a memory spike.
-- **Everything from 2.1.0.** Faster My games, the seven-source search, the
-  toggleable notification icon and Proton recovery are unchanged.
+- **A cleaner library.** The list on the left and the game page on the right
+  keep the same navigation, with a calmer palette, rounded panels, portrait
+  covers and a sharper selected row. The change is CSS-only, so startup and
+  memory use stay flat.
+- **Signed updates.** Release archives now ship a minisign signature. Quark
+  verifies the SHA-256 and the signature before replacing its binary, and
+  automatic updates are opt-in on first launch.
+- **Hardened desktop shell.** A strict Content Security Policy, validated Tauri
+  commands and escaped UI templates remove the inline-script and path-injection
+  surface.
+- **Everything from 2.1.1.** AnkerGames search, bounded artwork decoding, the
+  seven-source search, My games and Proton recovery are unchanged.
 
-This is the **2.1.1** documentation. Older release notes are kept on the GitHub
+This is the **2.2.0** documentation. Older release notes are kept on the GitHub
 releases page; `docs/release-notes.md` only describes the release currently
 being published.
 
 ## Table of contents
 
 1. [Preview](#preview)
-2. [What's new in 2.1.1](#whats-new-in-211)
+2. [What's new in 2.2.0](#whats-new-in-220)
 3. [What Quark does](#what-quark-does)
 4. [Installation](#installation)
 5. [First launch](#first-launch)
@@ -113,8 +116,8 @@ Download `quark-<version>-linux-x86_64.tar.gz` and its `.sha256` file from the
 then verify and unpack it:
 
 ```bash
-sha256sum -c quark-2.1.1-linux-x86_64.tar.gz.sha256
-tar -xzf quark-2.1.1-linux-x86_64.tar.gz
+sha256sum -c quark-2.2.0-linux-x86_64.tar.gz.sha256
+tar -xzf quark-2.2.0-linux-x86_64.tar.gz
 ./quark/quark
 ```
 
