@@ -147,12 +147,15 @@ fn search_key(text: &str) -> String {
 }
 
 fn fetch_text(url: &str, accept: &str) -> Result<String, String> {
-    let response = crate::artwork::http()
+    let request = crate::artwork::http()
         .get(url)
         .header(reqwest::header::ACCEPT, accept)
-        .timeout(Duration::from_secs(22))
-        .send()
-        .map_err(|_| "site injoignable".to_string())?;
+        .timeout(Duration::from_secs(22));
+    send_text(request)
+}
+
+fn send_text(request: reqwest::blocking::RequestBuilder) -> Result<String, String> {
+    let response = request.send().map_err(|_| "site injoignable".to_string())?;
     if !response.status().is_success() {
         return Err(format!(
             "le site a refusé la recherche (HTTP {})",
@@ -230,13 +233,28 @@ fn size_from_gb(value: Option<&Value>) -> Option<String> {
 // AnkerGames
 // ---------------------------------------------------------------------------
 
+const ANKER_ORIGIN: &str = "https://ankergames.net";
+// L'API refuse les clients non navigateur (`403 ... did not come from the
+// AnkerGames website`) : Origin, Referer et User-Agent sont vérifiés ensemble.
+const ANKER_USER_AGENT: &str = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36";
+
+fn anker_request(url: &str) -> reqwest::blocking::RequestBuilder {
+    crate::artwork::http()
+        .get(url)
+        .header(reqwest::header::USER_AGENT, ANKER_USER_AGENT)
+        .header(reqwest::header::ACCEPT, "application/json")
+        .header(reqwest::header::ORIGIN, ANKER_ORIGIN)
+        .header(reqwest::header::REFERER, format!("{ANKER_ORIGIN}/search"))
+        .timeout(Duration::from_secs(22))
+}
+
 fn search_anker(query: &str) -> Result<Vec<SiteHit>, String> {
     let mut url = reqwest::Url::parse("https://ankergames.net/api/v1/games")
         .map_err(|_| "adresse AnkerGames invalide".to_string())?;
     url.query_pairs_mut()
         .append_pair("search", query)
         .append_pair("limit", "8");
-    let text = fetch_text(url.as_str(), "application/json")?;
+    let text = send_text(anker_request(url.as_str()))?;
     parse_anker(&text)
 }
 
@@ -670,6 +688,27 @@ fn decode_entity(name: &str) -> Option<&'static str> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn anker_envoie_les_entetes_d_un_navigateur() {
+        let request = anker_request("https://ankergames.net/api/v1/games?search=x")
+            .build()
+            .expect("requête AnkerGames");
+        assert_eq!(
+            request.headers()[reqwest::header::ORIGIN],
+            "https://ankergames.net"
+        );
+        assert_eq!(
+            request.headers()[reqwest::header::REFERER],
+            "https://ankergames.net/search"
+        );
+        assert!(
+            request.headers()[reqwest::header::USER_AGENT]
+                .to_str()
+                .unwrap()
+                .starts_with("Mozilla/5.0")
+        );
+    }
 
     #[test]
     fn anker_lit_son_api_json() {

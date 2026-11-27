@@ -5,7 +5,7 @@ It brings local games and your Steam, Epic Games, GOG and itch.io libraries
 together, launches Windows games through Proton or umu-launcher, and keeps
 achievements and verified local saves alongside the library.
 
-This documentation describes **Quark 2.1.0**. Its source is versioned in the
+This documentation describes **Quark 2.1.1**. Its source is versioned in the
 repository under [`wiki/`](https://github.com/Matheotaku4/Quark/tree/main/wiki).
 
 ![Quark home](https://raw.githubusercontent.com/Matheotaku4/Quark/main/docs/images/home-en.png)
@@ -22,18 +22,15 @@ repository under [`wiki/`](https://github.com/Matheotaku4/Quark/tree/main/wiki).
 | **First launch** | **Home** |
 | ![Welcome guide](https://raw.githubusercontent.com/Matheotaku4/Quark/main/docs/images/onboarding-en.png) | ![Quark home](https://raw.githubusercontent.com/Matheotaku4/Quark/main/docs/images/home-en.png) |
 
-## What's new in 2.1.0
+## What's new in 2.1.1
 
-- **Faster My games.** Store data is built off the UI thread, covers are loaded
-  in small batches and **Load more** replaces the runaway infinite scroll.
-  Filters, sorting and the list/grid choice are remembered.
-- **Seven download sites.** GameBounty, AnkerGames, AstralGames, Kryoto,
-  Online-Fix, ZeiGames and scene.cat in one ordered search, with per-source
-  errors and no file download.
-- **Cleaner surfaces.** Opaque cards, shared spacing and radius tokens, stable
-  hover states and no expensive backdrop blur.
-- **Library unchanged.** The left-hand game list and the right-hand game page
-  keep the Steam-like layout, with the same local and store libraries.
+- **AnkerGames search restored.** The site rejected non-browser clients with
+  HTTP 403; Quark now sends the origin, referer and browser user agent it
+  expects.
+- **Safer artwork loading.** WebP dimensions come from the header (VP8X, VP8,
+  VP8L) and the decode fallback is capped at 8192 px and 64 MiB.
+- **Everything from 2.1.0.** Faster My games, the seven-source search, the
+  toggleable notification icon and Proton recovery are unchanged.
 
 ## Where to start
 

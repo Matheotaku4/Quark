@@ -80,17 +80,58 @@ pub fn image_size(bytes: &[u8]) -> Option<(u32, u32)> {
     None
 }
 
-/// Dimensions réelles d'une image : lecture de l'en-tête, puis décodage complet
+/// Dimensions d'une image WebP, lues dans son en-tête (aucun décodage).
+/// SteamGridDB en sert régulièrement ; les trois variantes VP8X, VP8 et VP8L
+/// stockent la taille à des endroits différents.
+fn webp_size(bytes: &[u8]) -> Option<(u32, u32)> {
+    if bytes.len() < 30 || &bytes[0..4] != b"RIFF" || &bytes[8..12] != b"WEBP" {
+        return None;
+    }
+    match &bytes[12..16] {
+        b"VP8X" => {
+            let width = u32::from_le_bytes([bytes[24], bytes[25], bytes[26], 0]) + 1;
+            let height = u32::from_le_bytes([bytes[27], bytes[28], bytes[29], 0]) + 1;
+            Some((width, height))
+        }
+        b"VP8 " => {
+            if bytes[23..26] != [0x9D, 0x01, 0x2A] {
+                return None;
+            }
+            let width = u16::from_le_bytes([bytes[26], bytes[27]]) as u32 & 0x3FFF;
+            let height = u16::from_le_bytes([bytes[28], bytes[29]]) as u32 & 0x3FFF;
+            (width > 0 && height > 0).then_some((width, height))
+        }
+        b"VP8L" => {
+            if bytes[20] != 0x2F {
+                return None;
+            }
+            let bits = u32::from_le_bytes([bytes[21], bytes[22], bytes[23], bytes[24]]);
+            Some(((bits & 0x3FFF) + 1, ((bits >> 14) & 0x3FFF) + 1))
+        }
+        _ => None,
+    }
+}
+
+/// Plafond du repli par décodage : au-delà, l'image est refusée sans allouer.
+const MAX_DECODED_SIDE: u32 = 8192;
+const MAX_DECODED_BYTES: u64 = 64 * 1024 * 1024;
+
+/// Dimensions réelles d'une image : lecture de l'en-tête, puis décodage borné
 /// quand le format n'y est pas reconnu.
-///
-/// SteamGridDB sert parfois des WebP : sans ce repli, l'en-tête est illisible et
-/// l'artwork est rejeté comme « image illisible » alors qu'il est valide. Les
-/// icônes (les plus concernées) étaient ainsi les seules à ne jamais arriver.
 pub fn dimensions(bytes: &[u8]) -> Option<(u32, u32)> {
-    if let Some(size) = image_size(bytes) {
+    if let Some(size) = image_size(bytes).or_else(|| webp_size(bytes)) {
         return Some(size);
     }
-    image::load_from_memory(bytes)
+    let mut reader = image::ImageReader::new(std::io::Cursor::new(bytes))
+        .with_guessed_format()
+        .ok()?;
+    let mut limits = image::Limits::default();
+    limits.max_image_width = Some(MAX_DECODED_SIDE);
+    limits.max_image_height = Some(MAX_DECODED_SIDE);
+    limits.max_alloc = Some(MAX_DECODED_BYTES);
+    reader.limits(limits);
+    reader
+        .decode()
         .ok()
         .map(|image| (image.width(), image.height()))
 }
@@ -907,9 +948,7 @@ fn save_image(dir: &Path, kind: AssetKind, bytes: &[u8], ext: &str) -> Result<Pa
 mod icon_tests {
     use super::*;
 
-    /// WebP 8×8 minimal (VP8L) : l'en-tête PNG/JPEG ne le reconnaît pas, seul le
-    /// décodage donne sa taille. C'est exactement le cas qui faisait rejeter
-    /// les icônes comme « image illisible ».
+    /// WebP 8×8 minimal (VP8L) : l'en-tête PNG/JPEG ne le reconnaît pas.
     const WEBP_8X8: [u8; 38] = [
         0x52, 0x49, 0x46, 0x46, 0x1E, 0x00, 0x00, 0x00, 0x57, 0x45, 0x42, 0x50, 0x56, 0x50, 0x38,
         0x4C, 0x11, 0x00, 0x00, 0x00, 0x2F, 0x07, 0xC0, 0x01, 0x00, 0x07, 0x50, 0x94, 0x22, 0x17,
@@ -967,9 +1006,33 @@ mod icon_tests {
     }
 
     #[test]
-    fn une_icone_webp_est_mesuree_par_decodage() {
-        assert_eq!(image_size(&WEBP_8X8), None, "en-tête non reconnu");
-        assert_eq!(dimensions(&WEBP_8X8), Some((8, 8)), "décodage de secours");
+    fn une_icone_webp_est_mesuree_par_entete() {
+        assert_eq!(image_size(&WEBP_8X8), None, "en-tête PNG/JPEG non reconnu");
+        assert_eq!(webp_size(&WEBP_8X8), Some((8, 8)));
+        assert_eq!(dimensions(&WEBP_8X8), Some((8, 8)));
+    }
+
+    #[test]
+    fn un_webp_vp8x_livre_sa_taille_sans_decodage() {
+        let mut bytes = vec![0u8; 30];
+        bytes[0..4].copy_from_slice(b"RIFF");
+        bytes[8..12].copy_from_slice(b"WEBP");
+        bytes[12..16].copy_from_slice(b"VP8X");
+        bytes[24..27].copy_from_slice(&(12000u32 - 1).to_le_bytes()[..3]);
+        bytes[27..30].copy_from_slice(&(9000u32 - 1).to_le_bytes()[..3]);
+        assert_eq!(dimensions(&bytes), Some((12000, 9000)));
+    }
+
+    #[test]
+    fn un_webp_vp8_livre_sa_taille_sans_decodage() {
+        let mut bytes = vec![0u8; 30];
+        bytes[0..4].copy_from_slice(b"RIFF");
+        bytes[8..12].copy_from_slice(b"WEBP");
+        bytes[12..16].copy_from_slice(b"VP8 ");
+        bytes[23..26].copy_from_slice(&[0x9D, 0x01, 0x2A]);
+        bytes[26..28].copy_from_slice(&600u16.to_le_bytes());
+        bytes[28..30].copy_from_slice(&900u16.to_le_bytes());
+        assert_eq!(dimensions(&bytes), Some((600, 900)));
     }
 
     #[test]

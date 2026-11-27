@@ -11,7 +11,7 @@ fast, modern interface.
 
 <p align="center"><sub>Home: continue playing, browse the library, launch in one click.</sub></p>
 
-**Version 2.1.0** · **Linux x86_64** · **MIT licence**
+**Version 2.1.1** · **Linux x86_64** · **MIT licence**
 
 **Website:** [matheotaku4.github.io/Quark](https://matheotaku4.github.io/Quark/) ·
 **Documentation:** [GitHub Wiki](https://github.com/Matheotaku4/Quark/wiki) ·
@@ -35,36 +35,26 @@ French, Spanish, German, Portuguese and Russian are available in the app.
 | **First launch:** language, theme and startup page | **Home:** continue playing, browse the library |
 | ![Welcome guide](docs/images/onboarding-en.png) | ![Quark home page](docs/images/home-en.png) |
 
-## What's new in 2.1.0
+## What's new in 2.1.1
 
-- **Faster My games.** Store data is built off the UI thread, visible covers are
-  downloaded in small batches, and the runaway infinite scroll is replaced by
-  an explicit **Load more** button. Filters, sorting and the list/grid choice
-  are remembered between launches.
-- **Seven download sites.** The game page and every store card open a multi-site
-  search: GameBounty first, then AnkerGames, AstralGames, Kryoto, Online-Fix,
-  ZeiGames and scene.cat. Each source reports its own results or error, and
-  Quark never downloads a file from these sites.
-- **Cleaner surfaces.** The interface now uses opaque cards, shared spacing and
-  radius tokens, stable hover states and no expensive backdrop blur. Rendering
-  artifacts from lazy card painting are gone.
-- **Tray that toggles.** With the notification icon enabled, left-clicking it
-  opens Quark when the window is closed or minimised, and closes the window
-  back to the icon when it is already visible. The close button does the same.
-- **Proton that recovers.** Runtimes are detected again at every launch, and a
-  game pointing to a Proton that Steam removed falls back to the available
-  default with a visible warning instead of refusing to start.
-- **Library unchanged.** The left-hand game list and the right-hand game page
-  keep the Steam-like layout, with the same local and store libraries.
+- **AnkerGames search works again.** Its API rejects non-browser clients with
+  HTTP 403. Quark now sends the origin, referer and browser user agent the site
+  expects, so AnkerGames results appear with the other six sources.
+- **Safer artwork loading.** WebP dimensions are read from the file header
+  (VP8X, VP8 and VP8L) instead of decoding the whole image. The remaining decode
+  fallback is capped at 8192 pixels per side and 64 MiB, so a huge or corrupted
+  remote artwork can no longer cause a memory spike.
+- **Everything from 2.1.0.** Faster My games, the seven-source search, the
+  toggleable notification icon and Proton recovery are unchanged.
 
-This is the **2.1.0** documentation. Older release notes are kept on the GitHub
+This is the **2.1.1** documentation. Older release notes are kept on the GitHub
 releases page; `docs/release-notes.md` only describes the release currently
 being published.
 
 ## Table of contents
 
 1. [Preview](#preview)
-2. [What's new in 2.1.0](#whats-new-in-210)
+2. [What's new in 2.1.1](#whats-new-in-211)
 3. [What Quark does](#what-quark-does)
 4. [Installation](#installation)
 5. [First launch](#first-launch)
@@ -123,8 +113,8 @@ Download `quark-<version>-linux-x86_64.tar.gz` and its `.sha256` file from the
 then verify and unpack it:
 
 ```bash
-sha256sum -c quark-2.1.0-linux-x86_64.tar.gz.sha256
-tar -xzf quark-2.1.0-linux-x86_64.tar.gz
+sha256sum -c quark-2.1.1-linux-x86_64.tar.gz.sha256
+tar -xzf quark-2.1.1-linux-x86_64.tar.gz
 ./quark/quark
 ```
 

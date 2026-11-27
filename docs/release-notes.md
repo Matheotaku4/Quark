@@ -1,3 +1,23 @@
+# Quark 2.1.1 — recherche AnkerGames rétablie et artworks plus sûrs
+
+### Recherche multi-sites
+
+- **AnkerGames répond de nouveau.** Son API refusait les clients non navigateur par un HTTP 403. Quark envoie maintenant l'origine, le referer et l'agent utilisateur attendus, et les résultats AnkerGames réapparaissent avec les six autres sources.
+- **Sept sources vérifiées.** GameBounty, AnkerGames, AstralGames, Kryoto, Online-Fix, ZeiGames et scene.cat ont été interrogés en direct ; une source indisponible continue d'afficher sa propre erreur.
+
+### Artworks
+
+- **WebP mesuré sans décodage.** Les dimensions sont lues dans l'en-tête VP8X, VP8 ou VP8L. Une grande image distante n'est plus décodée en mémoire juste pour connaître sa taille.
+- **Décodage borné.** Le repli restant refuse au-delà de 8192 pixels de côté et 64 Mio d'allocation, ce qui évite les pics mémoire sur un artwork volumineux ou corrompu.
+
+### Vérifications
+
+- `cargo fmt --all --check` : OK.
+- `cargo clippy --all-targets --locked -- -D warnings` : OK sur le cœur et l'interface.
+- `cargo test --locked` : tests du cœur réussis.
+- `cargo test --manifest-path quark-tauri/Cargo.toml --locked` : tests de l'interface réussis.
+- Recherche AnkerGames testée en direct (`cyberpunk`) : résultats reçus.
+
 # Quark 2.1.0 — interface plus rapide, jaquettes et recherche multi-sites
 
 ### Mes jeux
