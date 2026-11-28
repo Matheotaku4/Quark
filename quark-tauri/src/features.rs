@@ -4,7 +4,7 @@
 
 use super::{game_dto, lock, persist, AppState, GameDto};
 use quark::config::{Game, Settings};
-use quark::{artwork, disk, howlongtobeat, news, proton, protondb, update};
+use quark::{artwork, disk, extensions, howlongtobeat, news, proton, protondb, update};
 use serde::Serialize;
 use serde_json::Value;
 use std::path::{Path, PathBuf};
@@ -464,14 +464,6 @@ mod tests {
 
         std::fs::remove_dir_all(root).unwrap();
     }
-
-    #[test]
-    fn les_resultats_de_recherche_suivent_l_ordre_des_sources() {
-        let sites = quark::game_search::SearchSite::ALL;
-        assert_eq!(sites[0], quark::game_search::SearchSite::GameBounty);
-        let labels: Vec<_> = sites.iter().map(|site| site.label()).collect();
-        assert_eq!(labels.first().copied(), Some("GameBounty"));
-    }
 }
 
 // ---------------------------------------------------------------------------
@@ -551,7 +543,106 @@ pub async fn scan_folder(
 }
 
 #[tauri::command]
-pub async fn site_search(query: String) -> Result<SiteSearchDto, String> {
+pub async fn extensions_add(
+    state: State<'_, AppState>,
+    url: String,
+) -> Result<Vec<extensions::ExtensionStatus>, String> {
+    let (sources, path) = extension_snapshot(&state);
+    let url = url.trim().to_string();
+    let (sources, statuses) = blocking(move || {
+        let mut cache = extensions::load_cache_from(&path);
+        let mut sources = sources;
+        extensions::add_source(&mut cache, &mut sources, &url)?;
+        extensions::save_cache_to(&path, &cache)?;
+        let statuses = extensions::statuses(&cache, &sources);
+        Ok((sources, statuses))
+    })
+    .await?;
+    persist_extension_sources(&state, sources)?;
+    Ok(statuses)
+}
+
+#[tauri::command]
+pub fn extensions_remove(
+    state: State<'_, AppState>,
+    url: String,
+) -> Result<Vec<extensions::ExtensionStatus>, String> {
+    let path = extensions::cache_path();
+    let mut cache = extensions::load_cache_from(&path);
+    let mut sources = lock(&state.library).settings.extension_sources.clone();
+    extensions::remove_source(&mut cache, &mut sources, url.trim());
+    extensions::save_cache_to(&path, &cache)?;
+    let statuses = extensions::statuses(&cache, &sources);
+    persist_extension_sources(&state, sources)?;
+    Ok(statuses)
+}
+
+#[tauri::command]
+pub async fn extensions_refresh(
+    state: State<'_, AppState>,
+    url: Option<String>,
+) -> Result<Vec<extensions::ExtensionStatus>, String> {
+    let (sources, path) = extension_snapshot(&state);
+    let target = url
+        .map(|value| value.trim().to_string())
+        .filter(|value| !value.is_empty());
+    let (sources, statuses) = blocking(move || {
+        let mut cache = extensions::load_cache_from(&path);
+        let mut sources = sources;
+        let urls = match target {
+            Some(url) => vec![url],
+            None => sources.clone(),
+        };
+        let mut statuses = Vec::new();
+        for url in urls {
+            match extensions::refresh_source(&mut cache, &mut sources, &url) {
+                Ok(status) => statuses.push(status),
+                Err(error) => {
+                    let mut status = extensions::statuses(&cache, std::slice::from_ref(&url))
+                        .into_iter()
+                        .next()
+                        .unwrap_or_else(|| extensions::ExtensionStatus {
+                            url: url.clone(),
+                            id: String::new(),
+                            name: String::new(),
+                            version: String::new(),
+                            site_count: 0,
+                            fetched_at: 0,
+                            stale: true,
+                            error: None,
+                        });
+                    status.error = Some(error);
+                    statuses.push(status);
+                }
+            }
+        }
+        extensions::save_cache_to(&path, &cache)?;
+        Ok((sources, statuses))
+    })
+    .await?;
+    persist_extension_sources(&state, sources)?;
+    Ok(statuses)
+}
+
+fn extension_snapshot(state: &AppState) -> (Vec<String>, PathBuf) {
+    (
+        lock(&state.library).settings.extension_sources.clone(),
+        extensions::cache_path(),
+    )
+}
+
+fn persist_extension_sources(state: &AppState, sources: Vec<String>) -> Result<(), String> {
+    let mut library = lock(&state.library);
+    library.settings.extension_sources = sources;
+    persist(state, &mut library)
+}
+
+#[tauri::command]
+pub async fn site_search(
+    state: State<'_, AppState>,
+    query: String,
+) -> Result<SiteSearchDto, String> {
+    let sources = lock(&state.library).settings.extension_sources.clone();
     blocking(move || {
         let query = query.trim().to_string();
         if query.len() < 2 {
@@ -560,14 +651,16 @@ pub async fn site_search(query: String) -> Result<SiteSearchDto, String> {
                 errors: Vec::new(),
             });
         }
+        let cache = extensions::load_cache_from(&extensions::cache_path());
+        let sites = extensions::active_sites(&cache, &sources);
         let mut per_site = Vec::new();
         std::thread::scope(|scope| {
             let mut handles = Vec::new();
-            for site in quark::game_search::SearchSite::ALL {
+            for site in &sites {
                 let query = query.clone();
                 handles.push((
                     site,
-                    scope.spawn(move || quark::game_search::search(site, &query)),
+                    scope.spawn(move || quark::game_search::search(&site.site, &query)),
                 ));
             }
             for (site, handle) in handles {
@@ -582,13 +675,14 @@ pub async fn site_search(query: String) -> Result<SiteSearchDto, String> {
         let mut hits = Vec::new();
         let mut errors = Vec::new();
         for (site, result) in per_site {
-            let site_id = format!("{site:?}").to_lowercase();
+            let site_id = site.uid.clone();
+            let label = site.site.label.clone();
             match result {
                 Ok(found) => {
                     for hit in found {
                         hits.push(SiteHitDto {
                             site_id: site_id.clone(),
-                            site: site.label().to_string(),
+                            site: label.clone(),
                             title: hit.title,
                             url: hit.url,
                             detail: hit.detail,
@@ -598,7 +692,7 @@ pub async fn site_search(query: String) -> Result<SiteSearchDto, String> {
                 }
                 Err(message) => errors.push(SiteErrorDto {
                     site_id,
-                    site: site.label().to_string(),
+                    site: label,
                     message,
                 }),
             }

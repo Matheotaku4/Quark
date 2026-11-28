@@ -593,6 +593,34 @@ struct Bootstrap {
     demo: bool,
     deck: bool,
     load_error: Option<String>,
+    extensions: Vec<quark::extensions::ExtensionStatus>,
+    search_sites: Vec<SearchSiteDto>,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct SearchSiteDto {
+    uid: String,
+    extension_id: String,
+    extension_name: String,
+    id: String,
+    label: String,
+    host: String,
+    search_url: String,
+}
+
+impl From<&quark::extensions::ExtensionSite> for SearchSiteDto {
+    fn from(site: &quark::extensions::ExtensionSite) -> Self {
+        Self {
+            uid: site.uid.clone(),
+            extension_id: site.extension_id.clone(),
+            extension_name: site.extension_name.clone(),
+            id: site.site.id.clone(),
+            label: site.site.label.clone(),
+            host: site.site.host.clone(),
+            search_url: site.site.search_url.clone(),
+        }
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -805,6 +833,12 @@ fn bootstrap(state: &AppState) -> Bootstrap {
             )
         })
         .collect();
+    let extension_cache = quark::extensions::load_cache_from(&quark::extensions::cache_path());
+    let extensions = quark::extensions::statuses(&extension_cache, &settings.extension_sources);
+    let search_sites = quark::extensions::active_sites(&extension_cache, &settings.extension_sources)
+        .iter()
+        .map(SearchSiteDto::from)
+        .collect();
     Bootstrap {
         games,
         settings: settings_dto(&settings),
@@ -834,6 +868,8 @@ fn bootstrap(state: &AppState) -> Bootstrap {
         demo: state.demo,
         deck: state.deck_demo,
         load_error: library.load_error.clone(),
+        extensions,
+        search_sites,
     }
 }
 
@@ -2319,6 +2355,9 @@ fn main() {
             providers::steam_import,
             features::scan_folder,
             features::site_search,
+            features::extensions_add,
+            features::extensions_remove,
+            features::extensions_refresh,
             features::artwork_candidates,
             features::artwork_choose,
             extras::game_achievements,

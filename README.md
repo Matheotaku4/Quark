@@ -30,34 +30,32 @@ French, Spanish, German, Portuguese and Russian are available in the app.
 | ![Library with a game selected](docs/images/library-en.png) | ![Game page for A Short Hike](docs/images/game-en.png) |
 | **Store:** deals, recommendations and store search | **My games:** owned and installed games by store |
 | ![Steam store page](docs/images/store-en.png) | ![My games library](docs/images/my-games-en.png) |
-| **Site search:** seven sources, one ordered result list | **Settings:** full-page navigation and live previews |
+| **Site search:** optional extension, one ordered result list | **Settings:** full-page navigation and live previews |
 | ![Multi-site game search](docs/images/site-search-en.png) | ![Appearance settings](docs/images/settings-en.png) |
 | **First launch:** language, theme and startup page | **Home:** continue playing, browse the library |
 | ![Welcome guide](docs/images/onboarding-en.png) | ![Quark home page](docs/images/home-en.png) |
 
-## What's new in 2.2.0
+## What's new in 2.2.1
 
-- **A cleaner library.** The list on the left and the game page on the right
-  keep the same navigation, with a calmer palette, rounded panels, portrait
-  covers and a sharper selected row. The change is CSS-only, so startup and
-  memory use stay flat.
-- **Signed updates.** Release archives now ship a minisign signature. Quark
-  verifies the SHA-256 and the signature before replacing its binary, and
-  automatic updates are opt-in on first launch.
-- **Hardened desktop shell.** A strict Content Security Policy, validated Tauri
-  commands and escaped UI templates remove the inline-script and path-injection
-  surface.
-- **Everything from 2.1.1.** AnkerGames search, bounded artwork decoding, the
-  seven-source search, My games and Proton recovery are unchanged.
+- **Search is now an extension.** Quark ships with no search site enabled.
+  Add an HTTPS manifest in **Settings → Extensions** to enable the seven
+  built-in adapters (GameBounty, AnkerGames, AstralGames, Kryoto, Online-Fix,
+  ZeiGames and scene.cat), or describe your own JSON/HTML site.
+- **No extension, no network.** Without an installed manifest, search buttons
+  are hidden in the game page, store, add-game dialog and command palette.
+- **Cache and refresh.** Manifests are cached locally, refreshed on demand and
+  rejected if they point to a private host or a non-HTTPS URL.
+- **Everything from 2.2.0.** The modern library layout, signed updates and the
+  hardened desktop shell are unchanged.
 
-This is the **2.2.0** documentation. Older release notes are kept on the GitHub
+This is the **2.2.1** documentation. Older release notes are kept on the GitHub
 releases page; `docs/release-notes.md` only describes the release currently
 being published.
 
 ## Table of contents
 
 1. [Preview](#preview)
-2. [What's new in 2.2.0](#whats-new-in-220)
+2. [What's new in 2.2.1](#whats-new-in-221)
 3. [What Quark does](#what-quark-does)
 4. [Installation](#installation)
 5. [First launch](#first-launch)
@@ -105,7 +103,8 @@ being published.
 
 Quark is not a store: it never buys anything, and it never downloads or
 extracts games from third-party download sites. Store search results and the
-seven-site search open pages in your browser; no file is fetched by Quark.
+extension-provided site search open pages in your browser; no file is fetched by
+Quark.
 
 ## Installation
 
@@ -251,8 +250,8 @@ itself, or a local file.
 The **Stores** tab is a Steam discovery page: featured deal, recommendations,
 the most played games, top sellers, specials, new releases and upcoming titles.
 Prices are regional and the store page opens in your browser. A game card also
-offers a search on the download sites supported by Quark; results only open the
-site in your browser.
+offers a search on the download sites enabled by your extensions; results only
+open the site in your browser.
 
 ![Store discovery page](docs/images/store-en.png)
 
@@ -416,6 +415,8 @@ content scrolls independently and `Esc` or the top-right **×** closes the page.
 - **Artwork:** image sources, SteamGridDB key and cache.
 - **Saves:** local snapshots and Ludusavi.
 - **Stores & tools:** sync, accounts, managed tools and the EOS overlay.
+- **Extensions:** search manifests, local cache, refresh and removal. See
+  [`docs/extensions/README.md`](docs/extensions/README.md).
 - **Statistics** and **Disk:** play history and storage measurements.
 - **About:** version, updates, release link and guide.
 
