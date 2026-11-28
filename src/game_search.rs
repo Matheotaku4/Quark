@@ -300,8 +300,8 @@ pub fn search(site: &SiteDefinition, query: &str) -> Result<Vec<SiteHit>, String
         SiteDriver::OnlineFix => search_onlinefix(query)?,
         SiteDriver::ZeiGames => search_zeigames(query)?,
         SiteDriver::SceneCat => search_scene(query)?,
-        SiteDriver::Json(_) => return Err("driver JSON indisponible".to_string()),
-        SiteDriver::Html(_) => return Err("driver HTML indisponible".to_string()),
+        SiteDriver::Json(driver) => search_json(driver, query)?,
+        SiteDriver::Html(driver) => search_html(driver, query)?,
     };
     Ok(filter_relevant(hits, query)
         .into_iter()
@@ -648,6 +648,224 @@ fn parse_kryoto(text: &str) -> Result<Vec<SiteHit>, String> {
             })
         })
         .collect())
+}
+
+// ---------------------------------------------------------------------------
+// Driver JSON générique
+// ---------------------------------------------------------------------------
+
+fn search_json(driver: &JsonDriver, query: &str) -> Result<Vec<SiteHit>, String> {
+    let body = request_text(&driver.request, query)?;
+    parse_json(driver, &body)
+}
+
+fn request_text(request: &RequestSpec, query: &str) -> Result<String, String> {
+    let url = request.url.replace("{query}", &urlencode(query));
+    let client = crate::artwork::http();
+    let mut builder = match request.method {
+        HttpMethod::Get => client.get(&url),
+        HttpMethod::Post => client.post(&url),
+    };
+    for (name, value) in &request.headers {
+        builder = builder.header(name, value);
+    }
+    if let Some(body) = &request.body {
+        builder = builder.body(body.replace("{query}", query));
+    }
+    let response = builder
+        .timeout(Duration::from_secs(22))
+        .send()
+        .map_err(|_| "site injoignable".to_string())?;
+    if !response.status().is_success() {
+        return Err(format!(
+            "le site a refusé la recherche (HTTP {})",
+            response.status().as_u16()
+        ));
+    }
+    let bytes = crate::net::bytes(response, crate::net::MAX_JSON, "réponse du site")?;
+    Ok(match request.encoding {
+        ResponseEncoding::Utf8 => String::from_utf8_lossy(&bytes).into_owned(),
+        ResponseEncoding::Windows1251 => decode_windows_1251(&bytes),
+    })
+}
+
+fn parse_json(driver: &JsonDriver, body: &str) -> Result<Vec<SiteHit>, String> {
+    let root = json_root(body)?;
+    let items = dot_path(&root, &driver.list)
+        .and_then(Value::as_array)
+        .ok_or_else(|| "le site n'a pas renvoyé de liste".to_string())?;
+    let mut hits = Vec::new();
+    for item in items {
+        let title = dot_path(item, &driver.title)
+            .and_then(value_string)
+            .unwrap_or_default();
+        let title = title.trim();
+        if title.is_empty() {
+            continue;
+        }
+        let url = render_template(&driver.url, item);
+        if !is_http_url(&url) {
+            continue;
+        }
+        let detail = driver
+            .detail
+            .iter()
+            .map(|template| render_template(template, item))
+            .filter(|part| !part.trim().is_empty())
+            .collect::<Vec<_>>()
+            .join(" · ");
+        let cover = driver.cover.iter().find_map(|path| {
+            dot_path(item, path)
+                .and_then(value_string)
+                .filter(|url| is_http_url(url))
+        });
+        hits.push(SiteHit {
+            title: title.to_string(),
+            url,
+            detail,
+            cover,
+        });
+        if hits.len() >= driver.limit.clamp(1, 20) {
+            break;
+        }
+    }
+    Ok(hits)
+}
+
+fn dot_path<'a>(value: &'a Value, path: &str) -> Option<&'a Value> {
+    let mut current = value;
+    for part in path.split('.').filter(|part| !part.is_empty()) {
+        current = match current {
+            Value::Array(items) => items.get(part.parse::<usize>().ok()?)?,
+            _ => current.get(part)?,
+        };
+    }
+    Some(current)
+}
+
+fn value_string(value: &Value) -> Option<String> {
+    match value {
+        Value::String(text) => Some(text.trim().to_string()),
+        Value::Number(number) => Some(number.to_string()),
+        Value::Bool(flag) => Some(flag.to_string()),
+        _ => None,
+    }
+}
+
+fn render_template(template: &str, item: &Value) -> String {
+    let mut out = String::with_capacity(template.len());
+    let mut rest = template;
+    while let Some(start) = rest.find('{') {
+        out.push_str(&rest[..start]);
+        let Some(end) = rest[start..].find('}') else {
+            out.push_str(&rest[start..]);
+            return out;
+        };
+        let path = &rest[start + 1..start + end];
+        if let Some(value) = dot_path(item, path).and_then(value_string) {
+            out.push_str(&value);
+        }
+        rest = &rest[start + end + 1..];
+    }
+    out.push_str(rest);
+    out
+}
+
+fn is_http_url(url: &str) -> bool {
+    let url = url.trim();
+    url.starts_with("https://") || url.starts_with("http://")
+}
+
+// ---------------------------------------------------------------------------
+// Driver HTML générique
+// ---------------------------------------------------------------------------
+
+fn search_html(driver: &HtmlDriver, query: &str) -> Result<Vec<SiteHit>, String> {
+    let body = request_text(&driver.request, query)?;
+    let base = driver.request.url.replace("{query}", &urlencode(query));
+    parse_html(driver, &body, &base)
+}
+
+fn parse_html(driver: &HtmlDriver, body: &str, base_url: &str) -> Result<Vec<SiteHit>, String> {
+    let document = scraper::Html::parse_document(body);
+    let items = scraper::Selector::parse(&driver.items)
+        .map_err(|_| "sélecteur HTML des éléments invalide".to_string())?;
+    let base = reqwest::Url::parse(base_url).ok();
+    let mut hits = Vec::new();
+    for item in document.select(&items) {
+        let title = extract_field(item, &driver.title, base.as_ref(), false).unwrap_or_default();
+        let title = title.trim();
+        if title.is_empty() {
+            continue;
+        }
+        let url = extract_field(item, &driver.url, base.as_ref(), true).unwrap_or_default();
+        if !is_http_url(&url) {
+            continue;
+        }
+        let detail = driver
+            .detail
+            .iter()
+            .filter_map(|field| extract_field(item, field, base.as_ref(), false))
+            .map(|part| part.trim().to_string())
+            .filter(|part| !part.is_empty())
+            .collect::<Vec<_>>()
+            .join(" · ");
+        let cover = driver
+            .cover
+            .as_ref()
+            .and_then(|field| extract_field(item, field, base.as_ref(), true))
+            .filter(|url| is_http_url(url));
+        hits.push(SiteHit {
+            title: title.to_string(),
+            url,
+            detail,
+            cover,
+        });
+        if hits.len() >= driver.limit.clamp(1, 20) {
+            break;
+        }
+    }
+    Ok(hits)
+}
+
+fn extract_field(
+    item: scraper::ElementRef<'_>,
+    field: &FieldSpec,
+    base: Option<&reqwest::Url>,
+    resolve_url: bool,
+) -> Option<String> {
+    let selector = scraper::Selector::parse(&field.selector).ok()?;
+    let element = item
+        .select(&selector)
+        .next()
+        .or_else(|| selector.matches(&item).then_some(item))?;
+    let mut value = match &field.attr {
+        Some(attr) => element.value().attr(attr)?.to_string(),
+        None => element.text().collect::<String>(),
+    };
+    if let Some(prefix) = &field.strip_prefix {
+        value = value.strip_prefix(prefix).unwrap_or(&value).to_string();
+    }
+    if let Some(suffix) = &field.strip_suffix {
+        value = value.strip_suffix(suffix).unwrap_or(&value).to_string();
+    }
+    value = value.split_whitespace().collect::<Vec<_>>().join(" ");
+    if let Some(template) = &field.template {
+        value = template.replace("{value}", &value);
+    }
+    if resolve_url {
+        if value.starts_with("//") {
+            return Some(format!("https:{value}"));
+        }
+        if value.starts_with('/') || !is_http_url(&value) {
+            if let Some(base) = base {
+                if let Ok(resolved) = base.join(&value) {
+                    return Some(resolved.to_string());
+                }
+            }
+        }
+    }
+    Some(value)
 }
 
 // ---------------------------------------------------------------------------
@@ -1062,6 +1280,148 @@ mod tests {
             }
             _ => panic!("mauvais driver"),
         }
+    }
+
+    fn json_driver_example() -> JsonDriver {
+        JsonDriver {
+            request: RequestSpec {
+                method: HttpMethod::Get,
+                url: "https://example.com/api?q={query}".to_string(),
+                headers: BTreeMap::new(),
+                body: None,
+                encoding: ResponseEncoding::Utf8,
+            },
+            list: "data.results".to_string(),
+            title: "title".to_string(),
+            url: "https://example.com/game/{slug}".to_string(),
+            detail: vec!["{size}".to_string(), "{version}".to_string()],
+            cover: vec!["cover".to_string(), "poster".to_string()],
+            limit: 8,
+        }
+    }
+
+    fn html_driver_example() -> HtmlDriver {
+        HtmlDriver {
+            request: RequestSpec {
+                method: HttpMethod::Get,
+                url: "https://example.com/search?q={query}".to_string(),
+                headers: BTreeMap::new(),
+                body: None,
+                encoding: ResponseEncoding::Utf8,
+            },
+            items: "div.result".to_string(),
+            title: FieldSpec {
+                selector: "h2".to_string(),
+                attr: None,
+                template: None,
+                strip_prefix: None,
+                strip_suffix: None,
+            },
+            url: FieldSpec {
+                selector: "a".to_string(),
+                attr: Some("href".to_string()),
+                template: None,
+                strip_prefix: None,
+                strip_suffix: None,
+            },
+            detail: vec![FieldSpec {
+                selector: ".size".to_string(),
+                attr: None,
+                template: None,
+                strip_prefix: None,
+                strip_suffix: None,
+            }],
+            cover: Some(FieldSpec {
+                selector: "img".to_string(),
+                attr: Some("data-src".to_string()),
+                template: None,
+                strip_prefix: None,
+                strip_suffix: None,
+            }),
+            limit: 8,
+        }
+    }
+
+    #[test]
+    fn le_driver_json_lit_une_liste_et_construit_les_liens() {
+        let body = r#"{"data":{"results":[
+          {"title":"Portal 2","slug":"portal-2","size":"8 GB","version":"1.0",
+           "cover":"https://cdn/portal.jpg"}
+        ]}}"#;
+        let hits = parse_json(&json_driver_example(), body).unwrap();
+        assert_eq!(hits[0].title, "Portal 2");
+        assert_eq!(hits[0].url, "https://example.com/game/portal-2");
+        assert_eq!(hits[0].detail, "8 GB · 1.0");
+        assert_eq!(hits[0].cover.as_deref(), Some("https://cdn/portal.jpg"));
+    }
+
+    #[test]
+    fn le_driver_json_refuse_une_liste_absente() {
+        assert!(parse_json(&json_driver_example(), "{}").is_err());
+    }
+
+    #[test]
+    fn le_driver_json_respecte_la_limite() {
+        let mut driver = json_driver_example();
+        driver.limit = 2;
+        let body = r#"{"data":{"results":[
+          {"title":"Portal 2","slug":"a"},{"title":"Portal 2","slug":"b"},
+          {"title":"Portal 2","slug":"c"}
+        ]}}"#;
+        assert_eq!(parse_json(&driver, body).unwrap().len(), 2);
+    }
+
+    #[test]
+    fn le_driver_html_lit_les_selecteurs_et_les_attributs() {
+        let body = r#"<div class="result">
+          <h2>Portal 2</h2><a href="/game/portal-2">lien</a>
+          <span class="size">8 GB</span><img data-src="/cover.jpg">
+        </div>"#;
+        let hits = parse_html(&html_driver_example(), body, "https://example.com/search").unwrap();
+        assert_eq!(hits[0].title, "Portal 2");
+        assert_eq!(hits[0].url, "https://example.com/game/portal-2");
+        assert_eq!(hits[0].detail, "8 GB");
+        assert_eq!(
+            hits[0].cover.as_deref(),
+            Some("https://example.com/cover.jpg")
+        );
+    }
+
+    #[test]
+    fn le_driver_html_lit_un_modele_et_un_prefixe() {
+        let mut driver = html_driver_example();
+        driver.url = FieldSpec {
+            selector: "div.result".to_string(),
+            attr: Some("id".to_string()),
+            template: Some("https://example.com/game/{value}".to_string()),
+            strip_prefix: Some("game-".to_string()),
+            strip_suffix: None,
+        };
+        let body = r#"<div class="result" id="game-portal-2"><h2>Portal 2</h2></div>"#;
+        let hits = parse_html(&driver, body, "https://example.com/search").unwrap();
+        assert_eq!(hits[0].url, "https://example.com/game/portal-2");
+    }
+
+    #[test]
+    fn le_driver_html_refuse_un_selecteur_invalide() {
+        let mut driver = html_driver_example();
+        driver.items = "div[".to_string();
+        assert!(parse_html(&driver, "", "https://example.com/").is_err());
+    }
+
+    #[test]
+    fn le_driver_html_respecte_la_limite() {
+        let mut driver = html_driver_example();
+        driver.limit = 2;
+        let body = r#"<div class="result"><h2>A</h2><a href="/a"></a></div>
+          <div class="result"><h2>B</h2><a href="/b"></a></div>
+          <div class="result"><h2>C</h2><a href="/c"></a></div>"#;
+        assert_eq!(
+            parse_html(&driver, body, "https://example.com/")
+                .unwrap()
+                .len(),
+            2
+        );
     }
 
     #[test]
