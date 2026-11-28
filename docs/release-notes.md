@@ -15,7 +15,8 @@
 
 - **Extension officielle activée par défaut.** Le manifeste [`Quark-sites-extension`](https://github.com/Matheotaku4/Quark-sites-extension) fournit GameBounty, AnkerGames, AstralGames, Kryoto, Online-Fix, ZeiGames et scene.cat.
 - **Copie de secours.** Une copie du manifeste est fournie avec Quark : la recherche fonctionne au premier lancement, même si GitHub est injoignable.
-- **Extensions personnalisées.** Ajoutez des URL HTTPS dans `settings.extension_sources`. Un manifeste peut décrire une API JSON ou une page HTML avec des sélecteurs CSS, sans exécuter de code.
+- **Onglet Extensions.** Réglages → Extensions liste les manifestes actifs, leur version, leur date et leurs erreurs. On peut y ajouter une URL HTTPS, actualiser ou retirer une extension.
+- **Extensions personnalisées.** Un manifeste peut décrire une API JSON ou une page HTML avec des sélecteurs CSS, sans exécuter de code.
 - **Site mis à jour.** La page GitHub Pages de Quark renvoie vers l'extension et son dépôt.
 
 ### Sécurité

@@ -22,20 +22,16 @@ GameBounty, AnkerGames, AstralGames, Kryoto, Online-Fix, ZeiGames et scene.cat.
 
 1. Copie `quark-sites.json` dans un dépôt GitHub public.
 2. Ouvre le fichier sur GitHub puis clique sur **Raw**.
-3. Dans `~/.config/quark/config.json`, ajoute l'adresse brute au tableau
-   `settings.extension_sources`, puis redémarre Quark :
+3. Dans **Réglages → Extensions**, colle l'adresse brute dans le champ puis
+   clique sur **Ajouter**. L'extension est vérifiée avant d'être enregistrée.
 
-   ```json
-   "settings": {
-     "extension_sources": [
-       "https://raw.githubusercontent.com/Matheotaku4/Quark-sites-extension/main/quark-sites.json",
-       "https://raw.githubusercontent.com/.../mon-extension.json"
-     ]
-   }
-   ```
+   L'ajout manuel dans `~/.config/quark/config.json` reste possible :
+   ajoute l'adresse au tableau `settings.extension_sources`, puis redémarre
+   Quark.
 
 4. La recherche de la fiche de jeu, de la boutique, de l'ajout d'un jeu et de
    la palette utilise alors les sites de tous les manifestes configurés.
+   L'onglet **Extensions** permet de les actualiser ou de les retirer.
 
 ## Sécurité
 

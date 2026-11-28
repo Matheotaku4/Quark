@@ -46,8 +46,9 @@ French, Spanish, German, Portuguese and Russian are available in the app.
   [`Quark-sites-extension`](https://github.com/Matheotaku4/Quark-sites-extension)
   by default, ships a copy for the first offline launch, and refreshes it in the
   background. Site search works without editing `config.json`.
-- **Your own extensions still work.** Add HTTPS manifest URLs to
-  `settings.extension_sources`; manifests are data only, never executable code.
+- **Your own extensions still work.** Add HTTPS manifest URLs in
+  **Settings → Extensions**, then refresh or remove them there. Manifests are
+  data only, never executable code.
 - **No silent downloads.** Quark reads search pages only and opens results in
   your browser.
 

@@ -186,7 +186,12 @@ async function boot() {
   await listen("quark://provider-install-progress", (e) => providerProgress(e.payload));
   await listen("quark://notice", (e) => toast(e.payload.message, !!e.payload.error));
   await listen("quark://screenshot-saved", (e) => toast(t("toast.screenshot", { path: e.payload.path })));
-  await listen("quark://extensions-updated", async () => { try { app.data = await invoke("bootstrap_data"); } catch {} });
+  await listen("quark://extensions-updated", async () => {
+    try {
+      app.data = await invoke("bootstrap_data");
+      if (app.view === "settings" && app.stab === "extensions") renderSheetKeepScroll();
+    } catch {}
+  });
   setInterval(tick, 1000);
   setInterval(() => run(async () => { setRunning(await invoke("running_games")); if (app.view === "library") renderList(); }), 15000);
 }

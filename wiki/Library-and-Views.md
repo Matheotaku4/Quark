@@ -109,9 +109,9 @@ by default: **GameBounty**, **AnkerGames**, **AstralGames**, **Kryoto**,
 **Online-Fix**, **ZeiGames** and **scene.cat**. The banner action with the
 external-link icon opens a search across the sites declared by that manifest.
 A copy ships with Quark for the first offline launch and refreshes in the
-background. Add more HTTPS manifest URLs to `settings.extension_sources` in
-`~/.config/quark/config.json` to install custom sites. Store cards open the same
-dialog with the game name already filled in.
+background. Add more HTTPS manifest URLs in **Settings → Extensions** to
+install custom sites; the same tab refreshes or removes them. Store cards open
+the same dialog with the game name already filled in.
 
 - Results are grouped by source in that fixed order. A source that fails shows
   its own message; the other results stay visible.
