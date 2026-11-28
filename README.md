@@ -38,13 +38,15 @@ French, Spanish, German, Portuguese and Russian are available in the app.
 ## What's new in 2.2.1
 
 - **Search is now an extension.** Quark ships with no search site enabled.
-  Add an HTTPS manifest in **Settings → Extensions** to enable the seven
-  built-in adapters (GameBounty, AnkerGames, AstralGames, Kryoto, Online-Fix,
-  ZeiGames and scene.cat), or describe your own JSON/HTML site.
-- **No extension, no network.** Without an installed manifest, search buttons
-  are hidden in the game page, store, add-game dialog and command palette.
-- **Cache and refresh.** Manifests are cached locally, refreshed on demand and
-  rejected if they point to a private host or a non-HTTPS URL.
+  Add an HTTPS manifest URL to `settings.extension_sources` in
+  `~/.config/quark/config.json`, then restart Quark. The provided
+  `docs/extensions/quark-sites.json` restores the seven built-in adapters
+  (GameBounty, AnkerGames, AstralGames, Kryoto, Online-Fix, ZeiGames and
+  scene.cat); a manifest can also describe a custom JSON/HTML site.
+- **No extension, no network.** Without a configured manifest, site search
+  returns no result and makes no network request.
+- **Cache and refresh.** Manifests are cached in `extensions.json` and rejected
+  if they point to a private host or a non-HTTPS URL.
 - **Everything from 2.2.0.** The modern library layout, signed updates and the
   hardened desktop shell are unchanged.
 
@@ -415,8 +417,6 @@ content scrolls independently and `Esc` or the top-right **×** closes the page.
 - **Artwork:** image sources, SteamGridDB key and cache.
 - **Saves:** local snapshots and Ludusavi.
 - **Stores & tools:** sync, accounts, managed tools and the EOS overlay.
-- **Extensions:** search manifests, local cache, refresh and removal. See
-  [`docs/extensions/README.md`](docs/extensions/README.md).
 - **Statistics** and **Disk:** play history and storage measurements.
 - **About:** version, updates, release link and guide.
 

@@ -244,29 +244,3 @@ body.deck .gh { height: 380px; }
   .gh-main { padding-inline: 28px; }
   .gh-top { left: 28px; }
 }
-
-/* ---------- extensions de recherche ---------- */
-.extlist { display: grid; gap: 12px; margin-top: 14px; }
-.extcard {
-  display: grid; gap: 8px; padding: 14px 16px; border-radius: 16px;
-  background: var(--surface); border: 1px solid var(--border);
-}
-.exthead { display: flex; align-items: center; justify-content: space-between; gap: 14px; }
-.exthead b { display: block; font-size: 1rem; }
-.exthead small { display: block; margin-top: 3px; color: var(--text-faint); }
-.extactions { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
-.exturl {
-  font: 12px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace;
-  color: var(--text-faint); overflow-wrap: anywhere;
-  padding: 7px 10px; border-radius: 9px; background: var(--panel);
-}
-.extmeta { color: var(--text-faint); font-size: 12px; }
-.extmeta b { color: var(--danger); }
-.extempty {
-  padding: 26px 18px; text-align: center; border-radius: 16px;
-  border: 1px dashed var(--border); color: var(--text-faint);
-}
-@media (max-width: 760px) {
-  .exthead { align-items: flex-start; flex-direction: column; }
-  .extactions { justify-content: flex-start; }
-}

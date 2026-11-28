@@ -19,10 +19,3 @@ test("refuse une couleur injectée", () => {
   assert.equal(cssColor("red; background:url(//evil)"), "transparent");
   assert.equal(cssColor("#ff0000"), "#ff0000");
 });
-
-test("échappe le nom d'une extension", () => {
-  assert.equal(
-    html`<b>${"<script>alert(1)</script>"}</b>`,
-    "<b>&lt;script&gt;alert(1)&lt;/script&gt;</b>",
-  );
-});

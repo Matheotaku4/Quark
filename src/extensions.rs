@@ -140,6 +140,29 @@ pub fn cache_path() -> PathBuf {
     crate::config::data_dir().join("extensions.json")
 }
 
+/// Loads the cache and downloads configured manifests that are not cached yet.
+/// Cached entries are never refreshed automatically; only missing manifests are fetched.
+pub fn load_cache(sources: &[String]) -> ExtensionCache {
+    let path = cache_path();
+    let mut cache = load_cache_from(&path);
+    let mut changed = false;
+    for url in sources {
+        if cache.entries.iter().any(|entry| entry.url == *url) {
+            continue;
+        }
+        if let Ok(manifest) = fetch_manifest(url) {
+            let mut sources = sources.to_vec();
+            if add_manifest(&mut cache, &mut sources, url, manifest).is_ok() {
+                changed = true;
+            }
+        }
+    }
+    if changed {
+        let _ = save_cache_to(&path, &cache);
+    }
+    cache
+}
+
 pub fn load_cache_from(path: &Path) -> ExtensionCache {
     let Ok(text) = std::fs::read_to_string(path) else {
         return ExtensionCache::default();

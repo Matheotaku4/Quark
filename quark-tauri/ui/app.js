@@ -10,7 +10,7 @@ const acts = {
   }),
   fav: () => run(async () => { const g = game(app.sel); setGame(await invoke("set_favorite", { id: g.id, favorite: !g.favorite })); renderList(); renderSheet(); }),
   gsettings: () => gameSettingsModal(), customize: () => customizeModal(), log: () => logModal(), remove: () => removeModal(), add: () => addModal(),
-  sites: () => hasSearchSites() && webSearchModal(game(app.sel)?.name || ""),
+  sites: () => webSearchModal(game(app.sel)?.name || ""),
   settings: () => setView(app.view === "settings" ? "library" : "settings"), close: () => closeModal(), palette: () => palette(), updates: () => updatesModal(), deck: () => QuarkDeck.toggle(), transfers: () => transfersModal(),
   back: () => { app.open = false; renderSheet(); },
   "toggle-view": () => run(async () => { await cfgSet({ view: app.cfg.view === "grid" ? "list" : "grid" }); app.open = false; app.view = "library"; renderAll(); }),
@@ -53,7 +53,7 @@ function palItems() {
   const q = norm(app.pal.q.trim());
   const games = app.data.games.filter((g) => !q || norm(g.name).includes(q)).sort((a, b) => (b.lastPlayed || 0) - (a.lastPlayed || 0)).slice(0, 8).map((g) => ({ label: g.name, hint: rel(g.lastPlayed), go: () => { app.view = "library"; renderAll(); select(g.id); }, play: g.id }));
   const providerGames = (app.pv?.data?.games || []).filter((g) => !q || norm(g.title).includes(q)).slice(0, 6).map((g) => ({ label: g.title, hint: PV_LABEL[g.provider] || g.provider, icon: "grid", action: true, go: () => { app.pv.q = g.title; app.pv.provider = ""; app.view = "mygames"; renderAll(); } }));
-  const actions = [[t("add.title"), addModal, "plus"], [t("settings.title"), () => setView("settings"), "gear"], [t("x.home"), () => setView("home"), "home"], [t("nav.library"), () => setView("library"), "grid"], ...(hasSearchSites() && app.pal.q.trim().length >= 2 ? [[t("web.title"), () => webSearchModal(app.pal.q.trim()), "search"]] : [])].filter(([l]) => !q || norm(l).includes(q)).map(([label, go, icon]) => ({ label, hint: "", go, icon, action: true }));
+  const actions = [[t("add.title"), addModal, "plus"], [t("settings.title"), () => setView("settings"), "gear"], [t("x.home"), () => setView("home"), "home"], [t("nav.library"), () => setView("library"), "grid"], ...(app.pal.q.trim().length >= 2 ? [[t("web.title"), () => webSearchModal(app.pal.q.trim()), "search"]] : [])].filter(([l]) => !q || norm(l).includes(q)).map(([label, go, icon]) => ({ label, hint: "", go, icon, action: true }));
   return [...games, ...providerGames, ...actions];
 }
 function palList() {

@@ -24,8 +24,9 @@ repository under [`wiki/`](https://github.com/Matheotaku4/Quark/tree/main/wiki).
 
 ## What's new in 2.2.1
 
-- **Search by extensions.** Download-site search is off by default. Add an HTTPS
-  manifest in **Settings → Extensions** to enable it; the seven former sites are
+- **Search by extensions.** Download-site search is off by default. Add the
+  HTTPS manifest URL to `settings.extension_sources` in
+  `~/.config/quark/config.json`, then restart Quark; the seven former sites are
   provided as a ready-to-host manifest in `docs/extensions/`.
 - **Custom sites.** A manifest can describe a JSON API or an HTML page with CSS
   selectors. Quark never runs extension code.

@@ -103,9 +103,10 @@ per-game runtime, prefix, arguments, environment and compatibility options.
 
 ![Multi-site search](https://raw.githubusercontent.com/Matheotaku4/Quark/main/docs/images/site-search-en.png)
 
-Search is disabled by default. Install an extension in **Settings →
-Extensions** to enable it. The banner action with the external-link icon then
-opens a search across the sites declared by that manifest. The provided
+Search is disabled by default. Add the manifest URL to
+`settings.extension_sources` in `~/.config/quark/config.json`, then restart
+Quark. The banner action with the external-link icon then opens a search across
+the sites declared by that manifest. The provided
 `docs/extensions/quark-sites.json` restores **GameBounty**, **AnkerGames**,
 **AstralGames**, **Kryoto**, **Online-Fix**, **ZeiGames** and **scene.cat**.
 Store cards open the same dialog with the game name already filled in.

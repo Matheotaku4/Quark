@@ -1,5 +1,5 @@
 "use strict";
-// Page Paramètres : 10 onglets, recherche, enregistrement automatique (aucun bouton « Appliquer »).
+// Page Paramètres : 8 onglets, recherche, enregistrement automatique (aucun bouton « Appliquer »).
 
 const L = (fr, en) => (app.lang === "fr" ? fr : en);
 const swk = (k, label, hint) => `<div class="sw" data-s="${esc(label + " " + (hint || ""))}"><span>${esc(label)}${hint ? `<small>${esc(hint)}</small>` : ""}</span><input type="checkbox" data-k="${k}" ${getPath(app.cfg, k) ? "checked" : ""}></div>`;
@@ -50,7 +50,6 @@ function tabsDef() {
         `<div class="fl2" data-s="${esc(L("Dossiers de recherche Ludusavi", "Ludusavi search folders"))}"><span>${esc(L("Dossiers de recherche Ludusavi", "Ludusavi search folders"))}<small>${esc(L("Un chemin absolu par ligne. Ils s'ajoutent aux dossiers propres à chaque jeu.", "One absolute path per line. Added to each game's own folders."))}</small></span><textarea id="sv-search-dirs" rows="4" spellcheck="false" placeholder="~/.config/MyGame/Saves">${esc((app.cfg.save_search_dirs || []).join("\n"))}</textarea></div>`),
     ],
     providers: () => [providersSettings()],
-    extensions: () => [extensionsSettings()],
     stats: () => [renderStats()],
     disk: () => [card(L("Espace disque", "Disk usage"), `<div id="disk"><button class="btn sm" id="disk-go">${esc(L("Analyser", "Analyze"))}</button></div>`)],
     about: () => [card(t("settings.about"), `<div class="kv"><span>${esc(t("settings.version"))}</span><b>${esc(app.data.version)}</b></div>${app.data.memoryMb ? `<div class="kv"><span>${esc(t("settings.memory"))}</span><b>${app.data.memoryMb} MB</b></div>` : ""}<div class="kv"><span>${esc(t("settings.configPath"))}</span><b class="path">${esc(app.data.configPath)}</b></div><div class="kv"><span>${esc(t("settings.dataDir"))}</span><b class="path">${esc(app.data.dataDir)}</b></div>${app.data.demo ? `<div class="kv"><span>${esc(t("settings.demo"))}</span><b>✓</b></div>` : ""}`,
@@ -58,32 +57,7 @@ function tabsDef() {
       `<div class="foot l"><button class="btn sec sm" id="ab-upd">${esc(t("x.updates"))}</button><button class="btn sec sm" data-open="${esc(app.data.configPath)}">${esc(t("settings.openFolder"))}</button><button class="btn sec sm" id="ab-reload">${esc(t("settings.reload"))}</button><button class="btn sec sm" id="ab-guide">${esc(L("Revoir le guide", "Review the guide"))}</button><button class="btn sec sm" data-open="https://github.com/Matheotaku4/Quark">GitHub</button></div>`)],
   };
 }
-const STABS = [["appearance", "Apparence", "Appearance"], ["ingame", "En jeu", "In game"], ["defaults", "Nouveaux jeux", "New games"], ["artworks", "Illustrations", "Artwork"], ["saves", "Sauvegardes", "Saves"], ["providers", "Boutiques & outils", "Stores & tools"], ["extensions", "Extensions", "Extensions"], ["stats", "Statistiques", "Statistics"], ["disk", "Disque", "Disk"], ["about", "À propos", "About"]];
-
-function extensionDate(ts) {
-  if (!ts) return "";
-  try { return new Date(ts * 1000).toLocaleString(locale()); } catch { return ""; }
-}
-
-function extensionsSettings() {
-  const list = app.data.extensions || [];
-  const cards = list.map((ext) => {
-    const name = ext.name || ext.id || t("ext.unknown");
-    const meta = [ext.version, t("ext.sites", { n: ext.siteCount || 0 })].filter(Boolean).join(" · ");
-    const updated = ext.fetchedAt ? t("ext.updated", { date: extensionDate(ext.fetchedAt) }) : "";
-    return `<div class="extcard">
-      <div class="exthead"><div><b>${esc(name)}</b><small>${esc(meta)}</small></div>
-        <div class="extactions"><button class="btn sec sm" data-ext-refresh="${esc(ext.url)}">${ic("refresh")}${esc(t("ext.refresh"))}</button><button class="btn sec sm" data-ext-remove="${esc(ext.url)}">${ic("trash")}${esc(t("ext.remove"))}</button></div></div>
-      <div class="exturl">${esc(ext.url)}</div>
-      <div class="extmeta">${esc(updated)}${ext.stale ? ` · <b>${esc(t("ext.stale"))}</b>` : ""}</div>
-      ${ext.error ? `<p class="weberr">${esc(ext.error)}</p>` : ""}
-    </div>`;
-  }).join("");
-  return card(t("settings.extensions"), `<p class="hint">${esc(t("ext.hint"))}</p>
-    <div class="row2"><input type="text" id="ext-url" placeholder="${esc(t("ext.urlPlaceholder"))}" spellcheck="false" autocomplete="off"><button class="btn" id="ext-add">${ic("plus")}${esc(t("ext.add"))}</button></div>
-    <p class="hint">${esc(t("ext.template"))}</p>
-    <div class="extlist">${cards || `<div class="extempty">${esc(t("ext.empty"))}</div>`}</div>`);
-}
+const STABS = [["appearance", "Apparence", "Appearance"], ["ingame", "En jeu", "In game"], ["defaults", "Nouveaux jeux", "New games"], ["artworks", "Illustrations", "Artwork"], ["saves", "Sauvegardes", "Saves"], ["providers", "Boutiques & outils", "Stores & tools"], ["stats", "Statistiques", "Statistics"], ["disk", "Disque", "Disk"], ["about", "À propos", "About"]];
 
 function syncDependent(root, masterKey, selector) {
   const master = root.querySelector(`[data-k="${masterKey}"]`);
@@ -123,7 +97,7 @@ function renderSettings() {
   const defs = tabsDef(), q = norm(app.sq.trim());
   let body;
   if (q) {
-    body = ""; for (const [id, fr, en] of STABS) { if (id === "stats" || id === "disk" || id === "providers" || id === "extensions") continue; const html = defs[id]().join(""), d = document.createElement("div"); d.innerHTML = html;
+    body = ""; for (const [id, fr, en] of STABS) { if (id === "stats" || id === "disk" || id === "providers") continue; const html = defs[id]().join(""), d = document.createElement("div"); d.innerHTML = html;
       const hits = $$("[data-s]", d).filter((n) => norm(n.dataset.s).includes(q)); if (hits.length) body += `<div class="card"><h3>${esc(L(fr, en))}</h3>${hits.map((n) => n.outerHTML).join("")}</div>`; }
     body ||= `<div class="none">${esc(t("x.none"))}</div>`;
   } else body = defs[app.stab]().join("");
@@ -157,39 +131,6 @@ function bindSettings() {
   const rr = $("#rt-redo"); rr && (rr.onclick = () => run(async () => { app.runtimes = await invoke("list_runtimes"); renderSheetKeepScroll(); }));
   const dg = $("#disk-go"); dg && (dg.onclick = () => run(async () => { dg.disabled = true; dg.textContent = t("log.loading"); const d = await invoke("disk_report"), m = Math.max(1, ...d.rows.map((r) => r.bytes));
     $("#disk").innerHTML = `<div class="kv"><span>Total</span><b>${esc(d.human)}</b></div>` + d.rows.map((r) => `<div class="drow"><div><b>${esc(r.label)}</b><small>${esc(r.detail || r.path)}</small></div><i style="width:${(r.bytes / m) * 140}px"></i><span>${esc(r.human)}</span><button class="ib sm" data-open="${esc(r.path)}">${ic("folder")}</button></div>`).join(""); }));
-  const refreshExtensionData = async () => {
-    const data = await invoke("bootstrap_data");
-    app.data.extensions = data.extensions || [];
-    app.data.searchSites = data.searchSites || [];
-  };
-  const extAdd = $("#ext-add");
-  extAdd && (extAdd.onclick = () => run(async () => {
-    const url = $("#ext-url").value.trim();
-    if (!url) return toast(t("ext.urlRequired"), true);
-    extAdd.disabled = true;
-    try {
-      app.data.extensions = await invoke("extensions_add", { url });
-      await refreshExtensionData();
-      renderSheetKeepScroll();
-      toast(t("ext.added"));
-    } finally { extAdd.disabled = false; }
-  }));
-  $$("[data-ext-refresh]", root).forEach((button) => (button.onclick = () => run(async () => {
-    button.disabled = true;
-    try {
-      app.data.extensions = await invoke("extensions_refresh", { url: button.dataset.extRefresh });
-      await refreshExtensionData();
-      renderSheetKeepScroll();
-      toast(t("ext.refreshed"));
-    } finally { button.disabled = false; }
-  })));
-  $$("[data-ext-remove]", root).forEach((button) => (button.onclick = () => run(async () => {
-    if (!confirm(t("ext.removeConfirm"))) return;
-    app.data.extensions = await invoke("extensions_remove", { url: button.dataset.extRemove });
-    await refreshExtensionData();
-    renderSheetKeepScroll();
-    toast(t("ext.removed"));
-  })));
   const au = $("#ab-upd"); au && (au.onclick = updatesModal);
   const ar = $("#ab-reload"); ar && (ar.onclick = () => run(async () => { app.data = await invoke("reload_library"); setRunning(app.data.running); app.cfg = Object.assign({}, await invoke("get_settings_raw")); applySettings(); renderAll(); toast(t("toast.saved")); }));
   const ag = $("#ab-guide"); ag && (ag.onclick = onboardingModal);

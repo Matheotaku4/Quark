@@ -190,17 +190,15 @@ use the `raw.githubusercontent.com` URL.
 
 ## Step 6 — Verify inside Quark
 
-1. Open Quark.
-2. Go to **Settings → Extensions**.
-3. Paste `EXT_RAW` into the field and click **Add**.
-4. The card must show `Sites Quark`, `7 site(s)`, and the raw URL.
-5. Open any game, click the download-sites button, search for a game.
+1. Quit Quark.
+2. Open `~/.config/quark/config.json`.
+3. Add `EXT_RAW` to `settings.extension_sources`, then save the file.
+4. Start Quark. Open any game and click the download-sites button.
    Results must be grouped under GameBounty, AnkerGames, AstralGames, Kryoto,
    Online-Fix, ZeiGames and scene.cat.
-6. Go back to **Settings → Extensions** and click **Refresh**. The card must
-   stay present and the timestamp must update.
-7. Click **Remove**. All search buttons must disappear from the game page, the
-   store, the add-game dialog and the command palette.
+5. To refresh, delete `~/.config/quark/extensions.json` and restart Quark.
+6. To disable the extension, remove `EXT_RAW` from
+   `settings.extension_sources` and restart Quark.
 
 ## Step 7 — Report
 
@@ -285,5 +283,5 @@ Example HTML driver:
 | `site en double` | Make every `sites[].id` unique. |
 | `driver inconnu` | Use one of the exact driver names listed above. |
 | `l'extension ... est déjà fournie par ...` | Another installed extension already uses this manifest `id`. Change `id` or remove the other extension. |
-| No search buttons | Add the extension in **Settings → Extensions** and check that the card shows 7 sites. |
+| No results | Add the manifest to `settings.extension_sources` in `~/.config/quark/config.json`, restart Quark, and check that `extensions.json` contains 7 sites. |
 | Search returns errors for every site | The site changed its HTML/API. Update that site's driver or remove it. |

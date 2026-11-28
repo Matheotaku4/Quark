@@ -441,25 +441,3 @@ Object.assign(I18N, {
     "pv.menu.copyPath": "Копировать путь",
     "pv.menu.details": "Подробности"
 });
-
-Object.assign(I18N.ru, {
-  "settings.extensions": "Расширения",
-  "ext.title": "Расширения поиска",
-  "ext.hint": "Добавьте HTTPS-манифест, чтобы включить поиск на сайтах загрузки. Quark не скачивает оттуда файлы.",
-  "ext.urlPlaceholder": "https://raw.githubusercontent.com/…/quark-sites.json",
-  "ext.add": "Добавить",
-  "ext.empty": "Расширения не установлены. Поиск по сайтам отключён.",
-  "ext.refresh": "Обновить",
-  "ext.remove": "Удалить",
-  "ext.sites": "{n} сайт(ов)",
-  "ext.updated": "Обновлено {date}",
-  "ext.stale": "Требуется обновление",
-  "ext.template": "Шаблон и руководство: docs/extensions/README.md",
-  "ext.unknown": "Расширение без имени",
-  "ext.urlRequired": "Вставьте HTTPS-адрес манифеста.",
-  "ext.added": "Расширение добавлено.",
-  "ext.refreshed": "Расширение обновлено.",
-  "ext.removed": "Расширение удалено.",
-  "ext.removeConfirm": "Удалить это расширение и скрыть его сайты?",
-  "web.disabled": "Расширения поиска не установлены. Добавьте манифест в Настройки > Расширения, чтобы включить поиск."
-});

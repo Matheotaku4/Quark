@@ -29,8 +29,7 @@ function leadersOf(n) {
 
 function storeCard(i, rank) {
   const d = discountOf(i);
-  const sites = hasSearchSites() ? ` data-sites="${esc(i.name)}"` : "";
-  return `<button class="scard"${sites} title="${esc(i.name)}"><div class="simg" style="${i.artworkUrl ? `background-image:url('${esc(i.artworkUrl)}')` : ""}">
+  return `<button class="scard" data-sites="${esc(i.name)}" title="${esc(i.name)}"><div class="simg" style="${i.artworkUrl ? `background-image:url('${esc(i.artworkUrl)}')` : ""}">
     ${rank ? `<span class="rank">${rank}</span>` : ""}${d ? `<span class="dbadge">-${d}%</span>` : ""}${i.linuxAvailable ? `<span class="lx">Linux</span>` : ""}</div>
     <div class="sinfo"><b>${esc(i.name)}</b><div class="price">${priceLine(i)}</div>${i.playersPeak ? `<small>${esc(thousands(i.playersPeak))} ${esc(L("joueurs en pic", "peak players"))}</small>` : ""}</div></button>`;
 }

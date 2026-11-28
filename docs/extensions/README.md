@@ -9,8 +9,18 @@ exécutable.
 
 1. Copie `quark-sites.json` dans un dépôt GitHub public.
 2. Ouvre le fichier sur GitHub puis clique sur **Raw**.
-3. Dans Quark : **Réglages → Extensions**, colle l'adresse `https://raw.githubusercontent.com/.../quark-sites.json`, puis **Ajouter**.
-4. Les boutons de recherche apparaissent dans la fiche de jeu, la boutique, l'ajout d'un jeu et la palette.
+3. Dans `~/.config/quark/config.json`, ajoute l'adresse brute au tableau
+   `settings.extension_sources`, puis redémarre Quark :
+
+   ```json
+   "settings": {
+     "extension_sources": ["https://raw.githubusercontent.com/.../quark-sites.json"]
+   }
+   ```
+
+4. La recherche de la fiche de jeu, de la boutique, de l'ajout d'un jeu et de
+   la palette utilise alors les sites du manifeste. Sans URL configurée, aucun
+   site n'est contacté.
 
 Le fichier `quark-sites.json` de ce dossier reproduit les sept sites intégrés :
 GameBounty, AnkerGames, AstralGames, Kryoto, Online-Fix, ZeiGames et scene.cat.
@@ -21,7 +31,7 @@ GameBounty, AnkerGames, AstralGames, Kryoto, Online-Fix, ZeiGames et scene.cat.
 - Aucun cookie, aucun `Authorization`, aucun code exécuté.
 - Un seul site invalide rejette tout le manifeste.
 - 256 Kio maximum, 64 sites maximum, 8 résultats par site par défaut.
-- Le réseau n'est utilisé qu'à l'ajout ou à l'actualisation d'une extension, et lors d'une recherche demandée.
+- Le réseau n'est utilisé que pour charger un manifeste absent du cache, et lors d'une recherche demandée.
 
 ## Format du manifeste
 
@@ -128,7 +138,7 @@ En-têtes autorisés : `Accept`, `Accept-Language`, `Content-Type`, `User-Agent`
 | `hôte local ou privé interdit` | `localhost`, `127.0.0.1`, `192.168.x.x` |
 | `site en double` | deux sites avec le même `id` |
 | `driver inconnu` | nom de driver absent de la liste |
-| aucun bouton de recherche | extension non ajoutée, ou cache vide |
+| aucun résultat | URL absente de `settings.extension_sources`, ou cache vide |
 
 Le guide destiné à un agent IA est dans
 [`AGENT_BUILD_EXTENSION.md`](AGENT_BUILD_EXTENSION.md).

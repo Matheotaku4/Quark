@@ -2,9 +2,9 @@
 
 ### Recherche
 
-- **Désactivée par défaut.** Aucun site de téléchargement n'est contacté tant qu'aucune extension n'est installée. Les boutons de recherche disparaissent de la fiche de jeu, de la boutique, de l'ajout d'un jeu et de la palette.
-- **Réglages → Extensions.** Ajout d'un manifeste HTTPS, actualisation à la demande, retrait et cache local. Deux extensions ne peuvent pas partager le même identifiant.
-- **Sept adaptateurs conservés.** GameBounty, AnkerGames, AstralGames, Kryoto, Online-Fix, ZeiGames et scene.cat sont fournis dans `docs/extensions/quark-sites.json`, prêts à être hébergés dans un dépôt public.
+- **Désactivée par défaut.** Aucun site de téléchargement n'est contacté tant que `settings.extension_sources` est vide.
+- **Configuration par fichier.** Ajoutez l'URL HTTPS du manifeste dans `settings.extension_sources` de `~/.config/quark/config.json`, puis redémarrez Quark. Le cache local est écrit dans `extensions.json`. Deux extensions ne peuvent pas partager le même identifiant.
+- **Sept adaptateurs conservés.** GameBounty, AnkerGames, AstralGames, Kryoto, Online-Fix, ZeiGames et scene.cat sont fournis dans `docs/extensions/quark-sites.json`, prêts à être hébergés dans un dépôt public. L'interface 2.2.0 reste inchangée ; la recherche utilise le manifeste configuré.
 - **Sites personnalisés.** Un manifeste peut décrire une API JSON ou une page HTML avec des sélecteurs CSS, sans exécuter de code.
 
 ### Sécurité

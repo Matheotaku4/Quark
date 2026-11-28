@@ -817,6 +817,7 @@ fn running_dtos(state: &AppState) -> Vec<RunningDto> {
 fn bootstrap(state: &AppState) -> Bootstrap {
     let library = lock(&state.library);
     let settings = library.settings.clone();
+    let load_error = library.load_error.clone();
     let running = running_dtos(state);
     let running_map: HashMap<&str, &RunningDto> =
         running.iter().map(|run| (run.id.as_str(), run)).collect();
@@ -833,7 +834,8 @@ fn bootstrap(state: &AppState) -> Bootstrap {
             )
         })
         .collect();
-    let extension_cache = quark::extensions::load_cache_from(&quark::extensions::cache_path());
+    drop(library);
+    let extension_cache = quark::extensions::load_cache(&settings.extension_sources);
     let extensions = quark::extensions::statuses(&extension_cache, &settings.extension_sources);
     let search_sites =
         quark::extensions::active_sites(&extension_cache, &settings.extension_sources)
@@ -868,7 +870,7 @@ fn bootstrap(state: &AppState) -> Bootstrap {
         memory_mb: config::resident_mb(),
         demo: state.demo,
         deck: state.deck_demo,
-        load_error: library.load_error.clone(),
+        load_error,
         extensions,
         search_sites,
     }
