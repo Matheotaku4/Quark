@@ -835,10 +835,11 @@ fn bootstrap(state: &AppState) -> Bootstrap {
         .collect();
     let extension_cache = quark::extensions::load_cache_from(&quark::extensions::cache_path());
     let extensions = quark::extensions::statuses(&extension_cache, &settings.extension_sources);
-    let search_sites = quark::extensions::active_sites(&extension_cache, &settings.extension_sources)
-        .iter()
-        .map(SearchSiteDto::from)
-        .collect();
+    let search_sites =
+        quark::extensions::active_sites(&extension_cache, &settings.extension_sources)
+            .iter()
+            .map(SearchSiteDto::from)
+            .collect();
     Bootstrap {
         games,
         settings: settings_dto(&settings),
