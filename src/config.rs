@@ -1192,6 +1192,9 @@ pub struct Settings {
     /// Les vues de départ ont déjà été proposées une fois. Le drapeau évite
     /// de les recréer après que l'utilisateur les a supprimées.
     pub saved_views_seeded: bool,
+    /// URL des manifestes d'extensions de recherche. Vide par défaut : la
+    /// recherche de sites n'est proposée qu'après l'ajout d'une extension.
+    pub extension_sources: Vec<String>,
 }
 
 impl Default for Settings {
@@ -1247,6 +1250,7 @@ impl Default for Settings {
             library_sort: LibrarySort::Name,
             saved_views: Vec::new(),
             saved_views_seeded: false,
+            extension_sources: Vec::new(),
         }
     }
 }
@@ -3380,4 +3384,9 @@ mod tests {
         assert_eq!(groups[1].ids, ["steam"]);
         assert_eq!(groups[2].ids, ["mixed"]);
     }
+    #[test]
+    fn les_reglages_par_defaut_n_ont_aucune_extension() {
+        assert!(Settings::default().extension_sources.is_empty());
+    }
+
 }
