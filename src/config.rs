@@ -3388,5 +3388,4 @@ mod tests {
     fn les_reglages_par_defaut_n_ont_aucune_extension() {
         assert!(Settings::default().extension_sources.is_empty());
     }
-
 }

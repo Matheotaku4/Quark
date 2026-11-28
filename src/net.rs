@@ -70,7 +70,9 @@ pub fn validate_public_https(url: &str, allow_placeholders: bool) -> Result<(), 
     if !parsed.username().is_empty() || parsed.password().is_some() {
         return Err("identifiants interdits dans l'adresse".to_string());
     }
-    let host = parsed.host_str().ok_or_else(|| "hôte manquant".to_string())?;
+    let host = parsed
+        .host_str()
+        .ok_or_else(|| "hôte manquant".to_string())?;
     if !is_public_host(host) {
         return Err("hôte local ou privé interdit".to_string());
     }

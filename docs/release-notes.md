@@ -1,91 +1,29 @@
-# Quark 2.2.0 — bibliothèque modernisée et mises à jour signées
+# Quark 2.2.1 — recherche par extensions
 
-### Interface
+### Recherche
 
-- **Bibliothèque plus lisible.** La liste à gauche et la fiche à droite gardent leur disposition proche de Steam. Panneaux arrondis, barre supérieure compacte, couvertures verticales dans la liste et ligne sélectionnée plus nette.
-- **Fiche de jeu.** Onglets, bouton de lancement, carte d'aperçu et actions suivent une hiérarchie visuelle unique.
-- **Aucun coût au repos.** La modernisation est une feuille de style : pas de flou, pas d'animation permanente, pas de script supplémentaire.
+- **Désactivée par défaut.** Aucun site de téléchargement n'est contacté tant qu'aucune extension n'est installée. Les boutons de recherche disparaissent de la fiche de jeu, de la boutique, de l'ajout d'un jeu et de la palette.
+- **Réglages → Extensions.** Ajout d'un manifeste HTTPS, actualisation à la demande, retrait et cache local. Deux extensions ne peuvent pas partager le même identifiant.
+- **Sept adaptateurs conservés.** GameBounty, AnkerGames, AstralGames, Kryoto, Online-Fix, ZeiGames et scene.cat sont fournis dans `docs/extensions/quark-sites.json`, prêts à être hébergés dans un dépôt public.
+- **Sites personnalisés.** Un manifeste peut décrire une API JSON ou une page HTML avec des sélecteurs CSS, sans exécuter de code.
 
 ### Sécurité
 
-- **CSP stricte.** Aucun script inline ; seules les ressources locales et les images distantes attendues sont autorisées.
-- **Commandes validées.** URL, exécutable et dossier de scan sont contrôlés ; chaque commande Tauri a une permission explicite.
-- **Échappement HTML.** Les valeurs distantes passent par un helper unique et les couleurs injectées sont validées.
+- HTTPS et hôte public obligatoires pour les manifestes et les requêtes.
+- En-têtes limités à une liste blanche ; cookies et `Authorization` refusés.
+- Manifeste de 256 Kio maximum, 64 sites maximum, un site invalide rejette le manifeste.
+- Aucun appel réseau au démarrage : le cache local suffit.
 
-### Mises à jour
+### Documentation
 
-- **Signature minisign.** L'archive est vérifiée par SHA-256 puis par signature avant de remplacer le binaire.
-- **Opt-in.** Les mises à jour automatiques sont désactivées par défaut et proposées à l'accueil.
-- **Hôtes limités.** Le téléchargement refuse tout hôte autre que GitHub.
-
-### Chaîne d'approvisionnement
-
-- Actions GitHub épinglées par commit.
-- `cargo-deny` vérifie avis, licences, doublons et sources.
-- Dependabot suit les crates Rust et les actions.
+- `docs/extensions/README.md` décrit le format et le dépannage.
+- `docs/extensions/AGENT_BUILD_EXTENSION.md` donne à un agent IA les instructions exactes pour publier l'extension des sept sites.
 
 ### Vérifications
 
 - `cargo fmt --all --check` : OK.
 - `cargo clippy --all-targets --locked -- -D warnings` : OK.
-- `cargo test --locked` : 326 tests réussis.
-- `cargo test --manifest-path quark-tauri/Cargo.toml --locked` : 15 tests réussis.
+- `cargo test --locked` : 348 tests réussis.
+- `cargo test --manifest-path quark-tauri/Cargo.toml --locked` : 14 tests réussis.
+- `node --test ui-tests/*.test.mjs` : 8 tests réussis.
 - `cargo deny check` : avis, licences, bans et sources OK.
-- Aperçu de la bibliothèque vérifié avec des données factices.
-
-# Quark 2.1.1 — recherche AnkerGames rétablie et artworks plus sûrs
-
-### Recherche multi-sites
-
-- **AnkerGames répond de nouveau.** Son API refusait les clients non navigateur par un HTTP 403. Quark envoie maintenant l'origine, le referer et l'agent utilisateur attendus, et les résultats AnkerGames réapparaissent avec les six autres sources.
-- **Sept sources vérifiées.** GameBounty, AnkerGames, AstralGames, Kryoto, Online-Fix, ZeiGames et scene.cat ont été interrogés en direct ; une source indisponible continue d'afficher sa propre erreur.
-
-### Artworks
-
-- **WebP mesuré sans décodage.** Les dimensions sont lues dans l'en-tête VP8X, VP8 ou VP8L. Une grande image distante n'est plus décodée en mémoire juste pour connaître sa taille.
-- **Décodage borné.** Le repli restant refuse au-delà de 8192 pixels de côté et 64 Mio d'allocation, ce qui évite les pics mémoire sur un artwork volumineux ou corrompu.
-
-### Vérifications
-
-- `cargo fmt --all --check` : OK.
-- `cargo clippy --all-targets --locked -- -D warnings` : OK sur le cœur et l'interface.
-- `cargo test --locked` : tests du cœur réussis.
-- `cargo test --manifest-path quark-tauri/Cargo.toml --locked` : tests de l'interface réussis.
-- Recherche AnkerGames testée en direct (`cyberpunk`) : résultats reçus.
-
-# Quark 2.1.0 — interface plus rapide, jaquettes et recherche multi-sites
-
-### Mes jeux
-
-- **Chargement plus léger.** Les données de boutiques sont construites hors du fil d'interface, les jaquettes visibles sont téléchargées par petits lots et le défilement infini est remplacé par un bouton « Charger plus » explicite.
-- **Préférences conservées.** Les filtres, le tri et le choix liste/grille sont mémorisés entre deux lancements.
-- **Cartes stables.** Les jaquettes apparaissent sans artefact de rendu ; le menu « ··· » ouvre le dossier, copie le chemin et affiche les détails du jeu.
-
-### Recherche multi-sites
-
-- **Sept sources dans un ordre fixe.** GameBounty arrive en premier, puis AnkerGames, AstralGames, Kryoto, Online-Fix, ZeiGames et scene.cat.
-- **Erreurs par source.** Une source indisponible affiche son propre message sans masquer les résultats des autres.
-- **Aucun téléchargement.** Quark ouvre les pages dans le navigateur et ne récupère jamais de fichier depuis ces sites.
-- **Accès direct.** La fiche de jeu, chaque carte de la boutique et le bouton « Sites de téléchargement » du modal d'ajout ouvrent la recherche avec le nom du jeu.
-
-### Icône de notification
-
-- **Clic qui bascule.** Un clic gauche ouvre Quark si la fenêtre est fermée ou réduite, et referme la fenêtre vers l'icône si elle est déjà visible. La croix garde le même comportement.
-
-### Proton
-
-- **Runtimes redétectés à chaque lancement.** Un Proton installé après le démarrage de Quark est pris en compte sans redémarrer.
-- **Runtime supprimé ou renommé.** Le jeu se rabat sur le Proton disponible par défaut avec un avertissement visible, au lieu de refuser de se lancer.
-
-### Interface
-
-- **Surfaces nettes.** Cartes opaques, espacements et rayons partagés, états de survol stables et suppression des flous coûteux.
-- **Bibliothèque inchangée.** La liste à gauche et la fiche à droite conservent la disposition proche de Steam.
-
-### Vérifications
-
-- `cargo fmt --check` et `cargo fmt --manifest-path quark-tauri/Cargo.toml --check` : OK.
-- `cargo clippy --all-targets --locked -- -D warnings` : OK sur le cœur et l'interface.
-- `cargo test --locked` : tests du cœur réussis.
-- `cargo test --manifest-path quark-tauri/Cargo.toml --locked` : tests de l'interface réussis.
-- Captures réelles sous Xvfb en français et en anglais.

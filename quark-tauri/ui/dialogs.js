@@ -22,7 +22,8 @@ const fieldsFor = (g = {}) => `${lab(t("add.name"), inp("f-name", g.name))}
 const wireBrowse = () => { const b = $("#browse"); b && (b.onclick = () => run(async () => { const p = await invoke("pick_executable"); if (p) $("#f-exe").value = p; })); };
 
 function addModal(initialName = "") {
-  modal(`<h2>${esc(t("add.title"))}</h2>${fieldsFor({ name: initialName })}<div class="row2"><button class="btn sec sm" id="scan-open">${ic("search")}${esc(t("scan.title"))}</button><button class="btn sec sm" id="web-open">${ic("ext")}${esc(t("web.title"))}</button></div>${foot(t("add.submit"))}`); wireBrowse();
+  const webButton = hasSearchSites() ? `<button class="btn sec sm" id="web-open">${ic("ext")}${esc(t("web.title"))}</button>` : "";
+  modal(`<h2>${esc(t("add.title"))}</h2>${fieldsFor({ name: initialName })}<div class="row2"><button class="btn sec sm" id="scan-open">${ic("search")}${esc(t("scan.title"))}</button>${webButton}</div>${foot(t("add.submit"))}`); wireBrowse();
   const scan = $("#scan-open"); scan && (scan.onclick = scanModal);
   const web = $("#web-open"); web && (web.onclick = () => webSearchModal());
   $("#ok").onclick = () => run(async () => {
@@ -60,16 +61,6 @@ function scanModal() {
     app.data = await invoke("bootstrap_data"); closeModal(); renderAll(); if (lastId) select(lastId); toast(t("scan.added", { n: added }));
   });
 }
-const SITE_META = [
-  { id: "gamebounty", label: "GameBounty", host: "gamebounty.st", search: (q) => `https://gamebounty.st/search?q=${encodeURIComponent(q)}` },
-  { id: "ankergames", label: "AnkerGames", host: "ankergames.net", search: (q) => `https://ankergames.net/search?q=${encodeURIComponent(q)}` },
-  { id: "astralgames", label: "AstralGames", host: "astralgames.net", search: (q) => `https://astralgames.net/search?q=${encodeURIComponent(q)}` },
-  { id: "kryoto", label: "Kryoto", host: "kryo.to", search: (q) => `https://kryo.to/catalog?q=${encodeURIComponent(q)}` },
-  { id: "onlinefix", label: "Online-Fix", host: "online-fix.me", search: (q) => `https://online-fix.me/index.php?do=search&subaction=search&story=${encodeURIComponent(q)}` },
-  { id: "zeigames", label: "ZeiGames", host: "zeigames.com", search: (q) => `https://zeigames.com/search/?q=${encodeURIComponent(q)}` },
-  { id: "scenecat", label: "scene.cat", host: "scene.cat", search: (q) => `https://scene.cat/?q=${encodeURIComponent(q)}` },
-];
-
 function webError(message) {
   const text = String(message || "");
   const http = text.match(/HTTP (\d+)/);
@@ -81,13 +72,13 @@ function webError(message) {
 
 function renderWebResults(state) {
   const visible = (hit) => !state.filter || hit.siteId === state.filter;
-  const groups = SITE_META
-    .map((site) => ({ site, hits: state.hits.filter((hit) => hit.siteId === site.id && visible(hit)), errors: state.errors.filter((error) => error.siteId === site.id) }))
-    .filter((group) => !state.filter || group.site.id === state.filter)
+  const groups = searchSites()
+    .map((site) => ({ site, hits: state.hits.filter((hit) => hit.siteId === site.uid && visible(hit)), errors: state.errors.filter((error) => error.siteId === site.uid) }))
+    .filter((group) => !state.filter || group.site.uid === state.filter)
     .filter((group) => group.hits.length || group.errors.length);
   if (!groups.length) return `<div class="webempty">${esc(t(state.loading ? "log.loading" : "web.none"))}</div>`;
   return groups.map(({ site, hits, errors }) => `<section class="webgroup">
-    <div class="webhead"><span class="webdot" data-site="${esc(site.id)}"></span><b>${esc(site.label)}</b><small>${esc(site.host)}</small><em>${hits.length} ${esc(t("web.results"))}</em><button class="websearch" data-open="${esc(site.search(state.q))}">${ic("ext")}${esc(t("web.siteSearch"))}</button></div>
+    <div class="webhead"><span class="webdot" data-site="${esc(site.id)}"></span><b>${esc(site.label)}</b><small>${esc(site.host)}</small><em>${hits.length} ${esc(t("web.results"))}</em><button class="websearch" data-open="${esc(extensionSearchUrl(site, state.q))}">${ic("ext")}${esc(t("web.siteSearch"))}</button></div>
     ${errors.map((error) => `<p class="weberr">${esc(webError(error.message))}</p>`).join("")}
     ${hits.map((hit) => `<div class="webhit"><div class="webcover">${hit.cover ? `<img src="${esc(hit.cover)}" alt="" loading="lazy">` : `<span>${esc((hit.title || "?").slice(0, 1).toUpperCase())}</span>`}</div>
       <div class="webmeta"><b>${esc(hit.title)}</b><small>${esc(hit.detail || site.label)}</small></div>
@@ -98,6 +89,11 @@ function renderWebResults(state) {
 
 function webSearchModal(query = "") {
   if (typeof query !== "string") query = "";
+  if (!hasSearchSites()) {
+    modal(`<h2>${esc(t("web.title"))}</h2><p class="desc">${esc(t("web.disabled"))}</p><div class="foot"><button class="btn sec" data-act="close">${esc(t("x.close"))}</button><button class="btn" id="web-settings">${ic("gear")}${esc(t("settings.extensions"))}</button></div>`, true);
+    $("#web-settings").onclick = () => { closeModal(); app.stab = "extensions"; app.sq = ""; setView("settings"); };
+    return;
+  }
   const state = { q: query, loading: false, hits: [], errors: [], filter: null };
   modal(`<h2>${esc(t("web.title"))}</h2>
     <div class="websearchrow"><input type="text" id="web-q" value="${esc(query)}" placeholder="${esc(t("web.placeholder"))}" autocomplete="off" spellcheck="false"><button class="btn" id="web-go">${ic("search")}${esc(t("web.search"))}</button></div>
@@ -106,8 +102,8 @@ function webSearchModal(query = "") {
     <div id="web-res"></div>
     <div class="foot"><button class="btn sec" data-act="close">${esc(t("x.close"))}</button></div>`, true);
   const drawChips = () => {
-    const chips = [{ id: null, label: t("web.filterAll") }, ...SITE_META];
-    $("#web-chips").innerHTML = chips.map((site) => `<button class="webchip${state.filter === site.id ? " on" : ""}" data-webfilter="${esc(site.id || "")}">${esc(site.label)}</button>`).join("");
+    const chips = [{ uid: null, label: t("web.filterAll") }, ...searchSites()];
+    $("#web-chips").innerHTML = chips.map((site) => `<button class="webchip${state.filter === site.uid ? " on" : ""}" data-webfilter="${esc(site.uid || "")}">${esc(site.label)}</button>`).join("");
     $$("[data-webfilter]", $("#web-chips")).forEach((button) => (button.onclick = () => { state.filter = button.dataset.webfilter || null; draw(); }));
   };
   const bindResults = () => {
@@ -129,7 +125,7 @@ function webSearchModal(query = "") {
       const result = await invoke("site_search", { query: q });
       state.hits = result.hits || []; state.errors = result.errors || [];
     } catch (error) {
-      state.hits = []; state.errors = SITE_META.map((site) => ({ siteId: site.id, site: site.label, message: String(error) }));
+      state.hits = []; state.errors = searchSites().map((site) => ({ siteId: site.uid, site: site.label, message: String(error) }));
     }
     state.loading = false; draw();
   });

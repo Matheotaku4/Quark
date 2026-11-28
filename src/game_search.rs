@@ -45,7 +45,7 @@ pub enum SiteDriver {
     #[serde(rename = "scenecat")]
     SceneCat,
     Json(JsonDriver),
-    Html(HtmlDriver),
+    Html(Box<HtmlDriver>),
 }
 
 impl SiteDriver {
@@ -227,8 +227,7 @@ fn validate_html_driver(driver: &HtmlDriver) -> Result<(), String> {
 }
 
 fn validate_field(field: &FieldSpec) -> Result<(), String> {
-    scraper::Selector::parse(&field.selector)
-        .map_err(|_| "sélecteur HTML invalide".to_string())?;
+    scraper::Selector::parse(&field.selector).map_err(|_| "sélecteur HTML invalide".to_string())?;
     if let Some(attr) = &field.attr
         && (attr.is_empty()
             || attr.len() > 64
@@ -857,12 +856,11 @@ fn extract_field(
         if value.starts_with("//") {
             return Some(format!("https:{value}"));
         }
-        if value.starts_with('/') || !is_http_url(&value) {
-            if let Some(base) = base {
-                if let Ok(resolved) = base.join(&value) {
-                    return Some(resolved.to_string());
-                }
-            }
+        if (value.starts_with('/') || !is_http_url(&value))
+            && let Some(base) = base
+            && let Ok(resolved) = base.join(&value)
+        {
+            return Some(resolved.to_string());
         }
     }
     Some(value)

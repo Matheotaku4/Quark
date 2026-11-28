@@ -176,9 +176,11 @@ pub fn add_manifest(
     crate::net::validate_public_https(url, false)
         .map_err(|error| format!("adresse de l'extension : {error}"))?;
     validate_manifest(&manifest)?;
-    if let Some(other) = cache.entries.iter().find(|entry| {
-        entry.url != url && entry.manifest.id == manifest.id
-    }) {
+    if let Some(other) = cache
+        .entries
+        .iter()
+        .find(|entry| entry.url != url && entry.manifest.id == manifest.id)
+    {
         return Err(format!(
             "l'extension {} est déjà fournie par {}",
             manifest.id, other.url
@@ -202,11 +204,7 @@ pub fn add_manifest(
     Ok(status_from_entry(entry))
 }
 
-pub fn remove_source(
-    cache: &mut ExtensionCache,
-    sources: &mut Vec<String>,
-    url: &str,
-) -> bool {
+pub fn remove_source(cache: &mut ExtensionCache, sources: &mut Vec<String>, url: &str) -> bool {
     let before = sources.len();
     sources.retain(|source| source != url);
     let before_cache = cache.entries.len();
@@ -363,11 +361,8 @@ mod tests {
 
     #[test]
     fn un_manifeste_avec_un_doublon_de_site_est_refuse() {
-        let body = serde_json::to_vec(&manifest(vec![
-            builtin_site("same"),
-            builtin_site("same"),
-        ]))
-        .unwrap();
+        let body = serde_json::to_vec(&manifest(vec![builtin_site("same"), builtin_site("same")]))
+            .unwrap();
         assert!(parse_manifest(&body).unwrap_err().contains("double"));
     }
 
@@ -577,4 +572,12 @@ mod tests {
         assert!(cache.entries.is_empty());
     }
 
+    #[test]
+    fn le_manifeste_modele_est_valide() {
+        let bytes = include_str!("../docs/extensions/quark-sites.json").as_bytes();
+        let manifest = parse_manifest(bytes).expect("manifeste modele");
+        assert_eq!(manifest.sites.len(), 7);
+        assert_eq!(manifest.sites[0].driver, SiteDriver::GameBounty);
+        assert_eq!(manifest.sites[6].driver, SiteDriver::SceneCat);
+    }
 }
