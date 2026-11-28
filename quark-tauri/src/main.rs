@@ -2047,6 +2047,28 @@ fn demo_library(root: &Path, with_games: bool) -> Library {
 // Surveillance des sessions
 // ---------------------------------------------------------------------------
 
+/// Met à jour les manifestes en arrière-plan. Le bootstrap lit le cache (ou le
+/// manifeste officiel embarqué) et n'attend jamais le réseau.
+fn spawn_extension_refresh(app: AppHandle, sources: Vec<String>) {
+    std::thread::spawn(move || {
+        let path = quark::extensions::cache_path();
+        let mut cache = quark::extensions::load_cache_from(&path);
+        let mut sources = sources;
+        let mut changed = false;
+        for url in sources.clone() {
+            if !quark::extensions::needs_refresh(&cache, &url) {
+                continue;
+            }
+            if quark::extensions::refresh_source(&mut cache, &mut sources, &url).is_ok() {
+                changed = true;
+            }
+        }
+        if changed && quark::extensions::save_cache_to(&path, &cache).is_ok() {
+            let _ = app.emit("quark://extensions-updated", ());
+        }
+    });
+}
+
 fn spawn_monitor(app: AppHandle) {
     std::thread::spawn(move || loop {
         std::thread::sleep(Duration::from_millis(1000));
@@ -2400,6 +2422,7 @@ fn main() {
                 settings
             };
             let _ = register_shortcuts(app.handle(), &settings);
+            spawn_extension_refresh(app.handle().clone(), settings.extension_sources.clone());
             spawn_monitor(app.handle().clone());
             gamepad::spawn(app.handle().clone());
             Ok(())

@@ -35,30 +35,30 @@ French, Spanish, German, Portuguese and Russian are available in the app.
 | **First launch:** language, theme and startup page | **Home:** continue playing, browse the library |
 | ![Welcome guide](docs/images/onboarding-en.png) | ![Quark home page](docs/images/home-en.png) |
 
-## What's new in 2.2.2
+## What's new in 2.2.3
 
-- **The 2.1.1 interface is back.** The flat library layout, the game list on the
-  left and the game page on the right are restored; the 2.2.0 modern stylesheet
-  is removed.
-- **All 2.2.x features stay.** Signed updates, strict CSP, validated commands,
-  escaped templates and the extension search backend are unchanged.
-- **Search is still an extension.** Quark ships with no search site enabled.
-  Add an HTTPS manifest URL to `settings.extension_sources` in
-  `~/.config/quark/config.json`, then restart Quark. The provided
-  `docs/extensions/quark-sites.json` restores the seven built-in adapters
-  (GameBounty, AnkerGames, AstralGames, Kryoto, Online-Fix, ZeiGames and
-  scene.cat); a manifest can also describe a custom JSON/HTML site.
-- **No extension, no network.** Without a configured manifest, site search
-  returns no result and makes no network request.
+- **The 2.1.1 interface stays.** Flat library layout, game list on the left and
+  game page on the right; no stylesheet or markup redesign.
+- **Store, media and artwork images render again.** The strict CSP now allows
+  Steam and SteamGridDB artwork through `img-src`, `media-src` and
+  `connect-src`, including trailer playback and custom artwork previews.
+- **The official search-site extension is built in.** Quark seeds
+  [`Quark-sites-extension`](https://github.com/Matheotaku4/Quark-sites-extension)
+  by default, ships a copy for the first offline launch, and refreshes it in the
+  background. Site search works without editing `config.json`.
+- **Your own extensions still work.** Add HTTPS manifest URLs to
+  `settings.extension_sources`; manifests are data only, never executable code.
+- **No silent downloads.** Quark reads search pages only and opens results in
+  your browser.
 
-This is the **2.2.2** documentation. Older release notes are kept on the GitHub
+This is the **2.2.3** documentation. Older release notes are kept on the GitHub
 releases page; `docs/release-notes.md` only describes the release currently
 being published.
 
 ## Table of contents
 
 1. [Preview](#preview)
-2. [What's new in 2.2.2](#whats-new-in-222)
+2. [What's new in 2.2.3](#whats-new-in-223)
 3. [What Quark does](#what-quark-does)
 4. [Installation](#installation)
 5. [First launch](#first-launch)

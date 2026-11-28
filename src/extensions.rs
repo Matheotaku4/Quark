@@ -10,6 +10,10 @@ use std::collections::HashSet;
 use std::path::{Path, PathBuf};
 use std::time::{SystemTime, UNIX_EPOCH};
 
+/// Manifeste officiel des sept sites, hébergé par le dépôt d'extension.
+pub const OFFICIAL_SOURCE: &str =
+    "https://raw.githubusercontent.com/Matheotaku4/Quark-sites-extension/main/quark-sites.json";
+
 pub const SCHEMA_VERSION: u32 = 1;
 pub const MAX_MANIFEST_BYTES: u64 = 256 * 1024;
 pub const MAX_SITES: usize = 64;
@@ -140,27 +144,43 @@ pub fn cache_path() -> PathBuf {
     crate::config::data_dir().join("extensions.json")
 }
 
-/// Loads the cache and downloads configured manifests that are not cached yet.
-/// Cached entries are never refreshed automatically; only missing manifests are fetched.
+/// Charge le cache local. L'extension officielle est livrée dans le binaire
+/// pour que la recherche soit disponible immédiatement, même hors ligne.
 pub fn load_cache(sources: &[String]) -> ExtensionCache {
     let path = cache_path();
     let mut cache = load_cache_from(&path);
-    let mut changed = false;
-    for url in sources {
-        if cache.entries.iter().any(|entry| entry.url == *url) {
-            continue;
-        }
-        if let Ok(manifest) = fetch_manifest(url) {
-            let mut sources = sources.to_vec();
-            if add_manifest(&mut cache, &mut sources, url, manifest).is_ok() {
-                changed = true;
-            }
-        }
+    if !sources.iter().any(|url| url == OFFICIAL_SOURCE)
+        || cache
+            .entries
+            .iter()
+            .any(|entry| entry.url == OFFICIAL_SOURCE)
+    {
+        return cache;
     }
-    if changed {
-        let _ = save_cache_to(&path, &cache);
-    }
+    let Ok(manifest) = official_manifest() else {
+        return cache;
+    };
+    cache.entries.push(CachedExtension {
+        url: OFFICIAL_SOURCE.to_string(),
+        fetched_at: 0,
+        manifest,
+    });
+    let _ = save_cache_to(&path, &cache);
     cache
+}
+
+/// Manifeste des sept sites embarqué avec Quark.
+pub fn official_manifest() -> Result<ExtensionManifest, String> {
+    parse_manifest(include_bytes!("../docs/extensions/quark-sites.json"))
+}
+
+/// Indique si une source doit être retéléchargée au démarrage.
+pub fn needs_refresh(cache: &ExtensionCache, url: &str) -> bool {
+    cache
+        .entries
+        .iter()
+        .find(|entry| entry.url == url)
+        .is_none_or(|entry| entry.fetched_at == 0 || now_ts() - entry.fetched_at > STALE_AFTER_SECS)
 }
 
 pub fn load_cache_from(path: &Path) -> ExtensionCache {

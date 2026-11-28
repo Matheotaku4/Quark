@@ -5,6 +5,10 @@ contains one file, `quark-sites.json`, and to return its raw HTTPS URL. This
 extension restores the seven site-search adapters that Quark used to ship:
 GameBounty, AnkerGames, AstralGames, Kryoto, Online-Fix, ZeiGames and scene.cat.
 
+The official extension already exists at
+<https://github.com/Matheotaku4/Quark-sites-extension>. Use this guide only to
+build a replacement or a custom extension, not to recreate the official one.
+
 Do not modify the Quark source code. Do not add executable code to the
 extension. The extension is data only.
 

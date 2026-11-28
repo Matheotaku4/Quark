@@ -60,7 +60,7 @@ function scanModal() {
     app.data = await invoke("bootstrap_data"); closeModal(); renderAll(); if (lastId) select(lastId); toast(t("scan.added", { n: added }));
   });
 }
-const SITE_META = [
+const FALLBACK_SITE_META = [
   { id: "gamebounty", label: "GameBounty", host: "gamebounty.st", search: (q) => `https://gamebounty.st/search?q=${encodeURIComponent(q)}` },
   { id: "ankergames", label: "AnkerGames", host: "ankergames.net", search: (q) => `https://ankergames.net/search?q=${encodeURIComponent(q)}` },
   { id: "astralgames", label: "AstralGames", host: "astralgames.net", search: (q) => `https://astralgames.net/search?q=${encodeURIComponent(q)}` },
@@ -69,6 +69,21 @@ const SITE_META = [
   { id: "zeigames", label: "ZeiGames", host: "zeigames.com", search: (q) => `https://zeigames.com/search/?q=${encodeURIComponent(q)}` },
   { id: "scenecat", label: "scene.cat", host: "scene.cat", search: (q) => `https://scene.cat/?q=${encodeURIComponent(q)}` },
 ];
+// Les sites viennent du manifeste d'extension ; la liste locale ne sert que
+// lorsque le cache est vide (premier lancement hors ligne).
+function siteMeta() {
+  const sites = app.data?.search_sites;
+  if (!Array.isArray(sites) || !sites.length) return FALLBACK_SITE_META;
+  const seen = new Set();
+  return sites
+    .filter((site) => site?.id && !seen.has(site.id) && seen.add(site.id))
+    .map((site) => ({
+      id: site.id,
+      label: site.label,
+      host: site.host,
+      search: (q) => String(site.searchUrl || "").replaceAll("{query}", encodeURIComponent(q)),
+    }));
+}
 
 function webError(message) {
   const text = String(message || "");
@@ -81,7 +96,7 @@ function webError(message) {
 
 function renderWebResults(state) {
   const visible = (hit) => !state.filter || hit.siteId === state.filter;
-  const groups = SITE_META
+  const groups = siteMeta()
     .map((site) => ({ site, hits: state.hits.filter((hit) => hit.siteId === site.id && visible(hit)), errors: state.errors.filter((error) => error.siteId === site.id) }))
     .filter((group) => !state.filter || group.site.id === state.filter)
     .filter((group) => group.hits.length || group.errors.length);
@@ -106,7 +121,7 @@ function webSearchModal(query = "") {
     <div id="web-res"></div>
     <div class="foot"><button class="btn sec" data-act="close">${esc(t("x.close"))}</button></div>`, true);
   const drawChips = () => {
-    const chips = [{ id: null, label: t("web.filterAll") }, ...SITE_META];
+    const chips = [{ id: null, label: t("web.filterAll") }, ...siteMeta()];
     $("#web-chips").innerHTML = chips.map((site) => `<button class="webchip${state.filter === site.id ? " on" : ""}" data-webfilter="${esc(site.id || "")}">${esc(site.label)}</button>`).join("");
     $$("[data-webfilter]", $("#web-chips")).forEach((button) => (button.onclick = () => { state.filter = button.dataset.webfilter || null; draw(); }));
   };
@@ -129,7 +144,7 @@ function webSearchModal(query = "") {
       const result = await invoke("site_search", { query: q });
       state.hits = result.hits || []; state.errors = result.errors || [];
     } catch (error) {
-      state.hits = []; state.errors = SITE_META.map((site) => ({ siteId: site.id, site: site.label, message: String(error) }));
+      state.hits = []; state.errors = siteMeta().map((site) => ({ siteId: site.id, site: site.label, message: String(error) }));
     }
     state.loading = false; draw();
   });

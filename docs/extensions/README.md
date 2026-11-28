@@ -1,11 +1,24 @@
 # Extensions de recherche Quark
 
-La recherche de sites est **désactivée par défaut**. Quark ne contacte aucun
-site de téléchargement tant qu'aucune extension n'est installée. Une extension
-est un simple fichier JSON hébergé en HTTPS : elle ne contient aucun code
-exécutable.
+Quark active par défaut l'extension officielle
+[`Quark-sites-extension`](https://github.com/Matheotaku4/Quark-sites-extension).
+Une copie du manifeste est fournie avec l'application : la recherche fonctionne
+au premier lancement, même hors ligne, puis le manifeste est actualisé en
+arrière-plan. Une extension est un simple fichier JSON hébergé en HTTPS ; elle
+ne contient aucun code exécutable.
 
-## Démarrage rapide
+## Extension officielle
+
+`settings.extension_sources` contient déjà l'adresse du manifeste officiel :
+
+```
+https://raw.githubusercontent.com/Matheotaku4/Quark-sites-extension/main/quark-sites.json
+```
+
+Le fichier `quark-sites.json` de ce dossier en est la copie de secours :
+GameBounty, AnkerGames, AstralGames, Kryoto, Online-Fix, ZeiGames et scene.cat.
+
+## Ajouter une extension
 
 1. Copie `quark-sites.json` dans un dépôt GitHub public.
 2. Ouvre le fichier sur GitHub puis clique sur **Raw**.
@@ -14,16 +27,15 @@ exécutable.
 
    ```json
    "settings": {
-     "extension_sources": ["https://raw.githubusercontent.com/.../quark-sites.json"]
+     "extension_sources": [
+       "https://raw.githubusercontent.com/Matheotaku4/Quark-sites-extension/main/quark-sites.json",
+       "https://raw.githubusercontent.com/.../mon-extension.json"
+     ]
    }
    ```
 
 4. La recherche de la fiche de jeu, de la boutique, de l'ajout d'un jeu et de
-   la palette utilise alors les sites du manifeste. Sans URL configurée, aucun
-   site n'est contacté.
-
-Le fichier `quark-sites.json` de ce dossier reproduit les sept sites intégrés :
-GameBounty, AnkerGames, AstralGames, Kryoto, Online-Fix, ZeiGames et scene.cat.
+   la palette utilise alors les sites de tous les manifestes configurés.
 
 ## Sécurité
 

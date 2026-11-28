@@ -651,7 +651,7 @@ pub async fn site_search(
                 errors: Vec::new(),
             });
         }
-        let cache = extensions::load_cache_from(&extensions::cache_path());
+        let cache = extensions::load_cache(&sources);
         let sites = extensions::active_sites(&cache, &sources);
         let mut per_site = Vec::new();
         std::thread::scope(|scope| {
