@@ -42,13 +42,12 @@ French, Spanish, German, Portuguese and Russian are available in the app.
 - **Store, media and artwork images render again.** The strict CSP now allows
   Steam and SteamGridDB artwork through `img-src`, `media-src` and
   `connect-src`, including trailer playback and custom artwork previews.
-- **The official search-site extension is built in.** Quark seeds
-  [`Quark-sites-extension`](https://github.com/Matheotaku4/Quark-sites-extension)
-  by default, ships a copy for the first offline launch, and refreshes it in the
-  background. Site search works without editing `config.json`.
-- **Your own extensions still work.** Add HTTPS manifest URLs in
-  **Settings → Extensions**, then refresh or remove them there. Manifests are
-  data only, never executable code.
+- **Search extensions are opt-in.** No site is preinstalled: site search stays
+  empty until you add an HTTPS manifest in **Settings → Extensions**. A manifest
+  can describe any public site with a generic JSON or HTML driver, including
+  sites Quark does not know.
+- **Extensions stay data only.** Add, refresh or remove manifests in
+  **Settings → Extensions**. Quark never runs extension code.
 - **No silent downloads.** Quark reads search pages only and opens results in
   your browser.
 

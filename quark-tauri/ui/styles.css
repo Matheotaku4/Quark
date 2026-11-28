@@ -397,8 +397,7 @@ video.cinema-video{position:fixed;inset:0;width:100vw;height:100vh;z-index:9999;
 .webgroup{display:grid;gap:6px}
 .webhead{display:flex;align-items:center;gap:8px;padding:2px 2px 4px;border-bottom:1px solid var(--border)}
 .webhead b{font-size:13px}.webhead small{color:var(--text-faint);font-size:12px}.webhead em{margin-left:auto;color:var(--text-faint);font-style:normal;font-size:12px}
-.webdot{width:8px;height:8px;border-radius:50%;background:var(--text-faint)}
-.webdot[data-site=gamebounty]{background:#4cd07d}.webdot[data-site=ankergames]{background:#2e9bff}.webdot[data-site=astralgames]{background:#b58cff}.webdot[data-site=kryoto]{background:#ffc94d}.webdot[data-site=onlinefix]{background:#ff5c5c}.webdot[data-site=zeigames]{background:#4cd0c8}.webdot[data-site=scenecat]{background:#ff8f4d}
+.webdot{width:8px;height:8px;border-radius:50%;background:var(--text-faint);flex:none}
 .websearch{display:inline-flex;align-items:center;gap:5px;color:var(--accent);font-size:12px}.websearch .ic{width:13px;height:13px}
 .weberr{margin:2px 0 4px;padding:6px 9px;border-radius:var(--radius-sm);background:color-mix(in srgb,var(--danger) 12%,var(--surface));color:var(--danger);font-size:12px}
 .webhit{display:grid;grid-template-columns:44px 1fr auto auto;gap:10px;align-items:center;padding:8px;border-radius:var(--radius-md);background:var(--surface-2)}

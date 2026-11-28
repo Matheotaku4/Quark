@@ -1,63 +1,56 @@
 # Extensions de recherche Quark
 
-Quark active par défaut l'extension officielle
-[`Quark-sites-extension`](https://github.com/Matheotaku4/Quark-sites-extension).
-Une copie du manifeste est fournie avec l'application : la recherche fonctionne
-au premier lancement, même hors ligne, puis le manifeste est actualisé en
-arrière-plan. Une extension est un simple fichier JSON hébergé en HTTPS ; elle
-ne contient aucun code exécutable.
+Quark n'installe **aucune extension par défaut**. La recherche de sites reste
+vide tant que l'utilisateur n'a pas ajouté un manifeste dans
+**Réglages → Extensions**.
 
-## Extension officielle
-
-`settings.extension_sources` contient déjà l'adresse du manifeste officiel :
-
-```
-https://raw.githubusercontent.com/Matheotaku4/Quark-sites-extension/main/quark-sites.json
-```
-
-Le fichier `quark-sites.json` de ce dossier en est la copie de secours :
-GameBounty, AnkerGames, AstralGames, Kryoto, Online-Fix, ZeiGames et scene.cat.
+Une extension est un simple fichier JSON hébergé en HTTPS. Elle ne contient
+aucun code exécutable : Quark lit le manifeste, affiche ses sites et ouvre les
+résultats dans le navigateur.
 
 ## Ajouter une extension
 
-1. Copie `quark-sites.json` dans un dépôt GitHub public.
-2. Ouvre le fichier sur GitHub puis clique sur **Raw**.
-3. Dans **Réglages → Extensions**, colle l'adresse brute dans le champ puis
-   clique sur **Ajouter**. L'extension est vérifiée avant d'être enregistrée.
+1. Publie un fichier JSON sur un dépôt ou un serveur HTTPS public.
+2. Ouvre le fichier brut (par exemple l'URL `raw.githubusercontent.com`).
+3. Dans **Réglages → Extensions**, colle l'URL et clique sur **Ajouter**.
+4. Les sites de l'extension apparaissent dans la recherche multi-sites. Le même
+   onglet permet de l'actualiser ou de la retirer.
 
-   L'ajout manuel dans `~/.config/quark/config.json` reste possible :
-   ajoute l'adresse au tableau `settings.extension_sources`, puis redémarre
-   Quark.
+## Sites inconnus de Quark
 
-4. La recherche de la fiche de jeu, de la boutique, de l'ajout d'un jeu et de
-   la palette utilise alors les sites de tous les manifestes configurés.
-   L'onglet **Extensions** permet de les actualiser ou de les retirer.
-
-## Sécurité
-
-- HTTPS obligatoire, hôte public uniquement (pas de `localhost`, pas d'adresse privée).
-- Aucun cookie, aucun `Authorization`, aucun code exécuté.
-- Un seul site invalide rejette tout le manifeste.
-- 256 Kio maximum, 64 sites maximum, 8 résultats par site par défaut.
-- Le réseau n'est utilisé que pour charger un manifeste absent du cache, et lors d'une recherche demandée.
+Une extension peut déclarer n'importe quel site public. Si Quark ne connaît pas
+le site, utilise le driver générique `json` ou `html` : l'extension décrit
+elle-même la requête et les sélecteurs à lire. Aucun identifiant de site n'est
+imposé par le launcher.
 
 ## Format du manifeste
+
+Exemple avec le driver HTML générique :
 
 ```json
 {
   "schemaVersion": 1,
-  "id": "quark-sites",
-  "name": "Sites Quark",
+  "id": "my-sites",
+  "name": "My sites",
   "version": "1.0.0",
-  "description": "Les sept sites de recherche fournis avec Quark.",
-  "homepage": "https://github.com/Matheotaku4/Quark",
+  "description": "Mes sites de recherche",
   "sites": [
     {
-      "id": "gamebounty",
-      "label": "GameBounty",
-      "host": "gamebounty.st",
-      "searchUrl": "https://gamebounty.st/search?q={query}",
-      "driver": "gamebounty"
+      "id": "example",
+      "label": "Example",
+      "host": "example.com",
+      "searchUrl": "https://example.com/search?q={query}",
+      "driver": "html",
+      "request": {
+        "method": "GET",
+        "url": "https://example.com/search?q={query}"
+      },
+      "items": "article.result",
+      "title": { "selector": "h2" },
+      "url": { "selector": "a", "attr": "href" },
+      "detail": [{ "selector": ".size" }],
+      "cover": { "selector": "img", "attr": "src" },
+      "limit": 8
     }
   ]
 }
@@ -73,26 +66,17 @@ GameBounty, AnkerGames, AstralGames, Kryoto, Online-Fix, ZeiGames et scene.cat.
 | `homepage` | non | URL HTTPS publique |
 | `sites` | oui | 1 à 64 sites, identifiants uniques |
 | `searchUrl` | oui | HTTPS public, contient `{query}` |
-
-## Drivers
-
-### Drivers intégrés
-
-Ces drivers réutilisent les adaptateurs écrits dans Quark. Ils n'ont pas de
-configuration supplémentaire.
-
-`gamebounty`, `ankergames`, `astralgames`, `kryoto`, `onlinefix`, `zeigames`,
-`scenecat`.
+| `driver` | oui | `json` ou `html` pour un site arbitraire |
 
 ### Driver JSON
 
-Pour une API JSON. `list`, `title`, `cover` sont des chemins à points ;
-`{slug}` et les autres accolades sont remplacées par le champ correspondant.
+Pour une API JSON. `list`, `title`, `cover` sont des chemins à points ; les
+accolades sont remplacées par le champ correspondant.
 
 ```json
 {
-  "id": "example",
-  "label": "Example",
+  "id": "example-api",
+  "label": "Example API",
   "host": "example.com",
   "searchUrl": "https://example.com/search?q={query}",
   "driver": "json",
@@ -112,29 +96,18 @@ Pour une API JSON. `list`, `title`, `cover` sont des chemins à points ;
 
 ### Driver HTML
 
-Pour une page HTML. Chaque champ accepte `selector`, `attr`, `template`,
-`stripPrefix` et `stripSuffix`. Sans `attr`, le texte de l'élément est lu.
-Les URL relatives sont résolues par rapport à l'adresse de la requête.
+Chaque champ accepte `selector`, `attr`, `template`, `stripPrefix` et
+`stripSuffix`. Sans `attr`, le texte de l'élément est lu. Les URL relatives sont
+résolues par rapport à l'adresse de la requête.
 
-```json
-{
-  "id": "example",
-  "label": "Example",
-  "host": "example.com",
-  "searchUrl": "https://example.com/search?q={query}",
-  "driver": "html",
-  "request": { "method": "GET", "url": "https://example.com/search?q={query}" },
-  "items": "div.result",
-  "title": { "selector": "h2" },
-  "url": { "selector": "a", "attr": "href" },
-  "detail": [{ "selector": ".size" }],
-  "cover": { "selector": "img", "attr": "src" },
-  "limit": 8
-}
-```
+## Sécurité
 
-En-têtes autorisés : `Accept`, `Accept-Language`, `Content-Type`, `User-Agent`,
-`Referer`, `Origin`, `Next-Action`, `X-Requested-With`.
+- HTTPS obligatoire, hôte public uniquement.
+- Aucun cookie, aucun `Authorization`, aucun code exécuté.
+- Un seul site invalide rejette tout le manifeste.
+- 256 Kio maximum, 64 sites maximum, 8 résultats par site par défaut.
+- En-têtes autorisés : `Accept`, `Accept-Language`, `Content-Type`,
+  `User-Agent`, `Referer`, `Origin`, `Next-Action`, `X-Requested-With`.
 
 ## Dépannage
 
@@ -145,8 +118,8 @@ En-têtes autorisés : `Accept`, `Accept-Language`, `Content-Type`, `User-Agent`
 | `HTTPS obligatoire` | adresse en `http://` |
 | `hôte local ou privé interdit` | `localhost`, `127.0.0.1`, `192.168.x.x` |
 | `site en double` | deux sites avec le même `id` |
-| `driver inconnu` | nom de driver absent de la liste |
-| aucun résultat | URL absente de `settings.extension_sources`, ou cache vide |
+| `driver inconnu` | driver absent de `json` ou `html` |
+| aucun résultat | extension absente de **Réglages → Extensions**, ou cache vide |
 
 Le guide destiné à un agent IA est dans
 [`AGENT_BUILD_EXTENSION.md`](AGENT_BUILD_EXTENSION.md).

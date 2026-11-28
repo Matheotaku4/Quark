@@ -675,8 +675,7 @@ pub async fn site_search(
         let mut hits = Vec::new();
         let mut errors = Vec::new();
         for (site, result) in per_site {
-            // The 2.2.0 search dialog keys groups by the historical site id.
-            let site_id = site.site.id.clone();
+            let site_id = site.uid.clone();
             let label = site.site.label.clone();
             match result {
                 Ok(found) => {

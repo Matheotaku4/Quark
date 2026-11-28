@@ -1,16 +1,16 @@
-# Build the Quark search extension — instructions for an AI agent
+# Build a Quark search extension — instructions for an AI agent
 
 You are an AI agent. Your job is to create a public GitHub repository that
-contains one file, `quark-sites.json`, and to return its raw HTTPS URL. This
-extension restores the seven site-search adapters that Quark used to ship:
-GameBounty, AnkerGames, AstralGames, Kryoto, Online-Fix, ZeiGames and scene.cat.
-
-The official extension already exists at
-<https://github.com/Matheotaku4/Quark-sites-extension>. Use this guide only to
-build a replacement or a custom extension, not to recreate the official one.
+contains one manifest file, `quark-extension.json`, and to return its raw HTTPS
+URL. Quark does not ship any extension by default: the user adds your URL in
+**Settings → Extensions**.
 
 Do not modify the Quark source code. Do not add executable code to the
 extension. The extension is data only.
+
+The manifest may describe any public HTTPS site, including sites Quark has
+never seen. Use the generic `json` or `html` driver and describe how to read
+the site yourself.
 
 ## Preconditions
 
@@ -18,103 +18,72 @@ extension. The extension is data only.
 - A GitHub token is available as `GITHUB_TOKEN` if `gh` is not authenticated.
 - The repository must be **public**. A private repository cannot be fetched by
   Quark.
-- The default branch must be `main`. If you use another branch, change the raw
-  URL in step 6 accordingly.
+- The default branch must be `main`. Change the raw URL later if you use
+  another branch.
 
 ## Step 1 — Create a clean work directory
 
 ```bash
-export EXT_REPO="quark-search-sites"
+export EXT_REPO="quark-search-extension"
 export EXT_OWNER="${EXT_OWNER:-$(gh api user --jq .login)}"
-rm -rf /tmp/quark-search-sites
-mkdir -p /tmp/quark-search-sites
-cd /tmp/quark-search-sites
+rm -rf /tmp/quark-search-extension
+mkdir -p /tmp/quark-search-extension
+cd /tmp/quark-search-extension
 git init -b main
 ```
 
-If `gh` is not authenticated, set `EXT_OWNER` to the GitHub login that owns the
-token, then authenticate `gh` with `echo "$GITHUB_TOKEN" | gh auth login --with-token`.
+## Step 2 — Write the manifest
 
-## Step 2 — Write `quark-sites.json` exactly
-
-Create `/tmp/quark-search-sites/quark-sites.json` with this content:
+Create `/tmp/quark-search-extension/quark-extension.json`. Replace the example
+site with the site the user asked for. If the site is unknown to Quark, keep
+the generic `html` or `json` driver.
 
 ```json
 {
   "schemaVersion": 1,
-  "id": "quark-sites",
-  "name": "Sites Quark",
+  "id": "my-sites",
+  "name": "My search sites",
   "version": "1.0.0",
-  "description": "Les sept sites de recherche fournis avec Quark.",
-  "homepage": "https://github.com/Matheotaku4/Quark",
+  "description": "Sites added by this extension.",
   "sites": [
     {
-      "id": "gamebounty",
-      "label": "GameBounty",
-      "host": "gamebounty.st",
-      "searchUrl": "https://gamebounty.st/search?q={query}",
-      "driver": "gamebounty"
-    },
-    {
-      "id": "ankergames",
-      "label": "AnkerGames",
-      "host": "ankergames.net",
-      "searchUrl": "https://ankergames.net/search?q={query}",
-      "driver": "ankergames"
-    },
-    {
-      "id": "astralgames",
-      "label": "AstralGames",
-      "host": "astralgames.net",
-      "searchUrl": "https://astralgames.net/search?q={query}",
-      "driver": "astralgames"
-    },
-    {
-      "id": "kryoto",
-      "label": "Kryoto",
-      "host": "kryo.to",
-      "searchUrl": "https://kryo.to/catalog?q={query}",
-      "driver": "kryoto"
-    },
-    {
-      "id": "onlinefix",
-      "label": "Online-Fix",
-      "host": "online-fix.me",
-      "searchUrl": "https://online-fix.me/index.php?do=search&subaction=search&story={query}",
-      "driver": "onlinefix"
-    },
-    {
-      "id": "zeigames",
-      "label": "ZeiGames",
-      "host": "zeigames.com",
-      "searchUrl": "https://zeigames.com/search/?q={query}",
-      "driver": "zeigames"
-    },
-    {
-      "id": "scenecat",
-      "label": "scene.cat",
-      "host": "scene.cat",
-      "searchUrl": "https://scene.cat/?q={query}",
-      "driver": "scenecat"
+      "id": "example",
+      "label": "Example",
+      "host": "example.com",
+      "searchUrl": "https://example.com/search?q={query}",
+      "driver": "html",
+      "request": {
+        "method": "GET",
+        "url": "https://example.com/search?q={query}"
+      },
+      "items": "article.result",
+      "title": { "selector": "h2" },
+      "url": { "selector": "a", "attr": "href" },
+      "limit": 8
     }
   ]
 }
 ```
 
-Do not rename the drivers. The valid built-in driver names are exactly:
-`gamebounty`, `ankergames`, `astralgames`, `kryoto`, `onlinefix`, `zeigames`,
-`scenecat`.
+The generic drivers are the only ones you need for a new site:
+
+- `json` for an API: provide `request`, `list`, `title`, `url`, and optionally
+  `detail`, `cover`, `limit`.
+- `html` for a page: provide `request`, `items`, `title`, `url`, and optionally
+  `detail`, `cover`, `limit`.
+
+Full field examples are in [`README.md`](README.md).
 
 ## Step 3 — Validate the manifest before pushing
 
-Run this Python check from `/tmp/quark-search-sites`. It must print `OK`:
+Run this Python check from `/tmp/quark-search-extension`. It must print `OK`:
 
 ```bash
 python3 - <<'PY'
 import json, re, sys
 from urllib.parse import urlparse
 
-path = "quark-sites.json"
+path = "quark-extension.json"
 data = json.load(open(path, encoding="utf-8"))
 errors = []
 if data.get("schemaVersion") != 1:
@@ -130,8 +99,6 @@ if not isinstance(sites, list) or not 1 <= len(sites) <= 64:
     errors.append("sites must contain 1..64 entries")
     sites = []
 seen = set()
-allowed = {"gamebounty", "ankergames", "astralgames", "kryoto",
-           "onlinefix", "zeigames", "scenecat", "json", "html"}
 for site in sites:
     sid = site.get("id", "")
     if not re.fullmatch(r"[a-z0-9._-]{1,64}", sid):
@@ -151,8 +118,8 @@ for site in sites:
         errors.append(f"searchUrl must use HTTPS for {sid}")
     if parsed.hostname in {"localhost", "127.0.0.1", "::1"}:
         errors.append(f"private host for {sid}")
-    if site.get("driver") not in allowed:
-        errors.append(f"unknown driver for {sid}: {site.get('driver')!r}")
+    if site.get("driver") not in {"json", "html"}:
+        errors.append(f"driver must be json or html for {sid}")
 if errors:
     print("\n".join(errors))
     sys.exit(1)
@@ -160,49 +127,46 @@ print("OK")
 PY
 ```
 
-The file must also pass `python3 -m json.tool quark-sites.json >/dev/null`.
+The file must also pass `python3 -m json.tool quark-extension.json >/dev/null`.
 
 ## Step 4 — Commit and publish
 
 ```bash
-cd /tmp/quark-search-sites
-git add quark-sites.json
-git commit -m "add Quark search sites extension"
+cd /tmp/quark-search-extension
+git add quark-extension.json
+git commit -m "add Quark search extension"
 gh repo create "$EXT_OWNER/$EXT_REPO" --public --source=. --remote=origin --push
 ```
 
-If the repository already exists, use:
+If the repository already exists:
 
 ```bash
 git remote add origin "https://github.com/$EXT_OWNER/$EXT_REPO.git"
 git push -u origin main
 ```
 
-Do not force-push an existing repository that users may already reference.
+Do not force-push a repository that users may already reference.
 
 ## Step 5 — Produce the raw URL
 
 ```bash
-export EXT_RAW="https://raw.githubusercontent.com/$EXT_OWNER/$EXT_REPO/main/quark-sites.json"
+export EXT_RAW="https://raw.githubusercontent.com/$EXT_OWNER/$EXT_REPO/main/quark-extension.json"
 printf '%s\n' "$EXT_RAW"
 curl -fsSL "$EXT_RAW" | python3 -m json.tool >/dev/null && echo "RAW OK"
 ```
 
 `RAW OK` is mandatory. A browser URL such as
-`https://github.com/.../blob/main/quark-sites.json` is not accepted by Quark;
-use the `raw.githubusercontent.com` URL.
+`https://github.com/.../blob/main/quark-extension.json` is not accepted by
+Quark; use the `raw.githubusercontent.com` URL.
 
 ## Step 6 — Verify inside Quark
 
-1. Quit Quark.
-2. Open `~/.config/quark/config.json`.
-3. Add `EXT_RAW` to `settings.extension_sources`, then save the file.
-4. Start Quark. Open any game and click the download-sites button.
-   Results must be grouped under GameBounty, AnkerGames, AstralGames, Kryoto,
-   Online-Fix, ZeiGames and scene.cat.
-5. To refresh, delete `~/.config/quark/extensions.json` and restart Quark.
-6. To disable the extension, remove `EXT_RAW` from
-   `settings.extension_sources` and restart Quark.
+1. Start Quark. The site search must be empty before any extension is added.
+2. Open **Settings → Extensions**, paste `EXT_RAW`, then click **Add**.
+3. Open a game and click the download-sites button. The new site must appear
+   with its own label and host.
+4. Run a search. Results must be grouped under the extension's site.
+5. Use **Refresh** to update the manifest, or **Remove** to hide its sites.
 
 ## Step 7 — Report
 
@@ -210,10 +174,10 @@ Return these values to the user:
 
 ```text
 Repository: https://github.com/<owner>/<repo>
-Raw URL:    https://raw.githubusercontent.com/<owner>/<repo>/main/quark-sites.json
+Raw URL:    https://raw.githubusercontent.com/<owner>/<repo>/main/quark-extension.json
 Commit:     <git rev-parse HEAD>
 Validation: OK
-Quark test: 7 sites visible, search works
+Quark test: site visible, search works
 ```
 
 ## Rules and limits
@@ -231,61 +195,3 @@ Quark test: 7 sites visible, search works
 - Do not point a request at `localhost`, a private IP, or a non-HTTPS URL.
 - Do not add JavaScript, shell scripts, binaries or install hooks to the
   extension repository. Quark only reads JSON.
-
-## Adding a site later
-
-If the site is not one of the seven built-ins, use the generic `json` or `html`
-driver. Keep the seven built-in entries unchanged unless the site itself
-changes. The full schema and examples are in `README.md` next to this file.
-
-Example JSON driver:
-
-```json
-{
-  "id": "example",
-  "label": "Example",
-  "host": "example.com",
-  "searchUrl": "https://example.com/search?q={query}",
-  "driver": "json",
-  "request": { "method": "GET", "url": "https://example.com/api?q={query}" },
-  "list": "data.results",
-  "title": "title",
-  "url": "https://example.com/game/{slug}",
-  "detail": ["{size}", "{version}"],
-  "cover": ["cover"],
-  "limit": 8
-}
-```
-
-Example HTML driver:
-
-```json
-{
-  "id": "example",
-  "label": "Example",
-  "host": "example.com",
-  "searchUrl": "https://example.com/search?q={query}",
-  "driver": "html",
-  "request": { "method": "GET", "url": "https://example.com/search?q={query}" },
-  "items": "div.result",
-  "title": { "selector": "h2" },
-  "url": { "selector": "a", "attr": "href" },
-  "detail": [{ "selector": ".size" }],
-  "cover": { "selector": "img", "attr": "src" },
-  "limit": 8
-}
-```
-
-## Troubleshooting
-
-| Error or symptom | Fix |
-| --- | --- |
-| `HTTP 404` | Check the repository is public, the branch is `main`, and the filename is exact. |
-| `manifeste illisible` | Run `python3 -m json.tool quark-sites.json` and fix the JSON. |
-| `HTTPS obligatoire` | Replace `http://` with `https://`. |
-| `hôte local ou privé interdit` | Use a public domain, not `localhost` or a private IP. |
-| `site en double` | Make every `sites[].id` unique. |
-| `driver inconnu` | Use one of the exact driver names listed above. |
-| `l'extension ... est déjà fournie par ...` | Another installed extension already uses this manifest `id`. Change `id` or remove the other extension. |
-| No results | Add the manifest to `settings.extension_sources` in `~/.config/quark/config.json`, restart Quark, and check that `extensions.json` contains 7 sites. |
-| Search returns errors for every site | The site changed its HTML/API. Update that site's driver or remove it. |

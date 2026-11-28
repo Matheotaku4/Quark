@@ -1192,12 +1192,9 @@ pub struct Settings {
     /// Les vues de départ ont déjà été proposées une fois. Le drapeau évite
     /// de les recréer après que l'utilisateur les a supprimées.
     pub saved_views_seeded: bool,
-    /// URL des manifestes d'extensions de recherche. L'extension officielle
-    /// des sept sites est installée par défaut ; retirer son URL la désactive.
+    /// URL des manifestes d'extensions de recherche. Vide par défaut :
+    /// l'utilisateur ajoute lui-même les extensions qu'il souhaite.
     pub extension_sources: Vec<String>,
-    /// La source officielle a déjà été proposée une fois. Évite de la
-    /// réinstaller après que l'utilisateur l'a retirée.
-    pub extension_sources_migrated: bool,
 }
 
 impl Default for Settings {
@@ -1253,8 +1250,7 @@ impl Default for Settings {
             library_sort: LibrarySort::Name,
             saved_views: Vec::new(),
             saved_views_seeded: false,
-            extension_sources: vec![crate::extensions::OFFICIAL_SOURCE.to_string()],
-            extension_sources_migrated: false,
+            extension_sources: Vec::new(),
         }
     }
 }
@@ -2008,16 +2004,6 @@ impl Library {
     /// des jeux existants ne change pas.
     pub fn migrate_defaults(&mut self) {
         self.migrate_installations();
-        // 2.2.3 installe l'extension officielle une seule fois. Un utilisateur
-        // qui retire ensuite son URL ne la voit pas revenir au redémarrage.
-        if !self.settings.extension_sources_migrated {
-            if self.settings.extension_sources.is_empty() {
-                self.settings
-                    .extension_sources
-                    .push(crate::extensions::OFFICIAL_SOURCE.to_string());
-            }
-            self.settings.extension_sources_migrated = true;
-        }
         // Les configurations créées avant la 1.2 n'ont pas de parcours de
         // bienvenue : on ne le leur impose pas, mais elles verront le résumé
         // de la 1.2 une fois. Une configuration neuve garde le drapeau à faux
@@ -3399,24 +3385,10 @@ mod tests {
         assert_eq!(groups[2].ids, ["mixed"]);
     }
     #[test]
-    fn les_reglages_par_defaut_utilisent_l_extension_officielle() {
-        assert_eq!(
-            Settings::default().extension_sources,
-            vec![crate::extensions::OFFICIAL_SOURCE.to_string()]
-        );
-    }
-
-    #[test]
-    fn l_extension_officielle_est_installee_une_seule_fois() {
-        let mut lib: Library = serde_json::from_str(r#"{"settings":{"extension_sources":[]}}"#)
-            .expect("configuration héritée lisible");
-        lib.migrate_defaults();
-        assert_eq!(
-            lib.settings.extension_sources,
-            vec![crate::extensions::OFFICIAL_SOURCE.to_string()]
-        );
-        assert!(lib.settings.extension_sources_migrated);
-        lib.settings.extension_sources.clear();
+    fn aucune_extension_n_est_activee_par_defaut() {
+        assert!(Settings::default().extension_sources.is_empty());
+        let mut lib: Library =
+            serde_json::from_str(r#"{"settings":{}}"#).expect("configuration héritée lisible");
         lib.migrate_defaults();
         assert!(lib.settings.extension_sources.is_empty());
     }

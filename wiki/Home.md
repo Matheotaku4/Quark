@@ -29,14 +29,12 @@ repository under [`wiki/`](https://github.com/Matheotaku4/Quark/tree/main/wiki).
 - **Store, media and artwork images render again.** The CSP now allows Steam
   and SteamGridDB artwork through `img-src`, `media-src` and `connect-src`,
   including trailer playback and custom artwork previews.
-- **Official extension built in.** Quark seeds
-  [`Quark-sites-extension`](https://github.com/Matheotaku4/Quark-sites-extension)
-  by default, keeps a copy for the first offline launch, and refreshes it in the
-  background. Site search works without editing `config.json`.
+- **Search extensions are opt-in.** No site is preinstalled. Site search stays
+  empty until you add an HTTPS manifest in **Settings → Extensions**.
 - **Extensions tab.** Settings → Extensions lists active manifests with their
-  version, update date and errors. Add an HTTPS manifest, refresh it or remove
-  it there. A manifest can describe a JSON API or an HTML page with CSS
-  selectors; Quark never runs extension code.
+  version, update date and errors. Add, refresh or remove a manifest there. A
+  manifest can describe any public site with a JSON API or an HTML page; Quark
+  never runs extension code.
 
 ## Where to start
 

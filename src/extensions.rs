@@ -10,10 +10,6 @@ use std::collections::HashSet;
 use std::path::{Path, PathBuf};
 use std::time::{SystemTime, UNIX_EPOCH};
 
-/// Manifeste officiel des sept sites, hébergé par le dépôt d'extension.
-pub const OFFICIAL_SOURCE: &str =
-    "https://raw.githubusercontent.com/Matheotaku4/Quark-sites-extension/main/quark-sites.json";
-
 pub const SCHEMA_VERSION: u32 = 1;
 pub const MAX_MANIFEST_BYTES: u64 = 256 * 1024;
 pub const MAX_SITES: usize = 64;
@@ -144,34 +140,14 @@ pub fn cache_path() -> PathBuf {
     crate::config::data_dir().join("extensions.json")
 }
 
-/// Charge le cache local. L'extension officielle est livrée dans le binaire
-/// pour que la recherche soit disponible immédiatement, même hors ligne.
+/// Charge le cache local. Aucune extension n'est ajoutée implicitement :
+/// seules les sources présentes dans les réglages sont utilisées.
 pub fn load_cache(sources: &[String]) -> ExtensionCache {
-    let path = cache_path();
-    let mut cache = load_cache_from(&path);
-    if !sources.iter().any(|url| url == OFFICIAL_SOURCE)
-        || cache
-            .entries
-            .iter()
-            .any(|entry| entry.url == OFFICIAL_SOURCE)
-    {
-        return cache;
-    }
-    let Ok(manifest) = official_manifest() else {
-        return cache;
-    };
-    cache.entries.push(CachedExtension {
-        url: OFFICIAL_SOURCE.to_string(),
-        fetched_at: 0,
-        manifest,
-    });
-    let _ = save_cache_to(&path, &cache);
+    let mut cache = load_cache_from(&cache_path());
     cache
-}
-
-/// Manifeste des sept sites embarqué avec Quark.
-pub fn official_manifest() -> Result<ExtensionManifest, String> {
-    parse_manifest(include_bytes!("../docs/extensions/quark-sites.json"))
+        .entries
+        .retain(|entry| sources.iter().any(|source| source == &entry.url));
+    cache
 }
 
 /// Indique si une source doit être retéléchargée au démarrage.
@@ -616,11 +592,26 @@ mod tests {
     }
 
     #[test]
-    fn le_manifeste_modele_est_valide() {
-        let bytes = include_str!("../docs/extensions/quark-sites.json").as_bytes();
-        let manifest = parse_manifest(bytes).expect("manifeste modele");
-        assert_eq!(manifest.sites.len(), 7);
-        assert_eq!(manifest.sites[0].driver, SiteDriver::GameBounty);
-        assert_eq!(manifest.sites[6].driver, SiteDriver::SceneCat);
+    fn un_site_inconnu_du_launcher_est_accepte_avec_un_driver_generique() {
+        let bytes = br#"{
+            "schemaVersion": 1,
+            "id": "my-sites",
+            "name": "My sites",
+            "version": "1.0.0",
+            "sites": [{
+                "id": "unknown-site",
+                "label": "Unknown site",
+                "host": "example.com",
+                "searchUrl": "https://example.com/search?q={query}",
+                "driver": "html",
+                "request": {"url": "https://example.com/search?q={query}"},
+                "items": "article",
+                "title": {"selector": "h2"},
+                "url": {"selector": "a", "attr": "href"}
+            }]
+        }"#;
+        let manifest = parse_manifest(bytes).expect("site generique accepte");
+        assert_eq!(manifest.sites[0].id, "unknown-site");
+        assert!(matches!(manifest.sites[0].driver, SiteDriver::Html(_)));
     }
 }

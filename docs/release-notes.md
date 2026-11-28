@@ -1,4 +1,4 @@
-# Quark 2.2.3 — images, médias et extension officielle
+# Quark 2.2.3 — images, médias et extensions de recherche
 
 ### Interface
 
@@ -8,16 +8,15 @@
 ### Correctifs
 
 - **CSP compatible avec les images distantes.** `img-src`, `media-src` et `connect-src` autorisent les visuels et bandes-annonces Steam et SteamGridDB ; les protocoles locaux `quarkimg:` et `asset:` restent limités au nécessaire.
-- **Recherche multi-sites pilotée par l'extension.** Les sites, leurs noms et leurs couleurs viennent du manifeste chargé au lieu d'une liste figée dans l'interface.
-- **Pas d'attente réseau au démarrage.** Le manifeste officiel est chargé depuis une copie embarquée, puis actualisé en arrière-plan. L'interface est prévenue quand la liste des sites change.
+- **Recherche multi-sites pilotée par l'extension.** Les sites, leurs noms, leurs hôtes et leurs couleurs viennent uniquement des manifestes ajoutés par l'utilisateur. Aucun site n'est proposé par défaut.
+- **Pas d'attente réseau au démarrage.** Aucun manifeste n'est chargé tant que l'utilisateur n'en ajoute pas. L'interface est prévenue quand la liste des sites change.
 
 ### Recherche par extensions
 
-- **Extension officielle activée par défaut.** Le manifeste [`Quark-sites-extension`](https://github.com/Matheotaku4/Quark-sites-extension) fournit GameBounty, AnkerGames, AstralGames, Kryoto, Online-Fix, ZeiGames et scene.cat.
-- **Copie de secours.** Une copie du manifeste est fournie avec Quark : la recherche fonctionne au premier lancement, même si GitHub est injoignable.
+- **Aucune extension préinstallée.** La recherche de sites est vide au premier lancement. L'utilisateur ajoute lui-même un ou plusieurs manifestes HTTPS.
+- **Sites libres.** Une extension peut déclarer n'importe quel site public, même inconnu du launcher, avec un driver JSON ou HTML.
 - **Onglet Extensions.** Réglages → Extensions liste les manifestes actifs, leur version, leur date et leurs erreurs. On peut y ajouter une URL HTTPS, actualiser ou retirer une extension.
-- **Extensions personnalisées.** Un manifeste peut décrire une API JSON ou une page HTML avec des sélecteurs CSS, sans exécuter de code.
-- **Site mis à jour.** La page GitHub Pages de Quark renvoie vers l'extension et son dépôt.
+- **Extensions personnalisées.** Un manifeste décrit une API JSON ou une page HTML avec des sélecteurs CSS, sans exécuter de code.
 
 ### Sécurité
 
@@ -28,12 +27,13 @@
 
 ### Documentation
 
-- `docs/extensions/README.md` décrit le manifeste officiel, les extensions personnalisées et le dépannage.
-- `README.md` et le wiki décrivent l'activation par défaut et les correctifs d'affichage.
+- `docs/extensions/README.md` décrit le manifeste, les drivers génériques et le dépannage.
+- `README.md` et le wiki décrivent l'ajout manuel des extensions et les correctifs d'affichage.
 
 ### Vérifications
 
 - `cargo fmt --all --check` : OK.
 - `cargo clippy --all-targets --locked -- -D warnings` : OK.
-- `cargo test --locked` : OK.
-- Vérification visuelle : boutique, médias, aperçus d'illustrations et recherche multi-sites.
+- `cargo test --locked` : 348 tests cœur, 14 tests Tauri.
+- Tests UI : 3 tests d'échappement.
+- Vérification visuelle : recherche vide sans extension, ajout manuel d'un manifeste, sites dynamiques et filtre par site.

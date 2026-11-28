@@ -61,29 +61,29 @@ function scanModal() {
   });
 }
 let webSearchSeq = 0;
-const FALLBACK_SITE_META = [
-  { id: "gamebounty", label: "GameBounty", host: "gamebounty.st", search: (q) => `https://gamebounty.st/search?q=${encodeURIComponent(q)}` },
-  { id: "ankergames", label: "AnkerGames", host: "ankergames.net", search: (q) => `https://ankergames.net/search?q=${encodeURIComponent(q)}` },
-  { id: "astralgames", label: "AstralGames", host: "astralgames.net", search: (q) => `https://astralgames.net/search?q=${encodeURIComponent(q)}` },
-  { id: "kryoto", label: "Kryoto", host: "kryo.to", search: (q) => `https://kryo.to/catalog?q=${encodeURIComponent(q)}` },
-  { id: "onlinefix", label: "Online-Fix", host: "online-fix.me", search: (q) => `https://online-fix.me/index.php?do=search&subaction=search&story=${encodeURIComponent(q)}` },
-  { id: "zeigames", label: "ZeiGames", host: "zeigames.com", search: (q) => `https://zeigames.com/search/?q=${encodeURIComponent(q)}` },
-  { id: "scenecat", label: "scene.cat", host: "scene.cat", search: (q) => `https://scene.cat/?q=${encodeURIComponent(q)}` },
-];
-// Les sites viennent du manifeste d'extension ; la liste locale ne sert que
-// lorsque le cache est vide (premier lancement hors ligne).
+// Les sites viennent uniquement des manifestes ajoutés par l'utilisateur.
+// Aucun site de secours n'est proposé par le launcher.
 function siteMeta() {
   const sites = app.data?.searchSites;
-  if (!Array.isArray(sites) || !sites.length) return FALLBACK_SITE_META;
+  if (!Array.isArray(sites)) return [];
   const seen = new Set();
   return sites
-    .filter((site) => site?.id && !seen.has(site.id) && seen.add(site.id))
+    .filter((site) => {
+      const uid = site?.uid || site?.id;
+      return uid && !seen.has(uid) && seen.add(uid);
+    })
     .map((site) => ({
-      id: site.id,
+      uid: site.uid || site.id,
       label: site.label,
       host: site.host,
       search: (q) => String(site.searchUrl || "").replaceAll("{query}", encodeURIComponent(q)),
     }));
+}
+
+function siteColor(id) {
+  let hash = 0;
+  for (const char of String(id)) hash = (hash * 31 + char.codePointAt(0)) | 0;
+  return `hsl(${Math.abs(hash) % 360} 65% 60%)`;
 }
 
 function webError(message) {
@@ -98,12 +98,12 @@ function webError(message) {
 function renderWebResults(state) {
   const visible = (hit) => !state.filter || hit.siteId === state.filter;
   const groups = siteMeta()
-    .map((site) => ({ site, hits: state.hits.filter((hit) => hit.siteId === site.id && visible(hit)), errors: state.errors.filter((error) => error.siteId === site.id) }))
-    .filter((group) => !state.filter || group.site.id === state.filter)
+    .map((site) => ({ site, hits: state.hits.filter((hit) => hit.siteId === site.uid && visible(hit)), errors: state.errors.filter((error) => error.siteId === site.uid) }))
+    .filter((group) => !state.filter || group.site.uid === state.filter)
     .filter((group) => group.hits.length || group.errors.length);
   if (!groups.length) return `<div class="webempty">${esc(t(state.loading ? "log.loading" : "web.none"))}</div>`;
   return groups.map(({ site, hits, errors }) => `<section class="webgroup">
-    <div class="webhead"><span class="webdot" data-site="${esc(site.id)}"></span><b>${esc(site.label)}</b><small>${esc(site.host)}</small><em>${hits.length} ${esc(t("web.results"))}</em><button class="websearch" data-open="${esc(site.search(state.q))}">${ic("ext")}${esc(t("web.siteSearch"))}</button></div>
+    <div class="webhead"><span class="webdot" style="background:${siteColor(site.uid)}"></span><b>${esc(site.label)}</b><small>${esc(site.host)}</small><em>${hits.length} ${esc(t("web.results"))}</em><button class="websearch" data-open="${esc(site.search(state.q))}">${ic("ext")}${esc(t("web.siteSearch"))}</button></div>
     ${errors.map((error) => `<p class="weberr">${esc(webError(error.message))}</p>`).join("")}
     ${hits.map((hit) => `<div class="webhit"><div class="webcover">${hit.cover ? `<img src="${esc(hit.cover)}" alt="" loading="lazy">` : `<span>${esc((hit.title || "?").slice(0, 1).toUpperCase())}</span>`}</div>
       <div class="webmeta"><b>${esc(hit.title)}</b><small>${esc(hit.detail || site.label)}</small></div>
@@ -114,6 +114,13 @@ function renderWebResults(state) {
 
 function webSearchModal(query = "") {
   if (typeof query !== "string") query = "";
+  if (!siteMeta().length) {
+    modal(`<h2>${esc(t("web.title"))}</h2><p class="desc">${esc(t("web.disabled"))}</p>
+      <div class="foot"><button class="btn sec" data-act="close">${esc(t("x.close"))}</button><button class="btn" id="web-settings">${ic("gear")}${esc(t("settings.extensions"))}</button></div>`, true);
+    const settings = $("#web-settings");
+    if (settings) settings.onclick = () => { closeModal(); app.sq = ""; app.stab = "extensions"; app.view = "settings"; renderAll(); };
+    return;
+  }
   const seq = ++webSearchSeq;
   const state = { q: query, loading: false, hits: [], errors: [], filter: null };
   modal(`<h2>${esc(t("web.title"))}</h2>
@@ -125,8 +132,8 @@ function webSearchModal(query = "") {
   const drawChips = () => {
     const root = $("#web-chips");
     if (!root) return;
-    const chips = [{ id: null, label: t("web.filterAll") }, ...siteMeta()];
-    root.innerHTML = chips.map((site) => `<button class="webchip${state.filter === site.id ? " on" : ""}" data-webfilter="${esc(site.id || "")}">${esc(site.label)}</button>`).join("");
+    const chips = [{ uid: null, label: t("web.filterAll") }, ...siteMeta()];
+    root.innerHTML = chips.map((site) => `<button class="webchip${state.filter === site.uid ? " on" : ""}" data-webfilter="${esc(site.uid || "")}">${esc(site.label)}</button>`).join("");
     $$("[data-webfilter]", root).forEach((button) => (button.onclick = () => { state.filter = button.dataset.webfilter || null; draw(); }));
   };
   const bindResults = () => {
@@ -151,7 +158,7 @@ function webSearchModal(query = "") {
       const result = await invoke("site_search", { query: q });
       state.hits = result.hits || []; state.errors = result.errors || [];
     } catch (error) {
-      state.hits = []; state.errors = siteMeta().map((site) => ({ siteId: site.id, site: site.label, message: String(error) }));
+      state.hits = []; state.errors = siteMeta().map((site) => ({ siteId: site.uid, site: site.label, message: String(error) }));
     }
     state.loading = false; draw();
   });

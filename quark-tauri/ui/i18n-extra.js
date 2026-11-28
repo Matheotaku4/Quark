@@ -37,7 +37,7 @@ const EXTRA_I18N = {
     "onboarding.title": "Bienvenue dans Quark", "onboarding.subtitle": "Quelques choix pour commencer, tout reste modifiable ensuite.",
     "onboarding.language": "Langue", "onboarding.theme": "Thème", "onboarding.start": "Page d'ouverture", "onboarding.install": "Dossier des jeux de boutique",
     "onboarding.finish": "Commencer", "onboarding.skip": "Plus tard",
-    "whatsnew.title": "Nouveautés", "whatsnew.body": "Cette version corrige l'affichage des images de la boutique, des médias et de la personnalisation, et active l'extension officielle des sites de recherche.",
+    "whatsnew.title": "Nouveautés", "whatsnew.body": "Cette version corrige l'affichage des images de la boutique, des médias et de la personnalisation, et ajoute un onglet Extensions pour choisir les sites de recherche.",
     "views.title": "Vues enregistrées", "views.save": "Enregistrer la vue actuelle", "views.name": "Nom de la vue", "views.empty": "Aucune vue enregistrée.",
     "views.apply": "Appliquer", "views.delete": "Supprimer", "views.saved": "Vue enregistrée.", "views.deleted": "Vue supprimée.",
     "batch.selected": "{n} sélectionné(s)", "batch.remove": "Retirer la sélection", "batch.removeBody": "Retirer {n} jeu(x) de la bibliothèque ? Les fichiers ne sont pas supprimés.",
@@ -84,7 +84,7 @@ const EXTRA_I18N = {
     "onboarding.title": "Welcome to Quark", "onboarding.subtitle": "A few choices to get started; everything can be changed later.",
     "onboarding.language": "Language", "onboarding.theme": "Theme", "onboarding.start": "Startup page", "onboarding.install": "Store games folder",
     "onboarding.finish": "Get started", "onboarding.skip": "Later",
-    "whatsnew.title": "What's new", "whatsnew.body": "This release fixes missing store images, media and artwork previews, and enables the official search-site extension.",
+    "whatsnew.title": "What's new", "whatsnew.body": "This release fixes missing store images, media and artwork previews, and adds an Extensions tab to choose your search sites.",
     "views.title": "Saved views", "views.save": "Save current view", "views.name": "View name", "views.empty": "No saved view.",
     "views.apply": "Apply", "views.delete": "Delete", "views.saved": "View saved.", "views.deleted": "View deleted.",
     "batch.selected": "{n} selected", "batch.remove": "Remove selection", "batch.removeBody": "Remove {n} game(s) from the library? Files are not deleted.",
@@ -131,7 +131,7 @@ const EXTRA_I18N = {
     "onboarding.title": "Bienvenido a Quark", "onboarding.subtitle": "Unas elecciones para empezar; todo se puede cambiar después.",
     "onboarding.language": "Idioma", "onboarding.theme": "Tema", "onboarding.start": "Página inicial", "onboarding.install": "Carpeta de juegos de tienda",
     "onboarding.finish": "Empezar", "onboarding.skip": "Más tarde",
-    "whatsnew.title": "Novedades", "whatsnew.body": "Esta versión corrige las imágenes de la tienda, los medios y las vistas previas de ilustraciones, y activa la extensión oficial de sitios de búsqueda.",
+    "whatsnew.title": "Novedades", "whatsnew.body": "Esta versión corrige las imágenes de la tienda, los medios y las vistas previas de ilustraciones, y añade una pestaña Extensiones para elegir los sitios de búsqueda.",
     "views.title": "Vistas guardadas", "views.save": "Guardar vista actual", "views.name": "Nombre de la vista", "views.empty": "Ninguna vista guardada.",
     "views.apply": "Aplicar", "views.delete": "Eliminar", "views.saved": "Vista guardada.", "views.deleted": "Vista eliminada.",
     "batch.selected": "{n} seleccionado(s)", "batch.remove": "Quitar selección", "batch.removeBody": "¿Quitar {n} juego(s) de la biblioteca? Los archivos no se eliminan.",
@@ -178,7 +178,7 @@ const EXTRA_I18N = {
     "onboarding.title": "Willkommen bei Quark", "onboarding.subtitle": "Ein paar Entscheidungen für den Start; alles ist später änderbar.",
     "onboarding.language": "Sprache", "onboarding.theme": "Design", "onboarding.start": "Startseite", "onboarding.install": "Ordner für Store-Spiele",
     "onboarding.finish": "Loslegen", "onboarding.skip": "Später",
-    "whatsnew.title": "Neuigkeiten", "whatsnew.body": "Diese Version behebt fehlende Store-Bilder, Medien und Artwork-Vorschauen und aktiviert die offizielle Erweiterung für Suchseiten.",
+    "whatsnew.title": "Neuigkeiten", "whatsnew.body": "Diese Version behebt fehlende Store-Bilder, Medien und Artwork-Vorschauen und ergänzt einen Extensions-Tab zur Auswahl der Suchseiten.",
     "views.title": "Gespeicherte Ansichten", "views.save": "Aktuelle Ansicht speichern", "views.name": "Name der Ansicht", "views.empty": "Keine gespeicherte Ansicht.",
     "views.apply": "Anwenden", "views.delete": "Löschen", "views.saved": "Ansicht gespeichert.", "views.deleted": "Ansicht gelöscht.",
     "batch.selected": "{n} ausgewählt", "batch.remove": "Auswahl entfernen", "batch.removeBody": "{n} Spiel(e) aus der Bibliothek entfernen? Dateien werden nicht gelöscht.",
@@ -225,7 +225,7 @@ const EXTRA_I18N = {
     "onboarding.title": "Bem-vindo ao Quark", "onboarding.subtitle": "Algumas escolhas para começar; tudo pode ser alterado depois.",
     "onboarding.language": "Idioma", "onboarding.theme": "Tema", "onboarding.start": "Página inicial", "onboarding.install": "Pasta dos jogos de loja",
     "onboarding.finish": "Começar", "onboarding.skip": "Depois",
-    "whatsnew.title": "Novidades", "whatsnew.body": "Esta versão corrige as imagens da loja, as mídias e as pré-visualizações de artes, e ativa a extensão oficial de sites de busca.",
+    "whatsnew.title": "Novidades", "whatsnew.body": "Esta versão corrige as imagens da loja, as mídias e as pré-visualizações de artes, e adiciona um separador Extensões para escolher os sites de pesquisa.",
     "views.title": "Visualizações salvas", "views.save": "Salvar visualização atual", "views.name": "Nome da visualização", "views.empty": "Nenhuma visualização salva.",
     "views.apply": "Aplicar", "views.delete": "Excluir", "views.saved": "Visualização salva.", "views.deleted": "Visualização excluída.",
     "batch.selected": "{n} selecionado(s)", "batch.remove": "Remover seleção", "batch.removeBody": "Remover {n} jogo(s) da biblioteca? Os arquivos não são excluídos.",
@@ -428,17 +428,18 @@ Object.assign(I18N.es, { "web.sites": "Sitios de descarga", "web.hint": "Quark n
 Object.assign(I18N.de, { "web.sites": "Download-Seiten", "web.hint": "Quark lädt keine Dateien von diesen Seiten herunter.", "web.results": "Ergebnis(se)", "web.siteSearch": "Auf der Seite suchen", "web.error": "Fehler", "web.filterAll": "Alle", "web.open": "Öffnen" });
 Object.assign(I18N.pt, { "web.sites": "Sites de download", "web.hint": "O Quark não baixa nenhum ficheiro destes sites.", "web.results": "resultado(s)", "web.siteSearch": "Procurar no site", "web.error": "Erro", "web.filterAll": "Todos", "web.open": "Abrir" });
 
-Object.assign(I18N.fr, { "web.httpError": "Le site a refusé la recherche (HTTP {code}).", "web.unreachable": "Le site est injoignable.", "web.expired": "La recherche a expiré, réessayez.", "web.loading": "Recherche en cours…", "web.sources": "7 sources", "web.disclaimer": "Quark ne télécharge aucun fichier depuis ces sites.", "web.retry": "Réessayer", "web.steam": "Voir sur Steam", "web.site.gamebounty": "GameBounty", "web.site.ankergames": "AnkerGames", "web.site.astralgames": "AstralGames", "web.site.kryoto": "Kryoto", "web.site.onlinefix": "Online-Fix", "web.site.zeigames": "ZeiGames", "web.site.scenecat": "scene.cat", "pv.menu.openFolder": "Ouvrir le dossier", "pv.menu.copyPath": "Copier le chemin", "pv.menu.details": "Détails" });
-Object.assign(I18N.en, { "web.httpError": "The site refused the search (HTTP {code}).", "web.unreachable": "The site is unreachable.", "web.expired": "The search expired, try again.", "web.loading": "Searching…", "web.sources": "7 sources", "web.disclaimer": "Quark does not download any file from these sites.", "web.retry": "Retry", "web.steam": "View on Steam", "web.site.gamebounty": "GameBounty", "web.site.ankergames": "AnkerGames", "web.site.astralgames": "AstralGames", "web.site.kryoto": "Kryoto", "web.site.onlinefix": "Online-Fix", "web.site.zeigames": "ZeiGames", "web.site.scenecat": "scene.cat", "pv.menu.openFolder": "Open folder", "pv.menu.copyPath": "Copy path", "pv.menu.details": "Details" });
-Object.assign(I18N.es, { "web.httpError": "El sitio rechazó la búsqueda (HTTP {code}).", "web.unreachable": "El sitio no está disponible.", "web.expired": "La búsqueda caducó, inténtalo de nuevo.", "web.loading": "Buscando…", "web.sources": "7 fuentes", "web.disclaimer": "Quark no descarga ningún archivo de estos sitios.", "web.retry": "Reintentar", "web.steam": "Ver en Steam", "web.site.gamebounty": "GameBounty", "web.site.ankergames": "AnkerGames", "web.site.astralgames": "AstralGames", "web.site.kryoto": "Kryoto", "web.site.onlinefix": "Online-Fix", "web.site.zeigames": "ZeiGames", "web.site.scenecat": "scene.cat", "pv.menu.openFolder": "Abrir carpeta", "pv.menu.copyPath": "Copiar ruta", "pv.menu.details": "Detalles" });
-Object.assign(I18N.de, { "web.httpError": "Die Seite hat die Suche abgelehnt (HTTP {code}).", "web.unreachable": "Die Seite ist nicht erreichbar.", "web.expired": "Die Suche ist abgelaufen, bitte erneut versuchen.", "web.loading": "Suche läuft…", "web.sources": "7 Quellen", "web.disclaimer": "Quark lädt keine Dateien von diesen Seiten herunter.", "web.retry": "Erneut versuchen", "web.steam": "Auf Steam ansehen", "web.site.gamebounty": "GameBounty", "web.site.ankergames": "AnkerGames", "web.site.astralgames": "AstralGames", "web.site.kryoto": "Kryoto", "web.site.onlinefix": "Online-Fix", "web.site.zeigames": "ZeiGames", "web.site.scenecat": "scene.cat", "pv.menu.openFolder": "Ordner öffnen", "pv.menu.copyPath": "Pfad kopieren", "pv.menu.details": "Details" });
-Object.assign(I18N.pt, { "web.httpError": "O site recusou a pesquisa (HTTP {code}).", "web.unreachable": "O site está inacessível.", "web.expired": "A pesquisa expirou, tente novamente.", "web.loading": "A pesquisar…", "web.sources": "7 fontes", "web.disclaimer": "O Quark não baixa nenhum ficheiro destes sites.", "web.retry": "Tentar novamente", "web.steam": "Ver na Steam", "web.site.gamebounty": "GameBounty", "web.site.ankergames": "AnkerGames", "web.site.astralgames": "AstralGames", "web.site.kryoto": "Kryoto", "web.site.onlinefix": "Online-Fix", "web.site.zeigames": "ZeiGames", "web.site.scenecat": "scene.cat", "pv.menu.openFolder": "Abrir pasta", "pv.menu.copyPath": "Copiar caminho", "pv.menu.details": "Detalhes" });
+Object.assign(I18N.fr, { "web.httpError": "Le site a refusé la recherche (HTTP {code}).", "web.unreachable": "Le site est injoignable.", "web.expired": "La recherche a expiré, réessayez.", "web.loading": "Recherche en cours…", "web.disclaimer": "Quark ne télécharge aucun fichier depuis ces sites.", "web.retry": "Réessayer", "web.steam": "Voir sur Steam", "pv.menu.openFolder": "Ouvrir le dossier", "pv.menu.copyPath": "Copier le chemin", "pv.menu.details": "Détails" });
+Object.assign(I18N.en, { "web.httpError": "The site refused the search (HTTP {code}).", "web.unreachable": "The site is unreachable.", "web.expired": "The search expired, try again.", "web.loading": "Searching…", "web.disclaimer": "Quark does not download any file from these sites.", "web.retry": "Retry", "web.steam": "View on Steam", "pv.menu.openFolder": "Open folder", "pv.menu.copyPath": "Copy path", "pv.menu.details": "Details" });
+Object.assign(I18N.es, { "web.httpError": "El sitio rechazó la búsqueda (HTTP {code}).", "web.unreachable": "El sitio no está disponible.", "web.expired": "La búsqueda caducó, inténtalo de nuevo.", "web.loading": "Buscando…", "web.disclaimer": "Quark no descarga ningún archivo de estos sitios.", "web.retry": "Reintentar", "web.steam": "Ver en Steam", "pv.menu.openFolder": "Abrir carpeta", "pv.menu.copyPath": "Copiar ruta", "pv.menu.details": "Detalles" });
+Object.assign(I18N.de, { "web.httpError": "Die Seite hat die Suche abgelehnt (HTTP {code}).", "web.unreachable": "Die Seite ist nicht erreichbar.", "web.expired": "Die Suche ist abgelaufen, bitte erneut versuchen.", "web.loading": "Suche läuft…", "web.disclaimer": "Quark lädt keine Dateien von diesen Seiten herunter.", "web.retry": "Erneut versuchen", "web.steam": "Auf Steam ansehen", "pv.menu.openFolder": "Ordner öffnen", "pv.menu.copyPath": "Pfad kopieren", "pv.menu.details": "Details" });
+Object.assign(I18N.pt, { "web.httpError": "O site recusou a pesquisa (HTTP {code}).", "web.unreachable": "O site está inacessível.", "web.expired": "A pesquisa expirou, tente novamente.", "web.loading": "A pesquisar…", "web.disclaimer": "O Quark não baixa nenhum ficheiro destes sites.", "web.retry": "Tentar novamente", "web.steam": "Ver na Steam", "pv.menu.openFolder": "Abrir pasta", "pv.menu.copyPath": "Copiar caminho", "pv.menu.details": "Detalhes" });
 
 Object.assign(I18N.fr, {
   "settings.extensions": "Extensions",
   "ext.title": "Extensions de recherche",
-  "ext.hint": "L'extension officielle est active par défaut. Ajoute un manifeste HTTPS pour activer d'autres sites de téléchargement. Quark ne télécharge aucun fichier depuis ces sites.",
-  "ext.urlPlaceholder": "https://raw.githubusercontent.com/…/quark-sites.json",
+  "ext.hint": "Quark n'installe aucune extension par défaut. Ajoute un manifeste HTTPS pour activer des sites de téléchargement. Quark ne télécharge aucun fichier depuis ces sites.",
+  "web.disabled": "Aucune extension active. Ajoute un manifeste dans Réglages → Extensions pour activer la recherche de sites.",
+  "ext.urlPlaceholder": "https://exemple.com/quark-extension.json",
   "ext.add": "Ajouter",
   "ext.empty": "Aucune extension active. La recherche de sites est désactivée.",
   "ext.refresh": "Actualiser",
@@ -457,8 +458,9 @@ Object.assign(I18N.fr, {
 Object.assign(I18N.en, {
   "settings.extensions": "Extensions",
   "ext.title": "Search extensions",
-  "ext.hint": "The official extension is enabled by default. Add an HTTPS manifest to enable more download sites. Quark never downloads files from them.",
-  "ext.urlPlaceholder": "https://raw.githubusercontent.com/…/quark-sites.json",
+  "ext.hint": "Quark installs no extension by default. Add an HTTPS manifest to enable download sites. Quark never downloads files from them.",
+  "web.disabled": "No active extension. Add a manifest in Settings → Extensions to enable site search.",
+  "ext.urlPlaceholder": "https://exemple.com/quark-extension.json",
   "ext.add": "Add",
   "ext.empty": "No active extension. Site search is disabled.",
   "ext.refresh": "Refresh",
@@ -477,8 +479,9 @@ Object.assign(I18N.en, {
 Object.assign(I18N.es, {
   "settings.extensions": "Extensiones",
   "ext.title": "Extensiones de búsqueda",
-  "ext.hint": "La extensión oficial está activa por defecto. Añade un manifiesto HTTPS para activar más sitios de descarga. Quark no descarga archivos de ellos.",
-  "ext.urlPlaceholder": "https://raw.githubusercontent.com/…/quark-sites.json",
+  "ext.hint": "Quark no instala ninguna extensión por defecto. Añade un manifiesto HTTPS para activar sitios de descarga. Quark no descarga archivos de ellos.",
+  "web.disabled": "Ninguna extensión activa. Añade un manifiesto en Ajustes → Extensiones para activar la búsqueda en sitios.",
+  "ext.urlPlaceholder": "https://exemple.com/quark-extension.json",
   "ext.add": "Añadir",
   "ext.empty": "Ninguna extensión activa. La búsqueda en sitios está desactivada.",
   "ext.refresh": "Actualizar",
@@ -497,8 +500,9 @@ Object.assign(I18N.es, {
 Object.assign(I18N.de, {
   "settings.extensions": "Erweiterungen",
   "ext.title": "Such-Erweiterungen",
-  "ext.hint": "Die offizielle Erweiterung ist standardmäßig aktiv. Füge ein HTTPS-Manifest hinzu, um weitere Download-Seiten zu aktivieren. Quark lädt dort keine Dateien herunter.",
-  "ext.urlPlaceholder": "https://raw.githubusercontent.com/…/quark-sites.json",
+  "ext.hint": "Quark installiert standardmäßig keine Erweiterung. Füge ein HTTPS-Manifest hinzu, um Download-Seiten zu aktivieren. Quark lädt dort keine Dateien herunter.",
+  "web.disabled": "Keine aktive Erweiterung. Füge ein Manifest unter Einstellungen → Erweiterungen hinzu, um die Seitensuche zu aktivieren.",
+  "ext.urlPlaceholder": "https://exemple.com/quark-extension.json",
   "ext.add": "Hinzufügen",
   "ext.empty": "Keine aktive Erweiterung. Die Seitensuche ist deaktiviert.",
   "ext.refresh": "Aktualisieren",
@@ -517,8 +521,9 @@ Object.assign(I18N.de, {
 Object.assign(I18N.pt, {
   "settings.extensions": "Extensões",
   "ext.title": "Extensões de pesquisa",
-  "ext.hint": "A extensão oficial está ativa por predefinição. Adiciona um manifesto HTTPS para ativar mais sites de download. O Quark não descarrega ficheiros desses sites.",
-  "ext.urlPlaceholder": "https://raw.githubusercontent.com/…/quark-sites.json",
+  "ext.hint": "O Quark não instala nenhuma extensão por predefinição. Adiciona um manifesto HTTPS para ativar sites de download. O Quark não descarrega ficheiros desses sites.",
+  "web.disabled": "Nenhuma extensão ativa. Adiciona um manifesto em Definições → Extensões para ativar a pesquisa em sites.",
+  "ext.urlPlaceholder": "https://exemple.com/quark-extension.json",
   "ext.add": "Adicionar",
   "ext.empty": "Nenhuma extensão ativa. A pesquisa em sites está desativada.",
   "ext.refresh": "Atualizar",
