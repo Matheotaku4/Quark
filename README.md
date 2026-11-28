@@ -103,7 +103,8 @@ being published.
 
 Quark is not a store: it never buys anything, and it never downloads or
 extracts games from third-party download sites. Store search results and the
-seven-site search open pages in your browser; no file is fetched by Quark.
+extension-provided site search open pages in your browser; no file is fetched by
+Quark.
 
 ## Installation
 
@@ -249,8 +250,8 @@ itself, or a local file.
 The **Stores** tab is a Steam discovery page: featured deal, recommendations,
 the most played games, top sellers, specials, new releases and upcoming titles.
 Prices are regional and the store page opens in your browser. A game card also
-offers a search on the download sites supported by Quark; results only open the
-site in your browser.
+offers a search on the download sites enabled by your extensions; results only
+open the site in your browser.
 
 ![Store discovery page](docs/images/store-en.png)
 
