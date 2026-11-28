@@ -35,9 +35,14 @@ French, Spanish, German, Portuguese and Russian are available in the app.
 | **First launch:** language, theme and startup page | **Home:** continue playing, browse the library |
 | ![Welcome guide](docs/images/onboarding-en.png) | ![Quark home page](docs/images/home-en.png) |
 
-## What's new in 2.2.1
+## What's new in 2.2.2
 
-- **Search is now an extension.** Quark ships with no search site enabled.
+- **The 2.1.1 interface is back.** The flat library layout, the game list on the
+  left and the game page on the right are restored; the 2.2.0 modern stylesheet
+  is removed.
+- **All 2.2.x features stay.** Signed updates, strict CSP, validated commands,
+  escaped templates and the extension search backend are unchanged.
+- **Search is still an extension.** Quark ships with no search site enabled.
   Add an HTTPS manifest URL to `settings.extension_sources` in
   `~/.config/quark/config.json`, then restart Quark. The provided
   `docs/extensions/quark-sites.json` restores the seven built-in adapters
@@ -45,19 +50,15 @@ French, Spanish, German, Portuguese and Russian are available in the app.
   scene.cat); a manifest can also describe a custom JSON/HTML site.
 - **No extension, no network.** Without a configured manifest, site search
   returns no result and makes no network request.
-- **Cache and refresh.** Manifests are cached in `extensions.json` and rejected
-  if they point to a private host or a non-HTTPS URL.
-- **Everything from 2.2.0.** The modern library layout, signed updates and the
-  hardened desktop shell are unchanged.
 
-This is the **2.2.1** documentation. Older release notes are kept on the GitHub
+This is the **2.2.2** documentation. Older release notes are kept on the GitHub
 releases page; `docs/release-notes.md` only describes the release currently
 being published.
 
 ## Table of contents
 
 1. [Preview](#preview)
-2. [What's new in 2.2.1](#whats-new-in-221)
+2. [What's new in 2.2.2](#whats-new-in-222)
 3. [What Quark does](#what-quark-does)
 4. [Installation](#installation)
 5. [First launch](#first-launch)
