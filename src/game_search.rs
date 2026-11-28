@@ -9,77 +9,262 @@
 //! HTML classiques, et AstralGames ne les rend qu'après exécution de son
 //! JavaScript : on lit alors sa charge Next.js.
 
+use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use std::collections::HashSet;
+use std::collections::{BTreeMap, HashSet};
 use std::time::Duration;
 
-/// Les sept sources demandées, dans l'ordre d'affichage.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum SearchSite {
-    GameBounty,
-    AnkerGames,
-    AstralGames,
-    Kryoto,
-    OnlineFix,
-    ZeiGames,
-    SceneCat,
+/// Un site déclaré par une extension.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct SiteDefinition {
+    pub id: String,
+    pub label: String,
+    pub host: String,
+    pub search_url: String,
+    #[serde(flatten)]
+    pub driver: SiteDriver,
 }
 
-impl SearchSite {
-    pub const ALL: [SearchSite; 7] = [
-        SearchSite::GameBounty,
-        SearchSite::AnkerGames,
-        SearchSite::AstralGames,
-        SearchSite::Kryoto,
-        SearchSite::OnlineFix,
-        SearchSite::ZeiGames,
-        SearchSite::SceneCat,
-    ];
+/// Le lecteur utilisé pour interroger un site.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(tag = "driver", rename_all = "lowercase")]
+pub enum SiteDriver {
+    #[serde(rename = "gamebounty")]
+    GameBounty,
+    #[serde(rename = "ankergames")]
+    AnkerGames,
+    #[serde(rename = "astralgames")]
+    AstralGames,
+    #[serde(rename = "kryoto")]
+    Kryoto,
+    #[serde(rename = "onlinefix")]
+    OnlineFix,
+    #[serde(rename = "zeigames")]
+    ZeiGames,
+    #[serde(rename = "scenecat")]
+    SceneCat,
+    Json(JsonDriver),
+    Html(HtmlDriver),
+}
 
-    pub fn label(self) -> &'static str {
+impl SiteDriver {
+    /// Nombre de résultats demandé au site.
+    pub fn limit(&self) -> usize {
         match self {
-            SearchSite::GameBounty => "GameBounty",
-            SearchSite::AnkerGames => "AnkerGames",
-            SearchSite::AstralGames => "AstralGames",
-            SearchSite::Kryoto => "Kryoto",
-            SearchSite::OnlineFix => "Online-Fix",
-            SearchSite::ZeiGames => "ZeiGames",
-            SearchSite::SceneCat => "scene.cat",
+            SiteDriver::Json(driver) => driver.limit.clamp(1, 20),
+            SiteDriver::Html(driver) => driver.limit.clamp(1, 20),
+            _ => 8,
         }
     }
+}
 
-    pub fn host(self) -> &'static str {
-        match self {
-            SearchSite::GameBounty => "gamebounty.st",
-            SearchSite::AnkerGames => "ankergames.net",
-            SearchSite::AstralGames => "astralgames.net",
-            SearchSite::Kryoto => "kryo.to",
-            SearchSite::OnlineFix => "online-fix.me",
-            SearchSite::ZeiGames => "zeigames.com",
-            SearchSite::SceneCat => "scene.cat",
-        }
-    }
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[serde(rename_all = "UPPERCASE")]
+pub enum HttpMethod {
+    #[default]
+    Get,
+    Post,
+}
 
-    /// Recherche du site, utilisée quand l'adaptateur n'a rien pu lire.
-    pub fn search_url(self, query: &str) -> String {
-        let base = match self {
-            SearchSite::GameBounty => "https://gamebounty.st/search",
-            SearchSite::AnkerGames => "https://ankergames.net/search",
-            SearchSite::AstralGames => "https://astralgames.net/search",
-            SearchSite::Kryoto => "https://kryo.to/catalog",
-            SearchSite::OnlineFix => {
-                "https://online-fix.me/index.php?do=search&subaction=search&story="
-            }
-            SearchSite::ZeiGames => "https://zeigames.com/search/",
-            SearchSite::SceneCat => "https://scene.cat/",
-        };
-        if self == SearchSite::OnlineFix {
-            return format!("{base}{}", urlencode(query));
-        }
-        let mut url = reqwest::Url::parse(base).expect("adresse de recherche fixe");
-        url.query_pairs_mut().append_pair("q", query);
-        url.to_string()
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+pub enum ResponseEncoding {
+    #[default]
+    #[serde(rename = "utf-8")]
+    Utf8,
+    #[serde(rename = "windows-1251")]
+    Windows1251,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct RequestSpec {
+    #[serde(default)]
+    pub method: HttpMethod,
+    pub url: String,
+    #[serde(default)]
+    pub headers: BTreeMap<String, String>,
+    #[serde(default)]
+    pub body: Option<String>,
+    #[serde(default)]
+    pub encoding: ResponseEncoding,
+}
+
+/// Un champ lu dans un élément HTML.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct FieldSpec {
+    pub selector: String,
+    #[serde(default)]
+    pub attr: Option<String>,
+    #[serde(default)]
+    pub template: Option<String>,
+    #[serde(default)]
+    pub strip_prefix: Option<String>,
+    #[serde(default)]
+    pub strip_suffix: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct JsonDriver {
+    pub request: RequestSpec,
+    pub list: String,
+    pub title: String,
+    pub url: String,
+    #[serde(default)]
+    pub detail: Vec<String>,
+    #[serde(default)]
+    pub cover: Vec<String>,
+    #[serde(default = "default_limit")]
+    pub limit: usize,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct HtmlDriver {
+    pub request: RequestSpec,
+    pub items: String,
+    pub title: FieldSpec,
+    pub url: FieldSpec,
+    #[serde(default)]
+    pub detail: Vec<FieldSpec>,
+    #[serde(default)]
+    pub cover: Option<FieldSpec>,
+    #[serde(default = "default_limit")]
+    pub limit: usize,
+}
+
+fn default_limit() -> usize {
+    8
+}
+
+const ALLOWED_HEADERS: [&str; 8] = [
+    "accept",
+    "accept-language",
+    "content-type",
+    "user-agent",
+    "referer",
+    "origin",
+    "next-action",
+    "x-requested-with",
+];
+
+/// Vérifie un site avant de l'accepter dans un manifeste.
+pub fn validate_site(site: &SiteDefinition) -> Result<(), String> {
+    if site.id.is_empty()
+        || site.id.len() > 64
+        || !site
+            .id
+            .chars()
+            .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || matches!(c, '.' | '_' | '-'))
+    {
+        return Err("identifiant de site invalide".to_string());
     }
+    if site.label.trim().is_empty() || site.label.len() > 80 {
+        return Err(format!("libellé invalide pour {}", site.id));
+    }
+    if site.host.trim().is_empty()
+        || site.host.len() > 120
+        || site.host.contains('/')
+        || site.host.contains(char::is_whitespace)
+    {
+        return Err(format!("hôte invalide pour {}", site.id));
+    }
+    if !site.search_url.contains("{query}") {
+        return Err(format!("searchUrl sans {{query}} pour {}", site.id));
+    }
+    crate::net::validate_public_https(&site.search_url, true)
+        .map_err(|error| format!("searchUrl de {} : {error}", site.id))?;
+
+    match &site.driver {
+        SiteDriver::GameBounty
+        | SiteDriver::AnkerGames
+        | SiteDriver::AstralGames
+        | SiteDriver::Kryoto
+        | SiteDriver::OnlineFix
+        | SiteDriver::ZeiGames
+        | SiteDriver::SceneCat => Ok(()),
+        SiteDriver::Json(driver) => validate_json_driver(driver),
+        SiteDriver::Html(driver) => validate_html_driver(driver),
+    }
+}
+
+fn validate_json_driver(driver: &JsonDriver) -> Result<(), String> {
+    validate_request(&driver.request)?;
+    if driver.list.trim().is_empty() || driver.title.trim().is_empty() {
+        return Err("liste ou titre JSON vide".to_string());
+    }
+    crate::net::validate_public_https(&driver.url, true)
+        .map_err(|error| format!("URL de résultat JSON : {error}"))?;
+    if driver.limit == 0 || driver.limit > 20 {
+        return Err("limite JSON hors bornes".to_string());
+    }
+    for template in &driver.detail {
+        if template.len() > 200 {
+            return Err("détail JSON trop long".to_string());
+        }
+    }
+    Ok(())
+}
+
+fn validate_html_driver(driver: &HtmlDriver) -> Result<(), String> {
+    validate_request(&driver.request)?;
+    scraper::Selector::parse(&driver.items)
+        .map_err(|_| "sélecteur HTML des éléments invalide".to_string())?;
+    validate_field(&driver.title)?;
+    validate_field(&driver.url)?;
+    for field in &driver.detail {
+        validate_field(field)?;
+    }
+    if let Some(field) = &driver.cover {
+        validate_field(field)?;
+    }
+    if driver.limit == 0 || driver.limit > 20 {
+        return Err("limite HTML hors bornes".to_string());
+    }
+    Ok(())
+}
+
+fn validate_field(field: &FieldSpec) -> Result<(), String> {
+    scraper::Selector::parse(&field.selector)
+        .map_err(|_| "sélecteur HTML invalide".to_string())?;
+    if let Some(attr) = &field.attr
+        && (attr.is_empty()
+            || attr.len() > 64
+            || !attr
+                .chars()
+                .all(|c| c.is_ascii_alphanumeric() || matches!(c, '-' | '_' | ':')))
+    {
+        return Err("attribut HTML invalide".to_string());
+    }
+    if let Some(template) = &field.template {
+        if template.len() > 512 {
+            return Err("modèle HTML trop long".to_string());
+        }
+        if template.starts_with("http") {
+            crate::net::validate_public_https(template, true)
+                .map_err(|error| format!("URL HTML : {error}"))?;
+        }
+    }
+    Ok(())
+}
+
+fn validate_request(request: &RequestSpec) -> Result<(), String> {
+    crate::net::validate_public_https(&request.url, true)
+        .map_err(|error| format!("URL de requête : {error}"))?;
+    for (name, value) in &request.headers {
+        if !ALLOWED_HEADERS.contains(&name.to_ascii_lowercase().as_str()) {
+            return Err(format!("en-tête interdit : {name}"));
+        }
+        if value.len() > 512 || value.contains(['\r', '\n']) {
+            return Err(format!("valeur d'en-tête invalide : {name}"));
+        }
+    }
+    if request.body.as_ref().is_some_and(|body| body.len() > 8192) {
+        return Err("corps de requête trop long".to_string());
+    }
+    Ok(())
 }
 
 fn urlencode(value: &str) -> String {
@@ -100,22 +285,28 @@ pub struct SiteHit {
     pub cover: Option<String>,
 }
 
-/// Interroge une source. Une erreur ne contient jamais le corps de la réponse.
-pub fn search(site: SearchSite, query: &str) -> Result<Vec<SiteHit>, String> {
+/// Interroge un site déclaré par une extension.
+/// Une erreur ne contient jamais le corps de la réponse.
+pub fn search(site: &SiteDefinition, query: &str) -> Result<Vec<SiteHit>, String> {
     let query = query.trim();
     if query.len() < 2 {
         return Ok(Vec::new());
     }
-    let hits = match site {
-        SearchSite::GameBounty => search_gamebounty(query)?,
-        SearchSite::AnkerGames => search_anker(query)?,
-        SearchSite::AstralGames => search_astral(query)?,
-        SearchSite::Kryoto => search_kryoto(query)?,
-        SearchSite::OnlineFix => search_onlinefix(query)?,
-        SearchSite::ZeiGames => search_zeigames(query)?,
-        SearchSite::SceneCat => search_scene(query)?,
+    let hits = match &site.driver {
+        SiteDriver::GameBounty => search_gamebounty(query)?,
+        SiteDriver::AnkerGames => search_anker(query)?,
+        SiteDriver::AstralGames => search_astral(query)?,
+        SiteDriver::Kryoto => search_kryoto(query)?,
+        SiteDriver::OnlineFix => search_onlinefix(query)?,
+        SiteDriver::ZeiGames => search_zeigames(query)?,
+        SiteDriver::SceneCat => search_scene(query)?,
+        SiteDriver::Json(_) => return Err("driver JSON indisponible".to_string()),
+        SiteDriver::Html(_) => return Err("driver HTML indisponible".to_string()),
     };
-    Ok(filter_relevant(hits, query).into_iter().take(8).collect())
+    Ok(filter_relevant(hits, query)
+        .into_iter()
+        .take(site.driver.limit())
+        .collect())
 }
 
 /// Écarte les résultats qui ne reprennent pas le titre recherché.
@@ -835,29 +1026,41 @@ mod tests {
     }
 
     #[test]
-    fn les_cinq_sources_ont_une_recherche_web_de_repli() {
-        for site in SearchSite::ALL {
-            let url = site.search_url("The Witcher 3");
-            assert!(url.starts_with("https://"));
-            assert!(url.contains("The+Witcher+3"));
-        }
+    fn les_sept_drivers_integres_se_deserialisent() {
+        let sites: Vec<SiteDefinition> = serde_json::from_value(serde_json::json!([
+            {"id":"gamebounty","label":"GameBounty","host":"gamebounty.st","searchUrl":"https://gamebounty.st/search?q={query}","driver":"gamebounty"},
+            {"id":"ankergames","label":"AnkerGames","host":"ankergames.net","searchUrl":"https://ankergames.net/search?q={query}","driver":"ankergames"},
+            {"id":"astralgames","label":"AstralGames","host":"astralgames.net","searchUrl":"https://astralgames.net/search?q={query}","driver":"astralgames"},
+            {"id":"kryoto","label":"Kryoto","host":"kryo.to","searchUrl":"https://kryo.to/catalog?q={query}","driver":"kryoto"},
+            {"id":"onlinefix","label":"Online-Fix","host":"online-fix.me","searchUrl":"https://online-fix.me/index.php?do=search&subaction=search&story={query}","driver":"onlinefix"},
+            {"id":"zeigames","label":"ZeiGames","host":"zeigames.com","searchUrl":"https://zeigames.com/search/?q={query}","driver":"zeigames"},
+            {"id":"scenecat","label":"scene.cat","host":"scene.cat","searchUrl":"https://scene.cat/?q={query}","driver":"scenecat"}
+        ]))
+        .expect("sept drivers");
+        assert_eq!(sites.len(), 7);
+        assert_eq!(sites[0].driver, SiteDriver::GameBounty);
+        assert_eq!(sites[6].driver, SiteDriver::SceneCat);
+        assert!(sites[0].search_url.contains("{query}"));
     }
 
     #[test]
-    fn gamebounty_est_la_premiere_source() {
-        assert_eq!(SearchSite::ALL.len(), 7);
-        assert_eq!(SearchSite::ALL[0], SearchSite::GameBounty);
-        assert_eq!(SearchSite::ALL[0].host(), "gamebounty.st");
-        assert_eq!(SearchSite::OnlineFix.host(), "online-fix.me");
-        assert_eq!(SearchSite::ZeiGames.host(), "zeigames.com");
-    }
-
-    #[test]
-    fn les_sept_sources_ont_une_recherche_web_de_repli() {
-        for site in SearchSite::ALL {
-            let url = site.search_url("The Witcher 3");
-            assert!(url.starts_with("https://"));
-            assert!(url.contains("The+Witcher+3"));
+    fn un_driver_json_se_deserialise() {
+        let site: SiteDefinition = serde_json::from_value(serde_json::json!({
+            "id":"example","label":"Example","host":"example.com",
+            "searchUrl":"https://example.com/search?q={query}",
+            "driver":"json",
+            "request":{"method":"GET","url":"https://example.com/api?q={query}"},
+            "list":"data.results","title":"title",
+            "url":"https://example.com/game/{slug}",
+            "detail":["{size}","{version}"],"cover":["cover"],"limit":4
+        }))
+        .expect("driver json");
+        match site.driver {
+            SiteDriver::Json(driver) => {
+                assert_eq!(driver.list, "data.results");
+                assert_eq!(driver.limit, 4);
+            }
+            _ => panic!("mauvais driver"),
         }
     }
 

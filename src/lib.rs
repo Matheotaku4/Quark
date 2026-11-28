@@ -8,6 +8,7 @@ pub mod archive;
 pub mod artwork;
 pub mod config;
 pub mod disk;
+pub mod extensions;
 pub mod game_search;
 pub mod howlongtobeat;
 pub mod i18n;

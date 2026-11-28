@@ -23,3 +23,4 @@ encoding_rs = "0.8"
 # le fork maintenu, d'API identique.
 serde_yaml_ng = "0.10"
 minisign-verify = "0.3"
+scraper = "0.29"
