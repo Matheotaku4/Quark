@@ -1,5 +1,5 @@
 "use strict";
-// Page Paramètres : 8 onglets, recherche, enregistrement automatique (aucun bouton « Appliquer »).
+// Page Paramètres : 10 onglets, recherche, enregistrement automatique (aucun bouton « Appliquer »).
 
 const L = (fr, en) => (app.lang === "fr" ? fr : en);
 const swk = (k, label, hint) => `<div class="sw" data-s="${esc(label + " " + (hint || ""))}"><span>${esc(label)}${hint ? `<small>${esc(hint)}</small>` : ""}</span><input type="checkbox" data-k="${k}" ${getPath(app.cfg, k) ? "checked" : ""}></div>`;
