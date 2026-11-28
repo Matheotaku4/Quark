@@ -11,7 +11,7 @@ fast, modern interface.
 
 <p align="center"><sub>Home: continue playing, browse the library, launch in one click.</sub></p>
 
-**Version 2.2.0** · **Linux x86_64** · **MIT licence**
+**Version 2.2.4** · **Linux x86_64** · **MIT licence**
 
 **Website:** [matheotaku4.github.io/Quark](https://matheotaku4.github.io/Quark/) ·
 **Documentation:** [GitHub Wiki](https://github.com/Matheotaku4/Quark/wiki) ·
@@ -35,7 +35,7 @@ French, Spanish, German, Portuguese and Russian are available in the app.
 | **First launch:** language, theme and startup page | **Home:** continue playing, browse the library |
 | ![Welcome guide](docs/images/onboarding-en.png) | ![Quark home page](docs/images/home-en.png) |
 
-## What's new in 2.2.3
+## What's new in 2.2.4
 
 - **The 2.1.1 interface stays.** Flat library layout, game list on the left and
   game page on the right; no stylesheet or markup redesign.
@@ -51,14 +51,14 @@ French, Spanish, German, Portuguese and Russian are available in the app.
 - **No silent downloads.** Quark reads search pages only and opens results in
   your browser.
 
-This is the **2.2.3** documentation. Older release notes are kept on the GitHub
+This is the **2.2.4** documentation. Older release notes are kept on the GitHub
 releases page; `docs/release-notes.md` only describes the release currently
 being published.
 
 ## Table of contents
 
 1. [Preview](#preview)
-2. [What's new in 2.2.3](#whats-new-in-223)
+2. [What's new in 2.2.4](#whats-new-in-224)
 3. [What Quark does](#what-quark-does)
 4. [Installation](#installation)
 5. [First launch](#first-launch)
@@ -118,8 +118,8 @@ Download `quark-<version>-linux-x86_64.tar.gz` and its `.sha256` file from the
 then verify and unpack it:
 
 ```bash
-sha256sum -c quark-2.2.0-linux-x86_64.tar.gz.sha256
-tar -xzf quark-2.2.0-linux-x86_64.tar.gz
+sha256sum -c quark-2.2.4-linux-x86_64.tar.gz.sha256
+tar -xzf quark-2.2.4-linux-x86_64.tar.gz
 ./quark/quark
 ```
 

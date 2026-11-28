@@ -1,6 +1,6 @@
 [package]
 name = "quark-tauri"
-version = "2.2.3"
+version = "2.2.4"
 edition = "2021"
 description = "Interface Tauri moderne de Quark"
 publish = false

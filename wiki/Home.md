@@ -5,7 +5,7 @@ It brings local games and your Steam, Epic Games, GOG and itch.io libraries
 together, launches Windows games through Proton or umu-launcher, and keeps
 achievements and verified local saves alongside the library.
 
-This documentation describes **Quark 2.2.3**. Its source is versioned in the
+This documentation describes **Quark 2.2.4**. Its source is versioned in the
 repository under [`wiki/`](https://github.com/Matheotaku4/Quark/tree/main/wiki).
 
 ![Quark home](https://raw.githubusercontent.com/Matheotaku4/Quark/main/docs/images/home-en.png)
@@ -22,7 +22,7 @@ repository under [`wiki/`](https://github.com/Matheotaku4/Quark/tree/main/wiki).
 | **First launch** | **Home** |
 | ![Welcome guide](https://raw.githubusercontent.com/Matheotaku4/Quark/main/docs/images/onboarding-en.png) | ![Quark home](https://raw.githubusercontent.com/Matheotaku4/Quark/main/docs/images/home-en.png) |
 
-## What's new in 2.2.3
+## What's new in 2.2.4
 
 - **The 2.1.1 interface stays.** Flat library layout, game list on the left and
   game page on the right; no stylesheet or markup redesign.

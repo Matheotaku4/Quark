@@ -1195,6 +1195,9 @@ pub struct Settings {
     /// URL des manifestes d'extensions de recherche. Vide par défaut :
     /// l'utilisateur ajoute lui-même les extensions qu'il souhaite.
     pub extension_sources: Vec<String>,
+    /// L'ancienne extension activée par défaut a déjà été retirée. Le drapeau
+    /// évite de supprimer une URL que l'utilisateur aurait rajoutée ensuite.
+    pub extension_defaults_cleared: bool,
 }
 
 impl Default for Settings {
@@ -1251,6 +1254,7 @@ impl Default for Settings {
             saved_views: Vec::new(),
             saved_views_seeded: false,
             extension_sources: Vec::new(),
+            extension_defaults_cleared: false,
         }
     }
 }
@@ -2004,6 +2008,15 @@ impl Library {
     /// des jeux existants ne change pas.
     pub fn migrate_defaults(&mut self) {
         self.migrate_installations();
+        // 2.2.3 a brièvement installé une extension officielle par défaut.
+        // On la retire une fois pour que 2.2.4 parte d'une recherche vide.
+        const LEGACY_DEFAULT_SOURCE: &str = "https://raw.githubusercontent.com/Matheotaku4/Quark-sites-extension/main/quark-sites.json";
+        if !self.settings.extension_defaults_cleared {
+            self.settings
+                .extension_sources
+                .retain(|source| source != LEGACY_DEFAULT_SOURCE);
+            self.settings.extension_defaults_cleared = true;
+        }
         // Les configurations créées avant la 1.2 n'ont pas de parcours de
         // bienvenue : on ne le leur impose pas, mais elles verront le résumé
         // de la 1.2 une fois. Une configuration neuve garde le drapeau à faux
@@ -3391,5 +3404,23 @@ mod tests {
             serde_json::from_str(r#"{"settings":{}}"#).expect("configuration héritée lisible");
         lib.migrate_defaults();
         assert!(lib.settings.extension_sources.is_empty());
+    }
+
+    #[test]
+    fn l_ancienne_extension_par_defaut_est_retiree_une_seule_fois() {
+        const LEGACY: &str = "https://raw.githubusercontent.com/Matheotaku4/Quark-sites-extension/main/quark-sites.json";
+        let mut lib: Library = serde_json::from_str(&format!(
+            r#"{{"settings":{{"extension_sources":["{LEGACY}","https://example.com/keep.json"]}}}}"#
+        ))
+        .expect("configuration héritée lisible");
+        lib.migrate_defaults();
+        assert_eq!(
+            lib.settings.extension_sources,
+            vec!["https://example.com/keep.json"]
+        );
+        assert!(lib.settings.extension_defaults_cleared);
+        lib.settings.extension_sources.push(LEGACY.to_string());
+        lib.migrate_defaults();
+        assert_eq!(lib.settings.extension_sources.len(), 2);
     }
 }
